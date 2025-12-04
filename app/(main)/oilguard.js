@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
-import { Camera, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
 import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
@@ -806,37 +806,28 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   );
 };
 
-const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
+const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
-  // --- "Advanced Feature" State ---
-  // This could be expanded with real analysis in the future
-  const [shotQuality, setShotQuality] = useState({
-      isSteady: true, // Placeholder
-      isBright: true, // Placeholder
-  });
-
+  // This hook is still useful for requesting permission when the modal becomes visible
   useEffect(() => {
-      // If the modal becomes visible, request permission
       if (isVisible && !permission?.granted) {
           requestPermission();
       }
-  }, [isVisible]);
-  
+  }, [isVisible, permission]);
+
   const handleCapture = async () => {
       if (!cameraRef.current || isCapturing) return;
-
       setIsCapturing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
       try {
           const photo = await cameraRef.current.takePictureAsync({
-              quality: 0.8, // High enough quality for OCR
-              skipProcessing: true, // Faster capture
+              quality: 0.8,
+              skipProcessing: true,
           });
-          onPictureTaken(photo); // Send the photo back to the main screen
+          onPictureTaken(photo);
       } catch (error) {
           console.error("Failed to take picture:", error);
           Alert.alert("Capture Failed", "Could not take a picture. Please try again.");
@@ -846,12 +837,10 @@ const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
   };
 
   if (!permission) {
-      // Camera permissions are still loading
-      return <View />;
+      return null; // Return nothing while waiting for permission status
   }
 
   if (!permission.granted) {
-      // Camera permissions are not granted yet
       return (
           <Modal visible={isVisible} transparent animationType="fade">
               <View style={styles.permissionContainer}>
@@ -863,26 +852,23 @@ const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
           </Modal>
       );
   }
-  
-  const isGoodShot = shotQuality.isSteady && shotQuality.isBright;
 
   return (
       <Modal visible={isVisible} transparent animationType="slide" onRequestClose={onClose}>
-          <Camera style={StyleSheet.absoluteFill} type={CameraType.back} ref={cameraRef}>
+          {/* --- THE FIX IS HERE --- */}
+          {/* Use the correct component name: CameraView */}
+          <CameraView style={StyleSheet.absoluteFill} facing="back" ref={cameraRef}>
               <View style={styles.cameraOverlay}>
-
-                  {/* Top Controls */}
                   <BlurView intensity={50} tint="dark" style={styles.cameraHeader}>
                       <Text style={styles.cameraTitle}>فحص المكونات</Text>
                       <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
-                          <Ionicons name="close" size={24} color={COLORS.text} />
+                          <Ionicons name="close" size={24} color={'#FFFFFF'} />
                       </PressableScale>
                   </BlurView>
 
-                  {/* Center Guide */}
                   <View style={styles.guideContainer}>
-                      <View style={[styles.guideBox, { borderColor: isGoodShot ? COLORS.primary : COLORS.warning }]}>
-                          <View style={styles.guideCornersTL} />
+                      <View style={styles.guideBox}>
+                           <View style={styles.guideCornersTL} />
                           <View style={styles.guideCornersTR} />
                           <View style={styles.guideCornersBL} />
                           <View style={styles.guideCornersBR} />
@@ -892,18 +878,15 @@ const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
                       </Text>
                   </View>
 
-                  {/* Bottom Controls */}
                   <BlurView intensity={80} tint="dark" style={styles.cameraFooter}>
                       <View style={styles.shutterButtonOuter}>
                           <PressableScale onPress={handleCapture} disabled={isCapturing} style={styles.shutterButtonInner}>
-                              {isCapturing && <ActivityIndicator color="#FFF" />}
+                              {isCapturing && <ActivityIndicator color="#000" />}
                           </PressableScale>
                       </View>
-                      {/* Real-time feedback could go here */}
                   </BlurView>
-
               </View>
-          </Camera>
+          </CameraView>
       </Modal>
   );
 };
@@ -1001,7 +984,7 @@ const handlePictureTaken = (photo) => {
   // Now, we have the photo object which contains the URI.
   // We can send this URI to the same processing function that the gallery uses.
   if (photo && photo.uri) {
-      processImageWithGem-ini(photo.uri);
+      processImageWithGemini(photo.uri);
   }
 };
 
@@ -1274,13 +1257,11 @@ const handlePictureTaken = (photo) => {
               </Animated.View>
             </BlurView>
         </Modal>
-        {isCameraViewVisible && (
-      <CameraView
-        isVisible={isCameraViewVisible}
-        onClose={() => setCameraViewVisible(false)}
-        onPictureTaken={handlePictureTaken}
-      />
-    )}
+        <CustomCameraModal
+  isVisible={isCameraViewVisible}
+  onClose={() => setCameraViewVisible(false)}
+  onPictureTaken={handlePictureTaken}
+/>
     </SafeAreaView>
   );
 }
