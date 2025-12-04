@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # Allows you to click "Run" manually
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Setup Repo
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java (Required for Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📦 Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: 📦 Install Dependencies
+        # using npm install to generate a fresh lockfile on the server to avoid conflicts
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: 🚀 Build APK (Local Mode)
+        # --local forces it to build ON GitHub, not on Expo Cloud (Skipping the queue)
+        run: eas build --local --platform android --profile preview --non-interactive --output ./app-release.apk
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📤 Upload APK to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: wathiq-app-release
+          path: app-release.apk
