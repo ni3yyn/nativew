@@ -11,7 +11,7 @@ on:
     paths-ignore:
       - 'README.md'   # Don't build if you only change documentation
       - '.gitignore'
-      
+
 jobs:
   build:
     name: 🚀 Build Android APK
@@ -32,12 +32,14 @@ jobs:
       - name: 🐘 Cache Gradle
         uses: actions/cache@v4
         with:
+          # The Pipe symbol '|' below is MANDATORY for multiple lines
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            key: ${{ runner.os }}-gradle-v4-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-            restore-keys: |
-              ${{ runner.os }}-gradle-v4-
+          # Ensure this key line is indented exactly under 'path'
+          key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-v5-
 
       # 4. Setup Node & NPM Cache
       - name: 🟢 Setup Node.js
