@@ -1,8 +1,17 @@
 name: Turbo Build APK
 
 on:
-  workflow_dispatch: # Click "Run" button to start
-
+  # This enables the manual "Run" button
+  workflow_dispatch:
+  
+  # This enables Auto-Run on Push
+  push:
+    branches:
+      - main   # <--- Verify this matches your branch name (main or master)
+    paths-ignore:
+      - 'README.md'   # Don't build if you only change documentation
+      - '.gitignore'
+      
 jobs:
   build:
     name: 🚀 Build Android APK
