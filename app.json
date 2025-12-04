@@ -32,18 +32,7 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ],
-      "config": {
-        "manifestHooks": [
-          {
-            "file": "AndroidManifest.xml",
-            "target": "/manifest/application/activity",
-            "attrs": {
-              "android:hardwareAccelerated": "true"
-            }
-          }
-        ]
-      }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -859,7 +859,7 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
           {/* Use the correct component name: CameraView */}
           <CameraView style={StyleSheet.absoluteFill} facing="back" ref={cameraRef}>
               <View style={styles.cameraOverlay}>
-                  <BlurView intensity={50} tint="dark" style={styles.cameraHeader}>
+                  <BlurView intensity={50} tint="dark" style={[styles.cameraHeader, { borderWidth: 2, borderColor: 'red' }]} renderToHardwareTextureAndroid>
                       <Text style={styles.cameraTitle}>فحص المكونات</Text>
                       <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
                           <Ionicons name="close" size={24} color={'#FFFFFF'} />
@@ -895,6 +895,7 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
 export default function OilGuardEngine() {
+  
   const router = useRouter();
   const { user, userProfile } = useAppContext();
 
