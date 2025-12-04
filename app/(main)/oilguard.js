@@ -426,7 +426,7 @@ const PressableScale = ({ onPress, children, style, disabled }) => {
 const GlassCard = ({ children, style, delay = 0 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  return ( <Animated.View style={[{ opacity }, style]}><BlurView intensity={30} tint="dark" style={[styles.glassCardBase, style]}>{children}</BlurView></Animated.View> );
+  return ( <Animated.View style={[{ opacity }, style]}><BlurView intensity={30} tint="dark" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
@@ -756,7 +756,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <BlurView intensity={30} tint="dark" style={styles.ingCardBase}>
+            <BlurView intensity={30} tint="dark" style={styles.ingCardBase} renderToHardwareTextureAndroid>
         {/* Header */}
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
@@ -1138,7 +1138,7 @@ export default function OilGuardEngine() {
         </ImageBackground>
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <BlurView intensity={50} tint="dark" style={styles.modalOverlay}>
+            <BlurView intensity={50} tint="dark" style={styles.modalOverlay} renderToHardwareTextureAndroid>
               <Pressable style={StyleSheet.absoluteFill} onPress={() => setSaveModalVisible(false)} />
               <Animated.View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>حفظ المنتج</Text>

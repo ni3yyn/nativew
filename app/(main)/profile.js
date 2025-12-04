@@ -208,7 +208,7 @@ const Spore = ({ size, startX, duration, delay }) => {
   });
 
   return (
-    <BlurView intensity={20} tint="dark" style={{ position: 'absolute', zIndex: 0 }}>
+    <BlurView intensity={20} tint="dark" style={{ position: 'absolute', zIndex: 0 }} renderToHardwareTextureAndroid>
       <Animated.View style={{ 
         width: size, 
         height: size, 
@@ -306,7 +306,7 @@ const GlassCard = ({ children, style, onPress, disabled = false, delay = 0 }) =>
   };
 
   const content = (
-    <BlurView intensity={30} tint="dark" style={[styles.glassCard, style]}>
+    <BlurView intensity={30} tint="dark" style={[styles.glassCard, style]} renderToHardwareTextureAndroid>
       <Animated.View style={{ opacity }}>
         {children}
       </Animated.View>
@@ -467,7 +467,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color = COLORS.pr
 const NatureDock = ({ tabs, activeTab, onTabChange }) => {
     return (
       <View style={dockStyles.outerContainer}>
-        <BlurView intensity={30} tint="dark" style={dockStyles.glassContainer}>
+        <BlurView intensity={30} tint="dark" style={dockStyles.glassContainer} renderToHardwareTextureAndroid>
           <View style={dockStyles.row}>
             {tabs.map((tab) => (
               <DockItem 
@@ -1195,7 +1195,7 @@ const RoutineSection = ({ savedProducts, userProfile }) => {
                 onRequestClose={() => setModal({visible:false})}
             >
                 <View style={styles.modalOverlay}>
-                    <BlurView intensity={50} tint="dark" style={styles.modalGlass}>
+                    <BlurView intensity={50} tint="dark" style={styles.modalGlass} renderToHardwareTextureAndroid>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>اختر منتج</Text>
                             <TouchableOpacity 
@@ -1782,7 +1782,7 @@ export default function ProfileScreen() {
                     transform: [{ scale: headerScale }]
                 }
             ]}>
-                <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+                <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} renderToHardwareTextureAndroid />
                 <LinearGradient 
                     colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'transparent']} 
                     style={StyleSheet.absoluteFill} 

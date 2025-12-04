@@ -73,7 +73,7 @@ const GlassAlert = ({ visible, title, message, type, onClose }) => {
     return (
         <Modal transparent visible={visible} animationType="none">
             <View style={styles.modalOverlay}>
-                <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+                <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" renderToHardwareTextureAndroid />
                 <Animated.View style={[
                     styles.alertContainer, 
                     { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }
@@ -169,7 +169,7 @@ const PromoSlider = () => {
 
     return (
         <View style={styles.sliderOuterContainer}>
-            <BlurView intensity={40} tint="dark" style={[styles.sliderGlass, { backgroundColor: COLORS.glassTint }]}>
+            <BlurView intensity={40} tint="dark" style={[styles.sliderGlass, { backgroundColor: COLORS.glassTint }]} renderToHardwareTextureAndroid>
                 <Animated.ScrollView
                     ref={slidesRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
                     scrollEventThrottle={16} onScroll={handleScroll} onViewableItemsChanged={onViewableItemsChanged}
@@ -307,7 +307,7 @@ export default function LoginScreen() {
             <PromoSlider />
 
             <View style={styles.formOuterContainer}>
-                <BlurView intensity={70} tint="dark" style={[styles.formGlass, { backgroundColor: COLORS.glassTint }]}>
+                <BlurView intensity={70} tint="dark" style={[styles.formGlass, { backgroundColor: COLORS.glassTint }]} renderToHardwareTextureAndroid>
                     <Animated.View style={{ opacity: formOpacity, padding: 25 }}>
                         <Text style={styles.formTitle}>{isLogin ? 'مرحباً بعودتك!' : 'بداية جديدة'}</Text>
                         <Text style={styles.formSub}>{isLogin ? 'سجلي دخولكِ للوصول إلى تحليلاتك.' : 'أنشئي حسابكِ للوصول إلى مختبر الذكاء الاصطناعي.'}</Text>
