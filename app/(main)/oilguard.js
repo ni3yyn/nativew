@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
-import { Camera, CameraType } from 'expo-camera';
+import { Camera, CameraType, useCameraPermissions } from 'expo-camera';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
 import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
@@ -807,7 +807,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
 };
 
 const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
-  const [permission, requestPermission] = Camera.useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
@@ -1274,11 +1274,13 @@ const handlePictureTaken = (photo) => {
               </Animated.View>
             </BlurView>
         </Modal>
-        <CameraView
+        {isCameraViewVisible && (
+      <CameraView
         isVisible={isCameraViewVisible}
         onClose={() => setCameraViewVisible(false)}
         onPictureTaken={handlePictureTaken}
       />
+    )}
     </SafeAreaView>
   );
 }
