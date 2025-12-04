@@ -1,45 +1,68 @@
-name: Build Android APK
+name: Turbo Build APK
 
 on:
-  workflow_dispatch: # Allows you to click "Run" manually
+  workflow_dispatch: # Click "Run" button to start
 
 jobs:
   build:
-    name: Build APK
+    name: 🚀 Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗 Setup Repo
+      # 1. Checkout Code
+      - name: 🏗 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java (Required for Android)
+      # 2. Setup Java (Required for Android Gradle)
+      - name: ☕ Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🏗 Setup Node
+      # 3. Gradle Caching (The Speed Booster)
+      - name: 🐘 Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Setup Node & NPM Cache
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: 'npm'
 
-      - name: 📦 Setup EAS CLI
+      # 5. Install Global Tools
+      - name: 🛠 Install EAS CLI
         run: npm install -g eas-cli
 
+      # 6. Install Dependencies (Robust Mode)
+      # We delete package-lock first to prevent sync errors
       - name: 📦 Install Dependencies
-        # using npm install to generate a fresh lockfile on the server to avoid conflicts
         run: |
           rm -f package-lock.json
           npm install
 
-      - name: 🚀 Build APK (Local Mode)
-        # --local forces it to build ON GitHub, not on Expo Cloud (Skipping the queue)
-        run: eas build --local --platform android --profile preview --non-interactive --output ./app-release.apk
+      # 7. Build the APK
+      # We explicitly pass EXPO_TOKEN env var to this step
+      - name: 📱 Build APK (Local Mode)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
+            exit 1
+          fi
+          eas build --local --platform android --profile preview --non-interactive --output ./wathiq.apk
 
-      - name: 📤 Upload APK to GitHub
+      # 8. Upload Result
+      - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wathiq-app-release
-          path: app-release.apk
+          name: wathiq-release-apk
+          path: wathiq.apk
