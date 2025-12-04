@@ -34,7 +34,7 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
           cache: 'npm'
 
       # 5. Install Global Tools
@@ -53,12 +53,15 @@ jobs:
       - name: 📱 Build APK (Local Mode)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Boost Java memory to 4GB to prevent "Unknown" crashes
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
             exit 1
           fi
-          eas build --local --platform android --profile preview --non-interactive --output ./wathiq.apk
+          # Clear EAS cache to ensure it generates fresh android folders
+          eas build --local --clear-cache --platform android --profile preview --non-interactive --output ./wathiq.apk
 
       # 8. Upload Result
       - name: 📤 Upload Artifact
