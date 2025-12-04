@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
-
+import { Camera, CameraType } from 'expo-camera';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
 import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
@@ -806,6 +806,107 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   );
 };
 
+const CameraView = ({ isVisible, onClose, onPictureTaken }) => {
+  const [permission, requestPermission] = Camera.useCameraPermissions();
+  const cameraRef = useRef(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  // --- "Advanced Feature" State ---
+  // This could be expanded with real analysis in the future
+  const [shotQuality, setShotQuality] = useState({
+      isSteady: true, // Placeholder
+      isBright: true, // Placeholder
+  });
+
+  useEffect(() => {
+      // If the modal becomes visible, request permission
+      if (isVisible && !permission?.granted) {
+          requestPermission();
+      }
+  }, [isVisible]);
+  
+  const handleCapture = async () => {
+      if (!cameraRef.current || isCapturing) return;
+
+      setIsCapturing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      try {
+          const photo = await cameraRef.current.takePictureAsync({
+              quality: 0.8, // High enough quality for OCR
+              skipProcessing: true, // Faster capture
+          });
+          onPictureTaken(photo); // Send the photo back to the main screen
+      } catch (error) {
+          console.error("Failed to take picture:", error);
+          Alert.alert("Capture Failed", "Could not take a picture. Please try again.");
+      } finally {
+          setIsCapturing(false);
+      }
+  };
+
+  if (!permission) {
+      // Camera permissions are still loading
+      return <View />;
+  }
+
+  if (!permission.granted) {
+      // Camera permissions are not granted yet
+      return (
+          <Modal visible={isVisible} transparent animationType="fade">
+              <View style={styles.permissionContainer}>
+                  <Text style={styles.permissionText}>We need your permission to show the camera</Text>
+                  <PressableScale onPress={requestPermission} style={styles.permissionButton}>
+                      <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                  </PressableScale>
+              </View>
+          </Modal>
+      );
+  }
+  
+  const isGoodShot = shotQuality.isSteady && shotQuality.isBright;
+
+  return (
+      <Modal visible={isVisible} transparent animationType="slide" onRequestClose={onClose}>
+          <Camera style={StyleSheet.absoluteFill} type={CameraType.back} ref={cameraRef}>
+              <View style={styles.cameraOverlay}>
+
+                  {/* Top Controls */}
+                  <BlurView intensity={50} tint="dark" style={styles.cameraHeader}>
+                      <Text style={styles.cameraTitle}>فحص المكونات</Text>
+                      <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
+                          <Ionicons name="close" size={24} color={COLORS.text} />
+                      </PressableScale>
+                  </BlurView>
+
+                  {/* Center Guide */}
+                  <View style={styles.guideContainer}>
+                      <View style={[styles.guideBox, { borderColor: isGoodShot ? COLORS.primary : COLORS.warning }]}>
+                          <View style={styles.guideCornersTL} />
+                          <View style={styles.guideCornersTR} />
+                          <View style={styles.guideCornersBL} />
+                          <View style={styles.guideCornersBR} />
+                      </View>
+                      <Text style={styles.guideText}>
+                          ضع قائمة المكونات داخل الإطار
+                      </Text>
+                  </View>
+
+                  {/* Bottom Controls */}
+                  <BlurView intensity={80} tint="dark" style={styles.cameraFooter}>
+                      <View style={styles.shutterButtonOuter}>
+                          <PressableScale onPress={handleCapture} disabled={isCapturing} style={styles.shutterButtonInner}>
+                              {isCapturing && <ActivityIndicator color="#FFF" />}
+                          </PressableScale>
+                      </View>
+                      {/* Real-time feedback could go here */}
+                  </BlurView>
+
+              </View>
+          </Camera>
+      </Modal>
+  );
+};
 
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
@@ -831,6 +932,7 @@ export default function OilGuardEngine() {
   const [showSwipeHint, setShowSwipeHint] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0); // <-- ADD THIS
   const scrollX = useRef(new Animated.Value(0)).current; // <-- ADD THIS
+  const [isCameraViewVisible, setCameraViewVisible] = useState(false);
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef(null);
@@ -860,26 +962,48 @@ export default function OilGuardEngine() {
   const handleImageSelection = async (mode) => {
     try {
         Haptics.selectionAsync();
-        let result;
-        const options = { mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8, allowsEditing: true };
 
+        // --- NEW CAMERA LOGIC ---
+        // If the user selects 'camera', we just open our custom modal view and stop.
         if (mode === 'camera') {
-            const perm = await ImagePicker.requestCameraPermissionsAsync();
-            if (!perm.granted) { Alert.alert('Permission needed', 'Camera access is required.'); return; }
-            result = await ImagePicker.launchCameraAsync(options);
-        } else {
-            const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!perm.granted) { Alert.alert('Permission needed', 'Media library access is required.'); return; }
-            result = await ImagePicker.launchImageLibraryAsync(options);
+            setCameraViewVisible(true);
+            return; // Exit the function here.
         }
 
+        // --- EXISTING GALLERY LOGIC (Unchanged) ---
+        // If the mode is not 'camera', we proceed with the image picker for the gallery.
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+            Alert.alert('Permission needed', 'Media library access is required.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+            allowsEditing: true,
+        });
+
         if (!result.canceled && result.assets[0].uri) {
+            // Process the image selected from the gallery
             processImageWithGemini(result.assets[0].uri);
         }
     } catch (error) {
-        Alert.alert("Error", "Could not select image.");
+        console.error("Image selection error:", error);
+        Alert.alert("Error", "Could not select an image. Please try again.");
     }
-  };
+};
+
+const handlePictureTaken = (photo) => {
+  // First, close the camera modal
+  setCameraViewVisible(false);
+
+  // Now, we have the photo object which contains the URI.
+  // We can send this URI to the same processing function that the gallery uses.
+  if (photo && photo.uri) {
+      processImageWithGem-ini(photo.uri);
+  }
+};
 
   const processImageWithGemini = async (uri) => {
     setLoading(true);
@@ -1150,6 +1274,11 @@ export default function OilGuardEngine() {
               </Animated.View>
             </BlurView>
         </Modal>
+        <CameraView
+        isVisible={isCameraViewVisible}
+        onClose={() => setCameraViewVisible(false)}
+        onPictureTaken={handlePictureTaken}
+      />
     </SafeAreaView>
   );
 }
@@ -1766,5 +1895,107 @@ ingWarningText: {
       backgroundColor: COLORS.primary,
       position: 'absolute', // Sits on top of the track
       left: 0,
+    },
+    permissionContainer: {
+      flex: 1,
+      backgroundColor: '#05080a',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 20,
+    },
+    permissionText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.text,
+      textAlign: 'center',
+      paddingHorizontal: 30,
+    },
+    permissionButton: {
+      backgroundColor: COLORS.primary,
+      paddingHorizontal: 30,
+      paddingVertical: 15,
+      borderRadius: 15,
+    },
+    permissionButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.darkGreen,
+    },
+    cameraOverlay: {
+      flex: 1,
+      backgroundColor: 'transparent',
+      justifyContent: 'space-between',
+    },
+    cameraHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 50,
+      paddingBottom: 15,
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+      overflow: 'hidden',
+    },
+    cameraTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.text,
+    },
+    cameraCloseButton: {
+      padding: 5,
+    },
+    guideContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    guideBox: {
+      width: '90%',
+      aspectRatio: 1.6 / 1,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      borderRadius: 24,
+      borderWidth: 2,
+      position: 'relative',
+    },
+    guideText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.text,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginTop: 20,
+      overflow: 'hidden',
+    },
+    guideCornersTL: { position: 'absolute', top: -2, left: -2, width: 40, height: 40, borderTopWidth: 4, borderLeftWidth: 4, borderColor: '#FFF' },
+    guideCornersTR: { position: 'absolute', top: -2, right: -2, width: 40, height: 40, borderTopWidth: 4, borderRightWidth: 4, borderColor: '#FFF' },
+    guideCornersBL: { position: 'absolute', bottom: -2, left: -2, width: 40, height: 40, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: '#FFF' },
+    guideCornersBR: { position: 'absolute', bottom: -2, right: -2, width: 40, height: 40, borderBottomWidth: 4, borderRightWidth: 4, borderColor: '#FFF' },
+    cameraFooter: {
+      paddingTop: 20,
+      paddingBottom: Platform.OS === 'android' ? 20 : 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      overflow: 'hidden',
+    },
+    shutterButtonOuter: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: 'rgba(255,255,255,0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    shutterButtonInner: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: COLORS.text,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
 });
