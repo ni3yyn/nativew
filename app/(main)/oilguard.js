@@ -17,6 +17,7 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { BlurView } from 'expo-blur';
 import Fuse from 'fuse.js';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
