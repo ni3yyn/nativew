@@ -91,7 +91,7 @@ const BASIC_HAIR_TYPES = [
     { id: 'coily', label: 'أفرو / كيرلي جداً', icon: 'dna' }
 ];
 const BASIC_SKIN_TYPES = [
-    { id: 'oily', label: 'دهنية', icon: 'tint' },
+    { id: 'oily', label: 'دهنية', icon: 'blurType' },
     { id: 'dry', label: 'جافة', icon: 'leaf' },
     { id: 'combo', label: 'مختلطة', icon: 'adjust' },
     { id: 'normal', label: 'عادية', icon: 'smile' },
@@ -102,14 +102,14 @@ const GOALS_LIST = [
     { id: 'brightening', label: 'تفتيح', icon: 'sun' },
     { id: 'acne', label: 'حب الشباب', icon: 'shield-alt' },
     { id: 'anti_aging', label: 'شيخوخة', icon: 'hourglass-half' },
-    { id: 'hydration', label: 'ترطيب', icon: 'tint' },
+    { id: 'hydration', label: 'ترطيب', icon: 'blurType' },
     { id: 'hair_growth', label: 'كثافة', icon: 'seedling' }
 ];
 
 const INGREDIENT_FILTERS = [
   { id: 'all', label: 'الكل', icon: 'layer-group' },
   { id: 'exfoliants', label: 'مقشرات', icon: 'magic' },
-  { id: 'hydrators', label: 'مرطبات', icon: 'tint' },
+  { id: 'hydrators', label: 'مرطبات', icon: 'blurType' },
   { id: 'antioxidants', label: 'مضادات', icon: 'shield-alt' },
   { id: 'oils', label: 'زيوت', icon: 'oil-can' },
 ];
@@ -208,7 +208,7 @@ const Spore = ({ size, startX, duration, delay }) => {
   });
 
   return (
-    <BlurView intensity={20} tint="dark" style={{ position: 'absolute', zIndex: 0 }} renderToHardwareTextureAndroid>
+    <BlurView  blurAmount={20} blurType="dark" style={{ position: 'absolute', zIndex: 0 }} >
       <Animated.View style={{ 
         width: size, 
         height: size, 
@@ -306,7 +306,7 @@ const GlassCard = ({ children, style, onPress, disabled = false, delay = 0 }) =>
   };
 
   const content = (
-    <BlurView intensity={30} tint="dark" style={[styles.glassCard, style]} renderToHardwareTextureAndroid>
+    <BlurView  blurAmount={30} blurType="dark" style={[styles.glassCard, style]} >
       <Animated.View style={{ opacity }}>
         {children}
       </Animated.View>
@@ -467,7 +467,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color = COLORS.pr
 const NatureDock = ({ tabs, activeTab, onTabChange }) => {
     return (
       <View style={dockStyles.outerContainer}>
-        <BlurView intensity={30} tint="dark" style={dockStyles.glassContainer} renderToHardwareTextureAndroid>
+        <BlurView  blurAmount={30} blurType="dark" style={dockStyles.glassContainer} >
           <View style={dockStyles.row}>
             {tabs.map((tab) => (
               <DockItem 
@@ -1195,7 +1195,7 @@ const RoutineSection = ({ savedProducts, userProfile }) => {
                 onRequestClose={() => setModal({visible:false})}
             >
                 <View style={styles.modalOverlay}>
-                    <BlurView intensity={50} tint="dark" style={styles.modalGlass} renderToHardwareTextureAndroid>
+                    <BlurView  blurAmount={50} blurType="dark" style={styles.modalGlass} >
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>اختر منتج</Text>
                             <TouchableOpacity 
@@ -1782,7 +1782,7 @@ export default function ProfileScreen() {
                     transform: [{ scale: headerScale }]
                 }
             ]}>
-                <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} renderToHardwareTextureAndroid />
+                <BlurView  blurAmount={25} blurType="dark" style={StyleSheet.absoluteFill}  />
                 <LinearGradient 
                     colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'transparent']} 
                     style={StyleSheet.absoluteFill} 

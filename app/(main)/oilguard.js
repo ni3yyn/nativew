@@ -5,18 +5,19 @@ import {
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
   RefreshControl, Easing, SafeAreaView, FlatList
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { BlurView } from '@react-native-community/blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path, Defs, ClipPath, Rect } from 'react-native-svg';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import Fuse from 'fuse.js';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
 import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
@@ -37,7 +38,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // --- CONFIG & THEME ---
-const GEMINI_API_KEY = "AIzaSyDF5v1MF2Szo8WwoVwfs9pDTQ4Gj5wisVQ"; 
+const GEMINI_API_KEY = "AIzaSyAF38ctoP10LoTM_zFKARDeB4LPlHZkTPs"; 
 const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 const CARD_WIDTH = width * 0.85;
@@ -426,7 +427,7 @@ const PressableScale = ({ onPress, children, style, disabled }) => {
 const GlassCard = ({ children, style, delay = 0 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  return ( <Animated.View style={[{ opacity }, style]}><BlurView intensity={30} tint="dark" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
+  return ( <Animated.View style={[{ opacity }, style]}><BlurView  intensity={30}  tint="dark" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
@@ -756,7 +757,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <BlurView intensity={30} tint="dark" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+            <BlurView  intensity={30} tint="dark" style={styles.ingCardBase} renderToHardwareTextureAndroid>
         {/* Header */}
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
@@ -808,24 +809,65 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
 
 const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef(null);
+  // Renamed ref to clarify it controls the entire CameraView (including video stream)
+  const cameraViewRef = useRef(null); 
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isCameraReady, setCameraReady] = useState(false);
 
-  // This hook is still useful for requesting permission when the modal becomes visible
+  // Animation values
+  const scanAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const modalAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-      if (isVisible && !permission?.granted) {
+    let scanLoop, pulseLoop;
+
+    if (isVisible) {
+      if (!permission?.granted) {
           requestPermission();
       }
+      
+      Animated.spring(modalAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }).start();
+
+      scanLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scanAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scanAnim, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.delay(500),
+        ])
+      );
+
+      pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.8, duration: 1500, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        ])
+      );
+
+      scanLoop.start();
+      pulseLoop.start();
+      
+    } else {
+      Animated.timing(modalAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      scanAnim.setValue(0);
+      pulseAnim.setValue(1);
+    }
+
+    return () => {
+      // Ensure loops are stopped when component is not visible
+      scanLoop?.stop();
+      pulseLoop?.stop();
+    }
   }, [isVisible, permission]);
 
   const handleCapture = async () => {
-      if (!cameraRef.current || isCapturing) return;
+      // Use the renamed ref
+      if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
       setIsCapturing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       try {
-          const photo = await cameraRef.current.takePictureAsync({
-              quality: 0.8,
-              skipProcessing: true,
+          const photo = await cameraViewRef.current.takePictureAsync({
+              quality: 1, // Maximum quality for best OCR results
           });
           onPictureTaken(photo);
       } catch (error) {
@@ -835,59 +877,298 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
           setIsCapturing(false);
       }
   };
+  
+  const modalTranslateY = modalAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [height, 0],
+  });
 
-  if (!permission) {
-      return null; // Return nothing while waiting for permission status
-  }
+  if (!permission) return null;
 
   if (!permission.granted) {
-      return (
-          <Modal visible={isVisible} transparent animationType="fade">
-              <View style={styles.permissionContainer}>
-                  <Text style={styles.permissionText}>We need your permission to show the camera</Text>
-                  <PressableScale onPress={requestPermission} style={styles.permissionButton}>
-                      <Text style={styles.permissionButtonText}>Grant Permission</Text>
-                  </PressableScale>
-              </View>
-          </Modal>
-      );
+    return (
+      <Modal visible={isVisible} transparent animationType="fade">
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionText}>We need your permission to show the camera</Text>
+          <PressableScale onPress={requestPermission} style={styles.permissionButton}>
+            <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          </PressableScale>
+        </View>
+      </Modal>
+    );
   }
 
   return (
-      <Modal visible={isVisible} transparent animationType="slide" onRequestClose={onClose}>
-          {/* --- THE FIX IS HERE --- */}
-          {/* Use the correct component name: CameraView */}
-          <CameraView style={StyleSheet.absoluteFill} facing="back" ref={cameraRef}>
-              <View style={styles.cameraOverlay}>
-                  <BlurView intensity={50} tint="dark" style={[styles.cameraHeader, { borderWidth: 2, borderColor: 'red' }]} renderToHardwareTextureAndroid>
-                      <Text style={styles.cameraTitle}>فحص المكونات</Text>
-                      <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
-                          <Ionicons name="close" size={24} color={'#FFFFFF'} />
-                      </PressableScale>
-                  </BlurView>
+    <Modal visible={isVisible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={{ flex: 1, transform: [{ translateY: modalTranslateY }] }}>
+        <CameraView
+            style={StyleSheet.absoluteFill}
+            ref={cameraViewRef} // Use the renamed ref here
+            facing="back"
+            onCameraReady={() => setCameraReady(true)}
+            // These props leverage the video stream for the best still-image capture
+            autoFocus="on" // Use continuous auto-focus from the live video feed
+            mode="picture" // Prioritize settings for high-resolution still captures
+            flash="off"
+        >
+          <View style={styles.cameraOverlay}>
+            <BlurView  intensity={50} tint="dark" style={styles.cameraHeader}>
+              <Text style={styles.cameraTitle}>فحص المكونات</Text>
+              <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
+                <Ionicons name="close" size={24} color={'#FFFFFF'} />
+              </PressableScale>
+            </BlurView>
 
-                  <View style={styles.guideContainer}>
-                      <View style={styles.guideBox}>
-                           <View style={styles.guideCornersTL} />
-                          <View style={styles.guideCornersTR} />
-                          <View style={styles.guideCornersBL} />
-                          <View style={styles.guideCornersBR} />
-                      </View>
-                      <Text style={styles.guideText}>
-                          ضع قائمة المكونات داخل الإطار
-                      </Text>
-                  </View>
+            <View style={styles.cameraScannerContainer}>
+              <Text style={styles.cameraGuideText}>ضع قائمة المكونات داخل الإطار</Text>
+              <Animated.View style={[styles.cornerBracket, styles.topLeft, { opacity: pulseAnim }]} />
+              <Animated.View style={[styles.cornerBracket, styles.topRight, { opacity: pulseAnim }]} />
+              <Animated.View style={[styles.cornerBracket, styles.bottomLeft, { opacity: pulseAnim }]} />
+              <Animated.View style={[styles.cornerBracket, styles.bottomRight, { opacity: pulseAnim }]} />
+              <Animated.View style={{ 
+                  width: '100%', 
+                  height: 3, 
+                  transform: [{ 
+                      translateY: scanAnim.interpolate({ inputRange: [0, 1], outputRange: [-height * 0.25, height * 0.25] }) 
+                  }] 
+              }}>
+                <LinearGradient
+                  colors={['transparent', COLORS.primaryGlow, 'transparent']}
+                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                  style={{ flex: 1 }}
+                />
+              </Animated.View>
+            </View>
 
-                  <BlurView intensity={80} tint="dark" style={styles.cameraFooter}>
-                      <View style={styles.shutterButtonOuter}>
-                          <PressableScale onPress={handleCapture} disabled={isCapturing} style={styles.shutterButtonInner}>
-                              {isCapturing && <ActivityIndicator color="#000" />}
-                          </PressableScale>
-                      </View>
-                  </BlurView>
-              </View>
-          </CameraView>
-      </Modal>
+            <BlurView  intensity={80} tint="dark" style={styles.cameraFooter}>
+                <Animated.View style={[styles.shutterPulseRing, { transform: [{ scale: pulseAnim }] }]} />
+                <View style={styles.shutterButtonOuter}>
+                    <PressableScale onPress={handleCapture} disabled={isCapturing || !isCameraReady} style={styles.shutterButtonInner}>
+                        {isCapturing || !isCameraReady ? <ActivityIndicator color={COLORS.darkGreen} /> : null}
+                    </PressableScale>
+                </View>
+            </BlurView>
+          </View>
+        </CameraView>
+      </Animated.View>
+    </Modal>
+  );
+};
+
+const AnimatedCheckbox = ({ isSelected }) => {
+  const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+  const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+  useEffect(() => {
+      // Spring animation for the background fill
+      Animated.spring(scale, {
+          toValue: isSelected ? 1 : 0,
+          friction: 5,
+          tension: 80,
+          useNativeDriver: true,
+      }).start();
+      // Timing animation for the checkmark icon
+      Animated.timing(checkScale, {
+          toValue: isSelected ? 1 : 0,
+          duration: 200,
+          delay: isSelected ? 100 : 0, // Delay checkmark appearance on select
+          useNativeDriver: true,
+      }).start();
+  }, [isSelected]);
+
+  return (
+      <View style={styles.checkboxBase}>
+          <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
+          <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+              <FontAwesome5 name="check" size={14} color={COLORS.darkGreen} />
+          </Animated.View>
+      </View>
+  );
+};
+
+const Wave = ({ isFilling }) => {
+  const waveAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+      const animation = Animated.loop(
+          Animated.timing(waveAnim, {
+              toValue: 1,
+              duration: 2000,
+              useNativeDriver: true,
+              easing: Easing.linear
+          })
+      );
+      if (isFilling) {
+          animation.start();
+      }
+      return () => animation.stop();
+  }, [isFilling]);
+
+  const translateX = waveAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -width * 0.8], // Moves one full wave width
+  });
+
+  return (
+      <Animated.View style={{ width: '200%', height: 40, transform: [{ translateX }] }}>
+          <Svg height="40" width={width * 1.6} style={{ width: '100%' }}>
+              <Circle cx="50%" cy="50%" r="50%" fill={COLORS.primaryGlow} />
+          </Svg>
+      </Animated.View>
+  );
+};
+
+// --- ▼▼▼ ADD THIS NEW BUBBLE COMPONENT ▼▼▼ ---
+const Bubble = ({ size, x, duration, delay }) => {
+  const animY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Use a delay before starting the loop to stagger the bubbles
+    const timer = setTimeout(() => {
+        const animation = Animated.loop(
+            Animated.timing(animY, {
+                toValue: 1,
+                duration,
+                useNativeDriver: true,
+                easing: Easing.linear,
+            })
+        );
+        animation.start();
+        // Cleanup function for the animation itself
+        return () => animation.stop();
+    }, delay);
+
+    // Cleanup for the timeout in case the component unmounts before the delay finishes
+    return () => clearTimeout(timer);
+  }, []);
+
+  const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [0, -75] });
+
+  return <AnimatedCircle
+      cx={x}
+      cy={90} // Start at the bottom of the flask's bulb
+      r={size}
+      fill={COLORS.primaryGlow}
+      opacity={0.7}
+      transform={[{ translateY }]}
+  />;
+};
+
+const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1500, style }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [textIndex, setTextIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
+
+  // Effect for the main typing/deleting logic
+  useEffect(() => {
+      // Blinking cursor interval
+      const cursorInterval = setInterval(() => {
+          setShowCursor(prev => !prev);
+      }, 500);
+
+      const handleTyping = () => {
+          const currentText = texts[textIndex];
+          
+          // --- DELETING PHASE ---
+          if (isDeleting) {
+              if (displayedText.length > 0) {
+                  // If text remains, schedule the next deletion
+                  const timeout = setTimeout(() => {
+                      setDisplayedText(currentText.substring(0, displayedText.length - 1));
+                  }, deletingSpeed);
+                  return () => clearTimeout(timeout);
+              } else {
+                  // If deletion is complete, move to the next text and switch to typing phase
+                  setIsDeleting(false);
+                  setTextIndex((prevIndex) => (prevIndex + 1) % texts.length);
+              }
+          } 
+          // --- TYPING PHASE ---
+          else {
+              if (displayedText.length < currentText.length) {
+                  // If not finished typing, schedule the next character
+                  const timeout = setTimeout(() => {
+                      setDisplayedText(currentText.substring(0, displayedText.length + 1));
+                  }, typingSpeed);
+                  return () => clearTimeout(timeout);
+              } else {
+                  // If typing is complete, pause and then start deleting
+                  const timeout = setTimeout(() => {
+                      setIsDeleting(true);
+                  }, pauseDuration);
+                  return () => clearTimeout(timeout);
+              }
+          }
+      };
+
+      const typingTimeout = handleTyping();
+
+      // Cleanup function for all timeouts and intervals
+      return () => {
+          if(typingTimeout) typingTimeout();
+          clearInterval(cursorInterval);
+      };
+
+  }, [displayedText, isDeleting, textIndex, texts, typingSpeed, deletingSpeed, pauseDuration]);
+
+  return (
+      <View style={style.container}>
+          <Text style={style.text}>
+              {displayedText}
+              {showCursor && <Text style={{ color: COLORS.primary }}>▋</Text>}
+          </Text>
+      </View>
+  );
+};
+
+const FloatingButton = ({ icon, label, color, glowColor, onPress, index }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+      const float = Animated.loop(Animated.sequence([
+          Animated.timing(floatAnim, { toValue: 1, duration: 2500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          Animated.timing(floatAnim, { toValue: 0, duration: 2500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      ]));
+
+      const glow = Animated.loop(Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      ]));
+      
+      // Stagger the start of the animations based on the index
+      const timeout = setTimeout(() => {
+          float.start();
+          glow.start();
+      }, index * 300);
+
+      return () => {
+          clearTimeout(timeout);
+          float.stop();
+          glow.stop();
+      }
+  }, []);
+
+  const pressIn = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 20 }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -15] });
+  const glowScale = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] });
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
+
+  return (
+      <Pressable onPress={() => { if(onPress) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut}>
+          <Animated.View style={{ alignItems: 'center', transform: [{ translateY }, { scale }] }}>
+              <Animated.View style={[styles.glowEffect, { backgroundColor: glowColor, transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
+              <BlurView  intensity={30} tint="dark" style={styles.floatingBtnCore} renderToHardwareTextureAndroid>
+                  <FontAwesome5 name={icon} size={28} color={color} />
+              </BlurView>
+              <Text style={styles.floatingBtnLabel}>{label}</Text>
+          </Animated.View>
+      </Pressable>
   );
 };
 
@@ -895,33 +1176,54 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
 export default function OilGuardEngine() {
-  
   const router = useRouter();
   const { user, userProfile } = useAppContext();
 
+  // --- STATE MANAGEMENT ---
   const [step, setStep] = useState(0); 
   const [loading, setLoading] = useState(false);
-  
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const [ocrText, setOcrText] = useState('');
   const [manualIngredients, setManualIngredients] = useState('');
   const [preProcessedIngredients, setPreProcessedIngredients] = useState([]);
   const [productType, setProductType] = useState('other');
   const [selectedClaims, setSelectedClaims] = useState([]);
   const [finalAnalysis, setFinalAnalysis] = useState(null);
-  
   const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
   const [isSaveModalVisible, setSaveModalVisible] = useState(false);
   const [productName, setProductName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0); // <-- ADD THIS
-  const scrollX = useRef(new Animated.Value(0)).current; // <-- ADD THIS
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isCameraViewVisible, setCameraViewVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fabPosition, setFabPosition] = useState({ x: 0, y: 0 });
+  const [activeTab, setActiveTab] = useState('claims');
+  const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
+  const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
+  // --- ANIMATION REFS ---
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  // Step 0 (Intro)
+  const introIconScale = useRef(new Animated.Value(1)).current;
+  const introShineAnim = useRef(new Animated.Value(0)).current;
+  // Step 2 (Claims)
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const fabPulseAnim = useRef(new Animated.Value(1)).current;
+  const heroTransitionAnim = useRef(new Animated.Value(0)).current; 
+  const fabIconRef = useRef(null);
+  const fabRef = useRef(null);
+  const revealAnim = useRef(new Animated.Value(0)).current;
+  // Step 3 (Loading)
+  const loadingFillAnim = useRef(new Animated.Value(0)).current;
+  const loadingDropAnim = useRef(new Animated.Value(0)).current;
+  const loadingTextOpacityAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  // --- MEMOIZED DATA ---
   const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
-  
   const allIngredients = useMemo(() => combinedOilsDB.ingredients, []);
   const allSearchableTerms = useMemo(() => {
     const terms = new Map();
@@ -932,7 +1234,122 @@ export default function OilGuardEngine() {
     });
     return Array.from(terms.entries()).map(([term, ingredient]) => ({ term, ingredient })).sort((a, b) => b.term.length - a.term.length);
   }, [allIngredients]);
+  const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
+  const fuse = useMemo(() => new Fuse(claimsForType, {
+      includeScore: false,
+      threshold: 0.4,
+  }), [claimsForType]);
+  const loadingBubbles = useMemo(() => [...Array(15)].map((_, i) => ({
+      id: i,
+      size: Math.random() * 15 + 5,
+      x: `${Math.random() * 80 + 10}%`,
+      duration: Math.random() * 3000 + 2000,
+      delay: Math.random() * 2000,
+  })), []);
 
+  // --- ANIMATION CONTROLLERS ---
+
+  // Central Controller for Step-Based Animations
+  useEffect(() => {
+    // 1. Define all step-specific animations
+    const breathAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(introIconScale, { toValue: 1.05, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(introIconScale, { toValue: 1, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+      ])
+    );
+    const shineAnimation = Animated.loop(
+        Animated.timing(introShineAnim, {
+            toValue: 1,
+            duration: 3500,
+            useNativeDriver: true,
+            easing: Easing.linear,
+            delay: 500,
+        })
+    );
+    const drop = Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(loadingDropAnim, { toValue: 1, duration: 600, useNativeDriver: true, easing: Easing.bounce })
+    ]);
+    const fill = Animated.sequence([
+        Animated.delay(800),
+        Animated.timing(loadingFillAnim, { toValue: 1, duration: 2500, useNativeDriver: false, easing: Easing.inOut(Easing.ease) })
+    ]);
+    const textPulse = Animated.loop(Animated.sequence([
+        Animated.timing(loadingTextOpacityAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(loadingTextOpacityAnim, { toValue: 0.6, duration: 1000, useNativeDriver: true })
+    ]));
+
+    // 2. Conditionally start animations based on the current step
+    if (step === 0) {
+      breathAnimation.start();
+      shineAnimation.start();
+    } else if (step === 3) {
+      if (isGeminiLoading) {
+        // Start animations for the NEW Gemini loading screen
+        loadingTextOpacityAnim.setValue(0.6); // Start text visible
+        textPulse.start();
+      } else {
+        // Start animations for the FINAL analysis loading screen (original logic)
+        loadingDropAnim.setValue(0);
+        loadingFillAnim.setValue(0);
+        loadingTextOpacityAnim.setValue(0);
+        drop.start();
+        fill.start();
+        textPulse.start();
+      }
+    }
+
+    // 3. The cleanup function stops everything when dependencies change
+    return () => {
+        breathAnimation.stop();
+        shineAnimation.stop();
+        drop.stop();
+        fill.stop();
+        textPulse.stop();
+    };
+  }, [step, isGeminiLoading]);
+
+  // Separate Controller for FAB Animation (based on different dependency)
+  useEffect(() => {
+    const pulseAnimation = Animated.loop(
+        Animated.sequence([
+            Animated.timing(fabPulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+            Animated.timing(fabPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+        ])
+    );
+
+    if (selectedClaims.length > 0) {
+      Animated.spring(fabAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+      pulseAnimation.start();
+    } else {
+      Animated.timing(fabAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+
+    return () => pulseAnimation.stop();
+  }, [selectedClaims.length]);
+
+  useEffect(() => {
+    const pulseAnimation = Animated.loop(
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 1500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      })
+    );
+
+    if (isAnimatingTransition) {
+      pulseAnimation.start();
+    }
+
+    return () => {
+      pulseAnimation.stop();
+      pulseAnim.setValue(0);
+    };
+  }, [isAnimatingTransition]);
+
+  // --- CORE FUNCTIONS ---
   const changeStep = (next) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -991,6 +1408,7 @@ const handlePictureTaken = (photo) => {
 
   const processImageWithGemini = async (uri) => {
     setLoading(true);
+    setIsGeminiLoading(true);
     changeStep(3);
 
     try {
@@ -1028,6 +1446,7 @@ const handlePictureTaken = (photo) => {
         setPreProcessedIngredients(ingredients); 
         setProductType(jsonResponse.detected_type || 'other');
         
+        setIsGeminiLoading(false);
         setLoading(false);
         changeStep(1);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -1035,6 +1454,7 @@ const handlePictureTaken = (photo) => {
     } catch (error) {
         console.error("Gemini Error:", error);
         Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
+        setIsGeminiLoading(false);
         setLoading(false);
         changeStep(0);
     }
@@ -1065,20 +1485,34 @@ const handlePictureTaken = (photo) => {
   
 
   const executeAnalysis = () => {
-    changeStep(3);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!fabRef.current) return;
 
-    setTimeout(() => {
+    // 1. Measure the starting position of the FAB
+    fabRef.current.measure((fx, fy, width, height, px, py) => {
+      setFabMetrics({ x: px, y: py, width, height });
+      
+      const destX = (Dimensions.get('window').width / 2) - (width / 2);
+      const destY = (Dimensions.get('window').height / 2) - (height / 2);
+
+      // 2. Start the transition
+      setIsAnimatingTransition(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // 3. Animate the hero FAB from the FAB's position to the center of the screen
+      Animated.timing(heroTransitionAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.bezier(0.42, 0, 0.58, 1),
+        useNativeDriver: true,
+      }).start(() => {
+        // 5. When the animation finishes, start the analysis
         const detectedIngredients = preProcessedIngredients || [];
         const marketingResults = evaluateMarketingClaims(detectedIngredients, selectedClaims, productType);
         
         const { conflicts, user_specific_alerts } = analyzeIngredientInteractions(
-            detectedIngredients, 
-            allIngredients,
-            userProfile?.settings?.allergies || [], 
-            userProfile?.settings?.conditions || [], 
-            userProfile?.settings?.skinType, 
-            userProfile?.settings?.scalpType
+            detectedIngredients, allIngredients,
+            userProfile?.settings?.allergies || [], userProfile?.settings?.conditions || [], 
+            userProfile?.settings?.skinType, userProfile?.settings?.scalpType
         );
         
         const resultData = calculateReliabilityScore_V13(
@@ -1097,9 +1531,65 @@ const handlePictureTaken = (photo) => {
         };
 
         setFinalAnalysis(fullAnalysisData);
+        
+        // Hide the hero element, reset animations, and transition to the final page
+        setIsAnimatingTransition(false);
+        heroTransitionAnim.setValue(0);
         changeStep(4);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1500);
+      });
+
+      // 4. In the middle of the hero animation, switch the background to the loading step
+      setTimeout(() => {
+        changeStep(3);
+      }, 200);
+    });
+  };
+
+  const runBackendAnalysis = async () => {
+    // This timeout gives the user a moment to see the loading animation
+    // before the (potentially instant) analysis completes.
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Perform all the data analysis
+    const detectedIngredients = preProcessedIngredients || [];
+    const marketingResults = evaluateMarketingClaims(detectedIngredients, selectedClaims, productType);
+    const { conflicts, user_specific_alerts } = analyzeIngredientInteractions(
+        detectedIngredients, allIngredients,
+        userProfile?.settings?.allergies || [], userProfile?.settings?.conditions || [],
+        userProfile?.settings?.skinType, userProfile?.settings?.scalpType
+    );
+    const resultData = calculateReliabilityScore_V13(
+        detectedIngredients, allIngredients, conflicts,
+        user_specific_alerts, marketingResults, productType
+    );
+    const fullAnalysisData = {
+      ...resultData,
+      detected_ingredients: detectedIngredients,
+      conflicts,
+      marketing_results: marketingResults,
+      product_type: productType,
+      user_specific_alerts,
+      sunscreen_analysis: productType === 'sunscreen' ? analyzeSunscreen(detectedIngredients) : null
+    };
+
+    // Set the final state so the result page can render
+    setFinalAnalysis(fullAnalysisData);
+
+    // Trigger the final reveal animation
+    Animated.timing(revealAnim, {
+      toValue: 1,
+      duration: 500, // Speed of the reveal
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      // Once the reveal is complete, finalize the state
+      setStep(4);
+      setIsAnimatingTransition(false);
+      heroTransitionAnim.setValue(0);
+      pulseAnim.setValue(0);
+      revealAnim.setValue(0);
+    });
   };
   
   const handleSaveProduct = async () => {
@@ -1123,26 +1613,111 @@ const handlePictureTaken = (photo) => {
   };
 
   const resetFlow = () => {
-      setStep(0); setFinalAnalysis(null); setOcrText(''); 
+    setIsGeminiLoading(false);
+    setStep(0); setFinalAnalysis(null); setOcrText(''); 
       setPreProcessedIngredients([]); setSelectedClaims([]);
       setShowSwipeHint(true);
+      setSearchQuery('');
       setProductName(''); setShowManualTypeGrid(false); setManualIngredients('');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const renderGeminiLoading = () => {
+    // Reuse the pulsing text opacity animation from the parent component
+    const textOpacity = loadingTextOpacityAnim;
+
+    return (
+        <View style={styles.contentContainer}>
+            <StaggeredItem index={0}>
+                <View style={styles.flaskAnimationContainer}>
+                    <Svg width={180} height={180} viewBox="0 0 100 100">
+                        {/* Bubbles are rendered first to appear behind the flask outline */}
+                        {loadingBubbles.map(bubble => <Bubble key={bubble.id} {...bubble} />)}
+                        
+                        {/* Flask Outline SVG Path */}
+                        <Path
+                            d="M 50 95 L 40 95 A 10 10 0 0 1 30 85 L 30 60 A 20 20 0 0 1 50 40 A 20 20 0 0 1 70 60 L 70 85 A 10 10 0 0 1 60 95 L 50 95 M 50 40 L 50 5"
+                            stroke={COLORS.primary}
+                            strokeWidth="3"
+                            fill="rgba(178, 216, 180, 0.05)" // A very faint, glowing fill
+                            strokeLinecap="round"
+                        />
+                    </Svg>
+                </View>
+                <Animated.Text style={[styles.loadingText, { opacity: textOpacity, marginTop: 20 }]}>
+                    جاري تحليل الصورة بالذكاء الاصطناعي...
+                </Animated.Text>
+                <Text style={[styles.heroSub, { marginTop: 8 }]}>
+                    قد تستغرق هذه العملية بضع لحظات
+                </Text>
+            </StaggeredItem>
+        </View>
+    );
+  };
+
   // --- RENDER FUNCTIONS ---
-  const renderInputStep = () => (
-    <GlassCard>
-      <View style={styles.contentContainer}>
-          <View style={styles.heroSection}><View style={styles.heroIcon}><FontAwesome5 name="search" size={40} color={COLORS.primary} /></View><Text style={styles.heroTitle}>فحص ذكي للمنتجات</Text><Text style={styles.heroSub}>محرك V13: تحليل كيميائي دقيق بلمسة واحدة.</Text></View>
-          <View style={styles.btnRow}>
-            <PressableScale style={{flex: 1}} onPress={() => handleImageSelection('camera')}><View style={styles.btnCard}><FontAwesome5 name="camera" size={28} color={COLORS.primary} /><Text style={styles.btnText}>كاميرا</Text></View></PressableScale>
-            <PressableScale style={{flex: 1}} onPress={() => handleImageSelection('gallery')}><View style={styles.btnCard}><FontAwesome5 name="images" size={28} color={COLORS.info} /><Text style={styles.btnText}>معرض</Text></View></PressableScale>
-          </View>
-          <TouchableOpacity onPress={() => router.back()} style={{marginTop: 20}}><Text style={styles.backLinkText}>العودة للرئيسية</Text></TouchableOpacity>
-      </View>
-    </GlassCard>
-  );
+  const renderInputStep = () => {
+    return (
+        <View style={styles.contentContainer}>
+            <StaggeredItem index={0} style={styles.heroSection}>
+                <Animated.View style={{ transform: [{ scale: introIconScale }] }}>
+                    <View style={styles.heroIcon}>
+                        <FontAwesome5 name="search" size={40} color={COLORS.primary} />
+                    </View>
+                </Animated.View>
+            </StaggeredItem>
+
+            <StaggeredItem index={1}>
+                <Text style={styles.heroTitle}>حلل مكونات منتجك الآن</Text>
+            </StaggeredItem>
+
+            {/* --- MODIFIED TYPEWRITER USAGE --- */}
+            <Typewriter
+                texts={[
+                    "هل هذا المنتج آمن وفعال حقاً؟",
+                    "دع وثيق يرشدك.",
+                    "تحليل كيميائي بلمسة واحدة.",
+                    "اكتشف أسرار منتجات العناية الخاصة بك.",
+                    "مدعوم بالذكاء الاصطناعي لفهم أعمق.",
+                  
+                ]}
+                typingSpeed={80}
+                deletingSpeed={40}
+                pauseDuration={2000} // Increased pause time
+                style={{
+                    container: styles.heroSubContainer, // Pass a container style
+                    text: styles.heroSub, // Pass the text style
+                }}
+            />
+
+            {/* --- Floating Buttons (No changes here) --- */}
+            <View style={styles.floatingBtnContainer}>
+                <FloatingButton
+                    index={0}
+                    icon="camera"
+                    label="كاميرا"
+                    color={COLORS.primary}
+                    glowColor={COLORS.primaryGlow}
+                    onPress={() => handleImageSelection('camera')}
+                />
+                <FloatingButton
+                    index={1}
+                    icon="images"
+                    label="معرض الصور"
+                    color={COLORS.info}
+                    glowColor={`${COLORS.info}90`}
+                    onPress={() => handleImageSelection('gallery')}
+                />
+            </View>
+            
+            <StaggeredItem index={4} style={{ marginTop: 30 }}>
+                 <TouchableOpacity onPress={() => router.back()}>
+                    <Text style={styles.backLinkText}>العودة للرئيسية</Text>
+                 </TouchableOpacity>
+            </StaggeredItem>
+        </View>
+    );
+  };
 
   const renderReviewStep = () => (
     <GlassCard><View style={styles.contentContainer}>
@@ -1155,21 +1730,169 @@ const handlePictureTaken = (photo) => {
       <StaggeredItem index={2} style={{width: '100%', marginTop: 20}}><PressableScale onPress={() => changeStep(2)} style={styles.mainBtn}><Text style={styles.mainBtnText}>تأكيد والمتابعة للادعاءات</Text><FontAwesome5 name="arrow-right" color={COLORS.darkGreen} size={18} /></PressableScale></StaggeredItem>
     </View></GlassCard>
   );
-
+  
   const renderClaimsStep = () => {
-    const claimsForType = getClaimsByProductType(productType);
+    // --- Fuzzy Search Logic (no changes here) ---
+    const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
+    
+    // --- ANIMATION & LAYOUT CONSTANTS ---
+    const EXPANDED_HEADER_HEIGHT = 160;
+    const COLLAPSED_HEADER_HEIGHT = Platform.OS === 'android' ? 60 : 90;
+    const SEARCH_BAR_HEIGHT = 70;
+    const HEADER_ANIMATION_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
+
+    // --- ANIMATION INTERPOLATIONS ---
+    const headerTranslateY = scrollY.interpolate({
+      inputRange: [0, HEADER_ANIMATION_DISTANCE],
+      outputRange: [0, -HEADER_ANIMATION_DISTANCE],
+      extrapolate: 'clamp',
+    });
+
+    const expandedHeaderOpacity = scrollY.interpolate({
+      inputRange: [0, HEADER_ANIMATION_DISTANCE / 2],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    });
+
+    const collapsedHeaderOpacity = scrollY.interpolate({
+      inputRange: [HEADER_ANIMATION_DISTANCE / 2, HEADER_ANIMATION_DISTANCE],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    });
+
+    const fabTranslateY = fabAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [150, 0],
+    });
+    const fabScale = fabPulseAnim.interpolate({
+      inputRange: [0,1],
+      outputRange: [1, 1.1]
+    });
+
+    // --- RENDER HELPER ---
+    const renderClaimItem = ({ item, index }) => {
+      const isSelected = selectedClaims.includes(item);
+      return (
+        <StaggeredItem index={index}>
+          <PressableScale onPress={() => {
+            Haptics.selectionAsync();
+            setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
+          }}>
+            <BlurView  intensity={30} tint="dark" style={[styles.claimItem, isSelected && styles.claimItemActive]} renderToHardwareTextureAndroid>
+              <AnimatedCheckbox isSelected={isSelected} />
+              <Text style={styles.claimItemText}>{item}</Text>
+            </BlurView>
+          </PressableScale>
+        </StaggeredItem>
+      );
+    };
+
     return (
-      <GlassCard><View style={styles.contentContainer}>
-        <StaggeredItem index={0}><Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text><Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة لنتحقق من مصداقيتها.</Text></StaggeredItem>
-        <ScrollView contentContainerStyle={styles.claimsContainer}>{claimsForType.map((claim, index) => (
-            <StaggeredItem index={index+1} key={claim}><PressableScale onPress={() => setSelectedClaims(prev => prev.includes(claim) ? prev.filter(c => c !== claim) : [...prev, claim])} style={[styles.claimChip, selectedClaims.includes(claim) && styles.claimChipActive]}>{selectedClaims.includes(claim) && <FontAwesome5 name="check-circle" color={COLORS.darkGreen} size={14} style={{marginRight: 8}}/>}<Text style={[styles.claimText, selectedClaims.includes(claim) && {color: COLORS.darkGreen}]}>{claim}</Text></PressableScale></StaggeredItem>
-        ))}</ScrollView>
-        <StaggeredItem index={claimsForType.length + 1} style={{width: '100%', marginTop: 20}}><PressableScale onPress={executeAnalysis} style={styles.mainBtn}><Text style={styles.mainBtnText}>بدء التحليل النهائي</Text><FontAwesome5 name="flask" color={COLORS.darkGreen} size={18} /></PressableScale></StaggeredItem>
-      </View></GlassCard>
-    )
+      <View style={{ flex: 1, width: '100%' }}>
+        {/* The list is the base layer and scrolls underneath the fixed header */}
+        <Animated.FlatList
+          data={displayedClaims}
+          renderItem={renderClaimItem}
+          keyExtractor={(item) => item}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+            paddingBottom: 120, paddingHorizontal: 10, gap: 12
+          }}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+        />
+        
+        {/* --- MAIN FIXED HEADER BLOCK (Sits on top of the list) --- */}
+        <Animated.View style={[styles.fixedHeaderBlock, { 
+            height: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+            transform: [{ translateY: headerTranslateY }],
+        }]}>
+            {/* The Unified Background: Hides the list scrolling behind it */}
+            <BlurView  intensity={80} tint="dark" style={styles.headerBackdrop} />
+
+            {/* Large Header Content (Fades out) */}
+            <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
+                <Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text>
+                <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
+            </Animated.View>
+
+            {/* Collapsed Header Bar (Fades in) */}
+            <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
+                <SafeAreaView>
+                  <View style={styles.headerContent}>
+                    <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                        <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+                    </PressableScale>
+                    <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
+                    <View style={{width: 40}} />
+                  </View>
+                </SafeAreaView>
+            </Animated.View>
+
+            {/* Search Bar (Sits statically at the bottom of the header block) */}
+            <View style={styles.claimsSearchContainer}>
+                <View style={styles.searchInputWrapper}>
+                    <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.claimsSearchInput}
+                        placeholder="ابحث عن إدعاء..."
+                        placeholderTextColor={COLORS.textDim}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
+            </View>
+        </Animated.View>
+
+        {/* --- Animated Small, Round FAB --- */}
+        <View 
+            style={styles.fabContainer}
+        >
+            {/* ▼▼▼ THE FIX IS HERE ▼▼▼ */}
+            <Animated.View
+                ref={fabRef} // <-- MODIFICATION: ref is now on the measurable Animated.View
+                style={{
+                    transform: [{ translateY: fabTranslateY }],
+                    opacity: isAnimatingTransition ? 0 : 1 // <-- MODIFICATION: Opacity is also here now
+                }}
+            >
+                <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+                    <PressableScale
+                        // <-- MODIFICATION: ref and opacity are removed from here
+                        onPress={executeAnalysis} 
+                        style={styles.fab}
+                    >
+                        <FontAwesome5 name="flask" color={COLORS.darkGreen} size={22} />
+                    </PressableScale>
+                </Animated.View>
+            </Animated.View>
+            {/* ▲▲▲ END OF FIX ▲▲▲ */}
+        </View>
+      </View>
+    );
   };
   
-  const renderLoading = () => ( <View style={styles.loadingContainer}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={styles.loadingText}>جاري تشغيل محرك V13...</Text></View> );
+  // --- ▼▼▼ FULLY REVISED renderLoading FUNCTION ▼▼▼ ---
+  const renderLoading = () => {
+    return ( 
+      <View style={styles.loadingContainer}>
+          <Animated.Text style={[styles.loadingText, { 
+              opacity: heroTransitionAnim.interpolate({
+                inputRange: [0.5, 1], // Fade in text during the second half of the transition
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+              })
+          }]}>
+              جاري تحليل التركيبة...
+          </Animated.Text>
+      </View>
+    );
+  };
+
 
   const renderResultStep = () => {
       if(!finalAnalysis) return null;
@@ -1229,25 +1952,51 @@ const handlePictureTaken = (photo) => {
   
   return (
     <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-        <ImageBackground source={{ uri: BG_IMAGE }} style={StyleSheet.absoluteFill} resizeMode="cover">
+        {/* ... StatusBar and ImageBackground ... */}
+        <ImageBackground 
+            source={{ uri: BG_IMAGE }} 
+            style={StyleSheet.absoluteFill} 
+            resizeMode="cover"
+            blurRadius={step === 0 ? 10 : 0} 
+        >
             <View style={styles.darkOverlay} />
             {particles.map((p) => <Spore key={p.id} {...p} />)}
-            <View style={styles.header}>{step > 0 && <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}><Ionicons name="arrow-back" size={22} color={COLORS.text} /></PressableScale>}<Text style={styles.headerTitle}>محرك V13</Text>{step > 0 ? <View style={{width: 40}}/> : <View/>}</View>
-            <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-                <Animated.View style={{ opacity: contentOpacity, width: '100%'}}>
-                    {step === 0 && renderInputStep()}
-                    {step === 1 && renderReviewStep()}
-                    {step === 2 && renderClaimsStep()}
-                    {step === 3 && renderLoading()}
-                    {step === 4 && renderResultStep()}
+
+            {/* --- MODIFICATION STARTS HERE --- */}
+            {step !== 2 && !isAnimatingTransition && (
+              <View style={styles.header}>
+                {/* Conditionally render the blur layer BEHIND the header content */}
+                {step === 0 && <BlurView  intensity={50} tint="dark" style={styles.headerBlur} />}
+                
+                {step > 0 && (
+                  <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+                  </PressableScale>
+                )}
+                <Text style={styles.headerTitle}>محرك V13</Text>
+                {step > 0 ? <View style={{width: 40}}/> : <View/>}
+              </View>
+            )}
+
+            {step === 2 ? (
+                <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+                    {renderClaimsStep()}
                 </Animated.View>
-            </ScrollView>
+            ) : (
+              <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                  <Animated.View style={{ opacity: contentOpacity, width: '100%'}}>
+                      {step === 0 && renderInputStep()}
+                      {step === 1 && renderReviewStep()}
+                      {step === 3 && (isGeminiLoading ? renderGeminiLoading() : renderLoading())}
+                      {step === 4 && renderResultStep()}
+                  </Animated.View>
+              </ScrollView>
+            )}
         </ImageBackground>
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <BlurView intensity={50} tint="dark" style={styles.modalOverlay} renderToHardwareTextureAndroid>
-              <Pressable style={StyleSheet.absoluteFill} onPress={() => setSaveModalVisible(false)} />
+            <BlurView  intensity={50} tint="dark" style={styles.modalOverlay} renderToHardwareTextureAndroid>
+              <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
               <Animated.View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>حفظ المنتج</Text>
                   <Text style={styles.modalSubtitle}>أعطِ هذا المنتج اسماً يسهل تذكره.</Text>
@@ -1258,11 +2007,58 @@ const handlePictureTaken = (photo) => {
               </Animated.View>
             </BlurView>
         </Modal>
+        
         <CustomCameraModal
-  isVisible={isCameraViewVisible}
-  onClose={() => setCameraViewVisible(false)}
-  onPictureTaken={handlePictureTaken}
-/>
+          isVisible={isCameraViewVisible}
+          onClose={() => setCameraViewVisible(false)}
+          onPictureTaken={handlePictureTaken}
+        />
+
+        {isAnimatingTransition && (
+          <Animated.View
+            style={[
+              styles.heroFab,
+              {
+                top: fabMetrics.y,
+                left: fabMetrics.x,
+                width: fabMetrics.width,
+                height: fabMetrics.height,
+                transform: [
+                  {
+                    translateX: heroTransitionAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, (width / 2) - fabMetrics.x - (fabMetrics.width / 2)],
+                    }),
+                  },
+                  {
+                    translateY: heroTransitionAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, (height / 2) - fabMetrics.y - (fabMetrics.height / 2)],
+                    }),
+                  },
+                  {
+                    scale: heroTransitionAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 3],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Animated.View style={[styles.pulsingRing, {
+              borderColor: COLORS.primaryGlow,
+              transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 2.5] }) }],
+              opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 0] })
+            }]} />
+             <Animated.View style={[styles.pulsingRing, {
+              borderColor: COLORS.primary,
+              transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 3.5] }) }],
+              opacity: pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.5, 0] })
+            }]} />
+            <FontAwesome5 name="flask" color={COLORS.darkGreen} size={22} />
+          </Animated.View>
+        )}
     </SafeAreaView>
   );
 }
@@ -1290,6 +2086,9 @@ const styles = StyleSheet.create({
       right: 0,
       zIndex: 100,
     },
+    headerBlur: { // --- ADD THIS NEW STYLE ---
+      ...StyleSheet.absoluteFillObject,
+    },
     headerTitle: { 
       fontFamily: 'Tajawal-ExtraBold', 
       fontSize: 22, 
@@ -1308,6 +2107,7 @@ const styles = StyleSheet.create({
       paddingHorizontal: 20, 
       paddingBottom: 40,
       paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+      justifyContent: 'center'
     },
     contentContainer: { 
       width: '100%', 
@@ -1333,10 +2133,11 @@ const styles = StyleSheet.create({
       width: 100, 
       height: 100, 
       borderRadius: 50, 
-      backgroundColor: 'rgba(255,255,255,0.05)', 
+      backgroundColor: 'rgba(26, 59, 37, 0.5)', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      marginBottom: 20 
+      borderWidth: 1,
+      borderColor: 'rgba(178, 216, 180, 0.3)',
     },
     heroTitle: { 
       fontFamily: 'Tajawal-ExtraBold', 
@@ -1345,35 +2146,51 @@ const styles = StyleSheet.create({
       textAlign: 'center', 
       marginBottom: 8 
     },
+    // ▼▼▼ ADD A CONTAINER STYLE ▼▼▼
+    heroSubContainer: {
+        minHeight: 44, // Set height for 2 lines to prevent layout jump
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+    },
     heroSub: { 
       fontFamily: 'Tajawal-Regular', 
       fontSize: 15, 
       color: COLORS.textDim, 
       textAlign: 'center', 
-      lineHeight: 22 
+      lineHeight: 22,
+      minHeight: 22, // Prevents layout shift while typing
     },
-    btnRow: { 
-      flexDirection: 'row', 
-      gap: 15, 
-      width: '100%', 
-      paddingHorizontal: 10 
-    },
-    btnCard: { 
-      flex: 1, 
-      height: 130, 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      gap: 12,
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      borderRadius: 16,
+    floatingBtnContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'flex-start', // Align to top to account for floating
+      width: '100%',
+      marginTop: 60, // Increased space for the buttons to float
+      marginBottom: 20,
+  },
+  glowEffect: {
+      position: 'absolute',
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+  },
+  floatingBtnCore: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: COLORS.glassBorder,
-    },
-    btnText: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 16, 
-      color: COLORS.text 
-    },
+      overflow: 'hidden',
+  },
+  floatingBtnLabel: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.text,
+      marginTop: 15,
+  },
     backLinkText: { 
       color: COLORS.textDim, 
       fontFamily: 'Tajawal-Regular', 
@@ -1447,46 +2264,160 @@ const styles = StyleSheet.create({
     },
   
     // --- Step 2: Claims Step ---
-    claimsContainer: { 
-      flexDirection: 'row', 
-      flexWrap: 'wrap', 
-      justifyContent: 'center', 
-      gap: 10, 
-      marginTop: 20,
-      paddingHorizontal: 10,
-    },
-    claimChip: { 
-      paddingHorizontal: 16, 
-      paddingVertical: 12, 
-      backgroundColor: 'rgba(255,255,255,0.08)', 
-      borderRadius: 25, 
-      flexDirection: 'row-reverse', 
+    fixedHeaderBlock: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+  },
+  headerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 8, 10, 0.85)', // Opaque background to hide list
+  },
+  expandedHeader: {
+      height: 160,
       alignItems: 'center',
+      justifyContent: 'center',
+  },
+  collapsedHeader: {
+      position: 'absolute',
+      top: 40,
+      left: 0,
+      right: 0,
+      height: Platform.OS === 'android' ? 20 : 90,
+      justifyContent: 'flex-end',
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingBottom: 4,
+  },
+  collapsedHeaderText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.text,
+  },
+  claimsSearchContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 70,
+      paddingHorizontal: 15,
+      justifyContent: 'center',
+  },
+  searchInputWrapper: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-    },
-    claimChipActive: { 
-      backgroundColor: COLORS.primary,
+      borderColor: COLORS.glassBorder,
+      paddingHorizontal: 15,
+  },
+  searchIcon: {
+      marginLeft: 10,
+  },
+  claimsSearchInput: {
+      flex: 1,
+      height: 50,
+      color: COLORS.text,
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 15,
+      textAlign: 'right',
+  },
+  claimItem: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      padding: 20,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: COLORS.glassBorder,
+      overflow: 'hidden',
+      gap: 15,
+  },
+  claimItemActive: {
       borderColor: COLORS.primaryDark,
-    },
-    claimText: { 
+      backgroundColor: 'rgba(178, 216, 180, 0.1)',
+  },
+  claimItemText: {
       fontFamily: 'Tajawal-Bold', 
-      fontSize: 14, 
-      color: COLORS.text 
-    },
+      fontSize: 16, 
+      color: COLORS.text,
+      flex: 1,
+      textAlign: 'right',
+  },
+  checkboxBase: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: COLORS.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  checkboxFill: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: COLORS.primary,
+      borderRadius: 14,
+  },
+  fabContainer: {
+      position: 'absolute',
+      bottom: Platform.OS === 'android' ? 70 : 90,
+      alignSelf: 'center',
+      zIndex: 20,
+  },
+  fab: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: COLORS.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: COLORS.primaryGlow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.6,
+      shadowRadius: 8,
+  },
+  heroFab: {
+    position: 'absolute',
+    zIndex: 1000,
+    backgroundColor: COLORS.primary,
+    borderRadius: 32, // Should match your fab's borderRadius
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulsingRing: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 32, // Should match your fab's borderRadius
+    borderWidth: 3,
+  },
   
     // --- Step 3: Loading ---
     loadingContainer: {
       flex: 1,
-      height: height * 0.7,
+      alignItems: 'center',
       justifyContent: 'center',
-      alignItems: 'center'
+      gap: 30,
+    },
+    flaskAnimationContainer: { // ADD THIS
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 200,
     },
     loadingText: {
       color: COLORS.text,
-      marginTop: 15,
       fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
+      fontSize: 20,
+      textAlign: 'center',
     },
   
     // --- Step 4: Results ---
@@ -1880,6 +2811,7 @@ ingWarningText: {
       position: 'absolute', // Sits on top of the track
       left: 0,
     },
+    // --- Camera Modal (Enhanced) ---
     permissionContainer: {
       flex: 1,
       backgroundColor: '#05080a',
@@ -1915,71 +2847,76 @@ ingWarningText: {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 20,
-      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 50,
-      paddingBottom: 15,
-      borderBottomLeftRadius: 16,
-      borderBottomRightRadius: 16,
-      overflow: 'hidden',
+      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 55,
+      paddingBottom: 20,
     },
     cameraTitle: {
       fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
+      fontSize: 20,
       color: COLORS.text,
     },
     cameraCloseButton: {
       padding: 5,
     },
-    guideContainer: {
+    cameraScannerContainer: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingHorizontal: '5%',
     },
-    guideBox: {
-      width: '90%',
-      aspectRatio: 1.6 / 1,
-      backgroundColor: 'rgba(0,0,0,0.2)',
-      borderRadius: 24,
-      borderWidth: 2,
-      position: 'relative',
-    },
-    guideText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
+    cameraGuideText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
       color: COLORS.text,
       backgroundColor: 'rgba(0,0,0,0.5)',
-      paddingHorizontal: 15,
-      paddingVertical: 8,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
       borderRadius: 20,
-      marginTop: 20,
       overflow: 'hidden',
+      position: 'absolute',
+      top: '20%',
     },
-    guideCornersTL: { position: 'absolute', top: -2, left: -2, width: 40, height: 40, borderTopWidth: 4, borderLeftWidth: 4, borderColor: '#FFF' },
-    guideCornersTR: { position: 'absolute', top: -2, right: -2, width: 40, height: 40, borderTopWidth: 4, borderRightWidth: 4, borderColor: '#FFF' },
-    guideCornersBL: { position: 'absolute', bottom: -2, left: -2, width: 40, height: 40, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: '#FFF' },
-    guideCornersBR: { position: 'absolute', bottom: -2, right: -2, width: 40, height: 40, borderBottomWidth: 4, borderRightWidth: 4, borderColor: '#FFF' },
+    cornerBracket: {
+      position: 'absolute',
+      width: 40,
+      height: 40,
+      borderColor: COLORS.primary,
+      borderWidth: 4,
+    },
+    topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
+    topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
+    bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
+    bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
     cameraFooter: {
-      paddingTop: 20,
-      paddingBottom: Platform.OS === 'android' ? 20 : 40,
+      paddingTop: 30,
+      paddingBottom: Platform.OS === 'android' ? 30 : 50,
       alignItems: 'center',
       justifyContent: 'center',
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
-      overflow: 'hidden',
+    },
+    shutterPulseRing: {
+      position: 'absolute',
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 2,
+      borderColor: COLORS.primaryGlow,
     },
     shutterButtonOuter: {
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      backgroundColor: 'rgba(255,255,255,0.3)',
+      width: 74,
+      height: 74,
+      borderRadius: 37,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       justifyContent: 'center',
       alignItems: 'center',
     },
     shutterButtonInner: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: COLORS.text,
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: COLORS.primary,
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 2,
+      borderColor: COLORS.darkGreen,
     },
 });
