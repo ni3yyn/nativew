@@ -5,7 +5,7 @@ import {
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
   RefreshControl, Easing, SafeAreaView, FlatList
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -427,7 +427,7 @@ const PressableScale = ({ onPress, children, style, disabled }) => {
 const GlassCard = ({ children, style, delay = 0 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  return ( <Animated.View style={[{ opacity }, style]}><BlurView  intensity={30}  tint="dark" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
+  return ( <Animated.View style={[{ opacity }, style]}><BlurView  intensity={30}  tint="extraLight" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
@@ -757,7 +757,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <BlurView  intensity={30} tint="dark" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+            <BlurView  intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
         {/* Header */}
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
@@ -912,7 +912,7 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
             flash="off"
         >
           <View style={styles.cameraOverlay}>
-            <BlurView  intensity={50} tint="dark" style={styles.cameraHeader}>
+            <BlurView  intensity={50} tint="extraLight" style={styles.cameraHeader}>
               <Text style={styles.cameraTitle}>فحص المكونات</Text>
               <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
                 <Ionicons name="close" size={24} color={'#FFFFFF'} />
@@ -940,7 +940,7 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
               </Animated.View>
             </View>
 
-            <BlurView  intensity={80} tint="dark" style={styles.cameraFooter}>
+            <BlurView  intensity={80} tint="extraLight" style={styles.cameraFooter}>
                 <Animated.View style={[styles.shutterPulseRing, { transform: [{ scale: pulseAnim }] }]} />
                 <View style={styles.shutterButtonOuter}>
                     <PressableScale onPress={handleCapture} disabled={isCapturing || !isCameraReady} style={styles.shutterButtonInner}>
@@ -1163,7 +1163,7 @@ const FloatingButton = ({ icon, label, color, glowColor, onPress, index }) => {
       <Pressable onPress={() => { if(onPress) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut}>
           <Animated.View style={{ alignItems: 'center', transform: [{ translateY }, { scale }] }}>
               <Animated.View style={[styles.glowEffect, { backgroundColor: glowColor, transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
-              <BlurView  intensity={30} tint="dark" style={styles.floatingBtnCore} renderToHardwareTextureAndroid>
+              <BlurView  intensity={30} tint="extraLight" style={styles.floatingBtnCore} renderToHardwareTextureAndroid>
                   <FontAwesome5 name={icon} size={28} color={color} />
               </BlurView>
               <Text style={styles.floatingBtnLabel}>{label}</Text>
@@ -1778,7 +1778,7 @@ const handlePictureTaken = (photo) => {
             Haptics.selectionAsync();
             setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
           }}>
-            <BlurView  intensity={30} tint="dark" style={[styles.claimItem, isSelected && styles.claimItemActive]} renderToHardwareTextureAndroid>
+            <BlurView  intensity={30} tint="extraLight" style={[styles.claimItem, isSelected && styles.claimItemActive]} renderToHardwareTextureAndroid>
               <AnimatedCheckbox isSelected={isSelected} />
               <Text style={styles.claimItemText}>{item}</Text>
             </BlurView>
@@ -1812,7 +1812,7 @@ const handlePictureTaken = (photo) => {
             transform: [{ translateY: headerTranslateY }],
         }]}>
             {/* The Unified Background: Hides the list scrolling behind it */}
-            <BlurView  intensity={80} tint="dark" style={styles.headerBackdrop} />
+            <BlurView  intensity={80} tint="extraLight" style={styles.headerBackdrop} />
 
             {/* Large Header Content (Fades out) */}
             <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
@@ -1966,7 +1966,7 @@ const handlePictureTaken = (photo) => {
             {step !== 2 && !isAnimatingTransition && (
               <View style={styles.header}>
                 {/* Conditionally render the blur layer BEHIND the header content */}
-                {step === 0 && <BlurView  intensity={50} tint="dark" style={styles.headerBlur} />}
+                {step === 0 && <BlurView  intensity={50} tint="extraLight" style={styles.headerBlur} />}
                 
                 {step > 0 && (
                   <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
@@ -1995,7 +1995,7 @@ const handlePictureTaken = (photo) => {
         </ImageBackground>
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <BlurView  intensity={50} tint="dark" style={styles.modalOverlay} renderToHardwareTextureAndroid>
+            <BlurView  intensity={50} tint="extraLight" style={styles.modalOverlay} renderToHardwareTextureAndroid>
               <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
               <Animated.View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>حفظ المنتج</Text>
