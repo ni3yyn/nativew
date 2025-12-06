@@ -6,6 +6,7 @@ import {
   RefreshControl, Keyboard, Easing, I18nManager
 } from 'react-native';
 import { TouchableWithoutFeedback } from 'react-native'; 
+import { PanResponder } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons, Feather } from '@expo/vector-icons';
@@ -806,186 +807,252 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh }) => {
     );
   };
 
-const AnalysisSection = ({ products }) => {
-    const [weather, setWeather] = useState(null);
-    const [weatherLoading, setWeatherLoading] = useState(true);
-    const weatherAnim = useRef(new Animated.Value(0)).current;
-    const cloudAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.spring(weatherAnim, {
-                toValue: 1,
-                friction: 8,
-                tension: 40,
-                useNativeDriver: true,
-                delay: 300
-            }),
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(cloudAnim, {
-                        toValue: 1,
-                        duration: 3000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(cloudAnim, {
-                        toValue: 0,
-                        duration: 3000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true
-                    })
-                ])
-            ).start()
-        ]).start();
-
-        (async () => {
-            try {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') { setWeatherLoading(false); return; }
-                const loc = await Location.getCurrentPositionAsync({});
-                const apiKey = "99208a700b6e4ee8b26212752251002"; 
-                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${loc.coords.latitude},${loc.coords.longitude}&lang=ar`);
-                const data = await res.json();
-                setWeather({
-                    temp: data.current.temp_c,
-                    text: data.current.condition.text,
-                    uv: data.current.uv,
-                    humidity: data.current.humidity,
-                });
-            } catch (e) { 
-                console.log("Weather fetch error:", e);
-            } finally { 
-                setWeatherLoading(false); 
-            }
-        })();
-    }, []);
-
-    const score = useMemo(() => {
-        if (products.length === 0) return 0;
-        const hasSPF = products.some(p => p.analysisData?.product_type === 'sunscreen');
-        const hasCleanser = products.some(p => p.analysisData?.product_type === 'cleanser');
-        const hasMoisturizer = products.some(p => p.analysisData?.product_type === 'lotion_cream');
-        let base = 50;
-        if (hasSPF) base += 20;
-        if (hasCleanser) base += 15;
-        if (hasMoisturizer) base += 15;
-        return Math.min(100, base);
-    }, [products]);
-
-    // Dynamic Insights
-    const insights = [];
-    if (products.length > 0) {
-        if (!products.some(p => p.analysisData?.product_type === 'sunscreen')) {
-            insights.push({type:'danger', msg:'خطر: لا يوجد واقي شمس!'});
-        }
-        if (score > 80) {
-            insights.push({type:'success', msg:'توازن ممتاز في المنتجات.'});
-        }
-        if (products.filter(p => p.analysisData?.product_type === 'treatment').length > 2) {
-            insights.push({type:'warning', msg:'كثرة استخدام المنتجات العلاجية قد تسبب تهيج.'});
-        }
-    }
-
-    const cloudTranslate = cloudAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-5, 5]
-    });
-
-    const weatherScale = weatherAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.9, 1]
-    });
-
+  const InsightCard = React.memo(({ insight, onSelect, onDismiss }) => {
+    const isDismissible = insight.severity === 'good';
+    const severityStyles = {
+      critical: { icon: 'shield-alt', color: COLORS.danger, bg: 'rgba(239, 68, 68, 0.1)' },
+      warning: { icon: 'exclamation-triangle', color: COLORS.warning, bg: 'rgba(245, 158, 11, 0.1)' },
+      good: { icon: 'check-circle', color: COLORS.success, bg: 'rgba(34, 197, 94, 0.1)' },
+    };
+    const style = severityStyles[insight.severity] || severityStyles.warning;
+  
     return (
-        <View>
-            {/* Animated Weather Widget */}
-            <Animated.View style={[
-                styles.weatherWidget,
-                { 
-                    transform: [
-                        { scale: weatherScale },
-                        { translateX: cloudTranslate }
-                    ] 
-                }
-            ]}>
-                {weatherLoading ? (
-                    <ActivityIndicator color={COLORS.primary} />
-                ) : weather ? (
-                    <View style={{flexDirection:'row-reverse', justifyContent:'space-between', alignItems:'center', width:'100%'}}>
-                        <View>
-                            <View style={{flexDirection:'row-reverse', alignItems:'center', gap:8}}>
-                                <Text style={styles.weatherTemp}>{weather.temp}°</Text>
-                                <View style={{
-                                    backgroundColor: weather.uv>5 ? COLORS.danger : weather.uv>3 ? COLORS.warning : COLORS.success, 
-                                    paddingHorizontal:8, 
-                                    paddingVertical:4, 
-                                    borderRadius:6
-                                }}>
-                                    <Text style={{fontSize:10, fontFamily:'Tajawal-Bold', color:'#000'}}>
-                                        UV {weather.uv}
-                                    </Text>
-                                </View>
-                            </View>
-                            <Text style={styles.weatherText}>
-                                {weather.text} • رطوبة {weather.humidity}%
-                            </Text>
-                        </View>
-                        <Animated.View style={{ transform: [{ translateX: cloudTranslate }] }}>
-                            <FontAwesome5 name="cloud-sun" size={36} color={COLORS.warning} />
-                        </Animated.View>
-                    </View>
-                ) : (
-                    <View style={{flexDirection:'row-reverse', alignItems:'center', gap:10}}>
-                        <FontAwesome5 name="location-slash" size={20} color={COLORS.textDim} />
-                        <Text style={styles.weatherText}>تفعيل الموقع لمعرفة تأثير الطقس</Text>
-                    </View>
-                )}
-            </Animated.View>
-
-            {/* Score Card */}
-            <ContentCard style={styles.glassPanel}>
-                <View style={styles.scoreRow}>
-                    <View style={{flex:1, gap: 8}}>
-                        <Text style={styles.panelTitle}>صحة الروتين</Text>
-                        <Text style={styles.panelDesc}>
-                            {score > 80 ? 'روتينك مثالي! توازن رائع.' : 
-                             score > 50 ? 'جيد، لكن ينقصه بعض الأساسيات.' : 
-                             'يحتاج إلى إعادة هيكلة.'}
-                        </Text>
-                    </View>
-                    <ChartRing 
-                        percentage={score} 
-                        radius={50} 
-                        color={score>80 ? COLORS.success : score>60 ? COLORS.warning : COLORS.danger} 
-                    />
-                </View>
-            </ContentCard>
-
-            {/* Insights */}
-            <View style={{marginTop: 20}}>
-                <Text style={styles.sectionTitleSmall}>التنبيهات النشطة</Text>
-                {insights.map((i, idx) => (
-                    <StaggeredItem key={idx} index={idx}>
-                        <View style={[
-                            styles.alertCard, 
-                            {borderRightColor: COLORS[i.type]},
-                            {backgroundColor: `${COLORS[i.type]}15`}
-                        ]}>
-                            <FontAwesome5 
-                                name={i.type === 'danger' ? 'exclamation-triangle' : 
-                                      i.type === 'warning' ? 'exclamation-circle' : 'check-circle'} 
-                                size={14} 
-                                color={COLORS[i.type]} 
-                            />
-                            <Text style={styles.alertText}>{i.msg}</Text>
-                        </View>
-                    </StaggeredItem>
-                ))}
-            </View>
-            <View style={{height: 120}} />
-        </View>
+      <StaggeredItem index={0}>
+          <PressableScale onPress={() => onSelect(insight)} style={[styles.insightPill, { backgroundColor: style.bg }]}>
+              <View style={styles.insightPillHeader}>
+                  <FontAwesome5 name={style.icon} size={14} color={style.color} />
+                  <Text style={[styles.insightPillTitle, { color: style.color }]}>{insight.title}</Text>
+                  {isDismissible && (
+                       <TouchableOpacity onPress={() => onDismiss(insight.id)} style={styles.dismissButton}>
+                           <Feather name="x" size={16} color={COLORS.textSecondary} />
+                       </TouchableOpacity>
+                  )}
+              </View>
+              <Text style={styles.insightPillSummary}>{insight.short_summary}</Text>
+          </PressableScale>
+      </StaggeredItem>
     );
+  });
+
+// --- The Main Analysis Section ---
+const FocusInsight = ({ insight, onSelect }) => {
+  const severityStyles = {
+      critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
+      warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
+  };
+  const style = severityStyles[insight.severity] || severityStyles.warning;
+
+  return (
+      <StaggeredItem index={0}>
+          <PressableScale onPress={() => onSelect(insight)}>
+              <LinearGradient colors={style.colors} style={styles.focusInsightCard}>
+                  <View style={styles.focusInsightHeader}>
+                      <FontAwesome5 name={style.icon} size={20} color={COLORS[insight.severity]} />
+                      <Text style={styles.focusInsightTitle}>{insight.title}</Text>
+                  </View>
+                  <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
+                  <View style={styles.focusInsightAction}>
+                      <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
+                      <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
+                  </View>
+              </LinearGradient>
+          </PressableScale>
+      </StaggeredItem>
+  );
+};
+
+// 2. The celebratory state when there are no issues
+const AllClearState = () => (
+  <StaggeredItem index={0}>
+      <ContentCard style={styles.allClearContainer}>
+          <View style={styles.allClearIconWrapper}>
+               <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
+          </View>
+          <Text style={styles.allClearTitle}>روتينك يبدو رائعاً!</Text>
+          <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
+      </ContentCard>
+  </StaggeredItem>
+);
+
+// 3. The horizontal carousel for secondary insights
+const InsightCarousel = ({ insights, onSelect }) => (
+  <View>
+      <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+      <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselContentContainer}
+      >
+          {insights.map((insight, index) => (
+              <StaggeredItem index={index} key={insight.id}>
+                  <PressableScale onPress={() => onSelect(insight)} style={styles.carouselItem}>
+                       <View style={[styles.carouselIconWrapper, {backgroundColor: `${COLORS[insight.severity]}20`}]}>
+                          <FontAwesome5 
+                              name={insight.severity === 'good' ? 'check-circle' : 'info-circle'} 
+                              size={16} 
+                              color={COLORS[insight.severity]} 
+                          />
+                      </View>
+                      <Text style={styles.carouselItemTitle} numberOfLines={2}>{insight.title}</Text>
+                  </PressableScale>
+              </StaggeredItem>
+          ))}
+      </ScrollView>
+  </View>
+);
+
+
+// --- THE MAIN ANALYSIS HUB COMPONENT ---
+const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise }) => {
+
+  const [selectedInsight, setSelectedInsight] = useState(null);
+  const sheetAnim = useRef(new Animated.Value(height)).current;
+
+  const openSheet = () => Animated.spring(sheetAnim, { toValue: 0, friction: 9, tension: 60, useNativeDriver: true }).start();
+  const closeSheet = (callback) => Animated.timing(sheetAnim, { toValue: height, duration: 250, useNativeDriver: true }).start(() => callback && callback());
+  
+  useEffect(() => { if (selectedInsight) openSheet(); }, [selectedInsight]);
+
+  const handleClose = () => closeSheet(() => setSelectedInsight(null));
+
+  const panResponder = useRef(PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gs) => { if (gs.dy > 0) sheetAnim.setValue(gs.dy); },
+      onPanResponderRelease: (_, gs) => { gs.dy > height * 0.3 || gs.vy > 0.5 ? handleClose() : openSheet(); },
+  })).current;
+
+  const handleSelectInsight = useCallback((insight) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedInsight(insight);
+  }, []);
+
+  if (loading || !analysisResults) {
+      return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
+  }
+
+  if (savedProducts.length === 0) {
+      return (
+          <ContentCard style={styles.emptyState}>
+              <MaterialCommunityIcons name="brain" size={60} color={COLORS.textDim} style={{ opacity: 0.5, marginBottom: 15 }} />
+              <Text style={styles.emptyText}>ابدئي التحليل</Text>
+              <Text style={styles.emptySub}>أضيفي منتجات إلى رفّكِ أولا ليقوم المدرب الذكي بتحليل روتينكِ.</Text>
+          </ContentCard>
+      );
+  }
+  
+  const visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
+  const focusInsight = visibleInsights.find(i => i.severity === 'critical' || i.severity === 'warning') || null;
+  const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
+
+  return (
+      <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+          
+          {/* 1. Hero Section: Either Focus Insight or All Clear */}
+          {focusInsight ? (
+              <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
+          ) : (
+              <AllClearState />
+          )}
+
+          {/* 2. Carousel for other insights */}
+          {carouselInsights.length > 0 && (
+               <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />
+          )}
+
+          {/* 3. Overview Dashboard */}
+          <View style={styles.overviewContainer}>
+              <View style={styles.overviewCard}>
+                  <ContentCard style={{flex: 1}}>
+                      <View style={styles.analysisCardHeader}>
+                         <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 4}}>
+                              <Feather name="sun" size={14} color={COLORS.warning} />
+                              <Text style={{color: COLORS.textSecondary}}>/</Text>
+                              <Feather name="moon" size={14} color={'#a78bfa'} />
+                         </View>
+                         <Text style={styles.analysisCardTitle}>نظرة عامة</Text>
+                     </View>
+                     <View style={styles.routineOverviewGrid}>
+                         <View style={styles.routineColumn}>
+                             <Text style={styles.routineColumnTitle}>الصباح</Text>
+                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
+                             {analysisResults?.amRoutine?.products?.length > 0 ? (
+                                 analysisResults.amRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
+                             ) : ( <Text style={styles.routineEmptyText}>فارغ</Text> )}
+                             </ScrollView>
+                         </View>
+                          <View style={styles.routineDivider} />
+                          <View style={styles.routineColumn}>
+                             <Text style={styles.routineColumnTitle}>المساء</Text>
+                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
+                             {analysisResults?.pmRoutine?.products?.length > 0 ? (
+                                 analysisResults.pmRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
+                             ) : ( <Text style={styles.routineEmptyText}>فارغ</Text> )}
+                             </ScrollView>
+                         </View>
+                     </View>
+                  </ContentCard>
+              </View>
+              <View style={styles.overviewCard}>
+                   <ContentCard style={{flex: 1}}>
+                      <View style={styles.analysisCardHeader}>
+                         <FontAwesome5 name="shield-alt" size={14} color={COLORS.textSecondary} />
+                         <Text style={styles.analysisCardTitle}>حماية الشمس</Text>
+                     </View>
+                     <View style={styles.sunProtectionContainer}>
+                         <ChartRing 
+                             percentage={analysisResults?.sunProtectionGrade?.score || 0} 
+                             color={(analysisResults?.sunProtectionGrade?.score || 0) > 50 ? COLORS.gold : COLORS.danger}
+                             radius={35}
+                             strokeWidth={6}
+                         />
+                         <View style={{flex: 1, marginRight: 15}}>
+                             {(analysisResults?.sunProtectionGrade?.notes || []).map((note, i) => (
+                                  <Text key={i} style={styles.sunProtectionNote}>{note}</Text>
+                             ))}
+                         </View>
+                     </View>
+                  </ContentCard>
+              </View>
+          </View>
+
+          {/* Bottom Sheet Modal */}
+          <Modal transparent visible={!!selectedInsight} animationType="none" onRequestClose={handleClose}>
+              <Pressable style={styles.sheetOverlay} onPress={handleClose}>
+                  <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: sheetAnim }] }]}>
+                      <Pressable>
+                           <ContentCard style={styles.sheetContent}>
+                              <View style={styles.sheetHandleBar} {...panResponder.panHandlers}>
+                                  <View style={styles.sheetHandle} />
+                              </View>
+                              <View style={styles.modalHeader}>
+                                  <View style={[styles.modalIconContainer, { backgroundColor: `${COLORS[selectedInsight?.severity === 'critical' ? 'danger' : selectedInsight?.severity || 'info']}20` }]}>
+                                      <FontAwesome5 
+                                          name={selectedInsight?.severity === 'critical' ? 'shield-alt' : selectedInsight?.severity === 'warning' ? 'exclamation-triangle' : 'check-circle'} 
+                                          size={22} 
+                                          color={COLORS[selectedInsight?.severity === 'critical' ? 'danger' : selectedInsight?.severity || 'info']} 
+                                      />
+                                  </View>
+                                  <Text style={styles.modalTitle}>{selectedInsight?.title}</Text>
+                              </View>
+                              <ScrollView showsVerticalScrollIndicator={false}>
+                                  <Text style={styles.modalDescription}>{selectedInsight?.details}</Text>
+                                  {selectedInsight?.related_products && selectedInsight.related_products.length > 0 && (
+                                      <View style={{width: '100%', marginBottom: 20}}>
+                                          <Text style={styles.relatedProductsTitle}>المنتجات ذات الصلة:</Text>
+                                          {selectedInsight.related_products.map(p => <Text key={p} style={styles.relatedProductItem}>- {p}</Text>)}
+                                      </View>
+                                  )}
+                              </ScrollView>
+                              <PressableScale style={styles.closeButton} onPress={handleClose}>
+                                  <Text style={styles.closeButtonText}>فهمت</Text>
+                              </PressableScale>
+                          </ContentCard>
+                      </Pressable>
+                  </Animated.View>
+              </Pressable>
+          </Modal>
+      </ScrollView>
+  );
 };
 
 const RoutineSection = ({ savedProducts, userProfile }) => {
@@ -1598,6 +1665,7 @@ export default function ProfileScreen() {
   const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('shelf');
+  const [productPrice, setProductPrice] = useState('');
 
   // Scroll & Animation Refs
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -1669,6 +1737,143 @@ export default function ProfileScreen() {
     delay: Math.random()*5000 
   })), []);
 
+  const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
+  
+
+  const handleDismissPraise = (insightId) => {
+    if (!dismissedInsightIds.includes(insightId)) {
+      setDismissedInsightIds(prev => [...prev, insightId]);
+    }
+  };
+
+  // --- In your `ProfileScreen.js`, REPLACE the entire `analysisResults` useMemo hook with this ---
+
+  const analysisResults = useMemo(() => {
+    // Use all products on the shelf with valid data as the base for our analysis
+    const allShelfProducts = savedProducts.filter(p => p?.analysisData?.detected_ingredients);
+    
+    // Default structure
+    const results = {
+        aiCoachInsights: [],
+        amRoutine: { products: [], conflicts: 0, synergies: 0 },
+        pmRoutine: { products: [], conflicts: 0, synergies: 0 },
+        sunProtectionGrade: { score: 0, notes: [] },
+    };
+
+    if (!userProfile) {
+        return results;
+    }
+
+    const settings = userProfile.settings || {};
+    const { conditions = [], allergies = [] } = settings;
+    
+    const insightsMap = new Map();
+    const addInsight = (insight) => { if (!insightsMap.has(insight.id)) insightsMap.set(insight.id, insight); };
+
+    const amProducts = (userProfile.routines?.am || []).map(step => step ? savedProducts.find(p => p.id === step.id) : null).filter(Boolean);
+    const pmProducts = (userProfile.routines?.pm || []).map(step => step ? savedProducts.find(p => p.id === step.id) : null).filter(Boolean);
+    const routineIsPopulated = amProducts.length > 0 || pmProducts.length > 0;
+
+    // --- TIER 1: SHELF-WIDE ANALYSIS (Always Runs) ---
+    // These checks run on ALL products against your profile data.
+    if (allShelfProducts.length > 0) {
+        // Allergy & Condition Analysis (runs on the entire shelf)
+        allergies.forEach(id => {
+            const allergyData = commonAllergies.find(a => a.id === id);
+            if (!allergyData) return;
+            allShelfProducts.forEach(p => {
+                const problematicIng = p.analysisData?.detected_ingredients.find(i => allergyData.ingredients.includes(i.name));
+                if (problematicIng) {
+                    addInsight({
+                        id: `allergy_${id}_${p.id}`, title: 'تحذير حاسم: مكون مسبب للحساسية',
+                        short_summary: `منتج "${p.productName}" يحتوي على "${problematicIng.name}" المرتبط بحساسيتك.`,
+                        details: `ينصح بشدة بالتوقف عن استخدام "${p.productName}" لتجنب رد فعل تحسيّسي.`,
+                        severity: 'critical', related_products: [p.productName]
+                    });
+                }
+            });
+        });
+
+        conditions.forEach(id => {
+            const conditionData = commonConditions.find(c => c.id === id);
+            if (!conditionData?.avoidIngredients) return;
+            allShelfProducts.forEach(p => {
+                const problematicIng = p.analysisData?.detected_ingredients.find(i => conditionData.avoidIngredients.includes(i.name));
+                if (problematicIng) {
+                    addInsight({
+                        id: `condition_${id}_${p.id}`, title: `تنبيه: مكون لا يناسب حالتك`,
+                        short_summary: `منتج "${p.productName}" يحتوي على "${problematicIng.name}" الذي لا ينصح به مع "${conditionData.name}".`,
+                        details: `بناءً على ملفك الشخصي، من الأفضل تجنب استخدام "${p.productName}" لأنه يحتوي على ${problematicIng.name}.`,
+                        severity: 'warning', related_products: [p.productName]
+                    });
+                }
+            });
+        });
+    }
+
+    // --- TIER 2: ROUTINE-SPECIFIC ANALYSIS (Conditional) ---
+    if (routineIsPopulated) {
+        // If the routine is populated, run deeper analysis.
+        const usesSunscreenInAM = amProducts.some(p => p.analysisData?.product_type === 'sunscreen');
+        if (amProducts.length > 0 && !usesSunscreenInAM) {
+            addInsight({
+                id: 'missing-sunscreen-in-routine', title: 'حماية ناقصة!',
+                short_summary: 'روتينك الصباحي لا يحتوي على واقي شمسي.',
+                details: 'واقي الشمس هو أهم منتج لحماية البشرة. من الضروري إضافته كآخر خطوة في روتينك كل صباح.',
+                severity: 'critical'
+            });
+        }
+
+        const retinoidInAM = amProducts.find(p => p.analysisData?.detected_ingredients.some(i => i.name.toLowerCase().includes('retinol')));
+        if (retinoidInAM) {
+            addInsight({
+                id: 'retinol_am', title: 'توقيت غير مناسب',
+                short_summary: 'الريتينول في الصباح قد يزيد حساسية البشرة للشمس.',
+                details: 'الريتينول يتحلل بأشعة الشمس ويفقد فعاليته، وقد يزيد من حساسية بشرتك للشمس. يجب استخدامه في روتينك المسائي فقط.',
+                severity: 'critical', related_products: [retinoidInAM.productName]
+            });
+        }
+        
+        const amTypes = amProducts.map(p => p.analysisData?.product_type);
+        if (amTypes.indexOf('oil_blend') !== -1 && amTypes.indexOf('lotion_cream') !== -1 && amTypes.indexOf('oil_blend') < amTypes.indexOf('lotion_cream')) {
+          addInsight({ id: 'layering-issue-am', title: 'مشكلة في ترتيب المنتجات', short_summary: 'في روتين الصباح، يجب وضع الزيت بعد المرطب.', details: 'يجب دائمًا تطبيق المنتجات ذات الأساس المائي (السيرومات والمرطبات) أولاً، ثم المنتجات الزيتية بعدها لحبس الترطيب.', severity: 'warning'});
+        }
+
+    } else if (allShelfProducts.length > 0) {
+        // *** NEW: The Guide Message ***
+        // If routine is NOT populated, but the shelf HAS products, add the guide.
+        addInsight({
+            id: 'guide-build-routine',
+            title: 'مستعدة للخطوة التالية؟',
+            short_summary: 'بناء روتينك يفتح لك تحليلات أعمق وأكثر دقة!',
+            details: 'لقد حللنا منتجاتك على الرف بناءً على ملفك الشخصي. لإضافة تحليلات التوقيت، تعارضات الاستخدام، وترتيب الطبقات، قومي بسحب وإفلات منتجاتك في علامة تبويب "روتيني".',
+            severity: 'warning', // Use 'warning' to ensure it appears as the focus insight.
+        });
+    }
+
+    // --- FINAL AGGREGATION & SMART SUN PROTECTION GRADE ---
+    const hasSunscreenOnShelf = allShelfProducts.some(p => p.analysisData?.product_type === 'sunscreen');
+    const hasSunscreenInAM = amProducts.some(p => p.analysisData?.product_type === 'sunscreen');
+
+    if (hasSunscreenInAM) {
+        results.sunProtectionGrade.score = 100;
+        results.sunProtectionGrade.notes.push("✓ واقي الشمس موجود في روتين الصباح.");
+    } else if (hasSunscreenOnShelf) {
+        results.sunProtectionGrade.score = 50;
+        results.sunProtectionGrade.notes.push("✓ لديكِ واقي شمسي على الرف.");
+        results.sunProtectionGrade.notes.push("✗ لكنه غير موجود في روتين الصباح!");
+    } else {
+        results.sunProtectionGrade.score = 0;
+        results.sunProtectionGrade.notes.push("✗ لا يوجد واقي شمسي على الرف!");
+    }
+
+    results.amRoutine.products = amProducts;
+    results.pmRoutine.products = pmProducts;
+    const severityOrder = { 'critical': 1, 'warning': 2, 'good': 3 };
+    results.aiCoachInsights = Array.from(insightsMap.values()).sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+    return results;
+  }, [savedProducts, userProfile]);
   
   const avatarOpacity = scrollY.interpolate({ 
     inputRange: [0, 100], 
@@ -1790,7 +1995,14 @@ export default function ProfileScreen() {
                         />
                     )}
                     {activeTab === 'analysis' && (
-                        <AnalysisSection products={savedProducts} />
+                        <AnalysisSection 
+                        savedProducts={savedProducts} 
+                        loading={loading}
+                        analysisResults={analysisResults}
+                        
+                        dismissedInsightIds={dismissedInsightIds}
+                        handleDismissPraise={handleDismissPraise}
+                    />
                     )}
                     {activeTab === 'ingredients' && (
                         <IngredientsSection products={savedProducts} />
@@ -2100,68 +2312,274 @@ const styles = StyleSheet.create({
   },
 
   // ANALYSIS STYLES
-  weatherWidget: {
-      backgroundColor: `rgba(59, 130, 246, 0.1)`, 
-      borderRadius: 20, 
-      padding: 20, 
-      marginBottom: 20,
-      borderWidth: 1, 
-      borderColor: `rgba(59, 130, 246, 0.2)`,
+  focusInsightCard: {
+    borderRadius: 24,
+    padding: 25,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  weatherTemp: { 
-    fontFamily: 'Tajawal-ExtraBold', 
-    fontSize: 36, 
+  focusInsightHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+  },
+  focusInsightTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 18,
     color: COLORS.textPrimary,
   },
-  weatherText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 13, 
+  focusInsightSummary: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  panelTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 20, 
-    color: COLORS.textPrimary, 
-    textAlign: 'right', 
-    marginBottom: 8 
-  },
-  panelDesc: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 13, 
-    color: COLORS.textSecondary, 
     textAlign: 'right',
+    marginTop: 12,
+    lineHeight: 22,
+  },
+  focusInsightAction: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 20,
+  },
+  focusInsightActionText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    color: COLORS.accentGreen,
+  },
+  
+  allClearContainer: {
+    alignItems: 'center',
+    padding: 30,
+    marginBottom: 25,
+  },
+  allClearIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  allClearTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textPrimary,
+  },
+  allClearSummary: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 5,
     lineHeight: 20,
   },
-  scoreRow: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    justifyContent: 'space-between' 
-  },
-  sectionTitleSmall: {
+
+  carouselTitle: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 16,
     color: COLORS.textPrimary,
     textAlign: 'right',
-    marginBottom: 12,
-    marginTop: 5,
+    marginBottom: 15,
+    paddingHorizontal: 5,
   },
-  alertCard: { 
+  carouselContentContainer: {
+    paddingHorizontal: 5,
+    paddingBottom: 25,
+  },
+  carouselItem: {
+    width: 150,
+    height: 150,
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 15,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'space-between',
+  },
+  carouselIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  carouselItemTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    lineHeight: 19,
+  },
+  
+  overviewContainer: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  overviewCard: {
+    flex: 1,
+  },
+  analysisCardHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 15,
+    opacity: 0.8,
+  },
+  analysisCardTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  routineOverviewGrid: {
+    gap: 12,
+  },
+  routineColumn: {
+    gap: 8,
+  },
+  routineColumnTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    marginBottom: 4,
+  },
+  routineProductPill: {
+    backgroundColor: COLORS.background,
+    color: COLORS.textSecondary,
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  routineEmptyText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textDim,
+    textAlign: 'right',
+  },
+  routineDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  sunProtectionContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingVertical: 5,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  sunProtectionNote: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    lineHeight: 16,
+  },
+
+  // MODAL & BOTTOM SHEET STYLES
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  sheetContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  sheetContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 5,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
+    maxHeight: height * 0.75,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  sheetHandleBar: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingVertical: 15,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: COLORS.border,
+    borderRadius: 2.5,
+  },
+  modalHeader: { 
     flexDirection: 'row-reverse', 
     alignItems: 'center', 
-    backgroundColor: COLORS.card, 
-    borderRadius: 12, 
-    padding: 12, 
-    marginBottom: 8, 
-    borderRightWidth: 3, 
-    gap: 10 
+    gap: 15, 
+    marginBottom: 15, 
+    width: '100%', 
+    paddingHorizontal: 15,
   },
-  alertText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 12, 
-    color: COLORS.textPrimary, 
+  modalIconContainer: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: 24, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+  },
+  modalTitle: { 
     flex: 1, 
-    textAlign: 'right' 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 18, 
+    color: COLORS.textPrimary, 
+    textAlign: 'right', 
+  },
+  modalDescription: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 14, 
+    color: COLORS.textSecondary, 
+    textAlign: 'right', 
+    lineHeight: 22, 
+    marginBottom: 25, 
+    paddingHorizontal: 15,
+  },
+  relatedProductsTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    marginBottom: 8,
+    paddingHorizontal: 15,
+  },
+  relatedProductItem: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    marginBottom: 4,
+    paddingHorizontal: 15,
+  },
+  closeButton: { 
+    backgroundColor: COLORS.accentGreen, 
+    padding: 14, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    marginHorizontal: 15,
+    marginTop: 10,
+  },
+  closeButtonText: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 16, 
+    color: COLORS.textOnAccent, 
   },
 
   // INGREDIENTS STYLES
