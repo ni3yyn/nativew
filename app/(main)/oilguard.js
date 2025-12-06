@@ -17,7 +17,6 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { BlurView } from 'expo-blur';
 import Fuse from 'fuse.js';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
@@ -39,7 +38,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // --- CONFIG & THEME ---
-const GEMINI_API_KEY = "AIzaSyAF38ctoP10LoTM_zFKARDeB4LPlHZkTPs"; 
+const GEMINI_API_KEY = "AIzaSyD-7rzTClWUGTQOwgtjDerAYYwVqagiqrs"; 
 const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 const CARD_WIDTH = width * 0.85;
@@ -50,10 +49,26 @@ const PAGINATION_DOTS = 4; // How many static dots to show
 const DOT_SPACING = 8; 
 
 const COLORS = {
-  primary: '#B2D8B4', primaryGlow: 'rgba(178, 216, 180, 0.6)', primaryDark: '#8BC995', darkGreen: '#1a3b25',
-  text: '#FFFFFF', textDim: 'rgba(255, 255, 255, 0.65)', glassTint: 'rgba(8, 10, 9, 0.85)', 
-  glassBorder: 'rgba(178, 216, 180, 0.15)', cardBg: 'rgba(255, 255, 255, 0.04)',
-  danger: '#ef4444', warning: '#f59e0b', info: '#3b82f6', success: '#10b981', gold: '#fbbf24'
+  // --- Deep Green Thematic Base ---
+  background: '#1A2D27', // A rich, very dark forest green. This is the foundation of the theme.
+  card: '#253D34',      // A slightly lighter shade of the forest green for cards, creating a subtle, layered effect.
+  border: 'rgba(90, 156, 132, 0.25)', // A border derived from the accent color, tying the theme together.
+
+  // --- Elegant Emerald Accent ---
+  accentGreen: '#5A9C84', // The primary accent: a confident, muted emerald/seafoam green. It's visible and elegant, but not neon.
+  accentGlow: 'rgba(90, 156, 132, 0.4)', // A soft glow for the emerald accent.
+  
+  // --- High-Contrast Text Colors ---
+  textPrimary: '#F1F3F2',   // A soft, very light gray (near-white) for excellent readability on the dark green background.
+  textSecondary: '#A3B1AC', // A muted, light green-gray for subtitles and secondary information.
+  textOnAccent: '#1A2D27',  // The deep background color used for text on accent buttons, ensuring perfect contrast and cohesion.
+  
+  // --- System & Feedback Colors (Standard) ---
+  danger: '#ef4444', 
+  warning: '#f59e0b', 
+  info: '#3b82f6', 
+  success: '#22c55e',
+  gold: '#fbbf24'
 };
 
 const PRODUCT_TYPES = [
@@ -425,10 +440,15 @@ const PressableScale = ({ onPress, children, style, disabled }) => {
     );
 };
 
-const GlassCard = ({ children, style, delay = 0 }) => {
+const ContentCard = ({ children, style, delay = 0 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  return ( <Animated.View style={[{ opacity }, style]}><BlurView  intensity={30}  tint="extraLight" style={[styles.glassCardBase, style]} renderToHardwareTextureAndroid >{children}</BlurView></Animated.View> );
+  // No more BlurView, just an Animated.View with the new card style
+  return (
+    <Animated.View style={[styles.cardBase, { opacity }, style]}>
+      {children}
+    </Animated.View>
+  );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
@@ -758,7 +778,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <BlurView  intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+            <View  intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
         {/* Header */}
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
@@ -802,7 +822,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
             })}
           </>
         )}
-      </BlurView>
+      </View>
       </Animated.View>
     </StaggeredItem>
   );
@@ -913,12 +933,12 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
             flash="off"
         >
           <View style={styles.cameraOverlay}>
-            <BlurView  intensity={50} tint="extraLight" style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>فحص المكونات</Text>
-              <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
-                <Ionicons name="close" size={24} color={'#FFFFFF'} />
-              </PressableScale>
-            </BlurView>
+          <View style={styles.cameraHeader}>
+      <Text style={styles.cameraTitle}>فحص المكونات</Text>
+      <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
+        <Ionicons name="close" size={24} color={'#FFFFFF'} />
+      </PressableScale>
+    </View>
 
             <View style={styles.cameraScannerContainer}>
               <Text style={styles.cameraGuideText}>ضع قائمة المكونات داخل الإطار</Text>
@@ -941,14 +961,14 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
               </Animated.View>
             </View>
 
-            <BlurView  intensity={80} tint="extraLight" style={styles.cameraFooter}>
-                <Animated.View style={[styles.shutterPulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <View style={styles.cameraFooter}>
+             <Animated.View style={[styles.shutterPulseRing, { transform: [{ scale: pulseAnim }] }]} />
                 <View style={styles.shutterButtonOuter}>
                     <PressableScale onPress={handleCapture} disabled={isCapturing || !isCameraReady} style={styles.shutterButtonInner}>
                         {isCapturing || !isCameraReady ? <ActivityIndicator color={COLORS.darkGreen} /> : null}
                     </PressableScale>
                 </View>
-            </BlurView>
+                </View>
           </View>
         </CameraView>
       </Animated.View>
@@ -1164,12 +1184,50 @@ const FloatingButton = ({ icon, label, color, glowColor, onPress, index }) => {
       <Pressable onPress={() => { if(onPress) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut}>
           <Animated.View style={{ alignItems: 'center', transform: [{ translateY }, { scale }] }}>
               <Animated.View style={[styles.glowEffect, { backgroundColor: glowColor, transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
-              <BlurView  intensity={30} tint="extraLight" style={styles.floatingBtnCore} renderToHardwareTextureAndroid>
+              <View style={styles.floatingBtnCore}>
                   <FontAwesome5 name={icon} size={28} color={color} />
-              </BlurView>
+              </View>
               <Text style={styles.floatingBtnLabel}>{label}</Text>
           </Animated.View>
       </Pressable>
+  );
+};
+
+const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
+  const anim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: isSelected ? 1 : 0,
+      friction: 7,
+      tension: 50,
+      useNativeDriver: false, // Required for color animations
+    }).start();
+  }, [isSelected]);
+
+  const backgroundColor = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [String(COLORS.cardBg), String(COLORS.primary)], // Explicitly cast to string
+  });
+
+  const textColor = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [String(COLORS.textDim), String(COLORS.darkGreen)], // Explicitly cast to string
+  });
+
+  const iconColor = isSelected ? COLORS.darkGreen : COLORS.textDim;
+
+  return (
+    <StaggeredItem index={index}>
+      <PressableScale onPress={onPress}>
+        <Animated.View style={[styles.typeChip, { backgroundColor }]}>
+          <FontAwesome5 name={type.icon} color={iconColor} size={14} />
+          <Animated.Text style={[styles.typeText, { color: textColor }]}>
+            {type.label}
+          </Animated.Text>
+        </Animated.View>
+      </PressableScale>
+    </StaggeredItem>
   );
 };
 
@@ -1721,15 +1779,61 @@ const handlePictureTaken = (photo) => {
   };
 
   const renderReviewStep = () => (
-    <GlassCard><View style={styles.contentContainer}>
-      <StaggeredItem index={0}>
-          <Text style={styles.sectionTitle}><FontAwesome5 name="robot" /> ما الذي يعتقده الذكاء الاصطناعي؟</Text>
-          <View style={styles.aiPredictionCard}><FontAwesome5 name={PRODUCT_TYPES.find(t => t.id === productType)?.icon || 'shopping-bag'} size={40} color={COLORS.primary} /><View><Text style={styles.aiPredictionLabel}>نوع المنتج المكتشف:</Text><Text style={styles.aiPredictionValue}>{PRODUCT_TYPES.find(t => t.id === productType)?.label || 'غير معروف'}</Text></View></View>
-          <PressableScale onPress={() => setShowManualTypeGrid(true)} style={styles.changeTypeButton}><Text style={styles.changeTypeText}>تغيير النوع يدوياً</Text></PressableScale>
-      </StaggeredItem>
-      {showManualTypeGrid && <StaggeredItem index={1}><Text style={[styles.sectionTitle, {marginTop: 20}]}>اختر النوع الصحيح:</Text><View style={styles.typeGrid}>{PRODUCT_TYPES.map((t) => ( <PressableScale key={t.id} onPress={() => setProductType(t.id)} style={[styles.typeChip, productType === t.id && styles.typeChipActive]}><FontAwesome5 name={t.icon} color={productType === t.id ? COLORS.darkGreen : COLORS.textDim} size={12} /><Text style={[styles.typeText, productType === t.id && {color:COLORS.darkGreen}]}>{t.label}</Text></PressableScale> ))}</View></StaggeredItem>}
-      <StaggeredItem index={2} style={{width: '100%', marginTop: 20}}><PressableScale onPress={() => changeStep(2)} style={styles.mainBtn}><Text style={styles.mainBtnText}>تأكيد والمتابعة للادعاءات</Text><FontAwesome5 name="arrow-right" color={COLORS.darkGreen} size={18} /></PressableScale></StaggeredItem>
-    </View></GlassCard>
+    <ContentCard>
+      <View style={styles.contentContainer}>
+        {/* Section 1: AI Prediction with enhanced styling */}
+        <StaggeredItem index={0}>
+            <Text style={styles.sectionTitle}><FontAwesome5 name="robot" /> ما الذي يعتقده الذكاء الاصطناعي؟</Text>
+            <View style={styles.aiPredictionCard}>
+                <View style={styles.aiPredictionIconContainer}>
+                    <FontAwesome5 name={PRODUCT_TYPES.find(t => t.id === productType)?.icon || 'shopping-bag'} size={30} color={COLORS.primary} />
+                </View>
+                <View>
+                    <Text style={styles.aiPredictionLabel}>نوع المنتج المكتشف:</Text>
+                    <Text style={styles.aiPredictionValue}>{PRODUCT_TYPES.find(t => t.id === productType)?.label || 'غير معروف'}</Text>
+                </View>
+            </View>
+            {/* This button triggers the animation and then disappears */}
+            {!showManualTypeGrid && (
+              <PressableScale 
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                  setShowManualTypeGrid(true);
+                }} 
+                style={styles.changeTypeButton}
+              >
+                <Text style={styles.changeTypeText}>تغيير النوع يدوياً <FontAwesome5 name="edit" /></Text>
+              </PressableScale>
+            )}
+        </StaggeredItem>
+
+        {/* Section 2: Manual Type Selection - Animates into view */}
+        {showManualTypeGrid && (
+            <View style={{width: '100%'}}>
+              <Text style={[styles.sectionTitle, {marginTop: 25, marginBottom: 20}]}>اختر النوع الصحيح:</Text>
+              <View style={styles.typeGrid}>
+                  {PRODUCT_TYPES.map((t, index) => ( 
+                      <AnimatedTypeChip
+                          key={t.id}
+                          type={t}
+                          isSelected={productType === t.id}
+                          onPress={() => setProductType(t.id)}
+                          index={index}
+                      />
+                  ))}
+              </View>
+            </View>
+        )}
+        
+        {/* Section 3: Confirmation Button */}
+        <StaggeredItem index={showManualTypeGrid ? 2 : 1} style={{width: '100%', marginTop: 30}}>
+            <PressableScale onPress={() => changeStep(2)} style={styles.mainBtn}>
+                <Text style={styles.mainBtnText}>تأكيد والمتابعة للادعاءات</Text>
+                <FontAwesome5 name="arrow-right" color={COLORS.darkGreen} size={18} />
+            </PressableScale>
+        </StaggeredItem>
+      </View>
+      </ContentCard>
   );
   
   const renderClaimsStep = () => {
@@ -1779,10 +1883,10 @@ const handlePictureTaken = (photo) => {
             Haptics.selectionAsync();
             setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
           }}>
-            <BlurView  intensity={30} tint="extraLight" style={[styles.claimItem, isSelected && styles.claimItemActive]} renderToHardwareTextureAndroid>
+            <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
               <AnimatedCheckbox isSelected={isSelected} />
               <Text style={styles.claimItemText}>{item}</Text>
-            </BlurView>
+            </View>
           </PressableScale>
         </StaggeredItem>
       );
@@ -1813,7 +1917,7 @@ const handlePictureTaken = (photo) => {
             transform: [{ translateY: headerTranslateY }],
         }]}>
             {/* The Unified Background: Hides the list scrolling behind it */}
-            <BlurView  intensity={80} tint="extraLight" style={styles.headerBackdrop} />
+            <View style={styles.headerBackdrop} />
 
             {/* Large Header Content (Fades out) */}
             <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
@@ -1900,12 +2004,12 @@ const handlePictureTaken = (photo) => {
       return (
           <View style={{width: '100%', gap: 15}}>
               {finalAnalysis.personalMatch.reasons.length > 0 && <StaggeredItem index={0}>
-                  <GlassCard style={[styles.personalMatchCard, styles[`personalMatch_${finalAnalysis.personalMatch.status}`]]}>
+                  <ContentCard style={[styles.personalMatchCard, styles[`personalMatch_${finalAnalysis.personalMatch.status}`]]}>
                       <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}><FontAwesome5 name={finalAnalysis.personalMatch.status === 'danger' ? 'times-circle' : finalAnalysis.personalMatch.status === 'warning' ? 'exclamation-triangle' : 'check-circle'} size={24} color={'#FFF'}/><Text style={styles.personalMatchTitle}>{finalAnalysis.personalMatch.status === 'danger' ? 'غير موصى به لك' : finalAnalysis.personalMatch.status === 'warning' ? 'استخدمه بحذر' : 'مطابقة ممتازة لملفك'}</Text></View>
                       {finalAnalysis.personalMatch.reasons.map((reason, i) => <Text key={i} style={styles.personalMatchReason}>{reason}</Text>)}
-                  </GlassCard>
+                  </ContentCard>
               </StaggeredItem>}
-              <StaggeredItem index={1}><GlassCard style={styles.vScoreCard}><Text style={styles.verdictText}>{finalAnalysis.finalVerdict}</Text><ScoreRing score={finalAnalysis.oilGuardScore} /><View style={styles.pillarsRow}><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="flask" /> الفعالية</Text><Text style={[styles.pillarScore, {color: COLORS.info}]}>{finalAnalysis.efficacy.score}%</Text></View><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="shield-alt" /> السلامة</Text><Text style={[styles.pillarScore, {color: COLORS.primary}]}>{finalAnalysis.safety.score}%</Text></View></View></GlassCard></StaggeredItem>
+              <StaggeredItem index={1}><ContentCard style={styles.vScoreCard}><Text style={styles.verdictText}>{finalAnalysis.finalVerdict}</Text><ScoreRing score={finalAnalysis.oilGuardScore} /><View style={styles.pillarsRow}><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="flask" /> الفعالية</Text><Text style={[styles.pillarScore, {color: COLORS.info}]}>{finalAnalysis.efficacy.score}%</Text></View><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="shield-alt" /> السلامة</Text><Text style={[styles.pillarScore, {color: COLORS.primary}]}>{finalAnalysis.safety.score}%</Text></View></View></ContentCard></StaggeredItem>
               <View style={styles.actionRow}><StaggeredItem index={2} style={{flex: 1}}><PressableScale onPress={resetFlow} style={styles.secBtn}><Text style={styles.secBtnText}>فحص جديد</Text></PressableScale></StaggeredItem><StaggeredItem index={3} style={{flex: 1}}><PressableScale onPress={() => setSaveModalVisible(true)} style={styles.priBtn}><Text style={styles.priBtnText}>حفظ للرف</Text></PressableScale></StaggeredItem></View>
               {finalAnalysis.marketing_results.length > 0 && (
     <StaggeredItem index={4}>
@@ -1954,12 +2058,7 @@ const handlePictureTaken = (photo) => {
   return (
     <SafeAreaView style={styles.container}>
         {/* ... StatusBar and ImageBackground ... */}
-        <ImageBackground 
-            source={{ uri: BG_IMAGE }} 
-            style={StyleSheet.absoluteFill} 
-            resizeMode="cover"
-            blurRadius={step === 0 ? 10 : 0} 
-        >
+        <View style={styles.container}>
             <View style={styles.darkOverlay} />
             {particles.map((p) => <Spore key={p.id} {...p} />)}
 
@@ -1967,7 +2066,7 @@ const handlePictureTaken = (photo) => {
             {step !== 2 && !isAnimatingTransition && (
               <View style={styles.header}>
                 {/* Conditionally render the blur layer BEHIND the header content */}
-                {step === 0 && <BlurView  intensity={50} tint="extraLight" style={styles.headerBlur} />}
+                {step === 0 && <View style={styles.headerBlur} />}
                 
                 {step > 0 && (
                   <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
@@ -1993,11 +2092,11 @@ const handlePictureTaken = (photo) => {
                   </Animated.View>
               </ScrollView>
             )}
-        </ImageBackground>
+        </View>
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <BlurView  intensity={50} tint="extraLight" style={styles.modalOverlay} renderToHardwareTextureAndroid>
-              <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
+        <View style={styles.modalOverlay}>
+           <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
               <Animated.View style={styles.modalContent}>
                   <Text style={styles.modalTitle}>حفظ المنتج</Text>
                   <Text style={styles.modalSubtitle}>أعطِ هذا المنتج اسماً يسهل تذكره.</Text>
@@ -2006,7 +2105,7 @@ const handlePictureTaken = (photo) => {
                       {isSaving ? <ActivityIndicator color={COLORS.darkGreen} /> : <Text style={styles.modalSaveButtonText}>حفظ في رفّي</Text>}
                   </PressableScale>
               </Animated.View>
-            </BlurView>
+            </View>
         </Modal>
         
         <CustomCameraModal
@@ -2065,110 +2164,101 @@ const handlePictureTaken = (photo) => {
 }
 
 const styles = StyleSheet.create({
-    // --- Core Layout & Background ---
-    container: { 
-      flex: 1, 
-      backgroundColor: '#05080a' 
-    },
-    darkOverlay: { 
-      ...StyleSheet.absoluteFillObject, 
-      backgroundColor: 'rgba(0,0,0,0.75)' 
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+  // --- Core Layout & Background ---
+  container: { 
+    flex: 1, 
+    backgroundColor: COLORS.background, 
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 50,
+    paddingBottom: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+  headerTitle: { 
+    fontFamily: 'Tajawal-ExtraBold', 
+    fontSize: 22, 
+    color: COLORS.textPrimary 
+  },
+  backBtn: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center'
+  },
+  scrollContent: { 
+    flexGrow: 1, 
+    paddingHorizontal: 20, 
+    paddingBottom: 40,
+    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+    justifyContent: 'center'
+  },
+  contentContainer: { 
+    width: '100%', 
+    alignItems: 'center', 
+    paddingVertical: 20 
+  },
+  cardBase: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: '100%',
+  },
+
+  // --- Step 0: Input Step ---
+  heroSection: { 
+    alignItems: 'center', 
+    marginBottom: 30, 
+    paddingHorizontal: 20 
+  },
+  heroIcon: { 
+    width: 100, 
+    height: 100, 
+    borderRadius: 50, 
+    backgroundColor: COLORS.card, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  heroTitle: { 
+    fontFamily: 'Tajawal-ExtraBold', 
+    fontSize: 28, 
+    color: COLORS.textPrimary, 
+    textAlign: 'center', 
+    marginBottom: 8 
+  },
+  heroSubContainer: {
+      minHeight: 44,
+      justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 50,
-      paddingBottom: 10,
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 100,
-    },
-    headerBlur: { // --- ADD THIS NEW STYLE ---
-      ...StyleSheet.absoluteFillObject,
-    },
-    headerTitle: { 
-      fontFamily: 'Tajawal-ExtraBold', 
-      fontSize: 22, 
-      color: COLORS.text 
-    },
-    backBtn: { 
-      width: 40, 
-      height: 40, 
-      borderRadius: 20, 
-      backgroundColor: 'rgba(255,255,255,0.1)', 
-      justifyContent: 'center', 
-      alignItems: 'center'
-    },
-    scrollContent: { 
-      flexGrow: 1, 
-      paddingHorizontal: 20, 
-      paddingBottom: 40,
-      paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
-      justifyContent: 'center'
-    },
-    contentContainer: { 
-      width: '100%', 
-      alignItems: 'center', 
-      paddingVertical: 20 
-    },
-    glassCardBase: {
-      backgroundColor: 'rgba(255, 255, 255, 0.07)',
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
-      overflow: 'hidden',
-      width: '100%',
-    },
-  
-    // --- Step 0: Input Step ---
-    heroSection: { 
-      alignItems: 'center', 
-      marginBottom: 30, 
-      paddingHorizontal: 20 
-    },
-    heroIcon: { 
-      width: 100, 
-      height: 100, 
-      borderRadius: 50, 
-      backgroundColor: 'rgba(26, 59, 37, 0.5)', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      borderWidth: 1,
-      borderColor: 'rgba(178, 216, 180, 0.3)',
-    },
-    heroTitle: { 
-      fontFamily: 'Tajawal-ExtraBold', 
-      fontSize: 28, 
-      color: COLORS.text, 
-      textAlign: 'center', 
-      marginBottom: 8 
-    },
-    // ▼▼▼ ADD A CONTAINER STYLE ▼▼▼
-    heroSubContainer: {
-        minHeight: 44, // Set height for 2 lines to prevent layout jump
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 10,
-    },
-    heroSub: { 
-      fontFamily: 'Tajawal-Regular', 
-      fontSize: 15, 
-      color: COLORS.textDim, 
-      textAlign: 'center', 
-      lineHeight: 22,
-      minHeight: 22, // Prevents layout shift while typing
-    },
-    floatingBtnContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      alignItems: 'flex-start', // Align to top to account for floating
-      width: '100%',
-      marginTop: 60, // Increased space for the buttons to float
-      marginBottom: 20,
+      paddingHorizontal: 10,
+  },
+  heroSub: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 15, 
+    color: COLORS.textSecondary, 
+    textAlign: 'center', 
+    lineHeight: 22,
+    minHeight: 22,
+  },
+  floatingBtnContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginTop: 60,
+    marginBottom: 20,
   },
   glowEffect: {
       position: 'absolute',
@@ -2183,98 +2273,104 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderColor: COLORS.glassBorder,
-      overflow: 'hidden',
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
   },
   floatingBtnLabel: {
       fontFamily: 'Tajawal-Bold',
       fontSize: 16,
-      color: COLORS.text,
+      color: COLORS.textPrimary,
       marginTop: 15,
   },
-    backLinkText: { 
-      color: COLORS.textDim, 
-      fontFamily: 'Tajawal-Regular', 
-      fontSize: 14 
-    },
-  
-    // --- Step 1: Review Step ---
-    sectionTitle: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 18, 
-      color: COLORS.text, 
-      textAlign: 'right', 
-      marginBottom: 15,
-      width: '100%',
-      paddingHorizontal: 10,
-    },
-    aiPredictionCard: { 
-      flexDirection: 'row-reverse', 
-      alignItems: 'center', 
-      gap: 15, 
-      backgroundColor: 'rgba(0,0,0,0.2)', 
-      padding: 15, 
-      borderRadius: 15,
-      marginHorizontal: 10,
-    },
-    aiPredictionLabel: { 
-      fontFamily: 'Tajawal-Regular', 
-      fontSize: 12, 
-      color: COLORS.textDim,
-      textAlign: 'right',
-    },
-    aiPredictionValue: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 16, 
-      color: COLORS.primary,
-      textAlign: 'right',
-    },
-    changeTypeButton: { 
-      marginTop: 10, 
-      alignSelf: 'center', 
-      padding: 8 
-    },
-    changeTypeText: { 
-      color: COLORS.textDim, 
-      fontSize: 13, 
-      textDecorationLine: 'underline' 
-    },
-    typeGrid: { 
-      flexDirection: 'row', 
-      flexWrap: 'wrap', 
-      gap: 10, 
+  backLinkText: { 
+    color: COLORS.textSecondary, 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 14 
+  },
+
+  // --- Step 1: Review Step ---
+  sectionTitle: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 18, 
+    color: COLORS.textPrimary, 
+    textAlign: 'right', 
+    marginBottom: 15,
+    width: '100%',
+    paddingHorizontal: 10,
+  },
+  aiPredictionCard: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    gap: 20,
+    backgroundColor: COLORS.card, 
+    padding: 20,
+    borderRadius: 18,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  aiPredictionIconContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: 'rgba(96, 165, 140, 0.1)',
       justifyContent: 'center',
-      paddingHorizontal: 10,
-    },
-    typeChip: { 
-      paddingHorizontal: 15, 
-      paddingVertical: 10, 
-      borderRadius: 20, 
-      backgroundColor: COLORS.cardBg, 
-      flexDirection: 'row-reverse', 
-      alignItems: 'center', 
-      gap: 8 
-    },
-    typeChipActive: { 
-      backgroundColor: COLORS.primary 
-    },
-    typeText: { 
-      color: COLORS.textDim, 
-      fontSize: 12, 
-      fontFamily: 'Tajawal-Bold' 
-    },
-  
-    // --- Step 2: Claims Step ---
-    fixedHeaderBlock: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
+      alignItems: 'center',
+  },
+  aiPredictionLabel: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 12, 
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+  },
+  aiPredictionValue: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 16, 
+    color: COLORS.accentGreen,
+    textAlign: 'right',
+  },
+  changeTypeButton: { 
+    marginTop: 15, 
+    alignSelf: 'center', 
+    padding: 10,
+  },
+  changeTypeText: { 
+    color: COLORS.accentGreen, 
+    fontSize: 14,
+    fontFamily: 'Tajawal-Medium',
+  },
+  typeGrid: { 
+    flexDirection: 'row-reverse', 
+    flexWrap: 'wrap', 
+    gap: 12, 
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  typeChip: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    borderRadius: 25, 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    gap: 10,
+    backgroundColor: COLORS.card,
+  },
+  typeText: { 
+    fontSize: 13, 
+    fontFamily: 'Tajawal-Bold' 
+  },
+
+  // --- Step 2: Claims Step ---
+  fixedHeaderBlock: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   headerBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 8, 10, 0.85)', // Opaque background to hide list
+    backgroundColor: COLORS.background,
   },
   expandedHeader: {
       height: 160,
@@ -2300,7 +2396,7 @@ const styles = StyleSheet.create({
   collapsedHeaderText: {
       fontFamily: 'Tajawal-Bold',
       fontSize: 18,
-      color: COLORS.text,
+      color: COLORS.textPrimary,
   },
   claimsSearchContainer: {
       position: 'absolute',
@@ -2314,10 +2410,10 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      backgroundColor: COLORS.card,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: COLORS.glassBorder,
+      borderColor: COLORS.border,
       paddingHorizontal: 15,
   },
   searchIcon: {
@@ -2326,7 +2422,7 @@ const styles = StyleSheet.create({
   claimsSearchInput: {
       flex: 1,
       height: 50,
-      color: COLORS.text,
+      color: COLORS.textPrimary,
       fontFamily: 'Tajawal-Regular',
       fontSize: 15,
       textAlign: 'right',
@@ -2337,18 +2433,18 @@ const styles = StyleSheet.create({
       padding: 20,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: COLORS.glassBorder,
-      overflow: 'hidden',
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
       gap: 15,
   },
   claimItemActive: {
-      borderColor: COLORS.primaryDark,
-      backgroundColor: 'rgba(178, 216, 180, 0.1)',
+      borderColor: COLORS.accentGreen,
+      backgroundColor: 'rgba(96, 165, 140, 0.1)',
   },
   claimItemText: {
       fontFamily: 'Tajawal-Bold', 
       fontSize: 16, 
-      color: COLORS.text,
+      color: COLORS.textPrimary,
       flex: 1,
       textAlign: 'right',
   },
@@ -2357,14 +2453,14 @@ const styles = StyleSheet.create({
       height: 28,
       borderRadius: 14,
       borderWidth: 2,
-      borderColor: COLORS.primary,
+      borderColor: COLORS.accentGreen,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.2)',
+      backgroundColor: 'rgba(13, 27, 30, 0.5)',
   },
   checkboxFill: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: COLORS.primary,
+      backgroundColor: COLORS.accentGreen,
       borderRadius: 14,
   },
   fabContainer: {
@@ -2377,11 +2473,11 @@ const styles = StyleSheet.create({
       width: 64,
       height: 64,
       borderRadius: 32,
-      backgroundColor: COLORS.primary,
+      backgroundColor: COLORS.accentGreen,
       justifyContent: 'center',
       alignItems: 'center',
       elevation: 8,
-      shadowColor: COLORS.primaryGlow,
+      shadowColor: COLORS.accentGlow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.6,
       shadowRadius: 8,
@@ -2389,8 +2485,8 @@ const styles = StyleSheet.create({
   heroFab: {
     position: 'absolute',
     zIndex: 1000,
-    backgroundColor: COLORS.primary,
-    borderRadius: 32, // Should match your fab's borderRadius
+    backgroundColor: COLORS.accentGreen,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2398,526 +2494,287 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    borderRadius: 32, // Should match your fab's borderRadius
+    borderRadius: 32,
     borderWidth: 3,
   },
+
+  // --- Step 3: Loading ---
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 30,
+  },
+  flaskAnimationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+  },
+  loadingText: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 20,
+    textAlign: 'center',
+  },
+
+  // --- Step 4: Results ---
+  resultsSectionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 20,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  personalMatchCard: { 
+    padding: 15, 
+    borderWidth: 1,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+  },
+  personalMatch_good: { borderColor: COLORS.success },
+  personalMatch_warning: { borderColor: COLORS.warning },
+  personalMatch_danger: { borderColor: COLORS.danger },
+  personalMatchTitle: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 16, 
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+  },
+  personalMatchReason: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 13, 
+    color: COLORS.textSecondary, 
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  vScoreCard: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  verdictText: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 22, 
+    color: COLORS.textPrimary, 
+    textAlign: 'center', 
+    marginBottom: 10 
+  },
+  pillarsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    width: '100%', 
+    marginTop: 15, 
+    paddingTop: 15, 
+    borderTopWidth: 1, 
+    borderTopColor: COLORS.border, 
+  },
+  pillar: { 
+    alignItems: 'center', 
+    gap: 5 
+  },
+  pillarTitle: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: 14, 
+    color: COLORS.textSecondary, 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    gap: 5,
+  },
+  pillarScore: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: 20 
+  },
+  groupHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  groupTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+  },
+  truthCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  truthTrigger: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 15,
+    gap: 15,
+  },
+  truthTitleContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  truthTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+  },
+  truthStatus: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+  },
+  truthDetails: {
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: 10,
+  },
+  truthExplanation: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    textAlign: 'right',
+    marginBottom: 15,
+  },
+  evidenceContainer: {},
+  evidenceTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  evidencePillsContainer: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  evidencePill: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  evidencePillText: {
+    fontFamily: 'Tajawal-Medium',
+    fontSize: 12,
+    color: COLORS.textPrimary,
+  },
+  pillProven: { backgroundColor: `${COLORS.success}40` },
+  pillTraditional: { backgroundColor: `${COLORS.gold}40` },
+  pillDoubtful: { backgroundColor: `${COLORS.warning}40` },
+  pillIneffective: { backgroundColor: `${COLORS.danger}40` },
+  ingCardBase: {
+    width: width * 0.85,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    padding: 15,
+  },
+  ingHeader: { alignItems: 'flex-end' },
+  ingName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, textAlign: 'right' },
+  ingTagsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  ingTag: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  ingFuncTag: { backgroundColor: 'rgba(96, 165, 140, 0.2)' },
+  ingChemTag: { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+  ingTagText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary },
+  ingBenefitsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 15 },
+  ingBenefitChip: { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  ingBenefitText: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary },
+  ingDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
+  ingWarningBox: { borderRadius: 12, padding: 12, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 },
+  ingWarningIcon: { marginTop: 2 },
+  ingWarningText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textPrimary, lineHeight: 20, textAlign: 'right' },
+
+  // --- Shared Components ---
+  mainBtn: { flexDirection: 'row-reverse', backgroundColor: COLORS.accentGreen, borderRadius: 50, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' },
+  mainBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
+  actionRow: { flexDirection: 'row', gap: 15, marginTop: 20, width: '100%' },
+  secBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.textSecondary, borderRadius: 15 },
+  secBtnText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 15 },
+  priBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accentGreen, borderRadius: 15 },
+  priBtnText: { color: COLORS.background, fontFamily: 'Tajawal-Bold', fontSize: 15 },
+
+  // --- Save Modal ---
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 25,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  modalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, marginBottom: 10 },
+  modalSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
+  modalInput: {
+    width: '100%',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 15,
+    color: COLORS.textPrimary,
+    fontFamily: 'Tajawal-Regular',
+    textAlign: 'right',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 20,
+  },
+  modalSaveButton: { width: '100%', padding: 15, backgroundColor: COLORS.accentGreen, borderRadius: 12, alignItems: 'center' },
+  modalSaveButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
   
-    // --- Step 3: Loading ---
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 30,
-    },
-    flaskAnimationContainer: { // ADD THIS
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: 200,
-    },
-    loadingText: {
-      color: COLORS.text,
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
-      textAlign: 'center',
-    },
+  // --- Pagination & Swipe Hint ---
+  swipeHintContainer: { position: 'absolute', right: '40%', top: '45%', transform: [{ translateY: -30 }], zIndex: 10, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
+  paginationSimpleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  paginationContainer: { height: DOT_SIZE, width: PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING, justifyContent: 'center', alignSelf: 'center', marginBottom: 20, overflow: 'hidden' },
+  paginationTrack: { flexDirection: 'row', alignItems: 'center' },
+  paginationDot: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: 'rgba(255, 255, 255, 0.25)', marginRight: DOT_SPACING },
+  paginationIndicator: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: COLORS.accentGreen, position: 'absolute', left: 0 },
   
-    // --- Step 4: Results ---
-    resultsSectionTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
-      color: COLORS.text,
-      textAlign: 'right',
-      marginBottom: 15,
-      paddingHorizontal: 5,
-    },
-    personalMatchCard: { 
-      padding: 15, 
-      borderWidth: 1 
-    },
-    personalMatch_good: { 
-      backgroundColor: 'rgba(16, 185, 129, 0.15)', 
-      borderColor: COLORS.success 
-    },
-    personalMatch_warning: { 
-      backgroundColor: 'rgba(245, 158, 11, 0.15)', 
-      borderColor: COLORS.warning 
-    },
-    personalMatch_danger: { 
-      backgroundColor: 'rgba(239, 68, 68, 0.15)', 
-      borderColor: COLORS.danger 
-    },
-    personalMatchTitle: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 16, 
-      color: '#FFF',
-      textAlign: 'right',
-    },
-    personalMatchReason: { 
-      fontFamily: 'Tajawal-Regular', 
-      fontSize: 13, 
-      color: COLORS.textDim, 
-      marginTop: 8,
-      textAlign: 'right',
-    },
-    vScoreCard: {
-      alignItems: 'center',
-      padding: 20,
-    },
-    verdictText: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 22, 
-      color: COLORS.text, 
-      textAlign: 'center', 
-      marginBottom: 10 
-    },
-    pillarsRow: { 
-      flexDirection: 'row', 
-      justifyContent: 'space-around', 
-      width: '100%', 
-      marginTop: 15, 
-      paddingTop: 15, 
-      borderTopWidth: 1, 
-      borderTopColor: COLORS.glassBorder 
-    },
-    pillar: { 
-      alignItems: 'center', 
-      gap: 5 
-    },
-    pillarTitle: { 
-      fontFamily: 'Tajawal-Regular', 
-      fontSize: 14, 
-      color: COLORS.textDim, 
-      flexDirection: 'row', 
-      alignItems: 'center',
-      gap: 5,
-    },
-    pillarScore: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 20 
-    },
-    groupHeader: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: 10,
-      paddingHorizontal: 5,
-    },
-    groupTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-    },
-    truthCard: {
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      borderRadius: 16,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-    },
-    truthTrigger: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      padding: 15,
-      gap: 15,
-    },
-    truthTitleContainer: {
-      flex: 1,
-      alignItems: 'flex-end',
-    },
-    truthTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 15,
-      color: COLORS.text,
-      textAlign: 'right',
-    },
-    truthStatus: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textDim,
-      textAlign: 'right',
-    },
-    truthDetails: {
-      paddingHorizontal: 15,
-      paddingBottom: 15,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.glassBorder,
-      marginTop: 10,
-    },
-    truthExplanation: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 13,
-      color: COLORS.textDim,
-      lineHeight: 20,
-      textAlign: 'right',
-      marginBottom: 15,
-    },
-    evidenceContainer: {},
-    evidenceTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 13,
-      color: COLORS.text,
-      textAlign: 'right',
-      marginBottom: 10,
-    },
-    evidencePillsContainer: {
-      flexDirection: 'row-reverse',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    evidencePill: {
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-    },
-    evidencePillText: {
-      fontFamily: 'Tajawal-Medium',
-      fontSize: 12,
-      color: '#FFFFFF',
-    },
-    pillProven: {
-      backgroundColor: `${COLORS.success}40`,
-    },
-    pillTraditional: {
-      backgroundColor: `${COLORS.gold}40`,
-    },
-    pillDoubtful: {
-      backgroundColor: `${COLORS.warning}40`,
-    },
-    pillIneffective: {
-      backgroundColor: `${COLORS.danger}40`,
-    },
-    ingCardBase: {
-      width: width * 0.85, // <-- Add this line to define the card width
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
-      overflow: 'hidden',
-      padding: 15,
-    },
-ingHeader: {
-  alignItems: 'flex-end', // Aligns content to the right for RTL text
-},
-ingName: {
-  fontFamily: 'Tajawal-ExtraBold',
-  fontSize: 22,
-  color: COLORS.text,
-  textAlign: 'right',
-},
-ingTagsContainer: {
-  flexDirection: 'row-reverse',
-  flexWrap: 'wrap',
-  gap: 8,
-  marginTop: 8,
-},
-ingTag: {
-  borderRadius: 8,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-},
-ingFuncTag: {
-  backgroundColor: 'rgba(178, 216, 180, 0.2)', // primary with opacity
-},
-ingChemTag: {
-  backgroundColor: 'rgba(59, 130, 246, 0.2)', // info with opacity
-},
-ingTagText: {
-  fontFamily: 'Tajawal-Bold',
-  fontSize: 12,
-  color: COLORS.text,
-},
-ingBenefitsContainer: {
-  flexDirection: 'row-reverse',
-  flexWrap: 'wrap',
-  gap: 8,
-  marginTop: 15,
-},
-ingBenefitChip: {
-  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  borderRadius: 20,
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-},
-ingBenefitText: {
-  fontFamily: 'Tajawal-Regular',
-  fontSize: 13,
-  color: COLORS.textDim,
-},
-ingDivider: {
-  height: 1,
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  marginVertical: 15,
-},
-ingWarningBox: {
-  borderRadius: 12,
-  padding: 12,
-  flexDirection: 'row-reverse',
-  alignItems: 'flex-start',
-  gap: 10,
-},
-ingWarningIcon: {
-  marginTop: 2,
-},
-ingWarningText: {
-  flex: 1,
-  fontFamily: 'Tajawal-Regular',
-  fontSize: 13,
-  color: COLORS.text,
-  lineHeight: 20,
-  textAlign: 'right',
-},
-  
-    // --- Shared Components ---
-    mainBtn: { 
-      flexDirection: 'row-reverse', 
-      backgroundColor: COLORS.primary, 
-      borderRadius: 50, 
-      padding: 18, 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      gap: 10, 
-      width: '100%'
-    },
-    mainBtnText: { 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 16, 
-      color: COLORS.darkGreen 
-    },
-    actionRow: { 
-      flexDirection: 'row', 
-      gap: 15, 
-      marginTop: 20, 
-      width: '100%' 
-    },
-    secBtn: { 
-      flex: 1, 
-      padding: 16, 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      borderWidth: 1, 
-      borderColor: COLORS.textDim, 
-      borderRadius: 15 
-    },
-    secBtnText: { 
-      color: COLORS.text, 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 15 
-    },
-    priBtn: { 
-      flex: 1, 
-      padding: 16, 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: COLORS.primary, 
-      borderRadius: 15 
-    },
-    priBtnText: { 
-      color: COLORS.darkGreen, 
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 15 
-    },
-  
-    // --- Save Modal ---
-    modalOverlay: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      width: '90%',
-      backgroundColor: 'rgba(10, 15, 12, 0.95)',
-      borderRadius: 20,
-      padding: 25,
-      borderWidth: 1,
-      borderColor: COLORS.glassBorder,
-      alignItems: 'center',
-    },
-    modalTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
-      color: COLORS.text,
-      marginBottom: 10,
-    },
-    modalSubtitle: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
-      color: COLORS.textDim,
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    modalInput: {
-      width: '100%',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      borderRadius: 12,
-      padding: 15,
-      color: COLORS.text,
-      fontFamily: 'Tajawal-Regular',
-      textAlign: 'right',
-      borderWidth: 1,
-      borderColor: COLORS.glassBorder,
-      marginBottom: 20,
-    },
-    modalSaveButton: {
-      width: '100%',
-      padding: 15,
-      backgroundColor: COLORS.primary,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    modalSaveButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.darkGreen,
-    },
-    swipeHintContainer: {
-      position: 'absolute',
-      right: '40%', // Position it from the right edge
-      top: '45%',   // Center it vertically
-      transform: [{ translateY: -30 }], // Adjust for the icon's height
-      zIndex: 10,   // Ensure it's on top of the cards
-      alignItems: 'center',
-      justifyContent: 'center',
-      // This stops the hint from blocking touches to the card underneath it
-      pointerEvents: 'none', 
-    },
-    paginationSimpleContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-    paginationContainer: {
-      height: DOT_SIZE,
-      // This calculates the width of the visible mask (4 dots)
-      width: PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING,
-      justifyContent: 'center',
-      alignSelf: 'center', // Center the mask itself
-      marginBottom: 20,
-      overflow: 'hidden', // CRITICAL: This clips the sliding track
-    },
-    paginationTrack: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    paginationDot: {
-      width: DOT_SIZE,
-      height: DOT_SIZE,
-      borderRadius: DOT_SIZE / 2,
-      backgroundColor: 'rgba(255, 255, 255, 0.25)',
-      marginRight: DOT_SPACING, // Use marginRight for consistent spacing
-    },
-    paginationIndicator: {
-      width: DOT_SIZE,
-      height: DOT_SIZE,
-      borderRadius: DOT_SIZE / 2,
-      backgroundColor: COLORS.primary,
-      position: 'absolute', // Sits on top of the track
-      left: 0,
-    },
-    // --- Camera Modal (Enhanced) ---
-    permissionContainer: {
-      flex: 1,
-      backgroundColor: '#05080a',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 20,
-    },
-    permissionText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
-      color: COLORS.text,
-      textAlign: 'center',
-      paddingHorizontal: 30,
-    },
-    permissionButton: {
-      backgroundColor: COLORS.primary,
-      paddingHorizontal: 30,
-      paddingVertical: 15,
-      borderRadius: 15,
-    },
-    permissionButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.darkGreen,
-    },
-    cameraOverlay: {
-      flex: 1,
-      backgroundColor: 'transparent',
-      justifyContent: 'space-between',
-    },
-    cameraHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 55,
-      paddingBottom: 20,
-    },
-    cameraTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
-      color: COLORS.text,
-    },
-    cameraCloseButton: {
-      padding: 5,
-    },
-    cameraScannerContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: '5%',
-    },
-    cameraGuideText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.text,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 20,
-      overflow: 'hidden',
-      position: 'absolute',
-      top: '20%',
-    },
-    cornerBracket: {
-      position: 'absolute',
-      width: 40,
-      height: 40,
-      borderColor: COLORS.primary,
-      borderWidth: 4,
-    },
-    topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
-    topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
-    bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
-    bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-    cameraFooter: {
-      paddingTop: 30,
-      paddingBottom: Platform.OS === 'android' ? 30 : 50,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    shutterPulseRing: {
-      position: 'absolute',
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      borderWidth: 2,
-      borderColor: COLORS.primaryGlow,
-    },
-    shutterButtonOuter: {
-      width: 74,
-      height: 74,
-      borderRadius: 37,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    shutterButtonInner: {
-      width: 62,
-      height: 62,
-      borderRadius: 31,
-      backgroundColor: COLORS.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: COLORS.darkGreen,
-    },
+  // --- Camera Modal ---
+  permissionContainer: { flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', gap: 20 },
+  permissionText: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'center', paddingHorizontal: 30 },
+  permissionButton: { backgroundColor: COLORS.accentGreen, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15 },
+  permissionButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
+  cameraOverlay: { flex: 1, backgroundColor: 'transparent', justifyContent: 'space-between' },
+  cameraHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 55,
+    paddingBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  cameraTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary },
+  cameraCloseButton: { padding: 5 },
+  cameraScannerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: '5%' },
+  cameraGuideText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, overflow: 'hidden', position: 'absolute', top: '20%' },
+  cornerBracket: { position: 'absolute', width: 40, height: 40, borderColor: COLORS.accentGreen, borderWidth: 4 },
+  topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
+  topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
+  bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
+  bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
+  cameraFooter: {
+    paddingTop: 30,
+    paddingBottom: Platform.OS === 'android' ? 30 : 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  shutterPulseRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: COLORS.accentGlow },
+  shutterButtonOuter: { width: 74, height: 74, borderRadius: 37, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  shutterButtonInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: COLORS.accentGreen, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.background },
 });
