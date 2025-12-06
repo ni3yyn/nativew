@@ -574,73 +574,83 @@ const DockItem = ({ item, isActive, onPress, onLayout }) => {
 
 // 7. ENHANCED ACCORDION with smooth height animation
 const Accordion = ({ title, icon, children, isOpen, onPress }) => {
-  const heightAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const contentRef = useRef(null);
+  // State to hold the measured height of the content
   const [contentHeight, setContentHeight] = useState(0);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(heightAnim, {
-        toValue: isOpen ? 1 : 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: false
-      }),
-      Animated.spring(rotateAnim, {
-        toValue: isOpen ? 1 : 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true
-      })
-    ]).start();
-  }, [isOpen]);
+  // Animated values for height and chevron rotation
+  const heightAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
 
-  const onLayout = (event) => {
-    if (contentHeight === 0) {
-      setContentHeight(event.nativeEvent.layout.height);
-    }
+  useEffect(() => {
+      // This effect runs whenever the 'isOpen' prop changes
+      
+      // Animate the chevron rotation (same as before)
+      Animated.spring(rotateAnim, {
+          toValue: isOpen ? 1 : 0,
+          friction: 8,
+          tension: 60,
+          useNativeDriver: true,
+      }).start();
+
+      // Animate the height using a spring for a natural feel
+      Animated.spring(heightAnim, {
+          toValue: isOpen ? contentHeight : 0, // Animate to the measured height or to 0
+          friction: 9,
+          tension: 60,
+          useNativeDriver: false, // 'height' cannot be animated on the native thread
+      }).start();
+
+  }, [isOpen, contentHeight]); // Re-run animations if the open state or measured height changes
+
+  // This function measures the content's height the first time it's laid out
+  const handleLayout = (event) => {
+      const measuredHeight = event.nativeEvent.layout.height;
+      // We only set the height if it hasn't been set yet, to avoid re-measuring
+      if (measuredHeight > 0 && contentHeight === 0) {
+          setContentHeight(measuredHeight);
+      }
   };
 
-  const animatedHeight = heightAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, contentHeight || 200]
-  });
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg']
+  const rotateChevron = rotateAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '-180deg'],
   });
 
   return (
-    <ContentCard style={styles.accordionWrapper}>
-      <TouchableOpacity 
-        activeOpacity={0.7} 
-        onPress={() => {
-          Haptics.selectionAsync();
-          onPress();
-        }} 
-        style={[styles.accordionHeader, isOpen && styles.accordionHeaderOpen]}
-      >
-        <View style={{flexDirection:'row', alignItems:'center', gap:12}}>
-          <Animated.View style={[styles.iconBoxSm, {
-            transform: [{ rotate }]
-          }]}>
-            <FontAwesome5 name={icon} size={16} color={COLORS.primary} />
+      <ContentCard style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
+          <TouchableOpacity 
+              activeOpacity={0.8} 
+              onPress={onPress} // The press handler now just updates state, no LayoutAnimation
+              style={styles.accordionHeader}
+          >
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
+                  <View style={styles.iconBoxSm}>
+                      <FontAwesome5 name={icon} size={14} color={COLORS.accentGreen} />
+                  </View>
+                  <Text style={styles.accordionTitle}>{title}</Text>
+              </View>
+              <Animated.View style={{ transform: [{ rotate: rotateChevron }] }}>
+                  <FontAwesome5 name="chevron-down" size={14} color={COLORS.textSecondary} />
+              </Animated.View>
+          </TouchableOpacity>
+
+          {/* This is the container that will smoothly animate its height */}
+          <Animated.View style={{ height: heightAnim, overflow: 'hidden' }}>
+              {/* 
+                This inner view is positioned absolutely. This is a key trick:
+                It allows the content to render and be measured by 'onLayout' 
+                even when the parent Animated.View has a height of 0.
+              */}
+              <View 
+                  style={{ position: 'absolute', width: '100%' }}
+                  onLayout={handleLayout}
+              >
+                  <View style={styles.accordionBody}>
+                      {children}
+                  </View>
+              </View>
           </Animated.View>
-          <Text style={styles.accordionTitle}>{title}</Text>
-        </View>
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
-        </Animated.View>
-      </TouchableOpacity>
-      
-      <Animated.View style={[styles.accordionBody, { height: animatedHeight, overflow: 'hidden' }]}>
-        <View ref={contentRef} onLayout={onLayout}>
-          {children}
-        </View>
-      </Animated.View>
-    </ContentCard>
+      </ContentCard>
   );
 };
 
@@ -1476,47 +1486,38 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
 
 
 const SettingsSection = ({ profile, onLogout }) => {
-  // --- FIX #1: Get the authenticated user object from the context ---
   const { user } = useAppContext();
+  const [openAccordion, setOpenAccordion] = useState('traits'); // State to track which accordion is open, default to 'traits'
 
   const [form, setForm] = useState({
-      ...profile?.settings,
-      goals: profile?.settings?.goals || [],
-      conditions: profile?.settings?.conditions || [],
-      allergies: profile?.settings?.allergies || [],
+      goals: [], conditions: [], allergies: [], ...profile?.settings
   });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
       setForm(currentForm => ({
-          ...currentForm,
-          ...profile?.settings,
+          ...currentForm, ...profile?.settings,
           goals: profile?.settings?.goals || [],
           conditions: profile?.settings?.conditions || [],
           allergies: profile?.settings?.allergies || [],
       }));
   }, [profile]);
 
-  const updateSetting = async (key, value) => {
-      // Safety check: Don't try to save if there's no logged-in user.
-      if (!user?.uid) {
-          Alert.alert("Error", "User not found. Please log in again.");
-          return;
-      }
-
-      setIsSaving(true);
+  // This function ensures only one accordion is open at a time
+  const handleToggleAccordion = (id) => {
       Haptics.selectionAsync();
-      
+      setOpenAccordion(currentId => (currentId === id ? null : id));
+  };
+
+  const updateSetting = async (key, value) => {
+      if (!user?.uid) { Alert.alert("Error", "User not found."); return; }
+      setIsSaving(true);
       const newForm = { ...form, [key]: value };
       setForm(newForm);
-
       try {
-          // --- FIX #2: Use the correct user ID from the auth object ---
-          const userProfileRef = doc(db, 'profiles', user.uid);
-          await updateDoc(userProfileRef, { settings: newForm });
+          await updateDoc(doc(db, 'profiles', user.uid), { settings: newForm });
       } catch (e) {
           console.error("Error updating settings:", e);
-          setForm(profile?.settings || {}); // Revert on error
           Alert.alert("Error", "Could not save setting.");
       } finally {
           setIsSaving(false);
@@ -1525,77 +1526,65 @@ const SettingsSection = ({ profile, onLogout }) => {
 
   const handleMultiSelectToggle = (field, itemId) => {
       const currentSelection = form[field] || [];
-      const newSelection = currentSelection.includes(itemId)
-          ? currentSelection.filter(id => id !== itemId)
-          : [...currentSelection, itemId];
+      const newSelection = currentSelection.includes(itemId) ? currentSelection.filter(id => id !== itemId) : [...currentSelection, itemId];
       updateSetting(field, newSelection);
   };
 
-  // The JSX for this component remains exactly the same as the previous version
   return (
-      <ScrollView 
-          contentContainerStyle={{ paddingBottom: 150 }}
-          showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+          {/* --- UPDATE: Basic Traits is now an Accordion --- */}
           <StaggeredItem index={0}>
-              <ContentCard>
-                  <Text style={styles.settingTitle}>السمات الأساسية</Text>
-                  <SingleSelectGroup
-                      title="نوع بشرتي"
-                      options={basicSkinTypes}
-                      selectedValue={form.skinType}
-                      onSelect={(value) => updateSetting('skinType', value)}
+              <Accordion 
+                  title="السمات الأساسية" 
+                  icon="id-card" 
+                  isOpen={openAccordion === 'traits'} 
+                  onPress={() => handleToggleAccordion('traits')}
+              >
+                  <SingleSelectGroup 
+                      title="نوع بشرتي" 
+                      options={basicSkinTypes} 
+                      selectedValue={form.skinType} 
+                      onSelect={(value) => updateSetting('skinType', value)} 
                   />
                   <View style={styles.divider} />
-                  <SingleSelectGroup
-                      title="نوع فروة رأسي"
-                      options={basicScalpTypes}
-                      selectedValue={form.scalpType}
-                      onSelect={(value) => updateSetting('scalpType', value)}
+                  <SingleSelectGroup 
+                      title="نوع فروة رأسي" 
+                      options={basicScalpTypes} 
+                      selectedValue={form.scalpType} 
+                      onSelect={(value) => updateSetting('scalpType', value)} 
                   />
-              </ContentCard>
+              </Accordion>
           </StaggeredItem>
 
+          {/* Goals (Collapsible) */}
           <StaggeredItem index={1}>
-              <ContentCard>
-                  <Text style={styles.settingTitle}>الأهداف والمخاوف الصحية</Text>
-                   <MultiSelectGroup
-                      title="أهدافي (Goals)"
-                      options={GOALS_LIST.map(g => ({...g, name: g.label}))}
-                      selectedValues={form.goals}
-                      onToggle={(id) => handleMultiSelectToggle('goals', id)}
-                  />
-                  <View style={styles.divider} />
-                  <MultiSelectGroup
-                      title="الحالات الصحية (Conditions)"
-                      options={commonConditions}
-                      selectedValues={form.conditions}
-                      onToggle={(id) => handleMultiSelectToggle('conditions', id)}
-                  />
-                  <View style={styles.divider} />
-                  <MultiSelectGroup
-                      title="الحساسية (Allergies)"
-                      options={commonAllergies}
-                      selectedValues={form.allergies}
-                      onToggle={(id) => handleMultiSelectToggle('allergies', id)}
-                  />
-              </ContentCard>
+              <Accordion title="الأهداف" icon="crosshairs" isOpen={openAccordion === 'goals'} onPress={() => handleToggleAccordion('goals')}>
+                  <MultiSelectGroup options={GOALS_LIST.map(g => ({...g, name: g.label}))} selectedValues={form.goals} onToggle={(id) => handleMultiSelectToggle('goals', id)} />
+              </Accordion>
           </StaggeredItem>
 
+          {/* Health Conditions (Collapsible) */}
           <StaggeredItem index={2}>
-               <ContentCard>
-                  <Text style={styles.settingTitle}>إدارة الحساب</Text>
-                  <PressableScale 
-                      onPress={() => {
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                          if (onLogout) onLogout();
-                      }} 
-                      style={styles.logoutBtn}
-                  >
+              <Accordion title="الحالات الصحية" icon="heartbeat" isOpen={openAccordion === 'conditions'} onPress={() => handleToggleAccordion('conditions')}>
+                  <MultiSelectGroup options={commonConditions} selectedValues={form.conditions} onToggle={(id) => handleMultiSelectToggle('conditions', id)} />
+              </Accordion>
+          </StaggeredItem>
+
+          {/* Allergies (Collapsible) */}
+          <StaggeredItem index={3}>
+              <Accordion title="الحساسية" icon="allergies" isOpen={openAccordion === 'allergies'} onPress={() => handleToggleAccordion('allergies')}>
+                  <MultiSelectGroup options={commonAllergies} selectedValues={form.allergies} onToggle={(id) => handleMultiSelectToggle('allergies', id)} />
+              </Accordion>
+          </StaggeredItem>
+          
+          {/* Account Management (Collapsible) */}
+          <StaggeredItem index={4}>
+               <Accordion title="إدارة الحساب" icon="user-cog" isOpen={openAccordion === 'account'} onPress={() => handleToggleAccordion('account')}>
+                  <PressableScale onPress={onLogout} style={styles.logoutBtn}>
                       <Text style={styles.logoutText}>تسجيل الخروج</Text>
                       <FontAwesome5 name="sign-out-alt" size={16} color={COLORS.danger} />
                   </PressableScale>
-               </ContentCard>
+               </Accordion>
           </StaggeredItem>
       </ScrollView>
   );
@@ -2415,30 +2404,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     padding: 18,
-    backgroundColor: COLORS.card,
-  },
-  accordionHeaderOpen: { 
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent', // Header has no background itself
   },
   accordionTitle: { 
     fontFamily: 'Tajawal-Bold', 
     color: COLORS.textPrimary, 
-    fontSize: 15 
+    fontSize: 16,
   },
   accordionBody: { 
-    overflow: 'hidden',
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 18,
+    padding: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   iconBoxSm: { 
-    width: 28, 
-    height: 28, 
-    borderRadius: 14, 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
     backgroundColor: 'rgba(90, 156, 132, 0.15)', 
     alignItems: 'center', 
-    justifyContent: 'center' 
+    justifyContent: 'center',
   },
-
   // MODAL STYLES
   modalOverlay: { 
     flex: 1, 
