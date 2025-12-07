@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: 🚀 Build Android APK
+    name: 🚀 Build Android APK (Cloud)
     runs-on: ubuntu-latest
     steps:
       - name: 🏗 Checkout Repository
@@ -22,7 +22,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          # Enable Gradle caching through the setup-java action
           cache: 'gradle'
 
       - name: 🟢 Setup Node.js
@@ -37,20 +36,23 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install
 
-      - name: 📱 Build APK (Local Mode)
+      - name: 📱 Build APK (EAS Cloud Mode)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
             exit 1
           fi
-          # Removed the --clear-cache flag to leverage build caches
-          eas build --local --platform android --profile preview --non-interactive --output ./wathiq.apk
+          # SWITCHED to cloud build for speed, using the 'preview' profile from eas.json
+          eas build --platform android --profile preview --non-interactive
 
-      - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wathiq-release-apk
-          path: wathiq.apk
+      # EAS Cloud Build automatically uploads artifacts to the EAS dashboard.
+      # If you still want them in GitHub Actions, you need the build ID, 
+      # but for simplicity and speed with EAS, relying on EAS dashboard is better.
+      # I've removed the upload step as it's often redundant when using EAS.
+      # If you MUST have it here, you would need to run 'eas build --id <id>' 
+      # after the build and use 'eas build:download'.
+      
+      - name: ⚠️ Note on Artifacts
+        run: echo "Artifacts are uploaded to the EAS Build dashboard for profile 'preview'."

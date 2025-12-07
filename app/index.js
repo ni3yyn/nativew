@@ -1,27 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import LottieView from 'lottie-react-native';
 
 import { useAppContext } from '../src/context/AppContext';
 
-// Keep the native splash screen visible while the app loads
+// Keep the native splash screen visible while the app loads.
+// This will be hidden in this component once auth state is ready.
 SplashScreen.preventAutoHideAsync();
 
 export default function Index() {
   const { user, loading } = useAppContext();
   const router = useRouter();
   
-  // State to track if the Lottie animation has finished
-  const [animationFinished, setAnimationFinished] = useState(false);
-
   useEffect(() => {
-    console.log(`Index: Checking conditions... Loading: ${loading}, AnimationFinished: ${animationFinished}`);
+    console.log(`Index: Checking conditions... Loading: ${loading}, User: ${!!user}`);
 
-    // Only try to navigate when the initial loading is done AND the animation has finished
-    if (!loading && animationFinished) {
-      console.log("Index: Conditions met! Redirecting...");
+    // Only try to navigate when the initial loading (auth/profile setup) is done
+    if (!loading) {
+      console.log("Index: Loading complete! Redirecting...");
+      
+      // Hide the native splash screen now that we have a decision to make
+      SplashScreen.hideAsync(); 
+      
       if (user) {
         // User is logged in, redirect them to the profile page.
         router.replace('/profile');
@@ -30,31 +31,14 @@ export default function Index() {
         router.replace('/login');
       }
     }
-  }, [user, loading, animationFinished, router]);
+  }, [user, loading, router]);
 
-  const onLayoutRootView = useCallback(async () => {
-    // Hide the native splash screen once the Lottie animation is ready to be displayed
-    await SplashScreen.hideAsync();
-  }, []);
-
+  // The background color will show the Expo splash screen background color until navigation happens.
   return (
     <View 
       style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1A2D27' }}
-      onLayout={onLayoutRootView} // Hide native splash screen on layout
     >
-      <LottieView
-        style={{ width: '80%', height: '80%' }}
-        // IMPORTANT: Update this path to your Lottie JSON file
-        source={require('../assets/splash-animation.json')} 
-        autoPlay
-        loop={false}
-        resizeMode="contain"
-        // This function will be called when the animation is complete
-        onAnimationFinish={() => {
-          console.log("Animation Finished!");
-          setAnimationFinished(true);
-        }}
-      />
+      {/* Content is removed. This View just holds the space while waiting for auth state. */}
     </View>
   );
 }

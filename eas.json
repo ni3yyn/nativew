@@ -10,8 +10,9 @@
     },
     "preview": {
       "android": {
-        "buildType": "apk" ,
-        "gradleCommand": ":app:assembleRelease --stacktrace --info"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease --stacktrace --info",
+        "reactNativeArchitectures": "arm64-v8a"
       }
     },
     "production": {
