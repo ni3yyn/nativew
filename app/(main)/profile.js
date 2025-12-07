@@ -659,153 +659,295 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
 //                       ENHANCED MAIN SECTIONS
 // ============================================================================
 
-const ShelfSection = ({ products, loading, onDelete, onRefresh }) => {
-    const [refreshing, setRefreshing] = useState(false);
-    const spinAnim = useRef(new Animated.Value(0)).current;
-    const statsAnim = useRef(new Animated.Value(0)).current;
+// 1. Skeleton Loader
+const SkeletonProductCard = ({ index }) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.timing(shimmerAnim, { toValue: 1, duration: 1200, useNativeDriver: true, delay: index * 100 })
+    );
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  const translateX = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-width, width] });
+  const ShimmeringView = ({ style }) => (
+    <View style={[style, { overflow: 'hidden', backgroundColor: COLORS.border }]}>
+      <Animated.View style={{ ...StyleSheet.absoluteFillObject, transform: [{ translateX }] }}>
+        <LinearGradient colors={['transparent', 'rgba(255,255,255,0.1)', 'transparent']} style={{ flex: 1 }} />
+      </Animated.View>
+    </View>
+  );
+
+  return (
+    <View style={styles.productListItem}>
+      <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
+        <ShimmeringView style={{ height: 18, width: '80%', borderRadius: 8 }} />
+        <ShimmeringView style={{ height: 14, width: '40%', borderRadius: 6 }} />
+        <ShimmeringView style={{ height: 12, width: '60%', borderRadius: 6, marginTop: 4 }} />
+      </View>
+      <ShimmeringView style={{ width: 60, height: 60, borderRadius: 30 }} />
+    </View>
+  );
+};
+
+
+// 2. The new interactive, swipeable product list item with Verdict Icons
+const ProductListItem = ({ product, onPress, onDelete }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const getVerdictStyle = (verdict) => {
+    if (!verdict) return { icon: 'question-circle', color: COLORS.textSecondary };
+    const v = verdict.toLowerCase();
+    if (v.includes('elite') || v.includes('مثالية')) return { icon: 'gem', color: '#3b82f6' };
+    if (v.includes('ممتاز')) return { icon: 'star', color: COLORS.success };
+    if (v.includes('جيد')) return { icon: 'check-circle', color: COLORS.success };
+    if (v.includes('خطير') || v.includes('حساسية')) return { icon: 'times-circle', color: COLORS.danger };
+    if (v.includes('غير آمن')) return { icon: 'exclamation-triangle', color: COLORS.danger };
+    return { icon: 'balance-scale-right', color: COLORS.warning };
+  };
+  
+  const verdictStyle = getVerdictStyle(product.analysisData.finalVerdict);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5 && Math.abs(gestureState.dx) > 10,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) translateX.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -width * 0.25) {
+          Animated.timing(translateX, { toValue: -width, duration: 250, useNativeDriver: true }).start(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onDelete();
+          });
+        } else {
+          Animated.spring(translateX, { toValue: 0, friction: 5, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  const score = product.analysisData.oilGuardScore || 0;
+  const scoreColor = score >= 80 ? COLORS.success : score >= 65 ? COLORS.warning : COLORS.danger;
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  return (
+    <View style={styles.productListItemWrapper}>
+      <View style={styles.deleteActionContainer}>
+        <FontAwesome5 name="trash-alt" size={22} color={COLORS.danger} />
+      </View>
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        <Pressable style={styles.productListItem} onPress={onPress}>
+          <View style={styles.listItemContent}>
+            <Text style={styles.listItemName} numberOfLines={2}>{product.productName}</Text>
+            <Text style={styles.listItemType}>{PRODUCT_TYPES[product.analysisData?.product_type]?.label || 'منتج'}</Text>
+            <View style={styles.verdictContainer}>
+              <FontAwesome5 name={verdictStyle.icon} solid color={verdictStyle.color} size={12} />
+              <Text style={[styles.listItemVerdict, {color: verdictStyle.color}]}>{product.analysisData.finalVerdict}</Text>
+            </View>
+          </View>
+          <View style={styles.listItemScoreContainer}>
+            <Svg width={radius*2} height={radius*2} style={{transform: [{ rotate: '-90deg' }]}}>
+              <Circle cx={radius} cy={radius} r={radius - 4} stroke={COLORS.border} strokeWidth={4} fill="none" />
+              <Circle cx={radius} cy={radius} r={radius - 4} stroke={scoreColor} strokeWidth={4} fill="none"
+                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
+            </Svg>
+            <Text style={[styles.listItemScoreText, { color: scoreColor }]}>{score}%</Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+};
+
+
+// 3. The new sophisticated Bottom Sheet for product details (SCROLLING & LAYOUT FIXED)
+const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
+    const sheetAnim = useRef(new Animated.Value(height)).current;
   
     useEffect(() => {
-      if (!loading) {
-        Animated.spring(statsAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          delay: 200,
-          useNativeDriver: true
-        }).start();
-      }
-    }, [loading]);
+      Animated.spring(sheetAnim, { toValue: isVisible ? 0 : height, friction: 10, tension: 80, useNativeDriver: true }).start();
+    }, [isVisible]);
   
-    const handleRefresh = async () => {
-      setRefreshing(true);
-      spinAnim.setValue(0);
-      Animated.loop(
-        Animated.timing(spinAnim, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      ).start();
-      
-      await onRefresh?.();
-      setRefreshing(false);
-      spinAnim.stopAnimation();
+    const handleClose = () => {
+      Animated.timing(sheetAnim, { toValue: height, duration: 250, easing: Easing.out(Easing.ease), useNativeDriver: true }).start(onClose);
     };
   
-    const spin = spinAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0deg', '360deg']
-    });
+    const panResponder = useRef(PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gs) => { if (gs.dy > 0) sheetAnim.setValue(gs.dy); },
+      onPanResponderRelease: (_, gs) => { gs.dy > height * 0.3 || gs.vy > 0.5 ? handleClose() : Animated.spring(sheetAnim, { toValue: 0, friction: 10, tension: 80, useNativeDriver: true }).start(); },
+    })).current;
   
-    const statsScale = statsAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.9, 1]
-    });
+    const renderHeader = () => {
+        if (!product) return null;
+        const { productName, analysisData } = product;
+        const { safety, efficacy, user_specific_alerts = [] } = analysisData;
+        const alertStyles = {
+            danger: { icon: 'times-circle', color: COLORS.danger },
+            warning: { icon: 'exclamation-triangle', color: COLORS.warning },
+            good: { icon: 'check-circle', color: COLORS.success }
+        };
+
+        return (
+            <View>
+                <View {...panResponder.panHandlers} style={styles.sheetDraggableArea}>
+                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
+                    <Text style={styles.sheetProductTitle} numberOfLines={2}>{productName}</Text>
+                </View>
+                
+                <View style={styles.sheetPillarsContainer}>
+                    <View style={styles.sheetPillar}>
+                        <FontAwesome5 name="shield-alt" size={20} color={COLORS.success} />
+                        <Text style={styles.sheetPillarLabel}>مؤشر الأمان</Text>
+                        <Text style={[styles.sheetPillarValue, {color: COLORS.success}]}>{safety.score}%</Text>
+                    </View>
+                    <View style={styles.sheetDividerVertical} />
+                    <View style={styles.sheetPillar}>
+                        <FontAwesome5 name="flask" size={20} color={COLORS.info} />
+                        <Text style={styles.sheetPillarLabel}>مؤشر الفعالية</Text>
+                        <Text style={[styles.sheetPillarValue, {color: COLORS.info}]}>{efficacy.score}%</Text>
+                    </View>
+                </View>
+
+                {user_specific_alerts.length > 0 && (
+                    <View style={styles.sheetSection}>
+                        <Text style={styles.sheetSectionTitle}>تنبيهات شخصية</Text>
+                        {user_specific_alerts.map((alert, index) => {
+                            const style = alertStyles[alert.type];
+                            return (
+                                <View key={index} style={[styles.alertBox, {backgroundColor: `${style.color}15`, borderColor: `${style.color}80`}]}>
+                                    <FontAwesome5 name={style.icon} size={16} color={style.color} />
+                                    <Text style={styles.alertBoxText}>{alert.text}</Text>
+                                </View>
+                            )
+                        })}
+                    </View>
+                )}
+                 <View style={styles.sheetSection}>
+                    <Text style={styles.sheetSectionTitle}>المكونات المكتشفة ({product.analysisData.detected_ingredients.length})</Text>
+                 </View>
+            </View>
+        );
+    };
+
+    const renderIngredient = ({ item }) => (
+        <View style={styles.ingredientChip}>
+            <Text style={styles.ingredientChipText}>{item.name}</Text>
+        </View>
+    );
+
+    if (!product) return null;
   
-    if(loading && products.length === 0) {
+    return (
+      <Modal transparent visible={isVisible} onRequestClose={handleClose} animationType="none">
+        <Pressable style={styles.sheetOverlay} onPress={handleClose} />
+        <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: sheetAnim }] }]}>
+            <View style={styles.sheetContent}>
+                <FlatList
+                    data={product.analysisData.detected_ingredients}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderIngredient}
+                    ListHeaderComponent={renderHeader}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 15 }}
+                />
+            </View>
+        </Animated.View>
+      </Modal>
+    );
+  };
+  
+
+// --- REPLACEMENT ShelfSection COMPONENT ---
+const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
+    const [refreshing, setRefreshing] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await onRefresh?.();
+        setRefreshing(false);
+    };
+    
+    const handleProductDelete = (productId) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        onDelete(productId);
+    };
+    
+    if (loading) {
       return (
-        <View style={styles.loadingContainer}>
-          <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          </Animated.View>
+        <View style={{ gap: 8, paddingTop: 20 }}>
+            {[...Array(5)].map((_, index) => <SkeletonProductCard key={index} index={index} />)}
         </View>
       );
     }
   
     const empty = products.length === 0;
-  
-    const renderItem = ({ item, index }) => {
-      const type = PRODUCT_TYPES[item.analysisData?.product_type] || PRODUCT_TYPES.other;
-      return (
-        <StaggeredItem index={index}>
-          <PressableScale 
-            style={styles.productCard} 
-            onLongPress={() => onDelete(item.id)}
-            delay={index * 100}
-          >
-            <View style={[styles.productIconBox, { 
-              backgroundColor: `${type.color}20`,
-            }]}>
-              <FontAwesome5 name={type.icon} size={18} color={type.color} />
-            </View>
-            <View style={{flex: 1}}>
-              <Text style={styles.productName}>{item.productName}</Text>
-              <Text style={[styles.productType, {color: type.color}]}>{type.label}</Text>
-            </View>
-            <FontAwesome5 name="chevron-left" size={12} color={COLORS.textDim} />
-          </PressableScale>
-        </StaggeredItem>
-      );
-    };
-  
+
     return (
       <View style={{ flex: 1 }}>
-        {/* Gamified Stats with animated entrance */}
-        <Animated.View 
-          style={[
-            styles.statsContainer,
-            { transform: [{ scale: statsScale }] }
-          ]}
-        >
-          <ContentCard style={styles.statBox} delay={100}>
-            <Text style={styles.statLabel}>إجمالي المنتجات</Text>
-            <AnimatedCount value={products.length} style={styles.statValue} />
-          </ContentCard>
-          
-          <View style={styles.statDivider} />
-          
-          <ContentCard style={styles.statBox} delay={200}>
-            <Text style={styles.statLabel}>حماية الشمس</Text>
-            <AnimatedCount 
-              value={products.filter(p => p.analysisData?.product_type === 'sunscreen').length} 
-              style={styles.statValue} 
-            />
-          </ContentCard>
-          
-          <View style={styles.statDivider} />
-          
-          <ContentCard style={styles.statBox} delay={300}>
-            <Text style={styles.statLabel}>مكونات نشطة</Text>
-            <AnimatedCount 
-              value={products.filter(p => p.analysisData?.detected_ingredients?.length > 5).length} 
-              style={styles.statValue} 
-            />
-          </ContentCard>
-        </Animated.View>
+        <ContentCard delay={100} style={{ padding: 15, marginBottom: 20 }}>
+          <View style={styles.statsContainer}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>إجمالي المنتجات</Text>
+              <AnimatedCount value={products.length} style={styles.statValue} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>حماية الشمس</Text>
+              <AnimatedCount value={products.filter(p => p.analysisData?.product_type === 'sunscreen').length} style={styles.statValue} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>منتجات فعالة</Text>
+              <AnimatedCount value={products.filter(p => p.analysisData?.efficacy?.score > 60).length} style={styles.statValue} />
+            </View>
+          </View>
+        </ContentCard>
   
-        {/* List using FlatList instead of ScrollView */}
         {empty ? (
           <ContentCard style={styles.emptyState}>
-            <MaterialCommunityIcons 
-              name="bag-personal-outline" 
-              size={60} 
-              color={COLORS.textDim} 
-              style={{opacity:0.5, marginBottom:15}} 
-            />
+            <MaterialCommunityIcons name="bottle-tonic-outline" size={60} color={COLORS.textDim} style={{ opacity:0.5, marginBottom:15 }} />
             <Text style={styles.emptyText}>رفك فارغ تماماً</Text>
-            <Text style={styles.emptySub}>امسحي الباركود أو صوري المكونات لبدء التحليل</Text>
+            <Text style={styles.emptySub}>امسح الباركود أو صوّر المكونات لبدء رحلتك نحو العناية الطبيعية.</Text>
+            <PressableScale style={styles.emptyStateButton} onPress={() => router.push('/oilguard')}>
+                <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
+                <Text style={styles.emptyStateButtonText}>أضف أول منتج</Text>
+            </PressableScale>
           </ContentCard>
         ) : (
           <FlatList
             data={products}
-            renderItem={renderItem}
+            renderItem={({ item }) => (
+                <ProductListItem
+                    product={item}
+                    onPress={() => setSelectedProduct(item)}
+                    onDelete={() => handleProductDelete(item.id)}
+                />
+            )}
             keyExtractor={item => item.id}
+            ItemSeparatorComponent={() => <View style={{height: 8}}/>}
             contentContainerStyle={{ paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={COLORS.primary}
-                colors={[COLORS.primary]}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.accentGreen} colors={[COLORS.accentGreen]} />
             }
           />
         )}
+        
+        <ProductDetailsSheet 
+            product={selectedProduct} 
+            isVisible={!!selectedProduct} 
+            onClose={() => setSelectedProduct(null)} 
+        />
       </View>
     );
-  };
+};
 
   const InsightCard = React.memo(({ insight, onSelect, onDismiss }) => {
     const isDismissible = insight.severity === 'good';
@@ -907,14 +1049,52 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
 
   const [selectedInsight, setSelectedInsight] = useState(null);
   const sheetAnim = useRef(new Animated.Value(height)).current;
+  const animationController = useRef(null);
 
-  const openSheet = () => Animated.spring(sheetAnim, { toValue: 0, friction: 9, tension: 60, useNativeDriver: true }).start();
-  const closeSheet = (callback) => Animated.timing(sheetAnim, { toValue: height, duration: 250, useNativeDriver: true }).start(() => callback && callback());
-  
+  const openSheet = () => {
+    // Stop any previous animation before starting a new one
+    if (animationController.current) {
+        animationController.current.stop();
+    }
+    // Store the new animation in the ref and start it
+    animationController.current = Animated.spring(sheetAnim, { 
+        toValue: 0, 
+        friction: 9, 
+        tension: 60, 
+        useNativeDriver: true 
+    });
+    animationController.current.start();
+};
+
+const closeSheet = (callback) => {
+  // Stop any previous animation
+  if (animationController.current) {
+      animationController.current.stop();
+  }
+  // Store the new animation in the ref and start it
+  animationController.current = Animated.timing(sheetAnim, { 
+      toValue: height, 
+      duration: 250, 
+      useNativeDriver: true 
+  });
+  // The .start() method can take a completion callback
+  animationController.current.start(() => {
+      // Only run the callback if the animation completed successfully
+      if (callback) callback({ finished: true });
+  });
+};
+
   useEffect(() => { if (selectedInsight) openSheet(); }, [selectedInsight]);
 
-  const handleClose = () => closeSheet(() => setSelectedInsight(null));
-
+  const handleClose = () => {
+    // This function now has only ONE job: start the closing animation.
+    // The actual state change that removes the modal will happen in the callback.
+    closeSheet(() => {
+        // This callback runs after the 250ms animation.
+        // It ensures the modal is fully hidden before it's removed from the UI tree.
+        setSelectedInsight(null);
+    });
+};
   const panResponder = useRef(PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gs) => { if (gs.dy > 0) sheetAnim.setValue(gs.dy); },
@@ -922,9 +1102,11 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
   })).current;
 
   const handleSelectInsight = useCallback((insight) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedInsight(insight);
-  }, []);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Set the state IMMEDIATELY. This is the key to the fast feeling.
+    // The useEffect below will automatically trigger the openSheet animation.
+    setSelectedInsight(insight);
+}, []);
 
   if (loading || !analysisResults) {
       return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
@@ -1055,205 +1237,363 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
   );
 };
 
-const RoutineSection = ({ savedProducts, userProfile }) => {
-    const [routines, setRoutines] = useState(userProfile?.routines || { 
-        am: Array(5).fill(null), 
-        pm: Array(5).fill(null), 
-        weekly: [] 
-    });
-    const [modal, setModal] = useState({ visible: false, period: null, step: null });
-    const { user } = useAppContext();
-    const [activePeriod, setActivePeriod] = useState('am');
-    const fadeAnim = useRef(new Animated.Value(1)).current;
-    const contentAnim = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        Animated.spring(contentAnim, {
-            toValue: 1,
-            friction: 8,
-            tension: 40,
-            delay: 200,
-            useNativeDriver: true
-        }).start();
-    }, []);
+// --- HELPER 1: The Custom Prompt Modal as a Bottom Sheet ---
+// --- HELPER 1: The Custom Prompt Modal as a Bottom Sheet ---
+const AddStepModal = ({ isVisible, onClose, onAdd }) => {
+  const [stepName, setStepName] = useState('');
+  // Animate the vertical position, starting from off-screen bottom
+  const slideAnim = useRef(new Animated.Value(height)).current;
 
-    const switchPeriod = (period) => {
-        if (period === activePeriod) return;
-        
-        Animated.sequence([
-            Animated.timing(fadeAnim, { 
-                toValue: 0, 
-                duration: 150, 
-                useNativeDriver: true 
-            }),
-            Animated.timing(fadeAnim, { 
-                toValue: 1, 
-                duration: 200, 
-                useNativeDriver: true 
-            })
-        ]).start();
-        
-        setTimeout(() => setActivePeriod(period), 100);
-    };
+  useEffect(() => {
+      if (isVisible) {
+          setStepName('');
+          // Animate the sheet sliding into view
+          Animated.spring(slideAnim, { 
+              toValue: 0, 
+              friction: 9, 
+              tension: 60, 
+              useNativeDriver: true 
+          }).start();
+      }
+  }, [isVisible]);
 
-    const addToRoutine = async (id) => {
-        const newR = {...routines};
-        newR[modal.period][modal.step] = { id };
-        setRoutines(newR);
-        setModal({ visible: false });
-        try {
-            await updateDoc(doc(db, 'profiles', user.uid), { routines: newR });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (error) {
-            console.error("Error updating routine:", error);
-        }
-    };
+  const handleClose = () => {
+      // Animate the sheet sliding out of view
+      Animated.timing(slideAnim, { 
+          toValue: height, 
+          duration: 250, 
+          easing: Easing.inOut(Easing.ease), 
+          useNativeDriver: true 
+      }).start(() => {
+          onClose(); // Call the onClose callback after animation completes
+      });
+  };
 
-    const removeFromRoutine = async (period, index) => {
-        const newR = {...routines};
-        newR[period][index] = null;
-        setRoutines(newR);
-        try {
-            await updateDoc(doc(db, 'profiles', user.uid), { routines: newR });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        } catch (error) {
-            console.error("Error removing from routine:", error);
-        }
-    };
+  const handleAdd = () => {
+      if (stepName.trim()) {
+          onAdd(stepName.trim());
+          handleClose();
+      } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+  };
 
-    const RoutineItem = ({ step, index }) => {
-        const prod = savedProducts.find(p => p.id === routines[activePeriod][index]?.id);
-        return (
-            <StaggeredItem index={index}>
-                <ContentCard>
-                    <View style={styles.routineStepCard}>
-                        <View style={styles.routineNumber}>
-                            <Text style={styles.routineNumText}>{index+1}</Text>
-                        </View>
-                        <View style={{flex:1}}>
-                            <Text style={styles.routineLabel}>{step}</Text>
-                            {prod ? (
-                                <View style={styles.selectedProd}>
-                                    <Text style={styles.selectedProdText} numberOfLines={1}>
-                                        {prod.productName}
-                                    </Text>
-                                    <TouchableOpacity 
-                                        onPress={() => removeFromRoutine(activePeriod, index)}
-                                        style={{padding: 4}}
-                                    >
-                                        <FontAwesome5 name="times" size={12} color={COLORS.danger} />
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <PressableScale 
-                                    onPress={() => setModal({visible:true, period: activePeriod, step: index})}
-                                    style={styles.addProdBtn}
-                                >
-                                    <Text style={styles.addProdText}>+ إضافة منتج</Text>
-                                </PressableScale>
-                            )}
-                        </View>
-                    </View>
-                </ContentCard>
-            </StaggeredItem>
-        );
-    };
+  if (!isVisible) return null;
 
-    const routineSteps = activePeriod === 'am' 
-        ? ['غسول', 'تونر', 'سيروم', 'مرطب', 'واقي']
-        : ['مزيل مكياج', 'غسول مائي', 'مقشر / علاج', 'سيروم', 'كريم ليلي'];
+  return (
+      <Modal visible={isVisible} transparent animationType="none" onRequestClose={handleClose}>
+          <Pressable style={styles.sheetOverlay} onPress={handleClose}>
+              {/* The Animated.View is the sheet itself, which we translate */}
+              <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
+                  {/* Pressable prevents taps inside the sheet from closing it */}
+                  <Pressable> 
+                      {/* The ContentCard has styles to remove bottom corners */}
+                      <ContentCard style={styles.sheetContent}>
+                          <View style={styles.sheetHandleBar}>
+                              <View style={styles.sheetHandle} />
+                          </View>
+                          <Text style={styles.modalTitle}>إضافة خطوة جديدة</Text>
+                          <Text style={styles.promptModalSub}>أدخل اسم الخطوة (مثال: سيروم أو قناع الطين).</Text>
+                          <TextInput
+                              placeholder="اسم الخطوة..."
+                              placeholderTextColor={COLORS.textDim}
+                              style={styles.promptInput}
+                              value={stepName}
+                              onChangeText={setStepName}
+                              autoFocus={true}
+                          />
+                          <View style={styles.promptButtonRow}>
+                              <PressableScale style={[styles.promptButton, styles.promptButtonSecondary]} onPress={handleClose}>
+                                  <Text style={[styles.promptButtonText, styles.promptButtonTextSecondary]}>إلغاء</Text>
+                              </PressableScale>
+                              <PressableScale style={[styles.promptButton, styles.promptButtonPrimary]} onPress={handleAdd}>
+                                   <Text style={[styles.promptButtonText, styles.promptButtonTextPrimary]}>إضافة</Text>
+                              </PressableScale>
+                          </View>
+                      </ContentCard>
+                  </Pressable>
+              </Animated.View>
+          </Pressable>
+      </Modal>
+  );
+};
 
-    const renderRoutineItem = ({ item, index }) => (
-        <RoutineItem step={item} index={index} />
-    );
+// --- HELPER 2: The Interactive Onboarding Guide ---
+const RoutineOnboardingGuide = ({ onDismiss }) => {
+  const [step, setStep] = useState(0);
+  const anim = useRef(new Animated.Value(0)).current;
 
-    return (
-        <View style={{ flex: 1 }}>
-            {/* Period Switcher */}
-            <View style={styles.routineSwitchContainer}>
-                <PressableScale 
-                    onPress={() => switchPeriod('pm')} 
-                    style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}
-                >
-                    <Feather name="moon" size={16} color={activePeriod==='pm'?'#fff':COLORS.textDim} />
-                    <Text style={[styles.periodText, activePeriod==='pm' && {color:'#fff'}]}>مساء</Text>
-                </PressableScale>
-                
-                <PressableScale 
-                    onPress={() => switchPeriod('am')} 
-                    style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}
-                >
-                    <Feather name="sun" size={16} color={activePeriod==='am'?'#fff':COLORS.textDim} />
-                    <Text style={[styles.periodText, activePeriod==='am' && {color:'#fff'}]}>صباح</Text>
-                </PressableScale>
+  useEffect(() => {
+      Animated.timing(anim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  const steps = [
+      { title: "مرحباً بك في مُنشئ الروتين", text: "هنا يمكنك بناء روتينك المثالي خطوة بخطوة. لنبدأ!" },
+      { title: "1. أضف خطوتك الأولى", text: "اضغط على هذا الزر لإضافة أول مرحلة في روتينك، مثل 'غسول'." },
+      { title: "2. املأ رفّك الرقمي", text: "لأفضل النتائج، انتقل إلى علامة تبويب 'الرف' وامسح كل منتجاتك." },
+      { title: "3. دع الذكاء الاصطناعي يساعدك", text: "بعد إضافة منتجاتك، استخدم زر 'الإنشاء التلقائي' لبناء روتين مُقترح فوراً." }
+  ];
+
+  const handleNext = () => step < steps.length - 1 ? setStep(s => s + 1) : onDismiss();
+
+  return (
+      <View style={StyleSheet.absoluteFill}>
+          <Animated.View style={[styles.guideOverlay, { opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) }]} />
+          <View style={[StyleSheet.absoluteFill, styles.guideContentContainer]}>
+              <View style={{flex: 1}} />
+              <Animated.View style={[styles.guideTextBox, { opacity: anim, transform: [{ scale: anim }] }]}>
+                  <Text style={styles.guideTitle}>{steps[step].title}</Text>
+                  <Text style={styles.guideText}>{steps[step].text}</Text>
+                  <PressableScale onPress={handleNext} style={styles.guideButton}>
+                      <Text style={styles.guideButtonText}>{step === steps.length - 1 ? "لنبدأ!" : "التالي"}</Text>
+                  </PressableScale>
+              </Animated.View>
+          </View>
+      </View>
+  );
+};
+
+
+// --- HELPER 3: The Card for Each Step in the Timeline ---
+const RoutineStepCard = ({ step, index, onManage, products }) => {
+  const productList = step.productIds.map(id => products.find(p => p.id === id)).filter(Boolean);
+  const isStepFilled = productList.length > 0;
+
+  return (
+      <StaggeredItem index={index}>
+          <View style={styles.routineTimelineItem}>
+              <View style={styles.timelineGutter}>
+                  <View style={[styles.timelineNode, isStepFilled && styles.timelineNodeActive]}>
+                      <Text style={[styles.timelineNodeText, isStepFilled && styles.timelineNodeTextActive]}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.timelineLine} />
+              </View>
+              <View style={{flex: 1}}>
+                  <ContentCard style={styles.stepContentCard}>
+                      <View style={styles.stepHeader}>
+                          <Text style={styles.stepTitle}>{step.name}</Text>
+                          <PressableScale onPress={onManage} style={styles.manageStepButton}>
+                              <Text style={styles.manageStepButtonText}>إدارة</Text>
+                          </PressableScale>
+                      </View>
+                      {isStepFilled ? (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 8, paddingTop: 10}}>
+                              {productList.map(p => (
+                                  <View key={p.id} style={styles.routineProductPill}><Text style={styles.routineProductPillText} numberOfLines={1}>{p.productName}</Text></View>
+                              ))}
+                          </ScrollView>
+                      ) : (
+                          <Text style={styles.stepEmptyText}>اضغط على "إدارة" لإضافة منتجات لهذه الخطوة</Text>
+                      )}
+                  </ContentCard>
+              </View>
+          </View>
+      </StaggeredItem>
+  );
+};
+
+
+// --- HELPER 4: The Bottom Sheet Modal for Editing a Step ---
+const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
+  const sheetAnim = useRef(new Animated.Value(height)).current;
+  const [currentProducts, setCurrentProducts] = useState([]);
+  const [isAddModalVisible, setAddModalVisible] = useState(false);
+
+  const handleClose = () => {
+      Animated.timing(sheetAnim, { toValue: height, duration: 250, useNativeDriver: true }).start(() => onClose());
+  };
+
+  useEffect(() => {
+      if (isVisible && step) {
+          const initialProducts = step.productIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
+          setCurrentProducts(initialProducts);
+          Animated.spring(sheetAnim, { toValue: 0, friction: 9, useNativeDriver: true }).start();
+      }
+  }, [isVisible, step]);
+
+  const handleReorder = (index, direction) => {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= currentProducts.length) return;
+      const items = [...currentProducts];
+      const [removed] = items.splice(index, 1);
+      items.splice(newIndex, 0, removed);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCurrentProducts(items);
+      Haptics.selectionAsync();
+  };
+
+  const handleRemove = (productId) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCurrentProducts(prev => prev.filter(p => p.id !== productId));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  };
+
+  const handleAddProduct = (productId) => {
+      const productToAdd = allProducts.find(p => p.id === productId);
+      if (productToAdd && !currentProducts.some(p => p.id === productId)) {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setCurrentProducts(prev => [...prev, productToAdd]);
+      }
+      setAddModalVisible(false);
+  };
+
+  const handleSaveChanges = () => {
+      if (!step) return;
+      const updatedProductIds = currentProducts.map(p => p.id);
+      onSave(step.id, updatedProductIds);
+      handleClose();
+  };
+
+  const renderReorderItem = ({ item, index }) => (
+      <View style={styles.reorderItem}>
+          <View style={styles.reorderControls}>
+              <TouchableOpacity onPress={() => handleReorder(index, -1)} disabled={index === 0}><Feather name="chevron-up" size={22} color={index === 0 ? COLORS.border : COLORS.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => handleReorder(index, 1)} disabled={index === currentProducts.length - 1}><Feather name="chevron-down" size={22} color={index === currentProducts.length - 1 ? COLORS.border : COLORS.textSecondary} /></TouchableOpacity>
+          </View>
+          <Text style={styles.reorderItemText} numberOfLines={2}>{item.productName}</Text>
+          <PressableScale onPress={() => handleRemove(item.id)} style={styles.reorderRemoveButton}><FontAwesome5 name="times" size={14} color={COLORS.danger} /></PressableScale>
+      </View>
+  );
+  
+  if (!step) return null;
+
+  return (
+      <Modal transparent visible={isVisible} onRequestClose={handleClose} animationType="none">
+          <Pressable style={styles.sheetOverlay} onPress={handleClose}>
+              <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: sheetAnim }] }]}>
+                  <Pressable>
+                      <ContentCard style={styles.sheetContent}>
+                          <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
+                          <View style={styles.stepModalHeader}>
+                              <Text style={styles.stepModalTitle}>تعديل خطوة: {step.name}</Text>
+                              <PressableScale onPress={() => setAddModalVisible(true)} style={styles.addProductButton}><Feather name="plus" size={16} color={COLORS.textOnAccent} /><Text style={styles.addProductButtonText}>إضافة منتج</Text></PressableScale>
+                          </View>
+                          <FlatList data={currentProducts} renderItem={renderReorderItem} keyExtractor={item => item.id}
+                              ListEmptyComponent={() => (
+                                  <View style={styles.stepModalEmpty}><MaterialCommunityIcons name="playlist-plus" size={48} color={COLORS.textDim} /><Text style={styles.stepModalEmptyText}>هذه الخطوة فارغة</Text></View>
+                              )}
+                          />
+                          <PressableScale onPress={handleSaveChanges} style={styles.saveStepButton}><Text style={styles.saveStepButtonText}>حفظ التغييرات</Text></PressableScale>
+                      </ContentCard>
+                  </Pressable>
+              </Animated.View>
+          </Pressable>
+          <Modal transparent visible={isAddModalVisible} animationType="fade" onRequestClose={() => setAddModalVisible(false)}>
+              <Pressable style={styles.modalOverlay} onPress={() => setAddModalVisible(false)}>
+                  <ContentCard style={styles.modalContent}>
+                      <View style={styles.modalHeader}><Text style={styles.modalTitle}>اختر منتج من رفّك</Text><TouchableOpacity onPress={() => setAddModalVisible(false)}><FontAwesome5 name="times" color={COLORS.textDim} size={18}/></TouchableOpacity></View>
+                      <FlatList data={allProducts.filter(p => !currentProducts.some(cp => cp.id === p.id))} keyExtractor={item => item.id}
+                          renderItem={({item}) => (
+                              <PressableScale onPress={() => handleAddProduct(item.id)} style={styles.modalItem}><Text style={styles.modalItemName}>{item.productName}</Text><FontAwesome5 name="plus-circle" color={COLORS.accentGreen} size={20} /></PressableScale>
+                          )}
+                      />
+                  </ContentCard>
+              </Pressable>
+          </Modal>
+      </Modal>
+  );
+};
+
+
+// --- The Main Routine Section Component ---
+const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
+  const { user } = useAppContext();
+  const [routines, setRoutines] = useState({ am: [], pm: [] });
+  const [activePeriod, setActivePeriod] = useState('am');
+  const [selectedStep, setSelectedStep] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  // REMOVED: isAddStepModalVisible and addStepHandler state
+
+  useEffect(() => {
+      const initialRoutines = userProfile?.routines || { am: [], pm: [] };
+      setRoutines(initialRoutines);
+      if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
+          setShowOnboarding(true);
+      }
+  }, [userProfile]);
+  
+  const saveRoutines = async (newRoutines) => {
+      setRoutines(newRoutines);
+      try { await updateDoc(doc(db, 'profiles', user.uid), { routines: newRoutines }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (error) { console.error("Error saving routines:", error); Alert.alert("Error", "Could not save routine."); }
+  };
+
+  const switchPeriod = (period) => {
+      if (period === activePeriod) return;
+      Haptics.selectionAsync();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setActivePeriod(period);
+  };
+
+  const handleAddStep = (stepName) => {
+    if (stepName) {
+        const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
+        const newRoutines = JSON.parse(JSON.stringify(routines));
+        if (!newRoutines[activePeriod]) newRoutines[activePeriod] = [];
+        newRoutines[activePeriod].push(newStep);
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+        saveRoutines(newRoutines);
+    }
+};
+
+  const handleUpdateStep = (stepId, newProductIds) => {
+      const newRoutines = JSON.parse(JSON.stringify(routines));
+      const stepIndex = newRoutines[activePeriod].findIndex(s => s.id === stepId);
+      if (stepIndex !== -1) { newRoutines[activePeriod][stepIndex].productIds = newProductIds; saveRoutines(newRoutines); }
+  };
+
+  const handleAutoBuildRoutine = () => {
+      // ... (no changes in this function)
+      if (savedProducts.length < 2) { Alert.alert("منتجات غير كافية", "يجب أن يكون لديك منتجان على الأقل على رفّك لاستخدام هذه الميزة."); return; }
+      Alert.alert("إنشاء روتين تلقائي؟", "سيقوم هذا بمسح روتينك الحالي وإنشاء روتين جديد مقترح. هل أنت متأكد؟",
+          [{ text: "إلغاء", style: "cancel" }, { text: "نعم، أنشئ",
+              onPress: () => {
+                  const productClassifier = p => {
+                      const type = p.analysisData?.product_type || 'other', name = p.productName.toLowerCase(), ingredients = p.analysisData?.detected_ingredients.map(i => i.name.toLowerCase()) || [];
+                      if (type === 'sunscreen') return 'sunscreen'; if (type === 'lotion_cream') return 'hydrator'; if (type === 'serum') return ingredients.some(i => i.includes('retinol') || i.includes('glycolic')) ? 'treatment' : 'serum'; if (type === 'treatment') return 'treatment'; if (type === 'oil_blend') return name.includes('مزيل') ? 'oil_cleanser' : 'oil'; if (type === 'cleanser') return 'water_cleanser'; return 'serum';
+                  };
+                  const classified = savedProducts.map(p => ({ ...p, routineStep: productClassifier(p) }));
+                  const am = { water_cleanser: [], serum: [], hydrator: [], sunscreen: [] }, pm = { oil_cleanser: [], water_cleanser: [], treatment: [], serum: [], hydrator: [], oil: [] };
+                  classified.forEach(p => { if (p.routineStep !== 'sunscreen') pm[p.routineStep].push(p.id); if (!['treatment', 'oil_cleanser', 'oil'].includes(p.routineStep)) am[p.routineStep].push(p.id); });
+                  const newAm = [{ id: 'auto-am-1', name: 'غسول', productIds: am.water_cleanser }, { id: 'auto-am-2', name: 'سيروم', productIds: am.serum }, { id: 'auto-am-3', name: 'مرطب', productIds: am.hydrator }, { id: 'auto-am-4', name: 'واقي شمسي', productIds: am.sunscreen }].filter(s => s.productIds.length > 0);
+                  const newPm = [{ id: 'auto-pm-1', name: 'تنظيف زيتي', productIds: pm.oil_cleanser }, { id: 'auto-pm-2', name: 'تنظيف مائي', productIds: pm.water_cleanser }, { id: 'auto-pm-3', name: 'علاج/مقشر', productIds: pm.treatment }, { id: 'auto-pm-4', name: 'سيروم', productIds: pm.serum }, { id: 'auto-pm-5', name: 'مرطب/زيت', productIds: [...pm.hydrator, ...pm.oil] }].filter(s => s.productIds.length > 0);
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                  saveRoutines({ am: newAm, pm: newPm });
+              }
+          }]
+      );
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+        <View style={styles.routineHeaderContainer}>
+             <View style={styles.routineSwitchContainer}>
+                <PressableScale onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}><Feather name="moon" size={16} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text></PressableScale>
+                <PressableScale onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}><Feather name="sun" size={16} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text></PressableScale>
             </View>
-
-            {/* Routine Steps using FlatList */}
-            <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-                <Animated.View style={{ flex: 1, opacity: contentAnim }}>
-                    <FlatList
-                        data={routineSteps}
-                        renderItem={renderRoutineItem}
-                        keyExtractor={(item, index) => `routine-${activePeriod}-${index}`}
-                        contentContainerStyle={{ paddingBottom: 150 }}
-                        showsVerticalScrollIndicator={false}
-                    />
-                </Animated.View>
-            </Animated.View>
-
-            {/* Add Product Modal */}
-            <Modal 
-                transparent 
-                visible={modal.visible} 
-                animationType="fade" 
-                onRequestClose={() => setModal({visible:false})}
-            >
-                <View style={styles.modalOverlay}>
-                    <BlurView  intensity={50} tint="dark" style={styles.modalGlass} >
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>اختر منتج</Text>
-                            <TouchableOpacity 
-                                onPress={() => setModal({visible:false})}
-                                style={{padding: 4}}
-                            >
-                                <FontAwesome5 name="times" color={COLORS.textDim} size={18}/>
-                            </TouchableOpacity>
-                        </View>
-                        
-                        {savedProducts.length === 0 ? (
-                            <View style={styles.modalEmpty}>
-                                <FontAwesome5 name="shopping-bag" size={40} color={COLORS.textDim} />
-                                <Text style={styles.modalEmptyText}>الرف فارغ!</Text>
-                                <Text style={styles.modalEmptySubText}>أضف منتجات أولاً</Text>
-                            </View>
-                        ) : (
-                            <FlatList 
-                                data={savedProducts}
-                                keyExtractor={item => item.id}
-                                contentContainerStyle={{padding: 20}}
-                                renderItem={({item}) => (
-                                    <PressableScale 
-                                        onPress={() => addToRoutine(item.id)}
-                                        style={styles.modalItem}
-                                    >
-                                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                                            <FontAwesome5 
-                                                name={PRODUCT_TYPES[item.analysisData?.product_type]?.icon || 'shopping-bag'} 
-                                                size={16} 
-                                                color={COLORS.primary} 
-                                            />
-                                            <Text style={styles.modalItemName}>{item.productName}</Text>
-                                        </View>
-                                        <FontAwesome5 name="plus-circle" color={COLORS.primary} size={20} />
-                                    </PressableScale>
-                                )}
-                            />
-                        )}
-                    </BlurView>
-                </View>
-            </Modal>
+             <PressableScale onPress={handleAutoBuildRoutine} style={styles.autoBuildButton}><MaterialCommunityIcons name="auto-fix" size={20} color={COLORS.accentGreen} /></PressableScale>
         </View>
-    );
+        <FlatList
+            data={routines[activePeriod]}
+            renderItem={({ item, index }) => <RoutineStepCard step={item} index={index} onManage={() => setSelectedStep(item)} products={savedProducts} />}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
+            ListEmptyComponent={() => (
+                <View style={styles.routineEmptyState}><MaterialCommunityIcons name="playlist-edit" size={60} color={COLORS.textDim} style={{opacity: 0.5}}/><Text style={styles.routineEmptyTitle}>الروتين فارغ</Text><Text style={styles.routineEmptySub}>استخدم زر "+" في الأسفل لبناء روتينك المخصص.</Text></View>
+            )}
+        />
+        
+        {/* The FAB now calls the hoisted function, passing its own logic as a callback */}
+        <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
+            <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}><FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} /></LinearGradient>
+        </PressableScale>
+
+        {selectedStep && <StepEditorModal isVisible={!!selectedStep} onClose={() => setSelectedStep(null)} step={selectedStep} onSave={handleUpdateStep} allProducts={savedProducts} />}
+        {showOnboarding && <RoutineOnboardingGuide onDismiss={() => setShowOnboarding(false)} />}
+        
+        {/* The AddStepModal is NO LONGER RENDERED HERE */}
+    </View>
+);
 };
 
 const IngredientsSection = ({ products }) => {
@@ -1554,7 +1894,7 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
 
 const SettingsSection = ({ profile, onLogout }) => {
   const { user } = useAppContext();
-  const [openAccordion, setOpenAccordion] = useState('traits'); // State to track which accordion is open, default to 'traits'
+  const [openAccordion, setOpenAccordion] = useState('null'); // State to track which accordion is open, default to 'traits'
 
   const [form, setForm] = useState({
       goals: [], conditions: [], allergies: [], ...profile?.settings
@@ -1666,7 +2006,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('shelf');
   const [productPrice, setProductPrice] = useState('');
-
+  const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
+  const [addStepHandler, setAddStepHandler] = useState(null);
+  const openAddStepModal = (onAddCallback) => {
+    setAddStepHandler(() => onAddCallback); // Store the function to call on "Add"
+    setAddStepModalVisible(true);
+  };
   // Scroll & Animation Refs
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerHeight = scrollY.interpolate({ 
@@ -1916,6 +2261,8 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
+        {/* ... (StatusBar, Particles, Header, ScrollView) */}
+        
         <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
         
         {/* Particles are now direct children of the main container */}
@@ -1980,21 +2327,24 @@ export default function ProfileScreen() {
                     opacity: contentOpacity, 
                     transform: [{ translateX: contentTranslate }] 
                 }}>
+                    {/* ... (ShelfSection, AnalysisSection, etc.) */}
                     {activeTab === 'shelf' && (
                         <ShelfSection 
                             products={savedProducts} 
                             loading={loading} 
                             onDelete={handleDelete} 
                             onRefresh={handleRefresh}
+                            router={router}
                         />
                     )}
                     {activeTab === 'routine' && (
                         <RoutineSection 
                             savedProducts={savedProducts} 
                             userProfile={userProfile} 
+                            onOpenAddStepModal={openAddStepModal}
                         />
                     )}
-                    {activeTab === 'analysis' && (
+                     {activeTab === 'analysis' && (
                         <AnalysisSection 
                         savedProducts={savedProducts} 
                         loading={loading}
@@ -2019,18 +2369,30 @@ export default function ProfileScreen() {
                             }} 
                         />
                     )}
+
                 </Animated.View>
             </Animated.ScrollView>
 
-            {/* --- FLOATING GLASS DOCK (Bottom Navigation) --- */}
-            <NatureDock 
-    tabs={TABS} 
-    activeTab={activeTab} 
-    onTabChange={switchTab} // Use the switchTab function
-/>
+        {/* --- FLOATING GLASS DOCK & MODAL RENDERED AT TOP LEVEL --- */}
+        <NatureDock 
+            tabs={TABS} 
+            activeTab={activeTab} 
+            onTabChange={switchTab}
+        />
 
-            {/* --- FLOATING ACTION BUTTON (Only on Shelf) --- */}
-            {activeTab === 'shelf' && (
+        {/* MODAL IS NOW RENDERED HERE, OUTSIDE THE SCROLLVIEW */}
+        <AddStepModal 
+            isVisible={isAddStepModalVisible}
+            onClose={() => setAddStepModalVisible(false)}
+            onAdd={(stepName) => {
+                if (addStepHandler) {
+                    addStepHandler(stepName);
+                }
+            }}
+        />
+
+        {/* ... (FAB for shelf) */}
+         {activeTab === 'shelf' && (
                 <PressableScale 
                     style={styles.fab} 
                     onPress={() => {
@@ -2050,934 +2412,1287 @@ export default function ProfileScreen() {
   );
 }
 
-// --- 7. ENHANCED STYLES & UI KIT ---
-// --- 7. ENHANCED STYLES & UI KIT (FULL & FINAL) ---
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
+  // ========================================================================
+  // --- 1. GLOBAL & CONTAINER ---
+  // ========================================================================
+  container: {
+      flex: 1,
+      backgroundColor: COLORS.background
   },
-  
-  // PARALLAX HEADER
+  loadingContainer: {
+      height: 200,
+      justifyContent: 'center',
+      alignItems: 'center'
+  },
+  divider: {
+      height: 1,
+      backgroundColor: COLORS.border,
+      marginVertical: 12
+  },
+
+  // ========================================================================
+  // --- 2. HEADER (PARALLAX) ---
+  // ========================================================================
   header: {
-    position: 'absolute', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    zIndex: 1,
-    backgroundColor: COLORS.background, // Solid background
-    borderBottomWidth: 1, 
-    borderBottomColor: COLORS.border,
-    overflow: 'hidden',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1,
+      backgroundColor: COLORS.background,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      overflow: 'hidden',
   },
   headerContentExpanded: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row-reverse', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    paddingHorizontal: 25, 
-    paddingBottom: 15, 
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 25,
+      paddingBottom: 15,
   },
   headerContentCollapsed: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: HEADER_MIN_HEIGHT - (Platform.OS === 'ios' ? 45 : 20), // Adjust height for content
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // UPDATE 'welcomeText' and 'subWelcome'
-  welcomeText: { 
-    fontFamily: 'Tajawal-ExtraBold', 
-    fontSize: 26, // Slightly smaller for the new layout
-    color: COLORS.textPrimary, 
-    textAlign: 'right', 
-  },
-  subWelcome: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14, 
-    color: COLORS.textSecondary, 
-    textAlign: 'right', 
-    marginTop: 2,
-  },
-  
-  // ADD this new style for the collapsed title
-  collapsedTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 18,
-    color: COLORS.textPrimary,
-  },
-  
-  // UPDATE the 'avatar' style
-  avatar: { 
-    width: 55, 
-    height: 55, 
-    borderRadius: 27.5, 
-    backgroundColor: COLORS.card, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    borderWidth: 2, 
-    borderColor: COLORS.accentGreen 
-  },
-
-  // Loading & Card Base
-  loadingContainer: { 
-    height: 200, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  cardBase: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 20,
-    marginBottom: 15,
-  },
-
-  // SHELF STYLES
-  statsContainer: { 
-    flexDirection: 'row-reverse', 
-    justifyContent: 'space-between', 
-    marginBottom: 25,
-    marginTop: 10,
-    gap: 10,
-  },
-  statBox: { 
-    alignItems: 'center', 
-    flex: 1, 
-    padding: 15,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  statLabel: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 10, 
-    color: COLORS.textSecondary,
-    marginBottom: 5,
-  },
-  statValue: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 22, 
-    color: COLORS.accentGreen 
-  },
-  statDivider: { 
-    width: 1, 
-    height: '60%', 
-    backgroundColor: COLORS.border, 
-    alignSelf: 'center' 
-  },
-  productCard: {
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    backgroundColor: COLORS.card,
-    borderRadius: 20, 
-    padding: 16, 
-    marginBottom: 12, 
-    borderWidth: 1, 
-    borderColor: COLORS.border,
-  },
-  productIconBox: {
-    width: 48, 
-    height: 48, 
-    borderRadius: 24, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  productName: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 15, 
-    color: COLORS.textPrimary, 
-    textAlign: 'right',
-    marginBottom: 2,
-  },
-  productType: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 12, 
-    textAlign: 'right' 
-  },
-  emptyState: { 
-    alignItems: 'center', 
-    marginTop: 40, 
-    padding: 30,
-    borderRadius: 20,
-    backgroundColor: COLORS.card,
-  },
-  emptyText: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 18, 
-    color: COLORS.textPrimary, 
-    marginTop: 15,
-    textAlign: 'center',
-  },
-  emptySub: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14, 
-    color: COLORS.textSecondary, 
-    textAlign: 'center', 
-    marginTop: 5,
-    lineHeight: 20,
-  },
-
-  // ROUTINE STYLES
-  routineSwitchContainer: { 
-    flexDirection: 'row-reverse', 
-    backgroundColor: COLORS.card, 
-    borderRadius: 30, 
-    padding: 4, 
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  periodBtn: { 
-    flex: 1, 
-    flexDirection: 'row-reverse', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    gap: 8, 
-    paddingVertical: 12, 
-    borderRadius: 25,
-  },
-  periodBtnActive: { 
-    backgroundColor: COLORS.accentGreen,
-  },
-  periodText: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  routineStepCard: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    padding: 16,
-    borderRadius: 16,
-  },
-  routineNumber: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
-    backgroundColor: COLORS.accentGreen, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginLeft: 12,
-  },
-  routineNumText: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.textOnAccent,
-    fontSize: 13,
-  },
-  routineLabel: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.textPrimary, 
-    fontSize: 15, 
-    textAlign: 'right', 
-    flex: 1,
-    marginBottom: 8,
-  },
-  addProdBtn: { 
-    backgroundColor: COLORS.background, 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-  },
-  addProdText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 12, 
-    color: COLORS.textSecondary,
-  },
-  selectedProd: { 
-    backgroundColor: `rgba(90, 156, 132, 0.1)`, 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 10,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectedProdText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 12, 
-    color: COLORS.accentGreen, 
-    flex: 1,
-    marginRight: 8,
-  },
-
-  // ANALYSIS STYLES
-  focusInsightCard: {
-    borderRadius: 24,
-    padding: 25,
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  focusInsightHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-  },
-  focusInsightTitle: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 18,
-    color: COLORS.textPrimary,
-  },
-  focusInsightSummary: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    marginTop: 12,
-    lineHeight: 22,
-  },
-  focusInsightAction: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginTop: 20,
-  },
-  focusInsightActionText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.accentGreen,
-  },
-  
-  allClearContainer: {
-    alignItems: 'center',
-    padding: 30,
-    marginBottom: 25,
-  },
-  allClearIconWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
-  },
-  allClearTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 18,
-    color: COLORS.textPrimary,
-  },
-  allClearSummary: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 5,
-    lineHeight: 20,
-  },
-
-  carouselTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 15,
-    paddingHorizontal: 5,
-  },
-  carouselContentContainer: {
-    paddingHorizontal: 5,
-    paddingBottom: 25,
-  },
-  carouselItem: {
-    width: 150,
-    height: 150,
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 15,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'space-between',
-  },
-  carouselIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carouselItemTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    lineHeight: 19,
-  },
-  
-  overviewContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  overviewCard: {
-    flex: 1,
-  },
-  analysisCardHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 15,
-    opacity: 0.8,
-  },
-  analysisCardTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  routineOverviewGrid: {
-    gap: 12,
-  },
-  routineColumn: {
-    gap: 8,
-  },
-  routineColumnTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  routineProductPill: {
-    backgroundColor: COLORS.background,
-    color: COLORS.textSecondary,
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  routineEmptyText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textDim,
-    textAlign: 'right',
-  },
-  routineDivider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  sunProtectionContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingVertical: 5,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  sunProtectionNote: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    lineHeight: 16,
-  },
-
-  // MODAL & BOTTOM SHEET STYLES
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  sheetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  sheetContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 5,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
-    maxHeight: height * 0.75,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  sheetHandleBar: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    paddingVertical: 15,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: COLORS.border,
-    borderRadius: 2.5,
-  },
-  modalHeader: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    gap: 15, 
-    marginBottom: 15, 
-    width: '100%', 
-    paddingHorizontal: 15,
-  },
-  modalIconContainer: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: 24, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-  },
-  modalTitle: { 
-    flex: 1, 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 18, 
-    color: COLORS.textPrimary, 
-    textAlign: 'right', 
-  },
-  modalDescription: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14, 
-    color: COLORS.textSecondary, 
-    textAlign: 'right', 
-    lineHeight: 22, 
-    marginBottom: 25, 
-    paddingHorizontal: 15,
-  },
-  relatedProductsTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 8,
-    paddingHorizontal: 15,
-  },
-  relatedProductItem: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    marginBottom: 4,
-    paddingHorizontal: 15,
-  },
-  closeButton: { 
-    backgroundColor: COLORS.accentGreen, 
-    padding: 14, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    marginHorizontal: 15,
-    marginTop: 10,
-  },
-  closeButtonText: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 16, 
-    color: COLORS.textOnAccent, 
-  },
-
-  // INGREDIENTS STYLES
-  searchBar: { 
-    flexDirection: 'row-reverse', 
-    backgroundColor: COLORS.card, 
-    borderRadius: 14, 
-    paddingHorizontal: 15, 
-    height: 44, 
-    alignItems: 'center', 
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  searchInput: { 
-    flex: 1, 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.textPrimary, 
-    marginRight: 10, 
-    fontSize: 14, 
-    textAlign: 'right',
-    paddingVertical: 10,
-  },
-  filterPill: {
-    backgroundColor: COLORS.card, 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 15,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-  },
-  filterPillActive: {
-    backgroundColor: COLORS.accentGreen,
-  },
-  filterText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 11, 
-    color: COLORS.textSecondary,
-  },
-  filterTextActive: {
-    color: COLORS.textOnAccent,
-    fontFamily: 'Tajawal-Bold',
-  },
-  ingredientsStats: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 15,
-    marginBottom: 15,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  ingRow: {
-      flexDirection: 'row-reverse', 
-      justifyContent: 'space-between', 
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: HEADER_MIN_HEIGHT - (Platform.OS === 'ios' ? 45 : 20),
+      justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: COLORS.card, 
-      padding: 15, 
-      borderRadius: 14, 
-      marginBottom: 8,
-      borderWidth: 1, 
+  },
+  welcomeText: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 26,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  subWelcome: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      marginTop: 2,
+  },
+  collapsedTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+  },
+  avatar: {
+      width: 55,
+      height: 55,
+      borderRadius: 27.5,
+      backgroundColor: COLORS.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: COLORS.accentGreen
+  },
+
+  // ========================================================================
+  // --- 3. BASE UI & GENERAL COMPONENTS ---
+  // ========================================================================
+  cardBase: {
+      backgroundColor: COLORS.card,
+      borderRadius: 20,
+      borderWidth: 1,
       borderColor: COLORS.border,
+      padding: 20,
+      marginBottom: 15,
   },
-  ingName: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 14, 
-    color: COLORS.textPrimary,
-    marginBottom: 4,
+  emptyState: {
+      alignItems: 'center',
+      marginTop: 40,
+      padding: 30,
+      borderRadius: 20,
+      backgroundColor: COLORS.card,
   },
-  ingType: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 10, 
-    color: COLORS.textSecondary, 
-    marginLeft: 6 
+  emptyText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+      marginTop: 15,
+      textAlign: 'center',
   },
-  ingDot: { 
-    width: 6, 
-    height: 6, 
-    borderRadius: 3,
+  emptySub: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginTop: 5,
+      lineHeight: 20,
   },
-  ingProducts: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  countBadge: { 
-    backgroundColor: COLORS.background, 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 8,
-    minWidth: 32,
-    alignItems: 'center',
-  },
-  countText: { 
-    fontSize: 10, 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.accentGreen 
+  iconBoxSm: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(90, 156, 132, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
   },
 
-  // MIGRATION & SETTINGS
-  migName: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.textPrimary, 
-    fontSize: 16, 
-    textAlign: 'right',
-    flex: 1,
-  },
-  badBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)', 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 6,
-    marginLeft: 6,
-    marginBottom: 4,
-  },
-  criticalBadge: {
-    backgroundColor: COLORS.danger,
-  },
-  badText: { 
-    color: COLORS.danger, 
-    fontSize: 9, 
-    fontFamily: 'Tajawal-Bold' 
-  },
-  migReason: { 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.textSecondary, 
-    fontSize: 12, 
-    textAlign: 'right', 
-    marginTop: 8 
-  },
-  migSuggestion: { 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.accentGreen, 
-    textAlign: 'right', 
-    fontSize: 13, 
-    marginTop: 8, 
-    backgroundColor: 'rgba(90, 156, 132, 0.1)', 
-    padding: 10, 
-    borderRadius: 10 
-  },
-  migrationTip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-    padding: 8,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderRadius: 8,
-  },
-  migrationTipText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.gold,
-    flex: 1,
-  },
-  divider: { 
-    height: 1, 
-    backgroundColor: COLORS.border, 
-    marginVertical: 12 
-  },
-  settingTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 20, 
-    color: COLORS.textPrimary, 
-    textAlign: 'right', 
-    marginBottom: 10 
-  },
-  contentContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingGroup: {
-    marginVertical: 10,
-  },
-  groupLabel: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    marginBottom: 12,
-  },
-  chipsRow: { 
-    flexDirection: 'row-reverse', 
-    flexWrap: 'wrap', 
-    gap: 10,
-  },
-  chip: {
-    paddingVertical: 10, 
-    paddingHorizontal: 16, 
-    borderRadius: 20, 
-    backgroundColor: COLORS.background, 
-    borderWidth: 1, 
-    borderColor: COLORS.border,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chipActive: { 
-    backgroundColor: COLORS.accentGreen, 
-    borderColor: COLORS.accentGreen,
-  },
-  chipText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 13, 
-    color: COLORS.textSecondary,
-  },
-  logoutBtn: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    padding: 16, 
-    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-    borderRadius: 14, 
-    borderWidth: 1, 
-    borderColor: 'rgba(239, 68, 68, 0.5)', 
-    gap: 10 
-  },
-  logoutText: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.danger, 
-    fontSize: 16 
-  },
-  
-  // ACCORDION STYLES
-  accordionWrapper: { 
-    borderRadius: 16, 
-    marginBottom: 10, 
-    overflow: 'hidden', 
-    borderWidth: 1, 
-    borderColor: COLORS.border 
-  },
-  accordionHeader: { 
-    flexDirection: 'row-reverse', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    padding: 18,
-    backgroundColor: 'transparent', // Header has no background itself
-  },
-  accordionTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.textPrimary, 
-    fontSize: 16,
-  },
-  accordionBody: { 
-    padding: 20,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  iconBoxSm: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
-    backgroundColor: 'rgba(90, 156, 132, 0.15)', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-  },
-  // MODAL STYLES
-  modalOverlay: { 
-    flex: 1, 
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  modalContent: {
-    borderTopLeftRadius: 30, 
-    borderTopRightRadius: 30, 
-    overflow: 'hidden', 
-    maxHeight: height * 0.6, 
-    backgroundColor: COLORS.card, 
-    borderTopWidth: 1, 
-    borderTopColor: COLORS.border,
-  },
-  modalHeader: { 
-    flexDirection: 'row-reverse', 
-    justifyContent: 'space-between', 
-    padding: 20, 
-    borderBottomWidth: 1, 
-    borderBottomColor: COLORS.border,
-  },
-  modalTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    color: COLORS.textPrimary, 
-    fontSize: 18 
-  },
-  modalItem: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    padding: 15, 
-    borderBottomWidth: 1, 
-    borderBottomColor: COLORS.border,
-    borderRadius: 12,
-    marginBottom: 5,
-    backgroundColor: COLORS.background,
-  },
-  modalItemName: { 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.textPrimary, 
-    fontSize: 14,
-    flex: 1,
-    marginRight: 10,
-  },
-  modalEmpty: {
-    alignItems: 'center',
-    padding: 40,
-  },
-  modalEmptyText: {
-    fontFamily: 'Tajawal-Bold',
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    marginTop: 15,
-  },
-  modalEmptySubText: {
-    fontFamily: 'Tajawal-Regular',
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 5,
-  },
-
-  // FAB (Floating Action Button) STYLES
-  fab: { 
-    position: 'absolute', 
-    bottom: 130, 
-    right: 20, 
-    shadowColor: COLORS.accentGreen, 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.4, 
-    shadowRadius: 15, 
-    elevation: 10 
-  },
-  fabGradient: { 
-    width: 64, 
-    height: 64, 
-    borderRadius: 32, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-
-  // --- FLOATING PILL DOCK STYLES ---
-  // --- FLOATING PILL DOCK STYLES (CORRECTED) ---
+  // ========================================================================
+  // --- 4. BOTTOM DOCK (NATURE DOCK) ---
+  // ========================================================================
   dockOuterContainer: {
-    position: 'absolute',
-    bottom: 60,
-    left: 20,
-    right: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+      position: 'absolute',
+      bottom: 60,
+      left: 20,
+      right: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 10,
   },
   dockContainer: {
-    height: 65,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
-    overflow: 'hidden',
-    // The container is now a simple box, allowing absolute positioning inside
+      height: 65,
+      borderRadius: 35,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+      overflow: 'hidden',
   },
   pillIndicator: {
-    position: 'absolute',
-    top: 5,
-    left: 0, // The translateX will now correctly position it from the left edge
-    height: 52,
-    borderRadius: 24,
-    backgroundColor: COLORS.accentGreen,
-    zIndex: 1, // Sits behind the icons
-    
+      position: 'absolute',
+      top: 5,
+      left: 0,
+      height: 52,
+      borderRadius: 24,
+      backgroundColor: COLORS.accentGreen,
+      zIndex: 1,
   },
   tabsContainer: {
-    // This container for the icons now fills the entire dock
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    zIndex: 2, // Sits on top of the pill
+      ...StyleSheet.absoluteFillObject,
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      zIndex: 2,
   },
   dockItem: {
-    flex: 1, // Each item takes equal horizontal space
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative', // Necessary for the label's absolute positioning
+      flex: 1,
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
   },
   dockLabel: {
-    position: 'absolute',
-    bottom: 7, // Positioned slightly below the icon area
-    fontFamily: 'Tajawal-Bold',
+      position: 'absolute',
+      bottom: 7,
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 10,
+      color: COLORS.textOnAccent,
+  },
+
+  // ========================================================================
+  // --- 5. FLOATING ACTION BUTTON (FAB) ---
+  // ========================================================================
+  fab: {
+      position: 'absolute',
+      bottom: 130,
+      right: 20,
+      shadowColor: COLORS.accentGreen,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 15,
+      elevation: 10
+  },
+  fabRoutine: { // Specific position for Routine tab
+      position: 'absolute',
+      bottom: 130,
+      right: 20,
+      shadowColor: COLORS.accentGreen,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 15,
+      elevation: 10
+  },
+  fabGradient: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+
+  // ========================================================================
+  // --- 6. SECTION: SHELF & PRODUCTS ---
+  // ========================================================================
+  // --- Stats Bar ---
+  statsContainer: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+},
+statBox: {
+    alignItems: 'center',
+    flex: 1,
+},
+statLabel: {
+    fontFamily: 'Tajawal-Regular',
     fontSize: 10,
+    color: COLORS.textSecondary,
+    marginBottom: 5,
+},
+statValue: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 22,
+    color: COLORS.accentGreen
+},
+statDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: COLORS.border,
+    alignSelf: 'center'
+},
+
+// --- New Product List Item ---
+productListItemWrapper: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+},
+productListItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+},
+listItemContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: 4,
+},
+listItemName: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+},
+listItemType: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+},
+verdictContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    
+},
+listItemVerdict: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    textAlign: 'right',
+},
+listItemScoreContainer: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+},
+listItemScoreText: {
+    position: 'absolute',
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 16,
+},
+
+// --- Swipe to Delete ---
+deleteActionContainer: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+},
+
+// --- Empty State ---
+emptyState: {
+    alignItems: 'center',
+    marginTop: 40,
+    padding: 30,
+},
+emptyText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    marginTop: 15,
+    textAlign: 'center',
+},
+emptySub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 5,
+    lineHeight: 20,
+},
+emptyStateButton: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+    marginTop: 20,
+    backgroundColor: COLORS.accentGreen,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    alignItems: 'center',
+},
+emptyStateButtonText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 15,
     color: COLORS.textOnAccent,
+},
+
+// --- Product Details Bottom Sheet (Sophisticated & Scrollable) ---
+sheetContent: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderBottomWidth: 0,
+    maxHeight: height * 0.85,
+    overflow: 'hidden',
+},
+sheetDraggableArea: {
+    paddingBottom: 5,
+},
+sheetProductTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 22,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 20,
+},
+sheetPillarsContainer: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+    padding: 15,
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    marginBottom: 15,
+    marginHorizontal: 15,
+},
+sheetPillar: {
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+},
+sheetDividerVertical: {
+    width: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 10,
+},
+sheetPillarLabel: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+},
+sheetPillarValue: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 20,
+},
+sheetSection: {
+    paddingHorizontal: 15,
+    marginBottom: 15,
+},
+sheetSectionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    marginBottom: 10,
+},
+alertBox: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+},
+alertBoxText: {
+    flex: 1,
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    textAlign: 'right',
+    lineHeight: 18,
+},
+ingredientChip: {
+    backgroundColor: COLORS.background,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    marginBottom: 10,
+},
+ingredientChipText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+},
+  
+  // ========================================================================
+  // --- 7. SECTION: ANALYSIS & INSIGHTS ---
+  // ========================================================================
+  focusInsightCard: {
+      borderRadius: 24,
+      padding: 25,
+      marginBottom: 25,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+  },
+  focusInsightHeader: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 12,
+  },
+  focusInsightTitle: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+  },
+  focusInsightSummary: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      marginTop: 12,
+      lineHeight: 22,
+  },
+  focusInsightAction: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+      alignSelf: 'flex-start',
+      marginTop: 20,
+  },
+  focusInsightActionText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.accentGreen,
+  },
+  allClearContainer: {
+      alignItems: 'center',
+      padding: 30,
+      marginBottom: 25,
+  },
+  allClearIconWrapper: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  allClearTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+  },
+  allClearSummary: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginTop: 5,
+      lineHeight: 20,
+  },
+  carouselTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 15,
+      paddingHorizontal: 5,
+  },
+  carouselContentContainer: {
+      paddingHorizontal: 5,
+      paddingBottom: 25,
+  },
+  carouselItem: {
+      width: 150,
+      height: 150,
+      backgroundColor: COLORS.card,
+      borderRadius: 20,
+      padding: 15,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      justifyContent: 'space-between',
+  },
+  carouselIconWrapper: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  carouselItemTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      lineHeight: 19,
+  },
+  overviewContainer: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      gap: 12,
+  },
+  overviewCard: {
+      flex: 1,
+  },
+  analysisCardHeader: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 15,
+      opacity: 0.8,
+  },
+  analysisCardTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+  },
+  routineOverviewGrid: {
+      gap: 12,
+  },
+  routineColumn: {
+      gap: 8,
+  },
+  routineColumnTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 4,
+  },
+  routineProductPill: {
+      backgroundColor: COLORS.background,
+      color: COLORS.textSecondary,
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      overflow: 'hidden',
+  },
+  routineEmptyText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textDim,
+      textAlign: 'right',
+  },
+  routineDivider: {
+      height: 1,
+      backgroundColor: COLORS.border,
+  },
+  sunProtectionContainer: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      paddingVertical: 5,
+      flex: 1,
+      justifyContent: 'center',
+  },
+  sunProtectionNote: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      lineHeight: 16,
+  },
+
+  // ========================================================================
+  // --- 8. SECTION: ROUTINE BUILDER ---
+  // ========================================================================
+  routineHeaderContainer: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+      gap: 10,
+  },
+  routineSwitchContainer: {
+      flex: 1,
+      flexDirection: 'row-reverse',
+      backgroundColor: COLORS.card,
+      borderRadius: 99,
+      padding: 6,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+  },
+  periodBtn: {
+      flex: 1,
+      flexDirection: 'row-reverse',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 10,
+      borderRadius: 99,
+  },
+  periodBtnActive: {
+      backgroundColor: COLORS.accentGreen,
+  },
+  periodText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+  },
+  periodTextActive: {
+      color: COLORS.textOnAccent,
+  },
+  autoBuildButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: COLORS.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+  },
+  routineTimelineItem: {
+      flexDirection: 'row-reverse',
+      marginBottom: 5,
+  },
+  timelineGutter: {
+      alignItems: 'center',
+      marginRight: 15,
+  },
+  timelineNode: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: COLORS.card,
+      borderWidth: 2,
+      borderColor: COLORS.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1,
+  },
+  timelineNodeActive: {
+      backgroundColor: COLORS.accentGlow,
+      borderColor: COLORS.accentGreen,
+  },
+  timelineNodeText: {
+      fontFamily: 'Tajawal-Bold',
+      color: COLORS.textSecondary,
+      fontSize: 14,
+  },
+  timelineNodeTextActive: {
+      color: COLORS.accentGreen,
+  },
+  timelineLine: {
+      flex: 1,
+      width: 2,
+      backgroundColor: COLORS.border,
+      marginTop: -2,
+  },
+  stepContentCard: {
+      paddingVertical: 18,
+      paddingHorizontal: 20,
+      marginBottom: 15,
+  },
+  stepHeader: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+  },
+  stepTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+  },
+  manageStepButton: {
+      backgroundColor: COLORS.background,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 10,
+  },
+  manageStepButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+  },
+  stepEmptyText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textDim,
+      textAlign: 'right',
+      marginTop: 10,
+  },
+  routineProductPillText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+  },
+  routineEmptyState: {
+      marginTop: 60,
+      alignItems: 'center',
+      padding: 20,
+  },
+  routineEmptyTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+      marginTop: 15,
+  },
+  routineEmptySub: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginTop: 5,
+  },
+  
+  // ========================================================================
+  // --- 9. SECTION: INGREDIENTS ---
+  // ========================================================================
+  searchBar: {
+      flexDirection: 'row-reverse',
+      backgroundColor: COLORS.card,
+      borderRadius: 14,
+      paddingHorizontal: 15,
+      height: 44,
+      alignItems: 'center',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+  },
+  searchInput: {
+      flex: 1,
+      fontFamily: 'Tajawal-Regular',
+      color: COLORS.textPrimary,
+      marginRight: 10,
+      fontSize: 14,
+      textAlign: 'right',
+      paddingVertical: 10,
+  },
+  filterPill: {
+      backgroundColor: COLORS.card,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 15,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+  },
+  filterPillActive: {
+      backgroundColor: COLORS.accentGreen,
+  },
+  filterText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+  },
+  filterTextActive: {
+      color: COLORS.textOnAccent,
+      fontFamily: 'Tajawal-Bold',
+  },
+  ingredientsStats: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      backgroundColor: COLORS.card,
+      borderRadius: 16,
+      padding: 15,
+      marginBottom: 15,
+  },
+  statItem: {
+      alignItems: 'center',
+      flex: 1,
+  },
+  ingRow: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: COLORS.card,
+      padding: 15,
+      borderRadius: 14,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+  },
+  ingName: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+      marginBottom: 4,
+  },
+  ingType: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 10,
+      color: COLORS.textSecondary,
+      marginLeft: 6
+  },
+  ingDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+  },
+  ingProducts: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 10,
+      color: COLORS.textSecondary,
+      marginTop: 4,
+  },
+  countBadge: {
+      backgroundColor: COLORS.background,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      minWidth: 32,
+      alignItems: 'center',
+  },
+  countText: {
+      fontSize: 10,
+      fontFamily: 'Tajawal-Bold',
+      color: COLORS.accentGreen
+  },
+  
+  // ========================================================================
+  // --- 10. SECTION: MIGRATION ---
+  // ========================================================================
+  migName: {
+      fontFamily: 'Tajawal-Bold',
+      color: COLORS.textPrimary,
+      fontSize: 16,
+      textAlign: 'right',
+      flex: 1,
+  },
+  badBadge: {
+      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      marginLeft: 6,
+      marginBottom: 4,
+  },
+  criticalBadge: {
+      backgroundColor: COLORS.danger,
+  },
+  badText: {
+      color: COLORS.danger,
+      fontSize: 9,
+      fontFamily: 'Tajawal-Bold'
+  },
+  migReason: {
+      fontFamily: 'Tajawal-Regular',
+      color: COLORS.textSecondary,
+      fontSize: 12,
+      textAlign: 'right',
+      marginTop: 8
+  },
+  migSuggestion: {
+      fontFamily: 'Tajawal-Regular',
+      color: COLORS.accentGreen,
+      textAlign: 'right',
+      fontSize: 13,
+      marginTop: 8,
+      backgroundColor: 'rgba(90, 156, 132, 0.1)',
+      padding: 10,
+      borderRadius: 10
+  },
+  migrationTip: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 10,
+      padding: 8,
+      backgroundColor: 'rgba(251, 191, 36, 0.1)',
+      borderRadius: 8,
+  },
+  migrationTipText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.gold,
+      flex: 1,
+  },
+  
+  // ========================================================================
+  // --- 11. SECTION: SETTINGS & ACCORDION ---
+  // ========================================================================
+  accordionHeader: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 18,
+      backgroundColor: 'transparent',
+  },
+  accordionTitle: {
+      fontFamily: 'Tajawal-Bold',
+      color: COLORS.textPrimary,
+      fontSize: 16,
+  },
+  accordionBody: {
+      padding: 20,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
+  },
+  settingGroup: {
+      marginVertical: 10,
+  },
+  groupLabel: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      marginBottom: 12,
+  },
+  chipsRow: {
+      flexDirection: 'row-reverse',
+      flexWrap: 'wrap',
+      gap: 10,
+  },
+  chip: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      backgroundColor: COLORS.background,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 8,
+  },
+  chipActive: {
+      backgroundColor: COLORS.accentGreen,
+      borderColor: COLORS.accentGreen,
+  },
+  chipText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+  },
+  logoutBtn: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.5)',
+      gap: 10
+  },
+  logoutText: {
+      fontFamily: 'Tajawal-Bold',
+      color: COLORS.danger,
+      fontSize: 16
+  },
+
+  // ========================================================================
+  // --- 12. COMPONENT: ONBOARDING GUIDE ---
+  // ========================================================================
+  guideOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      zIndex: 100,
+  },
+  guideContentContainer: {
+      zIndex: 101,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      padding: 30,
+      paddingBottom: height * 0.2,
+  },
+  guideTextBox: {
+      backgroundColor: COLORS.card,
+      borderRadius: 20,
+      padding: 25,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      alignItems: 'center',
+      width: '100%',
+  },
+  guideTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 20,
+      color: COLORS.textPrimary,
+      marginBottom: 10,
+  },
+  guideText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 20,
+  },
+  guideButton: {
+      backgroundColor: COLORS.accentGreen,
+      paddingHorizontal: 30,
+      paddingVertical: 12,
+      borderRadius: 12,
+  },
+  guideButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textOnAccent,
+  },
+
+  // ========================================================================
+  // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
+  // ========================================================================
+  
+  // --- Overlays & Containers ---
+  sheetOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      justifyContent: 'flex-end',
+  },
+  centeredModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  
+  // --- Sheet Handle ---
+  sheetHandleBar: {
+      alignItems: 'center',
+      paddingVertical: 15,
+      cursor: 'grab',
+  },
+  sheetHandle: {
+      width: 40,
+      height: 5,
+      backgroundColor: COLORS.border,
+      borderRadius: 2.5,
+  },
+
+  // --- Modal/Sheet Header (Unified) ---
+  modalHeader: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 15,
+      paddingHorizontal: 20,
+      paddingBottom: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+  },
+  modalIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  modalTitle: {
+      flex: 1,
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  
+  // --- Modal/Sheet Body Content ---
+  modalDescription: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      lineHeight: 22,
+      paddingHorizontal: 20,
+      marginVertical: 15,
+  },
+  relatedProductsTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 8,
+      paddingHorizontal: 20,
+  },
+  relatedProductItem: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      marginBottom: 4,
+      paddingHorizontal: 20,
+  },
+  promptModalSub: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginBottom: 20,
+      marginTop: 5,
+  },
+  promptInput: {
+      backgroundColor: COLORS.background,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 12,
+      padding: 14,
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginHorizontal: 20,
+      marginBottom: 25,
+  },
+
+  // --- Modal/Sheet Action Buttons ---
+  closeButton: {
+      backgroundColor: COLORS.accentGreen,
+      padding: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginHorizontal: 20,
+      marginTop: 10,
+  },
+  closeButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textOnAccent,
+  },
+  promptButtonRow: {
+      flexDirection: 'row-reverse',
+      gap: 10,
+      marginHorizontal: 20,
+  },
+  promptButton: {
+      flex: 1,
+      padding: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+  },
+  promptButtonPrimary: {
+      backgroundColor: COLORS.accentGreen,
+  },
+  promptButtonSecondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+  },
+  promptButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 15,
+  },
+  promptButtonTextPrimary: {
+      color: COLORS.textOnAccent,
+  },
+  promptButtonTextSecondary: {
+      color: COLORS.textSecondary,
+  },
+
+  // --- Specific Modals: Step Editor & Add Product ---
+  stepModalHeader: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 20,
+  },
+  stepModalTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 18,
+      color: COLORS.textPrimary,
+  },
+  addProductButton: {
+      flexDirection: 'row-reverse',
+      gap: 6,
+      backgroundColor: COLORS.accentGreen,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      alignItems: 'center',
+  },
+  addProductButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.textOnAccent,
+  },
+  stepModalEmpty: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      gap: 10,
+  },
+  stepModalEmptyText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textDim,
+  },
+  reorderItem: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      backgroundColor: COLORS.background,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 10,
+      marginHorizontal: 20,
+  },
+  reorderControls: {
+      gap: 8,
+      marginLeft: 10,
+      paddingHorizontal: 5,
+  },
+  reorderItemText: {
+      flex: 1,
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  reorderRemoveButton: {
+      padding: 8,
+  },
+  saveStepButton: {
+      backgroundColor: COLORS.accentGreen,
+      padding: 16,
+      borderRadius: 14,
+      alignItems: 'center',
+      margin: 20,
+  },
+  saveStepButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textOnAccent,
+  },
+  modalContent: {
+      width: '90%',
+      maxHeight: height * 0.6,
+  },
+  modalItem: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+  },
+  modalItemName: {
+      fontFamily: 'Tajawal-Regular',
+      color: COLORS.textPrimary,
+      fontSize: 14,
   },
 });

@@ -1,15 +1,12 @@
-name: Turbo Build APK
+name: Optimized Turbo Build APK
 
 on:
-  # This enables the manual "Run" button
   workflow_dispatch:
-  
-  # This enables Auto-Run on Push
   push:
     branches:
-      - main   # <--- Verify this matches your branch name (main or master)
+      - main
     paths-ignore:
-      - 'README.md'   # Don't build if you only change documentation
+      - 'README.md'
       - '.gitignore'
 
 jobs:
@@ -28,51 +25,43 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Gradle Caching (The Speed Booster)
-      - name: 🐘 Cache Gradle
-        uses: actions/cache@v4
-        with:
-          # The Pipe symbol '|' below is MANDATORY for multiple lines
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          # Ensure this key line is indented exactly under 'path'
-          key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-v5-
-
-      # 4. Setup Node & NPM Cache
+      # 3. Setup Node.js and caches npm dependencies
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
           cache: 'npm'
 
-      # 5. Install Global Tools
-      - name: 🛠 Install EAS CLI
-        run: npm install -g eas-cli
+      # 4. Use the official Expo GitHub Action to set up and cache EAS CLI
+      - name: 🏗 Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
-      # 6. Install Dependencies (Robust Mode)
-      # We delete package-lock first to prevent sync errors
+      # 5. Gradle Caching (The Speed Booster)
+      - name: 🐘 Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-v5-
+
+      # 6. Install Dependencies using npm ci for speed and reliability
       - name: 📦 Install Dependencies
-        run: |
-          rm -f package-lock.json
-          npm install
+        run: npm ci
 
-      # 7. Build the APK
-      # We explicitly pass EXPO_TOKEN env var to this step
+      # 7. Build the APK without clearing the cache
       - name: 📱 Build APK (Local Mode)
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Boost Java memory to 4GB to prevent "Unknown" crashes
+          # Boost Java memory to prevent "Unknown" crashes
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
         run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
-            exit 1
-          fi
-          # Clear EAS cache to ensure it generates fresh android folders
-          eas build --local --clear-cache --platform android --profile preview --non-interactive --output ./wathiq.apk
+          # The EXPO_TOKEN is now handled by the expo/expo-github-action
+          eas build --local --platform android --profile preview --non-interactive --output ./wathiq.apk
 
       # 8. Upload Result
       - name: 📤 Upload Artifact

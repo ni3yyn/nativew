@@ -38,7 +38,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // --- CONFIG & THEME ---
-const GEMINI_API_KEY = "AIzaSyCm3-tPiQ1pGFKmM2wvN6QxfR0OXhBTr-s"; 
+const GEMINI_API_KEY = "AIzaSyBsz06vv0fo2VMTx0jCNctjQoCFhRxPe_4"; 
 const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 const CARD_WIDTH = width * 0.85;
@@ -394,10 +394,10 @@ const calculateReliabilityScore_V13 = (ingredients, allIngredients, conflicts, u
     if (hasAllergyDanger) { weightedScore = Math.min(weightedScore, 20); finalVerdict = "⛔ خطير: يسبب لك الحساسية"; scoreBreakdown.push({ type: 'override', text: 'تم إغلاق النتيجة لوجود خطر صحي', value: 'سقف 20%' }); } 
     else if (currentSafety < 40) { weightedScore = Math.min(weightedScore, 45); finalVerdict = "⚠️ غير آمن: يحتوي على مكونات قاسية/ضارة"; scoreBreakdown.push({ type: 'override', text: 'تم تخفيض النتيجة لضعف الأمان', value: 'سقف 45%' }); } 
     else if (currentSafety > 80 && currentEfficacy < 55) { weightedScore = Math.min(weightedScore, 65); finalVerdict = "💧 آمن لكن غير فعال (Basic)"; scoreBreakdown.push({ type: 'override', text: 'تم تخفيض النتيجة لعدم وجود فعالية حقيقية', value: 'سقف 65%' }); } 
-    else if (weightedScore >= 90) finalVerdict = "💎 تركيبة مثالية (Elite)"; 
-    else if (weightedScore >= 80) finalVerdict = "🌟 اختيار ممتاز"; 
-    else if (weightedScore >= 65) finalVerdict = "✅ جيد ومتوازن"; 
-    else finalVerdict = "⚖️ متوسط (يمكن إيجاد أفضل)";
+    else if (weightedScore >= 90) finalVerdict = "تركيبة مثالية (Elite)"; 
+    else if (weightedScore >= 80) finalVerdict = "اختيار ممتاز"; 
+    else if (weightedScore >= 65) finalVerdict = "جيد ومتوازن"; 
+    else finalVerdict = "متوسط (يمكن إيجاد أفضل)";
 
     return { oilGuardScore: Math.round(weightedScore), finalVerdict, efficacy: { score: Math.round(currentEfficacy) }, safety: { score: Math.round(currentSafety) }, scoreBreakdown, personalMatch: { status: hasAllergyDanger ? 'danger' : (hasMismatch ? 'warning' : 'good'), reasons: activeUserAlerts.map(a => a.text) } };
 };
@@ -2337,7 +2337,7 @@ const styles = StyleSheet.create({
   changeTypeText: { 
     color: COLORS.accentGreen, 
     fontSize: 14,
-    fontFamily: 'Tajawal-Medium',
+    fontFamily: 'Tajawal-Bold',
   },
   typeGrid: { 
     flexDirection: 'row-reverse', 
@@ -2662,7 +2662,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   evidencePillText: {
-    fontFamily: 'Tajawal-Medium',
+    fontFamily: 'Tajawal-Bold',
     fontSize: 12,
     color: COLORS.textPrimary,
   },
