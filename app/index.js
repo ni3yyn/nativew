@@ -17,15 +17,17 @@ export default function Index() {
   const [animationFinished, setAnimationFinished] = useState(false);
 
   useEffect(() => {
+    console.log(`Index: Checking conditions... Loading: ${loading}, AnimationFinished: ${animationFinished}`);
+
     // Only try to navigate when the initial loading is done AND the animation has finished
     if (!loading && animationFinished) {
-      if (!user) {
-        // Redirect to the login screen
-        router.replace('/login');
+      console.log("Index: Conditions met! Redirecting...");
+      if (user) {
+        // User is logged in, redirect them to the profile page.
+        router.replace('/profile');
       } else {
-        // Redirect to the main part of the app (e.g., a home screen or dashboard)
-        // IMPORTANT: Change '/login' to your main app route, e.g., '/(tabs)/home'
-        router.replace('/profile'); 
+        // User is not logged in, send them to the login screen.
+        router.replace('/login');
       }
     }
   }, [user, loading, animationFinished, router]);
@@ -37,7 +39,7 @@ export default function Index() {
 
   return (
     <View 
-      style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111' }}
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1A2D27' }}
       onLayout={onLayoutRootView} // Hide native splash screen on layout
     >
       <LottieView
