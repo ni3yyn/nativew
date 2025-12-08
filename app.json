@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Wathiq",
+    "name": "وثيق",
     "slug": "nativew",
-    "scheme": "wathiq",
+    "scheme": "وثيق",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
