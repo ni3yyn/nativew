@@ -6,6 +6,7 @@ import {
   RefreshControl, Keyboard, Easing, I18nManager
 } from 'react-native';
 import { TouchableWithoutFeedback } from 'react-native'; 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PanResponder } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,11 +35,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 I18nManager.allowRTL(false);
 
 const { width, height } = Dimensions.get('window');
-const HEADER_MAX_HEIGHT = 150; // Much more compact
-const HEADER_MIN_HEIGHT = Platform.OS === 'ios' ? 90 : 80; // Standard native height
-const SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
-// --- 2. THEME & ASSETS ---
 const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 // --- 2. THEME & ASSETS ---
@@ -2004,6 +2001,12 @@ const SettingsSection = ({ profile, onLogout }) => {
 export default function ProfileScreen() {
   const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
   const router = useRouter();
+  const insets = useSafeAreaInsets(); 
+
+  const HEADER_BASE_HEIGHT = 150; 
+  const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
+  const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
+  const scrollDistance = headerMaxHeight - headerMinHeight;
   const [activeTab, setActiveTab] = useState('shelf');
   const [productPrice, setProductPrice] = useState('');
   const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
@@ -2015,25 +2018,25 @@ export default function ProfileScreen() {
   // Scroll & Animation Refs
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerHeight = scrollY.interpolate({ 
-    inputRange: [0, SCROLL_DISTANCE], 
-    outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT], 
+    inputRange: [0, scrollDistance], 
+    outputRange: [headerMaxHeight, headerMinHeight], 
     extrapolate: 'clamp' 
   });
 
   const expandedHeaderOpacity = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE / 2],
+    inputRange: [0, scrollDistance / 2],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
   const expandedHeaderTranslate = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
+    inputRange: [0, scrollDistance],
     outputRange: [0, -20],
     extrapolate: 'clamp',
   });
 
   const collapsedHeaderOpacity = scrollY.interpolate({
-    inputRange: [SCROLL_DISTANCE / 2, SCROLL_DISTANCE],
+    inputRange: [scrollDistance / 2, scrollDistance],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
@@ -2293,7 +2296,7 @@ export default function ProfileScreen() {
                 </Animated.View>
 
                 {/* COLLAPSED STATE CONTENT (Fades in on scroll) */}
-                <Animated.View style={[styles.headerContentCollapsed, { opacity: collapsedHeaderOpacity }]}>
+                <Animated.View style={[styles.headerContentCollapsed, { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }]}>
                     <Text style={styles.collapsedTitle}>
                         {userProfile?.settings?.name || 'الملف الشخصي'}
                     </Text>
@@ -2304,7 +2307,7 @@ export default function ProfileScreen() {
             <Animated.ScrollView
                 contentContainerStyle={{ 
                     paddingHorizontal: 15, 
-                    paddingTop: HEADER_MAX_HEIGHT + 20,
+                    paddingTop: headerMaxHeight + 20,
                     paddingBottom: 100 
                 }}
                 scrollEventThrottle={16}
@@ -2461,7 +2464,7 @@ const styles = StyleSheet.create({
       bottom: 0,
       left: 0,
       right: 0,
-      height: HEADER_MIN_HEIGHT - (Platform.OS === 'ios' ? 45 : 20),
+      
       justifyContent: 'center',
       alignItems: 'center',
   },

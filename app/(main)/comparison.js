@@ -10,7 +10,7 @@ import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-ico
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // --- Analysis helpers imports ---
 import {
     createGenerativePartFromUri,
@@ -492,6 +492,8 @@ export default function ComparisonPage() {
     const [productType, setProductType] = useState(null);
     const [claims, setClaims] = useState([]);
     const [loadingText, setLoadingText] = useState('');
+    const insets = useSafeAreaInsets();
+
     
     // Back handler
     useEffect(() => {
@@ -609,14 +611,10 @@ export default function ComparisonPage() {
 
     const renderContent = () => {
         switch(step) {
-            case 0: 
-                return <IntroStep onStart={() => transitionTo(1)} />;
-            case 1: 
-                return <InputStep left={left} setLeft={setLeft} right={right} setRight={setRight} />;
-            case 2: 
-                return <LoadingStep text={loadingText} />;
-            case 3: 
-                return <TypeSelectionStep current={productType} onSelect={(t) => { setProductType(t); transitionTo(4); }} />;
+            case 0: return <IntroStep onStart={() => transitionTo(1)} />;
+            case 1: return <InputStep left={left} setLeft={setLeft} right={right} setRight={setRight} />;
+            case 2: return <LoadingStep text={loadingText} />;
+            case 3: return <TypeSelectionStep current={productType} onSelect={(t) => { setProductType(t); transitionTo(4); }} />;
             case 4: 
                 const availableClaims = getClaimsByProductType(productType);
                 return <ClaimsSelectionStep 
@@ -625,10 +623,8 @@ export default function ComparisonPage() {
                     onToggle={(c) => setClaims(prev => prev.includes(c) ? prev.filter(x=>x!==c) : [...prev, c])} 
                     onFinish={handleFinalCalculation} 
                 />;
-            case 5: 
-                return <ResultsStep left={left} right={right} onReset={resetAll} />;
-            default:
-                return <IntroStep onStart={() => transitionTo(1)} />;
+            case 5: return <ResultsStep left={left} right={right} onReset={resetAll} />;
+            default: return <IntroStep onStart={() => transitionTo(1)} />;
         }
     };
 
@@ -636,14 +632,20 @@ export default function ComparisonPage() {
         <View style={styles.container}>
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
             <LinearGradient colors={[THEME.bg, '#08100e']} style={StyleSheet.absoluteFill} />
-            {/* Ambient Background Glow */}
             <View style={styles.glowOrb} />
             
-            <View style={styles.contentArea}>
+            <View style={[
+                styles.contentArea, 
+                // Dynamic padding for status bar and nav bar
+                { paddingTop: insets.top + 20, paddingBottom: insets.bottom } 
+            ]}>
                 {renderContent()}
             </View>
 
-            <InstructionBubble step={step} />
+            {/* Instruction bubble respects bottom inset */}
+            <View style={{ marginBottom: insets.bottom }}>
+                <InstructionBubble step={step} />
+            </View>
         </View>
     );
 }

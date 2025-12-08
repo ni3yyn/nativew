@@ -11,7 +11,7 @@ import { db } from '../../src/config/firebase';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../../src/context/AppContext';
 import * as Haptics from 'expo-haptics';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // --- CONFIGURATION ---
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -20,7 +20,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // --- THEME ---
-const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
+const BG_IMAGE = require('../../assets/lolo.jpg');
 
 const COLORS = {
   primary: '#B2D8B4',
@@ -199,7 +199,7 @@ const RowOption = ({ label, selected, onPress, index, category }) => {
 export default function WelcomeScreen() {
   const { user } = useAppContext();
   const router = useRouter();
-  
+  const insets = useSafeAreaInsets();
   // Transitions
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTransX = useRef(new Animated.Value(0)).current; 
@@ -337,13 +337,8 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <ImageBackground 
-        source={{ uri: BG_IMAGE }} 
-        style={{ position: 'absolute', width: width, height: height, top: 0, left: 0 }} 
-        resizeMode="cover"
-      > 
-        {/* Background Visuals */}
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
         <View style={styles.darkOverlay} />
         {particles.map(p => <Spore key={p.key} {...p} />)}
 
@@ -352,9 +347,12 @@ export default function WelcomeScreen() {
           style={{flex: 1}}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
         >
-          <View style={styles.safeArea}>
+          <View style={[
+              styles.safeArea, 
+              // Add safe area padding here
+              { paddingTop: 40 + insets.top, paddingBottom: insets.bottom } 
+          ]}>
                 
-            {/* 1. PROGRESS BAR (FLOATING) */}
             <View style={styles.progressContainer}>
               <Text style={styles.stepCounter}>الخطوة {currentStep + 1} من {STEPS.length}</Text>
               <View style={styles.track}>
@@ -362,17 +360,14 @@ export default function WelcomeScreen() {
               </View>
             </View>
 
-            {/* 2. THE GLASS CARD CONTAINER */}
             <View style={styles.cardContainer}>
-              <BlurView intensity={70} tint="dark" style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
-                        
-                {/* 2a. HEADER INSIDE CARD */}
+              <BlurView intensity={70} tint="extralight" style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
+                
                 <View style={styles.cardHeader}>
                   <Text style={styles.title}>{STEPS[currentStep].title}</Text>
                   <Text style={styles.subtitle}>{STEPS[currentStep].subtitle}</Text>
                 </View>
 
-                {/* 2b. CONTENT */}
                 <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
                   <ScrollView 
                     contentContainerStyle={{ 
@@ -388,7 +383,6 @@ export default function WelcomeScreen() {
                   </ScrollView>
                 </Animated.View>
 
-                {/* 2c. FOOTER */}
                 <View style={styles.footer}>
                   {currentStep > 0 ? (
                     <TouchableOpacity onPress={() => changeStep(-1)} style={styles.backBtn}>
@@ -396,7 +390,6 @@ export default function WelcomeScreen() {
                     </TouchableOpacity>
                   ) : <View style={{ width: 50 }} />}
 
-                  {/* NEXT BUTTON (Hidden on single-select) */}
                   {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep].id) && (
                     <TouchableOpacity 
                       onPress={() => changeStep(1)} 
@@ -404,9 +397,7 @@ export default function WelcomeScreen() {
                       style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
                     >
                       {loading ? (
-                        <Text style={styles.btnText}>
-                          {formData.gender === 'أنثى' ? 'جاري الحفظ...' : 'جاري الحفظ...'}
-                        </Text>
+                        <Text style={styles.btnText}>جاري الحفظ...</Text>
                       ) : (
                         <Text style={styles.btnText}>
                           {currentStep === 6 ? (formData.gender === 'أنثى' ? 'انطلقي' : 'انطلق') : 'التالي'}
