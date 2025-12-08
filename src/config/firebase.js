@@ -1,13 +1,15 @@
+import { Platform } from 'react-native'; // 1. Import Platform
 import { initializeApp } from "firebase/app";
-// 1. UPDATE: Import initializeAuth and getReactNativePersistence
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import { 
+  initializeAuth, 
+  getReactNativePersistence, 
+  browserLocalPersistence // 2. Import Browser Persistence
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging";
-
-// 2. UPDATE: Import AsyncStorage
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- 1. WATHIQ CONFIGURATION ---
@@ -24,18 +26,30 @@ const firebaseConfig = {
 // --- 2. INITIALIZE APP ---
 const app = initializeApp(firebaseConfig);
 
-// --- 3. INITIALIZE CORE SERVICES ---
-// 3. UPDATE: Use initializeAuth with persistence instead of getAuth()
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+// --- 3. INITIALIZE AUTH (PLATFORM AWARE) ---
+let auth;
 
+if (Platform.OS === 'web') {
+  // If running on Web, use standard browser storage
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence
+  });
+} else {
+  // If running on Android/iOS, use React Native Async Storage
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  });
+}
+
+// Export auth specifically
+export { auth };
+
+// --- 4. INITIALIZE OTHER SERVICES ---
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
-// --- 4. CONDITIONAL SERVICES (Analytics & Messaging) ---
-// These are initialized asynchronously to prevent crashes in unsupported environments
+// --- 5. CONDITIONAL SERVICES (Analytics & Messaging) ---
 export let analytics = null;
 export let messaging = null;
 
@@ -51,8 +65,7 @@ isMessagingSupported().then((supported) => {
   }
 });
 
-// --- 5. HELPER EXPORTS (For Backward Compatibility with Oily Code) ---
-// This ensures components like AdminPortal or WathiqAdmin don't break
+// --- 6. HELPER EXPORTS ---
 export { collection, addDoc, setDoc, doc, updateDoc, deleteDoc, query, orderBy, limit, getDocs, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export default app;
