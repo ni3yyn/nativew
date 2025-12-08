@@ -104,9 +104,9 @@ export const createGenerativePartFromUri = async (uri) => {
 
 export const processWithGemini = async (imagePart) => {
     // This API key should ideally be stored in a secure environment configuration.
-    const apiKey = "AIzaSyBjrkKZSUh3urArMWSnIOgC96Lc0kYea9A";
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" }); // Using 1.5-flash as a robust alternative.
+    const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" }); // Using 1.5-flash as a robust alternative.
 
     const prompt = `
         Analyze the cosmetic product image.

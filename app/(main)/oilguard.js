@@ -38,7 +38,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // --- CONFIG & THEME ---
-const GEMINI_API_KEY = "AIzaSyBsz06vv0fo2VMTx0jCNctjQoCFhRxPe_4"; 
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 const CARD_WIDTH = width * 0.85;
