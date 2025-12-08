@@ -25,7 +25,7 @@ export default function Index() {
       
       if (user) {
         // User is logged in, redirect them to the profile page.
-        router.replace('/profile');
+        router.replace('/(main)/profile'); 
       } else {
         // User is not logged in, send them to the login screen.
         router.replace('/login');

@@ -1,10 +1,14 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+// 1. UPDATE: Import initializeAuth and getReactNativePersistence
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging";
+
+// 2. UPDATE: Import AsyncStorage
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- 1. WATHIQ CONFIGURATION ---
 const firebaseConfig = {
@@ -21,7 +25,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // --- 3. INITIALIZE CORE SERVICES ---
-export const auth = getAuth(app);
+// 3. UPDATE: Use initializeAuth with persistence instead of getAuth()
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
