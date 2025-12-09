@@ -17,6 +17,7 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
 // --- DATA IMPORTS from Web Version ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
@@ -840,6 +841,14 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const modalAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    if (Platform.OS === 'android' && isVisible) {
+      // Re-assert transparency and light icons when modal opens
+      NavigationBar.setBackgroundColorAsync('#00000000');
+      NavigationBar.setButtonStyleAsync('light');
+    }
+  }, [isVisible]);
+  
   useEffect(() => {
     let scanLoop, pulseLoop;
 
