@@ -1,20 +1,18 @@
-name: Turbo Build APK
+name: Native Android Build (No EAS)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger
   push:
     branches:
       - main
-    paths-ignore:
-      - 'README.md'
-      - '.gitignore'
 
 jobs:
   build:
-    name: 🚀 Build Android APK (Cloud)
+    name: 🏗️ Build APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: 🏗 Checkout Repository
+      - name: 📦 Checkout Repository
         uses: actions/checkout@v4
 
       - name: ☕ Setup JDK 17
@@ -30,29 +28,43 @@ jobs:
           node-version: 20.x
           cache: 'npm'
 
-      - name: 🛠 Install EAS CLI
-        run: npm install -g eas-cli
-
       - name: 📦 Install Dependencies
         run: npm install
 
-      - name: 📱 Build APK (EAS Cloud Mode)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
-            exit 1
-          fi
-          # SWITCHED to cloud build for speed, using the 'preview' profile from eas.json
-          eas build --platform android --profile preview --non-interactive
+      # This step generates the 'android' folder if it doesn't exist
+      - name: ⚙️ Expo Prebuild
+        run: npx expo prebuild --platform android --no-interactive
 
-      # EAS Cloud Build automatically uploads artifacts to the EAS dashboard.
-      # If you still want them in GitHub Actions, you need the build ID, 
-      # but for simplicity and speed with EAS, relying on EAS dashboard is better.
-      # I've removed the upload step as it's often redundant when using EAS.
-      # If you MUST have it here, you would need to run 'eas build --id <id>' 
-      # after the build and use 'eas build:download'.
-      
-      - name: ⚠️ Note on Artifacts
-        run: echo "Artifacts are uploaded to the EAS Build dashboard for profile 'preview'."
+      - name: 🔧 Make Gradlew Executable
+        run: cd android && chmod +x gradlew
+
+      # This builds the unsigned APK
+      - name: 🔨 Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      # (Optional) Sign the APK for installation
+      # You need to set up secrets for this step to work.
+      # If you skip this, you can still install the unsigned debug APK 
+      # by changing 'assembleRelease' to 'assembleDebug' above.
+      - name: ✍️ Sign APK
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        env:
+          # This fixes a common build tool version issue
+          BUILD_TOOLS_VERSION: "34.0.0" 
+
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          # If you didn't sign it, use this path instead:
+          # path: android/app/build/outputs/apk/release/app-release-unsigned.apk

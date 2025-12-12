@@ -3,7 +3,7 @@ import {
   StyleSheet, View, Text, TouchableOpacity, Dimensions, 
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, SafeAreaView, FlatList
+  RefreshControl, Easing, SafeAreaView, FlatList, Slider, PanResponder, Vibration
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,8 @@ import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons 
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import Svg, { Circle, Path, Defs, ClipPath, Rect } from 'react-native-svg';
+import { Image as RNImage, } from 'react-native';
+import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask } from 'react-native-svg';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
@@ -831,177 +832,243 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
 
 const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   const [permission, requestPermission] = useCameraPermissions();
-  // Renamed ref to clarify it controls the entire CameraView (including video stream)
-  const cameraViewRef = useRef(null); 
+  const cameraViewRef = useRef(null);
+  
+  // --- Constants ---
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+  const VIEWPORT_WIDTH = SCREEN_WIDTH * 0.85;
+  const VIEWPORT_HEIGHT = SCREEN_HEIGHT * 0.50; // 50% of screen height
+  const VIEWPORT_X = (SCREEN_WIDTH - VIEWPORT_WIDTH) / 2;
+  const VIEWPORT_Y = (SCREEN_HEIGHT - VIEWPORT_HEIGHT) / 2 - 50; // Shifted up to make room for bottom controls
+  
+  // Zoom Constants
+  const SLIDER_WIDTH = SCREEN_WIDTH * 0.8; // 80% of screen width
+  const SLIDER_START_X = (SCREEN_WIDTH - SLIDER_WIDTH) / 2;
+  const MAX_ZOOM_FACTOR = 0.15; // Cap at 15% digital zoom for clarity
+
+  // --- State ---
   const [isCapturing, setIsCapturing] = useState(false);
   const [isCameraReady, setCameraReady] = useState(false);
+  const [flashMode, setFlashMode] = useState('off');
+  const [zoomLevel, setZoomLevel] = useState(0); // 0.0 -> 1.0 (Hardware)
+  const [displayZoom, setDisplayZoom] = useState(1.0); // 1.0 -> 4.0 (UI)
 
-  // Animation values
-  const scanAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const modalAnim = useRef(new Animated.Value(0)).current;
+  // --- Animations ---
+  const uiAnim = useRef(new Animated.Value(0)).current; // Slides controls up
+  const scanAnim = useRef(new Animated.Value(0)).current; // Laser
+  const shutterFlashAnim = useRef(new Animated.Value(0)).current; // White flash
+  const knobScale = useRef(new Animated.Value(1)).current; // Knob press effect
+  const tooltipOpacity = useRef(new Animated.Value(0)).current; // Bubble fade
 
-  useEffect(() => {
-    if (Platform.OS === 'android' && isVisible) {
-      // Re-assert transparency and light icons when modal opens
-      NavigationBar.setBackgroundColorAsync('#00000000');
-      NavigationBar.setButtonStyleAsync('light');
-    }
-  }, [isVisible]);
-  
-  useEffect(() => {
-    let scanLoop, pulseLoop;
+  // --- Zoom Logic (Deterministic Math) ---
+  const updateZoom = (gestureX) => {
+    let relativeX = gestureX - SLIDER_START_X;
+    // Clamp values
+    if (relativeX < 0) relativeX = 0;
+    if (relativeX > SLIDER_WIDTH) relativeX = SLIDER_WIDTH;
 
-    if (isVisible) {
-      if (!permission?.granted) {
-          requestPermission();
+    const percentage = relativeX / SLIDER_WIDTH;
+    
+    setZoomLevel(percentage * MAX_ZOOM_FACTOR);
+    setDisplayZoom(1 + (percentage * 3)); // Map 0-1 to 1x-4x
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt, gestureState) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Animated.parallel([
+            Animated.spring(knobScale, { toValue: 1.3, useNativeDriver: true }),
+            Animated.timing(tooltipOpacity, { toValue: 1, duration: 150, useNativeDriver: true })
+        ]).start();
+        updateZoom(evt.nativeEvent.pageX);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        updateZoom(gestureState.moveX);
+      },
+      onPanResponderRelease: () => {
+        Animated.parallel([
+            Animated.spring(knobScale, { toValue: 1, useNativeDriver: true }),
+            Animated.timing(tooltipOpacity, { toValue: 0, duration: 200, useNativeDriver: true })
+        ]).start();
       }
-      
-      Animated.spring(modalAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }).start();
+    })
+  ).current;
 
+  // --- Lifecycle ---
+  useEffect(() => {
+    if (Platform.OS === 'android' && isVisible) NavigationBar.setBackgroundColorAsync('#00000000');
+  }, [isVisible]);
+
+  useEffect(() => {
+    let scanLoop;
+    if (isVisible) {
+      if (!permission?.granted) requestPermission();
+      
+      // Animate UI Entry
+      Animated.spring(uiAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true, delay: 100 }).start();
+
+      // Start Laser Loop
       scanLoop = Animated.loop(
         Animated.sequence([
-          Animated.timing(scanAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(scanAnim, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.delay(500),
+            Animated.timing(scanAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+            Animated.timing(scanAnim, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         ])
       );
-
-      pulseLoop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.8, duration: 1500, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        ])
-      );
-
       scanLoop.start();
-      pulseLoop.start();
-      
     } else {
-      Animated.timing(modalAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-      scanAnim.setValue(0);
-      pulseAnim.setValue(1);
+      uiAnim.setValue(0);
     }
-
-    return () => {
-      // Ensure loops are stopped when component is not visible
-      scanLoop?.stop();
-      pulseLoop?.stop();
-    }
+    return () => scanLoop?.stop();
   }, [isVisible, permission]);
 
   const handleCapture = async () => {
-  if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
-  setIsCapturing(true);
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  try {
-    // Step 1: Take the picture at a reasonably high quality
-    const photo = await cameraViewRef.current.takePictureAsync({
-      quality: 0.8, // 0.8 is still very high quality
-    });
+    if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
+    setIsCapturing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Step 2: Manipulate the image to ensure it's a reasonable size
-    console.log('Original photo size:', photo.width, 'x', photo.height);
+    // Screen Flash
+    Animated.sequence([
+        Animated.timing(shutterFlashAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
+        Animated.timing(shutterFlashAnim, { toValue: 0, duration: 200, useNativeDriver: true })
+    ]).start();
 
-    const manipulatedPhoto = await ImageManipulator.manipulateAsync(
-      photo.uri, // URI of the original photo
-      [
-        // Resize the image. It will maintain aspect ratio.
-        { resize: { width: 1080 } } 
-      ],
-      {
-        // Compress the image (0.7 is a good balance of quality and size)
-        compress: 0.7, 
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
+    try {
+      const photo = await cameraViewRef.current.takePictureAsync({ quality: 0.8, base64: true });
+      const manipulated = await ImageManipulator.manipulateAsync(photo.uri, [{ resize: { width: 1080 } }], { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
+      onPictureTaken(manipulated);
+    } catch (e) {
+      setIsCapturing(false);
+    }
+  };
 
-    console.log('Manipulated photo size:', manipulatedPhoto.width, 'x', manipulatedPhoto.height);
+  const toggleFlash = () => {
+      Haptics.selectionAsync();
+      setFlashMode(prev => prev === 'off' ? 'on' : 'off');
+  };
 
-    // Step 3: Send the NEW, smaller photo to be processed
-    onPictureTaken(manipulatedPhoto);
+  if (!permission || !permission.granted) return null;
 
-  } catch (error) {
-    console.error("Failed to take or manipulate picture:", error);
-    Alert.alert("Capture Failed", "Could not take a picture. Please try again.");
-  } finally {
-    setIsCapturing(false);
-  }
-};
+  // Interpolations
+  const laserY = scanAnim.interpolate({ inputRange: [0, 1], outputRange: [VIEWPORT_Y, VIEWPORT_Y + VIEWPORT_HEIGHT] });
+  const controlsY = uiAnim.interpolate({ inputRange: [0, 1], outputRange: [150, 0] });
   
-  const modalTranslateY = modalAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [height, 0],
-  });
-
-  if (!permission) return null;
-
-  if (!permission.granted) {
-    return (
-      <Modal visible={isVisible} transparent animationType="fade">
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionText}>We need your permission to show the camera</Text>
-          <PressableScale onPress={requestPermission} style={styles.permissionButton}>
-            <Text style={styles.permissionButtonText}>Grant Permission</Text>
-          </PressableScale>
-        </View>
-      </Modal>
-    );
-  }
+  // Knob Calculation
+  const knobPosition = (zoomLevel / MAX_ZOOM_FACTOR) * SLIDER_WIDTH;
 
   return (
-    <Modal visible={isVisible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View style={{ flex: 1, transform: [{ translateY: modalTranslateY }] }}>
+    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
         <CameraView
-            style={StyleSheet.absoluteFill}
-            ref={cameraViewRef} // Use the renamed ref here
-            facing="back"
-            onCameraReady={() => setCameraReady(true)}
-            // These props leverage the video stream for the best still-image capture
-            autoFocus="on" // Use continuous auto-focus from the live video feed
-            mode="picture" // Prioritize settings for high-resolution still captures
-            flash="off"
+          style={StyleSheet.absoluteFill}
+          ref={cameraViewRef}
+          facing="back"
+          flash={flashMode}
+          zoom={zoomLevel}
+          onCameraReady={() => setCameraReady(true)}
+          mode="picture"
         >
-          <View style={styles.cameraOverlay}>
-          <View style={styles.cameraHeader}>
-      <Text style={styles.cameraTitle}>فحص المكونات</Text>
-      <PressableScale onPress={onClose} style={styles.cameraCloseButton}>
-        <Ionicons name="close" size={24} color={'#FFFFFF'} />
-      </PressableScale>
-    </View>
+          {/* --- 1. THE MASK (Darkens everything except viewport) --- */}
+          <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+            <Defs>
+              <Mask id="mask" x="0" y="0" height="100%" width="100%">
+                <Rect height="100%" width="100%" fill="#fff" />
+                <Rect x={VIEWPORT_X} y={VIEWPORT_Y} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} rx="30" fill="#000" />
+              </Mask>
+            </Defs>
+            <Rect height="100%" width="100%" fill="rgba(0,0,0,0.8)" mask="url(#mask)" />
+            <Rect x={VIEWPORT_X} y={VIEWPORT_Y} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} rx="30" stroke="rgba(255,255,255,0.15)" strokeWidth="1" fill="transparent"/>
+            
+            {/* Tech Corners (Visual Flair) */}
+            <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
+            <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
+            <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
+            <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
+          </Svg>
 
-            <View style={styles.cameraScannerContainer}>
-              <Text style={styles.cameraGuideText}>ضع قائمة المكونات داخل الإطار</Text>
-              <Animated.View style={[styles.cornerBracket, styles.topLeft, { opacity: pulseAnim }]} />
-              <Animated.View style={[styles.cornerBracket, styles.topRight, { opacity: pulseAnim }]} />
-              <Animated.View style={[styles.cornerBracket, styles.bottomLeft, { opacity: pulseAnim }]} />
-              <Animated.View style={[styles.cornerBracket, styles.bottomRight, { opacity: pulseAnim }]} />
-              <Animated.View style={{ 
-                  width: '100%', 
-                  height: 3, 
-                  transform: [{ 
-                      translateY: scanAnim.interpolate({ inputRange: [0, 1], outputRange: [-height * 0.25, height * 0.25] }) 
-                  }] 
-              }}>
-                <LinearGradient
-                  colors={['transparent', COLORS.primaryGlow, 'transparent']}
-                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-                  style={{ flex: 1 }}
-                />
-              </Animated.View>
+          {/* --- 2. THE LASER --- */}
+          <Animated.View style={[styles.laserLine, { width: VIEWPORT_WIDTH, left: VIEWPORT_X, transform: [{ translateY: laserY }] }]}>
+            <LinearGradient colors={['transparent', COLORS.accentGreen, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, opacity: 0.8 }} />
+          </Animated.View>
+
+          {/* --- 3. TOP STATUS (Only Information, No Controls) --- */}
+          <SafeAreaView style={styles.topStatusContainer}>
+             <View style={styles.statusBadge}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>الذكاء الاصطناعي نشط</Text>
+             </View>
+             <Text style={styles.hintText}>التقط صورة واضحة للمكونات</Text>
+          </SafeAreaView>
+
+          {/* --- 4. BOTTOM CONTROL DECK (Thumb Zone) --- */}
+          <Animated.View style={[styles.bottomControlDeck, { transform: [{translateY: controlsY}], opacity: uiAnim }]}>
+            
+            {/* --- A. ZOOM SLIDER --- */}
+            <View style={{ width: SLIDER_WIDTH, marginBottom: 25 }}>
+                
+                {/* Floating Tooltip */}
+                <Animated.View style={[
+                    styles.zoomTooltip, 
+                    { 
+                        opacity: tooltipOpacity,
+                        left: knobPosition - 20, // Center bubble over knob
+                    }
+                ]}>
+                    <Text style={styles.zoomTooltipText}>{displayZoom.toFixed(1)}x</Text>
+                    <View style={styles.zoomTooltipArrow} />
+                </Animated.View>
+
+                {/* Touch Track */}
+                <View 
+                    style={styles.sliderContainer}
+                    {...panResponder.panHandlers}
+                >
+                    {/* Gray Background */}
+                    <View style={styles.sliderTrackBg} />
+                    {/* Active Green Fill */}
+                    <View style={[styles.sliderTrackFill, { width: knobPosition }]} />
+                    {/* The Knob */}
+                    <Animated.View style={[styles.sliderKnob, { left: knobPosition, transform: [{ scale: knobScale }, { translateX: -14 }] }]}>
+                         <View style={styles.sliderKnobDot} />
+                    </Animated.View>
+                </View>
+
+                <View style={styles.sliderLabels}>
+                    <Text style={styles.sliderLabelText}>1x</Text>
+                    <Text style={styles.sliderLabelText}>4x</Text>
+                </View>
             </View>
 
-            <View style={styles.cameraFooter}>
-             <Animated.View style={[styles.shutterPulseRing, { transform: [{ scale: pulseAnim }] }]} />
-                <View style={styles.shutterButtonOuter}>
-                    <PressableScale onPress={handleCapture} disabled={isCapturing || !isCameraReady} style={styles.shutterButtonInner}>
-                        {isCapturing || !isCameraReady ? <ActivityIndicator color={COLORS.darkGreen} /> : null}
-                    </PressableScale>
-                </View>
-                </View>
-          </View>
+            {/* --- B. MAIN BUTTONS ROW --- */}
+            <View style={styles.mainControlsRow}>
+                
+                {/* 1. Flash Toggle (Left Thumb) */}
+                <PressableScale onPress={toggleFlash} style={[styles.sideControlBtn, flashMode === 'on' && styles.sideControlBtnActive]}>
+                    <Ionicons name={flashMode === 'on' ? "flash" : "flash-off"} size={24} color={flashMode === 'on' ? "#000" : "#FFF"} />
+                </PressableScale>
+
+                {/* 2. Shutter (Center) */}
+                <Pressable onPress={handleCapture} disabled={isCapturing}>
+                    <View style={styles.shutterOuter}>
+                        {isCapturing ? <ActivityIndicator size="large" color={COLORS.accentGreen} /> : <View style={styles.shutterInner} />}
+                    </View>
+                </Pressable>
+
+                {/* 3. Close / Exit (Right Thumb) */}
+                <PressableScale onPress={onClose} style={[styles.sideControlBtn, { backgroundColor: 'rgba(255, 50, 50, 0.2)', borderColor: 'rgba(255, 50, 50, 0.4)' }]}>
+                    <Ionicons name="close" size={28} color="#FFF" />
+                </PressableScale>
+
+            </View>
+
+          </Animated.View>
+
+          {/* --- 5. FLASH OVERLAY --- */}
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: shutterFlashAnim, pointerEvents: 'none' }]} />
         </CameraView>
-      </Animated.View>
+      </View>
     </Modal>
   );
 };
@@ -1261,6 +1328,294 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
   );
 };
 
+const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
+  // --- Layout Constants ---
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+  const MASK_WIDTH = SCREEN_WIDTH * 0.85; 
+  const MASK_HEIGHT = SCREEN_HEIGHT * 0.5;
+  const MASK_X = (SCREEN_WIDTH - MASK_WIDTH) / 2;
+  const MASK_Y = (SCREEN_HEIGHT - MASK_HEIGHT) / 2 - 40;
+  const SLIDER_WIDTH = SCREEN_WIDTH * 0.7; // Width of the zoom slider
+
+  // --- State ---
+  const [imageLayout, setImageLayout] = useState(null); 
+  const [viewSize, setViewSize] = useState(null); 
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(0); 
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // --- Animations ---
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const panAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const knobPosition = useRef(new Animated.Value(0)).current; // For Slider
+
+  // --- Load Image ---
+  useEffect(() => {
+    if (imageUri) {
+      RNImage.getSize(imageUri, (w, h) => {
+        setImageLayout({ width: w, height: h });
+        const ratio = Math.min(SCREEN_WIDTH / w, SCREEN_HEIGHT / h);
+        setViewSize({ width: w * ratio, height: h * ratio, ratio });
+      });
+      // Reset
+      setScale(1);
+      setPan({ x: 0, y: 0 });
+      setRotation(0);
+      scaleAnim.setValue(1);
+      panAnim.setValue({ x: 0, y: 0 });
+      rotateAnim.setValue(0);
+      knobPosition.setValue(0);
+    }
+  }, [imageUri]);
+
+  // --- Pan Responder (Move Image) ---
+  const imagePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panAnim.setOffset({ x: pan.x, y: pan.y });
+        panAnim.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: panAnim.x, dy: panAnim.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (e, gestureState) => {
+        panAnim.flattenOffset();
+        setPan({ x: pan.x + gestureState.dx, y: pan.y + gestureState.dy });
+      },
+    })
+  ).current;
+
+  // --- Pan Responder (Zoom Slider) ---
+  const updateZoom = (gestureX) => {
+    // 1. Calculate relative X inside the slider track
+    // We assume the slider is centered, so startX is approx (SCREEN_WIDTH - SLIDER_WIDTH) / 2
+    const sliderStartX = (SCREEN_WIDTH - SLIDER_WIDTH) / 2;
+    let relativeX = gestureX - sliderStartX;
+
+    // 2. Clamp
+    if (relativeX < 0) relativeX = 0;
+    if (relativeX > SLIDER_WIDTH) relativeX = SLIDER_WIDTH;
+
+    // 3. Update Knob Visuals
+    knobPosition.setValue(relativeX);
+
+    // 4. Update Scale Logic (1x to 3x)
+    const percentage = relativeX / SLIDER_WIDTH;
+    const newScale = 1 + (percentage * 2); 
+    
+    setScale(newScale);
+    scaleAnim.setValue(newScale);
+  };
+
+  const sliderPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        updateZoom(evt.nativeEvent.pageX);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        updateZoom(gestureState.moveX);
+      },
+    })
+  ).current;
+
+  // --- Rotate Logic ---
+  const rotate90 = () => {
+    const nextRot = (rotation + 90) % 360;
+    setRotation(nextRot);
+    Animated.spring(rotateAnim, { toValue: nextRot, useNativeDriver: true }).start();
+  };
+
+  // --- Crop Logic ---
+  const performCrop = async () => {
+    if (!imageLayout || !viewSize) return;
+    setIsProcessing(true);
+
+    try {
+        let processingUri = imageUri;
+        // 1. Handle Rotation
+        if (rotation !== 0) {
+            const rotResult = await ImageManipulator.manipulateAsync(
+                imageUri,
+                [{ rotate: rotation }],
+                { format: ImageManipulator.SaveFormat.JPEG }
+            );
+            processingUri = rotResult.uri;
+            if (rotation % 180 !== 0) {
+                 setImageLayout({ width: imageLayout.height, height: imageLayout.width });
+            }
+        }
+
+        // 2. Calculate Coords
+        const centerX = SCREEN_WIDTH / 2;
+        const centerY = SCREEN_HEIGHT / 2;
+        const imgCenterX = centerX + pan.x;
+        const imgCenterY = centerY + pan.y;
+        
+        const currentWidth = viewSize.width * scale;
+        // The displayed height relies on the aspect ratio of the VIEW, not just layout
+        const currentHeight = viewSize.height * scale;
+        
+        const imgTopLeftX = imgCenterX - (currentWidth / 2);
+        const imgTopLeftY = imgCenterY - (currentHeight / 2);
+
+        const cropStartScreenX = MASK_X - imgTopLeftX;
+        const cropStartScreenY = MASK_Y - imgTopLeftY;
+
+        const resolutionRatio = imageLayout.width / currentWidth; 
+
+        let cropX = cropStartScreenX * resolutionRatio;
+        let cropY = cropStartScreenY * resolutionRatio;
+        let cropW = MASK_WIDTH * resolutionRatio;
+        let cropH = MASK_HEIGHT * resolutionRatio;
+
+        cropX = Math.max(0, cropX);
+        cropY = Math.max(0, cropY);
+        if (cropX + cropW > imageLayout.width) cropW = imageLayout.width - cropX;
+        if (cropY + cropH > imageLayout.height) cropH = imageLayout.height - cropY;
+
+        // 3. Execute
+        const cropResult = await ImageManipulator.manipulateAsync(
+            processingUri,
+            [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
+            { format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 }
+        );
+
+        onCropComplete(cropResult);
+
+    } catch (error) {
+        Alert.alert("خطأ", "تعذر قص الصورة");
+        setIsProcessing(false);
+    }
+  };
+
+  if (!isVisible || !imageUri) return null;
+
+  return (
+    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.cropperContainer}>
+        
+        {/* --- Header --- */}
+        <View style={styles.cropperHeader}>
+            <PressableScale onPress={onClose} style={styles.iconButtonBlur}>
+                <Ionicons name="close" size={24} color="#FFF" />
+            </PressableScale>
+            <Text style={styles.cropperTitle}>تحديد المكونات</Text>
+            <PressableScale onPress={rotate90} style={styles.iconButtonBlur}>
+                <MaterialIcons name="rotate-right" size={24} color="#FFF" />
+            </PressableScale>
+        </View>
+
+        {/* --- Workspace --- */}
+        <View style={styles.cropperWorkspace} {...imagePanResponder.panHandlers}>
+            {viewSize && (
+                <Animated.Image
+                    source={{ uri: imageUri }}
+                    style={{
+                        width: viewSize.width,
+                        height: viewSize.height,
+                        transform: [
+                            { translateX: panAnim.x },
+                            { translateY: panAnim.y },
+                            { scale: scaleAnim },
+                            { rotate: rotateAnim.interpolate({inputRange: [0, 360], outputRange: ['0deg', '360deg']}) }
+                        ]
+                    }}
+                    resizeMode="contain"
+                />
+            )}
+
+            {/* Dark Overlay Mask */}
+            <View style={styles.cropperOverlay} pointerEvents="none">
+                <View style={{ width: '100%', height: MASK_Y, backgroundColor: 'rgba(0,0,0,0.8)' }} />
+                <View style={{ flexDirection: 'row', height: MASK_HEIGHT }}>
+                    <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
+                    <View style={styles.cropperWindow}>
+                         {/* Visual Corners */}
+                         <View style={[styles.cornerBracket, styles.topLeft]} />
+                         <View style={[styles.cornerBracket, styles.topRight]} />
+                         <View style={[styles.cornerBracket, styles.bottomLeft]} />
+                         <View style={[styles.cornerBracket, styles.bottomRight]} />
+                    </View>
+                    <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
+                </View>
+                <View style={{ width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)' }} />
+            </View>
+        </View>
+
+        {/* --- Footer & Custom Slider --- */}
+        <View style={styles.cropperFooter}>
+            
+            <View style={styles.cropperHint}>
+                <Text style={styles.cropperHintText}>اسحب لتكبير النص داخل الإطار</Text>
+                <Ionicons name="search" size={16} color={COLORS.accentGreen} />
+            </View>
+
+            {/* Custom Zoom Slider */}
+            <View style={{ height: 60, justifyContent: 'center', width: '100%', alignItems: 'center' }}>
+                <View 
+                    style={{ width: SLIDER_WIDTH, height: 40, justifyContent: 'center' }}
+                    {...sliderPanResponder.panHandlers}
+                >
+                    {/* Track Background */}
+                    <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, width: '100%' }} />
+                    
+                    {/* Active Track */}
+                    <Animated.View style={{ 
+                        position: 'absolute', 
+                        height: 4, 
+                        backgroundColor: COLORS.accentGreen, 
+                        borderRadius: 2,
+                        width: knobPosition 
+                    }} />
+
+                    {/* Knob */}
+                    <Animated.View style={{ 
+                        position: 'absolute',
+                        left: 0,
+                        width: 24, 
+                        height: 24, 
+                        borderRadius: 12, 
+                        backgroundColor: '#FFF',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        transform: [{ translateX: knobPosition }, { translateX: -12 }] // Center knob
+                    }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accentGreen }} />
+                    </Animated.View>
+                </View>
+                
+                {/* Labels */}
+                <View style={{ flexDirection: 'row', width: SLIDER_WIDTH, justifyContent: 'space-between', marginTop: -5 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Tajawal-Regular' }}>1x</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Tajawal-Regular' }}>3x</Text>
+                </View>
+            </View>
+
+            {/* Action Button */}
+            <PressableScale onPress={performCrop} style={styles.mainBtn} disabled={isProcessing}>
+                {isProcessing ? (
+                    <ActivityIndicator color={COLORS.background} />
+                ) : (
+                    <>
+                    <Text style={styles.mainBtnText}>تأكيد القص</Text>
+                    <Ionicons name="crop" size={20} color={COLORS.background} />
+                    </>
+                )}
+            </PressableScale>
+        </View>
+
+      </View>
+    </Modal>
+  );
+};
+
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
@@ -1291,6 +1646,8 @@ export default function OilGuardEngine() {
   const [activeTab, setActiveTab] = useState('claims');
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
+const [cropperVisible, setCropperVisible] = useState(false);
+const [tempImageUri, setTempImageUri] = useState(null);
 
   // --- ANIMATION REFS ---
   const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -1454,15 +1811,11 @@ export default function OilGuardEngine() {
     try {
         Haptics.selectionAsync();
 
-        // --- NEW CAMERA LOGIC ---
-        // If the user selects 'camera', we just open our custom modal view and stop.
         if (mode === 'camera') {
             setCameraViewVisible(true);
-            return; // Exit the function here.
+            return; 
         }
 
-        // --- EXISTING GALLERY LOGIC (Unchanged) ---
-        // If the mode is not 'camera', we proceed with the image picker for the gallery.
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
             Alert.alert('Permission needed', 'Media library access is required.');
@@ -1471,29 +1824,37 @@ export default function OilGuardEngine() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.8,
-            allowsEditing: true,
+            quality: 1, // High quality for cropping
+            allowsEditing: false, // Turn OFF native editing, we use ours
         });
 
         if (!result.canceled && result.assets[0].uri) {
-            // Process the image selected from the gallery
-            processImageWithGemini(result.assets[0].uri);
+            // INSTEAD of processing immediately:
+            setTempImageUri(result.assets[0].uri);
+            setCropperVisible(true); // Open our new modal
         }
     } catch (error) {
         console.error("Image selection error:", error);
-        Alert.alert("Error", "Could not select an image. Please try again.");
     }
 };
 
+// 3. Handle the Camera Result (Optional: Do you want to crop camera photos too?)
+// If yes, update handlePictureTaken:
 const handlePictureTaken = (photo) => {
-  // First, close the camera modal
   setCameraViewVisible(false);
-
-  // Now, we have the photo object which contains the URI.
-  // We can send this URI to the same processing function that the gallery uses.
   if (photo && photo.uri) {
-      processImageWithGemini(photo.uri);
+      setTempImageUri(photo.uri);
+      setCropperVisible(true); // Go to cropper instead of processing
   }
+};
+
+// 4. Handle Crop Completion (This calls the actual API)
+const onCropComplete = (cropResult) => {
+    setCropperVisible(false);
+    // Add a small delay to allow modal to close smoothly
+    setTimeout(() => {
+        processImageWithGemini(cropResult.uri);
+    }, 500);
 };
 
 const VERCEL_BACKEND_URL = "https://oilguard-backend-8hvtyqhno-ni3yyns-projects.vercel.app/api/analyze.js";
@@ -2149,6 +2510,12 @@ const processImageWithGemini = async (uri) => {
           onClose={() => setCameraViewVisible(false)}
           onPictureTaken={handlePictureTaken}
         />
+        <ImageCropperModal 
+    isVisible={cropperVisible}
+    imageUri={tempImageUri}
+    onClose={() => setCropperVisible(false)}
+    onCropComplete={onCropComplete}
+/>
 
         {isAnimatingTransition && (
           <Animated.View
@@ -2757,38 +3124,253 @@ const styles = StyleSheet.create({
   paginationDot: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: 'rgba(255, 255, 255, 0.25)', marginRight: DOT_SPACING },
   paginationIndicator: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: COLORS.accentGreen, position: 'absolute', left: 0 },
   
-  // --- Camera Modal ---
-  permissionContainer: { flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', gap: 20 },
-  permissionText: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'center', paddingHorizontal: 30 },
-  permissionButton: { backgroundColor: COLORS.accentGreen, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15 },
-  permissionButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
-  cameraOverlay: { flex: 1, backgroundColor: 'transparent', justifyContent: 'space-between' },
-  cameraHeader: {
-    flexDirection: 'row',
+// ==========================================
+  //         ULTIMATE CAMERA STYLES
+  // ==========================================
+  
+  // --- TOP AREA ---
+  topStatusContainer: {
+      position: 'absolute',
+      top: Platform.OS === 'android' ? 50 : 60,
+      width: '100%',
+      alignItems: 'center',
+      zIndex: 1,
+  },
+  statusBadge: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: COLORS.accentGreen,
+      marginBottom: 15,
+  },
+  statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#ef4444',
+  },
+  statusText: {
+      color: '#FFF',
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+  },
+  hintText: {
+      color: 'rgba(255,255,255,0.8)',
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 15,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: {width: 0, height: 1},
+      textShadowRadius: 4,
+  },
+  
+  // --- LASER ---
+  laserLine: {
+    position: 'absolute',
+    height: 2,
+    shadowColor: COLORS.accentGreen,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 10,
+    zIndex: 0,
+  },
+
+  // --- BOTTOM CONTROL DECK ---
+  bottomControlDeck: {
+      position: 'absolute',
+      bottom: 0,
+      width: '100%',
+      paddingBottom: Platform.OS === 'android' ? 40 : 60,
+      paddingTop: 30,
+      alignItems: 'center',
+      backgroundColor: 'transparent', // Gradient could go here if desired
+  },
+
+  // --- ZOOM SLIDER ---
+  sliderContainer: {
+      height: 40,
+      justifyContent: 'center',
+  },
+  sliderTrackBg: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  sliderTrackFill: {
+      position: 'absolute',
+      left: 0,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.accentGreen,
+  },
+  sliderKnob: {
+      position: 'absolute',
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: '#FFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: COLORS.accentGreen,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 10,
+      top: 6, // (40 - 28) / 2
+  },
+  sliderKnobDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.accentGreen,
+  },
+  sliderLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 4,
+  },
+  sliderLabelText: {
+      color: 'rgba(255,255,255,0.5)',
+      fontSize: 12,
+      fontFamily: 'Tajawal-Bold',
+  },
+
+  // --- ZOOM TOOLTIP ---
+  zoomTooltip: {
+      position: 'absolute',
+      top: -45,
+      backgroundColor: COLORS.accentGreen,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      minWidth: 50,
+      alignItems: 'center',
+  },
+  zoomTooltipText: {
+      color: '#000',
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 14,
+  },
+  zoomTooltipArrow: {
+      position: 'absolute',
+      bottom: -5,
+      left: '50%',
+      marginLeft: -5,
+      width: 0,
+      height: 0,
+      borderLeftWidth: 5,
+      borderRightWidth: 5,
+      borderTopWidth: 5,
+      borderLeftColor: 'transparent',
+      borderRightColor: 'transparent',
+      borderTopColor: COLORS.accentGreen,
+  },
+
+  // --- MAIN CONTROLS ROW ---
+  mainControlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '80%', // Keeps buttons reachable
+  },
+  
+  // --- SIDE BUTTONS (Flash / Close) ---
+  sideControlBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sideControlBtnActive: {
+      backgroundColor: COLORS.accentGreen,
+      borderColor: COLORS.accentGreen,
+  },
+
+  // --- SHUTTER BUTTON ---
+  shutterOuter: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 4,
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  shutterInner: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: '#FFF',
+      shadowColor: '#FFF',
+      shadowOpacity: 0.6,
+      shadowRadius: 10,
+  },
+  // --- IMAGE CROPPER STYLES ---
+  cropperContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  cropperHeader: {
+    flexDirection: 'row-reverse', // Arabic
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 55,
-    paddingBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingTop: Platform.OS === 'android' ? 40 : 50,
+    zIndex: 10,
   },
-  cameraTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary },
-  cameraCloseButton: { padding: 5 },
-  cameraScannerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: '5%' },
-  cameraGuideText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, overflow: 'hidden', position: 'absolute', top: '20%' },
-  cornerBracket: { position: 'absolute', width: 40, height: 40, borderColor: COLORS.accentGreen, borderWidth: 4 },
-  topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
-  topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
-  bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
-  bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-  cameraFooter: {
-    paddingTop: 30,
-    paddingBottom: Platform.OS === 'android' ? 30 : 50,
-    alignItems: 'center',
+  cropperTitle: {
+    color: '#FFF',
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+  },
+  cropperWorkspace: {
+    flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
-  shutterPulseRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: COLORS.accentGlow },
-  shutterButtonOuter: { width: 74, height: 74, borderRadius: 37, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  shutterButtonInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: COLORS.accentGreen, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.background },
+  cropperOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cropperWindow: {
+    width: width * 0.85,
+    height: height * 0.5,
+    borderColor: COLORS.accentGreen,
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  // Add corners from the Camera styles (or reuse cornerBracket styles)
+  
+  cropperFooter: {
+    paddingBottom: 40,
+    paddingTop: 20,
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  cropperHint: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  cropperHintText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+  },
 });
