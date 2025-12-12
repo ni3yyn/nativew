@@ -1,14 +1,16 @@
-name: Build Debug APK (No Keys)
+name: Build Standalone Debug APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
 
 jobs:
   build:
-    name: 🤖 Build Android Debug APK
+    name: 🤖 Build Android Standalone APK
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +22,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
@@ -28,20 +29,27 @@ jobs:
           node-version: 20.x
           cache: 'npm'
 
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
       - name: 📦 Install Dependencies
         run: npm install
 
       - name: ⚙️ Expo Prebuild
         run: npx expo prebuild --platform android
 
-      - name: 🔨 Build Debug APK
+      - name: 🔨 Build APK (Offline & Small)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          # -PbundleInDebug=true  -> Makes the app work without a server
+          # -Pandroid.injected.build.abi=arm64-v8a -> Makes the file small
+          ./gradlew assembleDebug -PbundleInDebug=true -Pandroid.injected.build.abi=arm64-v8a --no-daemon --build-cache
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: app-debug-standalone
           path: android/app/build/outputs/apk/debug/app-debug.apk

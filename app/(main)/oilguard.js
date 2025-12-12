@@ -1329,49 +1329,49 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
 };
 
 const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
-  // --- Layout Constants ---
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-  const MASK_WIDTH = SCREEN_WIDTH * 0.85; 
-  const MASK_HEIGHT = SCREEN_HEIGHT * 0.5;
+  // --- Constants ---
+  const SCREEN_WIDTH = width;
+  const SCREEN_HEIGHT = height;
+  const MASK_WIDTH = width * 0.85; // The "Window" width
+  const MASK_HEIGHT = height * 0.5; // The "Window" height
   const MASK_X = (SCREEN_WIDTH - MASK_WIDTH) / 2;
   const MASK_Y = (SCREEN_HEIGHT - MASK_HEIGHT) / 2 - 40;
-  const SLIDER_WIDTH = SCREEN_WIDTH * 0.7; // Width of the zoom slider
 
   // --- State ---
-  const [imageLayout, setImageLayout] = useState(null); 
-  const [viewSize, setViewSize] = useState(null); 
+  const [imageLayout, setImageLayout] = useState(null); // { width, height } (original)
+  const [viewSize, setViewSize] = useState(null); // { width, height } (rendered onscreen)
+  
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState(0); 
+  const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- Animations ---
+  // --- Animation Refs ---
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const knobPosition = useRef(new Animated.Value(0)).current; // For Slider
 
-  // --- Load Image ---
+  // --- Load Image Size ---
   useEffect(() => {
     if (imageUri) {
       RNImage.getSize(imageUri, (w, h) => {
         setImageLayout({ width: w, height: h });
+        // Calculate initial 'contain' fit
         const ratio = Math.min(SCREEN_WIDTH / w, SCREEN_HEIGHT / h);
         setViewSize({ width: w * ratio, height: h * ratio, ratio });
       });
-      // Reset
+      // Reset Transforms
       setScale(1);
       setPan({ x: 0, y: 0 });
       setRotation(0);
       scaleAnim.setValue(1);
       panAnim.setValue({ x: 0, y: 0 });
       rotateAnim.setValue(0);
-      knobPosition.setValue(0);
     }
   }, [imageUri]);
 
-  // --- Pan Responder (Move Image) ---
-  const imagePanResponder = useRef(
+  // --- Pan Responder (Drag Image) ---
+  const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -1390,56 +1390,28 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     })
   ).current;
 
-  // --- Pan Responder (Zoom Slider) ---
-  const updateZoom = (gestureX) => {
-    // 1. Calculate relative X inside the slider track
-    // We assume the slider is centered, so startX is approx (SCREEN_WIDTH - SLIDER_WIDTH) / 2
-    const sliderStartX = (SCREEN_WIDTH - SLIDER_WIDTH) / 2;
-    let relativeX = gestureX - sliderStartX;
-
-    // 2. Clamp
-    if (relativeX < 0) relativeX = 0;
-    if (relativeX > SLIDER_WIDTH) relativeX = SLIDER_WIDTH;
-
-    // 3. Update Knob Visuals
-    knobPosition.setValue(relativeX);
-
-    // 4. Update Scale Logic (1x to 3x)
-    const percentage = relativeX / SLIDER_WIDTH;
-    const newScale = 1 + (percentage * 2); 
-    
+  // --- Zoom Logic (Slider) ---
+  const handleZoom = (val) => {
+    // val is 0 to 1
+    const newScale = 1 + val * 2; // Zoom from 1x to 3x
     setScale(newScale);
     scaleAnim.setValue(newScale);
   };
 
-  const sliderPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        updateZoom(evt.nativeEvent.pageX);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        updateZoom(gestureState.moveX);
-      },
-    })
-  ).current;
-
-  // --- Rotate Logic ---
   const rotate90 = () => {
     const nextRot = (rotation + 90) % 360;
     setRotation(nextRot);
     Animated.spring(rotateAnim, { toValue: nextRot, useNativeDriver: true }).start();
   };
 
-  // --- Crop Logic ---
+  // --- The Heavy Lifting: CROP CALCULATION ---
   const performCrop = async () => {
     if (!imageLayout || !viewSize) return;
     setIsProcessing(true);
 
     try {
+        // 1. If rotated, we need to manipulate first to get a "straight" image to crop from
         let processingUri = imageUri;
-        // 1. Handle Rotation
         if (rotation !== 0) {
             const rotResult = await ImageManipulator.manipulateAsync(
                 imageUri,
@@ -1447,40 +1419,56 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
                 { format: ImageManipulator.SaveFormat.JPEG }
             );
             processingUri = rotResult.uri;
+            // Swap dimensions if 90/270
             if (rotation % 180 !== 0) {
                  setImageLayout({ width: imageLayout.height, height: imageLayout.width });
             }
         }
 
-        // 2. Calculate Coords
+        // 2. Calculate Math
+        // The image is centered. 
+        // Current Rendered Width = viewSize.width * scale
+        // Pan.x moves the image. 
+        
+        // We need the offset of the Image's Top-Left relative to the Mask's Top-Left
         const centerX = SCREEN_WIDTH / 2;
         const centerY = SCREEN_HEIGHT / 2;
+        
+        // Image Center position including Pan
         const imgCenterX = centerX + pan.x;
         const imgCenterY = centerY + pan.y;
-        
+
+        // Image TopLeft position (Screen Coords)
         const currentWidth = viewSize.width * scale;
-        // The displayed height relies on the aspect ratio of the VIEW, not just layout
         const currentHeight = viewSize.height * scale;
         
         const imgTopLeftX = imgCenterX - (currentWidth / 2);
         const imgTopLeftY = imgCenterY - (currentHeight / 2);
 
-        const cropStartScreenX = MASK_X - imgTopLeftX;
-        const cropStartScreenY = MASK_Y - imgTopLeftY;
+        // Mask TopLeft position (Screen Coords)
+        const maskTopLeftX = MASK_X;
+        const maskTopLeftY = MASK_Y;
 
-        const resolutionRatio = imageLayout.width / currentWidth; 
+        // Delta (How far into the image is the mask starting?)
+        const cropStartScreenX = maskTopLeftX - imgTopLeftX;
+        const cropStartScreenY = maskTopLeftY - imgTopLeftY;
+
+        // Convert Screen Delta to Original Image Pixels
+        // Ratio = Original Image Width / Current Rendered Width
+        const resolutionRatio = imageLayout.width / currentWidth; // Use original width (or rotated width)
 
         let cropX = cropStartScreenX * resolutionRatio;
         let cropY = cropStartScreenY * resolutionRatio;
         let cropW = MASK_WIDTH * resolutionRatio;
         let cropH = MASK_HEIGHT * resolutionRatio;
 
+        // Safety Clamping
         cropX = Math.max(0, cropX);
         cropY = Math.max(0, cropY);
         if (cropX + cropW > imageLayout.width) cropW = imageLayout.width - cropX;
         if (cropY + cropH > imageLayout.height) cropH = imageLayout.height - cropY;
 
-        // 3. Execute
+        // 3. Perform Crop
         const cropResult = await ImageManipulator.manipulateAsync(
             processingUri,
             [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
@@ -1490,7 +1478,8 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
         onCropComplete(cropResult);
 
     } catch (error) {
-        Alert.alert("خطأ", "تعذر قص الصورة");
+        Alert.alert("Error", "Could not crop image.");
+        console.error(error);
         setIsProcessing(false);
     }
   };
@@ -1512,8 +1501,9 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
             </PressableScale>
         </View>
 
-        {/* --- Workspace --- */}
-        <View style={styles.cropperWorkspace} {...imagePanResponder.panHandlers}>
+        {/* --- Main Workspace --- */}
+        <View style={styles.cropperWorkspace} {...panResponder.panHandlers}>
+            {/* The Movable Image */}
             {viewSize && (
                 <Animated.Image
                     source={{ uri: imageUri }}
@@ -1531,81 +1521,61 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
                 />
             )}
 
-            {/* Dark Overlay Mask */}
+            {/* The Overlay (Darkness + Clear Window) */}
             <View style={styles.cropperOverlay} pointerEvents="none">
+                {/* Top Dark */}
                 <View style={{ width: '100%', height: MASK_Y, backgroundColor: 'rgba(0,0,0,0.8)' }} />
                 <View style={{ flexDirection: 'row', height: MASK_HEIGHT }}>
+                    {/* Left Dark */}
                     <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
+                    {/* Clear Window (Border) */}
                     <View style={styles.cropperWindow}>
-                         {/* Visual Corners */}
                          <View style={[styles.cornerBracket, styles.topLeft]} />
                          <View style={[styles.cornerBracket, styles.topRight]} />
                          <View style={[styles.cornerBracket, styles.bottomLeft]} />
                          <View style={[styles.cornerBracket, styles.bottomRight]} />
                     </View>
+                    {/* Right Dark */}
                     <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
                 </View>
+                {/* Bottom Dark */}
                 <View style={{ width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)' }} />
             </View>
         </View>
 
-        {/* --- Footer & Custom Slider --- */}
+        {/* --- Footer Controls --- */}
         <View style={styles.cropperFooter}>
-            
             <View style={styles.cropperHint}>
-                <Text style={styles.cropperHintText}>اسحب لتكبير النص داخل الإطار</Text>
-                <Ionicons name="search" size={16} color={COLORS.accentGreen} />
+                <Ionicons name="scan-outline" size={16} color={COLORS.accentGreen} />
+                <Text style={styles.cropperHintText}>حرك الصورة لتكون المكونات داخل الإطار</Text>
             </View>
 
-            {/* Custom Zoom Slider */}
-            <View style={{ height: 60, justifyContent: 'center', width: '100%', alignItems: 'center' }}>
-                <View 
-                    style={{ width: SLIDER_WIDTH, height: 40, justifyContent: 'center' }}
-                    {...sliderPanResponder.panHandlers}
-                >
-                    {/* Track Background */}
-                    <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, width: '100%' }} />
-                    
-                    {/* Active Track */}
-                    <Animated.View style={{ 
-                        position: 'absolute', 
-                        height: 4, 
-                        backgroundColor: COLORS.accentGreen, 
-                        borderRadius: 2,
-                        width: knobPosition 
-                    }} />
-
-                    {/* Knob */}
-                    <Animated.View style={{ 
-                        position: 'absolute',
-                        left: 0,
-                        width: 24, 
-                        height: 24, 
-                        borderRadius: 12, 
-                        backgroundColor: '#FFF',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        transform: [{ translateX: knobPosition }, { translateX: -12 }] // Center knob
-                    }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accentGreen }} />
-                    </Animated.View>
-                </View>
-                
-                {/* Labels */}
-                <View style={{ flexDirection: 'row', width: SLIDER_WIDTH, justifyContent: 'space-between', marginTop: -5 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Tajawal-Regular' }}>1x</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Tajawal-Regular' }}>3x</Text>
-                </View>
+            {/* Slider (Reused Logic Logic from Camera) */}
+            <View style={{ width: '80%', height: 40, justifyContent: 'center', marginVertical: 20 }}>
+                <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 }} />
+                <View style={{ 
+                    position: 'absolute', height: 4, backgroundColor: COLORS.accentGreen, borderRadius: 2,
+                    width: `${((scale-1)/2)*100}%` 
+                }} />
+                {/* Simple Slider Implementation for brevity */}
+                <Slider
+                    style={{ width: '100%', height: 40, position: 'absolute' }}
+                    minimumValue={0}
+                    maximumValue={1}
+                    minimumTrackTintColor="transparent"
+                    maximumTrackTintColor="transparent"
+                    thumbTintColor="#FFF"
+                    onValueChange={handleZoom}
+                />
             </View>
 
-            {/* Action Button */}
             <PressableScale onPress={performCrop} style={styles.mainBtn} disabled={isProcessing}>
                 {isProcessing ? (
                     <ActivityIndicator color={COLORS.background} />
                 ) : (
                     <>
                     <Text style={styles.mainBtnText}>تأكيد القص</Text>
-                    <Ionicons name="crop" size={20} color={COLORS.background} />
+                    <Ionicons name="checkmark" size={20} color={COLORS.background} />
                     </>
                 )}
             </PressableScale>
@@ -1811,11 +1781,15 @@ const [tempImageUri, setTempImageUri] = useState(null);
     try {
         Haptics.selectionAsync();
 
+        // --- NEW CAMERA LOGIC ---
+        // If the user selects 'camera', we just open our custom modal view and stop.
         if (mode === 'camera') {
             setCameraViewVisible(true);
-            return; 
+            return; // Exit the function here.
         }
 
+        // --- EXISTING GALLERY LOGIC (Unchanged) ---
+        // If the mode is not 'camera', we proceed with the image picker for the gallery.
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
             Alert.alert('Permission needed', 'Media library access is required.');
@@ -1824,37 +1798,29 @@ const [tempImageUri, setTempImageUri] = useState(null);
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 1, // High quality for cropping
-            allowsEditing: false, // Turn OFF native editing, we use ours
+            quality: 0.8,
+            allowsEditing: true,
         });
 
         if (!result.canceled && result.assets[0].uri) {
-            // INSTEAD of processing immediately:
-            setTempImageUri(result.assets[0].uri);
-            setCropperVisible(true); // Open our new modal
+            // Process the image selected from the gallery
+            processImageWithGemini(result.assets[0].uri);
         }
     } catch (error) {
         console.error("Image selection error:", error);
+        Alert.alert("Error", "Could not select an image. Please try again.");
     }
 };
 
-// 3. Handle the Camera Result (Optional: Do you want to crop camera photos too?)
-// If yes, update handlePictureTaken:
 const handlePictureTaken = (photo) => {
+  // First, close the camera modal
   setCameraViewVisible(false);
-  if (photo && photo.uri) {
-      setTempImageUri(photo.uri);
-      setCropperVisible(true); // Go to cropper instead of processing
-  }
-};
 
-// 4. Handle Crop Completion (This calls the actual API)
-const onCropComplete = (cropResult) => {
-    setCropperVisible(false);
-    // Add a small delay to allow modal to close smoothly
-    setTimeout(() => {
-        processImageWithGemini(cropResult.uri);
-    }, 500);
+  // Now, we have the photo object which contains the URI.
+  // We can send this URI to the same processing function that the gallery uses.
+  if (photo && photo.uri) {
+      processImageWithGemini(photo.uri);
+  }
 };
 
 const VERCEL_BACKEND_URL = "https://oilguard-backend-8hvtyqhno-ni3yyns-projects.vercel.app/api/analyze.js";
@@ -2510,12 +2476,6 @@ const processImageWithGemini = async (uri) => {
           onClose={() => setCameraViewVisible(false)}
           onPictureTaken={handlePictureTaken}
         />
-        <ImageCropperModal 
-    isVisible={cropperVisible}
-    imageUri={tempImageUri}
-    onClose={() => setCropperVisible(false)}
-    onCropComplete={onCropComplete}
-/>
 
         {isAnimatingTransition && (
           <Animated.View
@@ -3316,61 +3276,5 @@ const styles = StyleSheet.create({
       shadowColor: '#FFF',
       shadowOpacity: 0.6,
       shadowRadius: 10,
-  },
-  // --- IMAGE CROPPER STYLES ---
-  cropperContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  cropperHeader: {
-    flexDirection: 'row-reverse', // Arabic
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
-    zIndex: 10,
-  },
-  cropperTitle: {
-    color: '#FFF',
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 18,
-  },
-  cropperWorkspace: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  cropperOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cropperWindow: {
-    width: width * 0.85,
-    height: height * 0.5,
-    borderColor: COLORS.accentGreen,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  // Add corners from the Camera styles (or reuse cornerBracket styles)
-  
-  cropperFooter: {
-    paddingBottom: 40,
-    paddingTop: 20,
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  cropperHint: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  cropperHintText: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 14,
   },
 });
