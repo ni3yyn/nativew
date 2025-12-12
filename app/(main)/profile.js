@@ -3076,12 +3076,12 @@ export default function ProfileScreen() {
             </Animated.View>
 
             {/* --- MAIN SCROLL --- */}
-            <Animated.ScrollView
-                contentContainerStyle={{ 
-                    paddingHorizontal: 15, 
-                    paddingTop: headerMaxHeight + 20,
-                    paddingBottom: 100 
-                }}
+            <View style={{ flex: 1, paddingTop: headerMaxHeight }}>
+    <Animated.View style={{ 
+        opacity: contentOpacity, 
+        transform: [{ translateX: contentTranslate }],
+        flex: 1 // Make it fill the container
+    }}>
                 scrollEventThrottle={16}
                 onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -3090,12 +3090,12 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
-                        refreshing={loading}
-                        onRefresh={handleRefresh}
-                        tintColor={COLORS.primary}
-                        colors={[COLORS.primary]}
-                        progressBackgroundColor="rgba(255,255,255,0.1)"
-                    />
+    refreshing={loading}
+    onRefresh={handleRefresh}
+    tintColor={COLORS.accentGreen} // <-- FIX
+    colors={[COLORS.accentGreen]}   // <-- FIX
+    progressBackgroundColor="rgba(255,255,255,0.1)"
+/>
                 }
             >
                 <Animated.View style={{ 
@@ -3146,7 +3146,7 @@ export default function ProfileScreen() {
                     )}
 
                 </Animated.View>
-            </Animated.ScrollView>
+            </View>
 
         {/* --- FLOATING GLASS DOCK & MODAL RENDERED AT TOP LEVEL --- */}
         <NatureDock 
