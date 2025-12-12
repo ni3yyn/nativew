@@ -28,6 +28,8 @@ import {
   basicSkinTypes,
   basicScalpTypes
 } from '../../src/data/allergiesandconditions';
+import remoteConfig from '@react-native-firebase/remote-config';
+
 
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
@@ -1475,17 +1477,35 @@ const handlePictureTaken = (photo) => {
   }
 };
 
-  const processImageWithGemini = async (uri) => {
-    setLoading(true);
-    setIsGeminiLoading(true);
-    changeStep(3);
+const processImageWithGemini = async (uri) => {
+  setLoading(true);
+  setIsGeminiLoading(true);
+  changeStep(3);
 
-    try {
-        const base64Data = await uriToBase64(uri);
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-        const validTypes = "shampoo, hair_mask, serum, lotion_cream, cleanser, toner, mask, sunscreen, oil_blend, other";
-        const prompt = `
+  try {
+      // 1. Move Fetch INSIDE the try block so errors are caught
+      await remoteConfig().fetchAndActivate();
+      const apiKey = remoteConfig().getValue('gemini_api_key').asString();
+
+      // 2. Handle missing key safely
+      if (!apiKey) {
+          console.error("Remote Config: API Key not found");
+          Alert.alert("Configuration Error", "Could not retrieve API configuration.");
+          // IMPORTANT: Stop the loading state!
+          setIsGeminiLoading(false);
+          setLoading(false);
+          changeStep(0);
+          return;
+      }
+
+      const base64Data = await uriToBase64(uri);
+      
+      // 3. Use the fetched apiKey here
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+      
+      const validTypes = "shampoo, hair_mask, serum, lotion_cream, cleanser, toner, mask, sunscreen, oil_blend, other";
+      const prompt = `
             You are an expert cosmetic chemist AI. Analyze the provided image.
             
             Task 1: Identify the Product Type.
@@ -1502,32 +1522,32 @@ const handlePictureTaken = (photo) => {
             }
         `;
 
-        const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
-        const response = await result.response;
-        let text = response.text().replace(/```json|```/g, '').trim();
+      const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
+      const response = await result.response;
+      let text = response.text().replace(/```json|```/g, '').trim();
 
-        const jsonResponse = JSON.parse(text);
-        const { ingredients } = await extractIngredientsFromAIText(jsonResponse.ingredients_text);
+      const jsonResponse = JSON.parse(text);
+      const { ingredients } = await extractIngredientsFromAIText(jsonResponse.ingredients_text);
 
-        if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
+      if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
 
-        setOcrText(jsonResponse.ingredients_text); 
-        setPreProcessedIngredients(ingredients); 
-        setProductType(jsonResponse.detected_type || 'other');
-        
-        setIsGeminiLoading(false);
-        setLoading(false);
-        changeStep(1);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setOcrText(jsonResponse.ingredients_text); 
+      setPreProcessedIngredients(ingredients); 
+      setProductType(jsonResponse.detected_type || 'other');
+      
+      setIsGeminiLoading(false);
+      setLoading(false);
+      changeStep(1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
-        setIsGeminiLoading(false);
-        setLoading(false);
-        changeStep(0);
-    }
-  };
+  } catch (error) {
+      console.error("Gemini/Config Error:", error);
+      Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
+      setIsGeminiLoading(false);
+      setLoading(false);
+      changeStep(0);
+  }
+};
   
   const extractIngredientsFromAIText = async (text) => {
       const foundIngredients = new Map();

@@ -3172,7 +3172,7 @@ export default function ProfileScreen() {
                     style={styles.fab} 
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push('/oilguard');
+                        router.push('/oil-guard');
                     }}
                 >
                    <LinearGradient 

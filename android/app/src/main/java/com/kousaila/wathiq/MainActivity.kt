@@ -1,4 +1,4 @@
-package com.kousaila.wathiq
+package com.wathiq.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

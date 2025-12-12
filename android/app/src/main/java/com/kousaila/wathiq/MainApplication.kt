@@ -1,4 +1,4 @@
-package com.kousaila.wathiq
+package com.wathiq.app
 
 import android.app.Application
 import android.content.res.Configuration

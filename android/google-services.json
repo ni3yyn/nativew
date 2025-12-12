@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "964917104358",
+    "project_id": "whatheeq",
+    "storage_bucket": "whatheeq.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:964917104358:android:4248bcc4b4b91cd9a07527",
+        "android_client_info": {
+          "package_name": "com.wathiq.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUYJ_qaRj_6nUvKU3JOOA2N_9QstFddGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
