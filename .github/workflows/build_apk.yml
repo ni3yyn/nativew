@@ -1,21 +1,21 @@
-name: Native Android Build (No EAS)
+name: Build Debug APK (No Keys)
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Allows you to click "Run workflow" manually
   push:
     branches:
       - main
 
 jobs:
   build:
-    name: 🏗️ Build APK
+    name: 🤖 Build Android Debug APK
     runs-on: ubuntu-latest
 
     steps:
       - name: 📦 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ☕ Setup JDK 17
+      - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -31,40 +31,20 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install
 
-      # This step generates the 'android' folder if it doesn't exist
+      # This creates the native 'android' folder based on your Expo config
       - name: ⚙️ Expo Prebuild
         run: npx expo prebuild --platform android --no-interactive
 
-      - name: 🔧 Make Gradlew Executable
-        run: cd android && chmod +x gradlew
-
-      # This builds the unsigned APK
-      - name: 🔨 Build Release APK
+      # We build the 'Debug' version which doesn't need custom keys
+      - name: 🔨 Build Debug APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
-
-      # (Optional) Sign the APK for installation
-      # You need to set up secrets for this step to work.
-      # If you skip this, you can still install the unsigned debug APK 
-      # by changing 'assembleRelease' to 'assembleDebug' above.
-      - name: ✍️ Sign APK
-        id: sign_app
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        env:
-          # This fixes a common build tool version issue
-          BUILD_TOOLS_VERSION: "34.0.0" 
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
-          # If you didn't sign it, use this path instead:
-          # path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: app-debug
+          # This is where Gradle outputs the debug APK by default
+          path: android/app/build/outputs/apk/debug/app-debug.apk
