@@ -1,7 +1,7 @@
 name: Build Debug APK (No Keys)
 
 on:
-  workflow_dispatch: # Allows you to click "Run workflow" manually
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -31,11 +31,9 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install
 
-      # This creates the native 'android' folder based on your Expo config
       - name: ⚙️ Expo Prebuild
-        run: npx expo prebuild --platform android --no-interactive
+        run: npx expo prebuild --platform android
 
-      # We build the 'Debug' version which doesn't need custom keys
       - name: 🔨 Build Debug APK
         run: |
           cd android
@@ -46,5 +44,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          # This is where Gradle outputs the debug APK by default
           path: android/app/build/outputs/apk/debug/app-debug.apk
