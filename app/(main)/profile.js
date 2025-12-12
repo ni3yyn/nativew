@@ -2686,6 +2686,107 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     );
 };
 
+const ShelfActionGroup = ({ router }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const anim = useRef(new Animated.Value(0)).current;
+
+    const toggleMenu = () => {
+        const toValue = isOpen ? 0 : 1;
+        if (isOpen) {
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+
+        Animated.spring(anim, {
+            toValue,
+            friction: 5,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+
+        setIsOpen(!isOpen);
+    };
+
+    const handlePressAction = (route) => {
+        Haptics.selectionAsync();
+        toggleMenu();
+        setTimeout(() => {
+            router.push(route);
+        }, 80);
+    };
+
+    // --- Animations ---
+    const rotate = anim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '45deg']
+    });
+
+    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -140] });
+    const action1Opacity = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
+
+    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -75] });
+    const action2Opacity = anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0, 1] });
+
+    const backdropOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+
+    const Label = ({ text }) => (
+        <View style={styles.actionLabelContainer}>
+            <Text style={styles.actionLabel}>{text}</Text>
+        </View>
+    );
+
+    return (
+        <View style={styles.fabContainer}>
+            {/* Backdrop */}
+            {isOpen && (
+                <Pressable onPress={toggleMenu}>
+                    <Animated.View style={[styles.fabBackdrop, { opacity: backdropOpacity }]} />
+                </Pressable>
+            )}
+
+            {/* --- BUTTON 1: COMPARISON (Top - Deeper Green) --- */}
+            <Animated.View style={[styles.actionBtnWrap, { opacity: action1Opacity, transform: [{ translateY: action1Y }] }]}>
+                <Label text="مقارنة منتجات" />
+                <PressableScale 
+                    onPress={() => handlePressAction('/comparison')} 
+                    // UPDATED: Using a deeper green from your gradient palette
+                    style={[styles.actionBtn, { backgroundColor: '#4a8a73' }]}
+                >
+                    {/* UPDATED: Icon color matches textOnAccent (Dark Green) */}
+                    <FontAwesome5 name="balance-scale" size={16} color={COLORS.textOnAccent} />
+                </PressableScale>
+            </Animated.View>
+
+            {/* --- BUTTON 2: SCAN/ADD (Middle - Accent Green) --- */}
+            <Animated.View style={[styles.actionBtnWrap, { opacity: action2Opacity, transform: [{ translateY: action2Y }] }]}>
+                <Label text="فحص منتج" />
+                <PressableScale 
+                    onPress={() => handlePressAction('/oilguard')} 
+                    // UPDATED: Using the primary Accent Green
+                    style={[styles.actionBtn, { backgroundColor: COLORS.accentGreen }]}
+                >
+                    {/* UPDATED: Icon color matches textOnAccent (Dark Green) */}
+                    <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
+                </PressableScale>
+            </Animated.View>
+
+            {/* --- MAIN TRIGGER --- */}
+            <PressableScale style={styles.mainFab} onPress={toggleMenu}>
+                <LinearGradient 
+                    // UPDATED: Red for close state, your Green Gradient for open state
+                    colors={isOpen ? [COLORS.danger, '#991b1b'] : [COLORS.accentGreen, '#4a8a73']} 
+                    style={styles.fabGradient}
+                >
+                    <Animated.View style={{ transform: [{ rotate }] }}>
+                        <FontAwesome5 name="plus" size={22} color={COLORS.textOnAccent} />
+                    </Animated.View>
+                </LinearGradient>
+            </PressableScale>
+        </View>
+    );
+};
+
 // ============================================================================
 //                       MAIN PROFILE CONTROLLER
 // ============================================================================
@@ -3167,22 +3268,7 @@ export default function ProfileScreen() {
         />
 
         {/* ... (FAB for shelf) */}
-         {activeTab === 'shelf' && (
-                <PressableScale 
-                    style={styles.fab} 
-                    onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push('/oilguard');
-                    }}
-                >
-                   <LinearGradient 
-                    colors={[COLORS.accentGreen, '#4a8a73']} // Adjusted gradient
-                    style={styles.fabGradient}
-                >
-                    <FontAwesome5 name="plus" size={22} color={COLORS.textOnAccent} />
-                </LinearGradient>
-            </PressableScale>
-        )}
+        {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
     </View>
   );
 }
@@ -3396,6 +3482,74 @@ const styles = StyleSheet.create({
       borderWidth: 2,
       borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+
+  fabContainer: {
+    position: 'absolute',
+    bottom: 130, // Aligned above the dock
+    right: 20,
+    alignItems: 'center',
+    zIndex: 999,
+},
+fabBackdrop: {
+    position: 'absolute',
+    width: width,
+    height: height,
+    top: -height + 150, // Offset to cover screen
+    left: -width + 40,  // Offset to centered
+    backgroundColor: 'rgba(26, 45, 39, 0.85)', // Matches COLORS.background with high opacity
+    zIndex: -1,
+},
+mainFab: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 2,
+},
+actionBtnWrap: {
+    position: 'absolute',
+    bottom: 0,
+    right: 4, // Align centers of small buttons with main button
+    flexDirection: 'row', // Label left, Button right
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: 200, // Width to hold the label
+    zIndex: 2,
+    pointerEvents: 'box-none',
+},
+actionBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+},
+actionLabelContainer: {
+    backgroundColor: COLORS.card, // Matches your cards
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginRight: 12, // Space between label and button
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+},
+actionLabel: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    color: COLORS.textPrimary,
+},
 
   // ========================================================================
   // --- 6. SECTION: SHELF & PRODUCTS ---

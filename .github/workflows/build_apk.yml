@@ -44,12 +44,13 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # -PbundleInDebug=true  -> Makes the app work without a server
-          # -Pandroid.injected.build.abi=arm64-v8a -> Makes the file small
+          # -PbundleInDebug=true -> Bundles JS (Offline support)
+          # -Pandroid.injected.build.abi=arm64-v8a -> Small size
           ./gradlew assembleDebug -PbundleInDebug=true -Pandroid.injected.build.abi=arm64-v8a --no-daemon --build-cache
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-standalone
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          # CHANGED: Use *.apk to catch whatever name Gradle gives it (likely app-arm64-v8a-debug.apk)
+          path: android/app/build/outputs/apk/debug/*.apk
