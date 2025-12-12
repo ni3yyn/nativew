@@ -46,7 +46,10 @@ export default function RootLayout() {
         {/* 'light' style makes text white, 'translucent' ensures background flows under */}
         <StatusBar style="light" translucent={true} />
         <Stack screenOptions={{ headerShown: false }}>
-          
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(main)" />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>
