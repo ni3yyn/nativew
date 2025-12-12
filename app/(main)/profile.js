@@ -3090,12 +3090,12 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
-    refreshing={loading}
-    onRefresh={handleRefresh}
-    tintColor={COLORS.accentGreen} // <-- FIX
-    colors={[COLORS.accentGreen]}   // <-- FIX
-    progressBackgroundColor="rgba(255,255,255,0.1)"
-/>
+                        refreshing={loading}
+                        onRefresh={handleRefresh}
+                        tintColor={COLORS.primary}
+                        colors={[COLORS.primary]}
+                        progressBackgroundColor="rgba(255,255,255,0.1)"
+                    />
                 }
             >
                 <Animated.View style={{ 

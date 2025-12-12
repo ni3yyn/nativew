@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import Svg, { Circle, Path, Defs, ClipPath, Rect } from 'react-native-svg';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -28,8 +29,6 @@ import {
   basicSkinTypes,
   basicScalpTypes
 } from '../../src/data/allergiesandconditions';
-import remoteConfig from '@react-native-firebase/remote-config';
-
 
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
@@ -892,22 +891,43 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   }, [isVisible, permission]);
 
   const handleCapture = async () => {
-      // Use the renamed ref
-      if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
-      setIsCapturing(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      try {
-          const photo = await cameraViewRef.current.takePictureAsync({
-              quality: 1, // Maximum quality for best OCR results
-          });
-          onPictureTaken(photo);
-      } catch (error) {
-          console.error("Failed to take picture:", error);
-          Alert.alert("Capture Failed", "Could not take a picture. Please try again.");
-      } finally {
-          setIsCapturing(false);
+  if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
+  setIsCapturing(true);
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  try {
+    // Step 1: Take the picture at a reasonably high quality
+    const photo = await cameraViewRef.current.takePictureAsync({
+      quality: 0.8, // 0.8 is still very high quality
+    });
+
+    // Step 2: Manipulate the image to ensure it's a reasonable size
+    console.log('Original photo size:', photo.width, 'x', photo.height);
+
+    const manipulatedPhoto = await ImageManipulator.manipulateAsync(
+      photo.uri, // URI of the original photo
+      [
+        // Resize the image. It will maintain aspect ratio.
+        { resize: { width: 1080 } } 
+      ],
+      {
+        // Compress the image (0.7 is a good balance of quality and size)
+        compress: 0.7, 
+        format: ImageManipulator.SaveFormat.JPEG,
       }
-  };
+    );
+
+    console.log('Manipulated photo size:', manipulatedPhoto.width, 'x', manipulatedPhoto.height);
+
+    // Step 3: Send the NEW, smaller photo to be processed
+    onPictureTaken(manipulatedPhoto);
+
+  } catch (error) {
+    console.error("Failed to take or manipulate picture:", error);
+    Alert.alert("Capture Failed", "Could not take a picture. Please try again.");
+  } finally {
+    setIsCapturing(false);
+  }
+};
   
   const modalTranslateY = modalAnim.interpolate({
       inputRange: [0, 1],
@@ -1476,75 +1496,54 @@ const handlePictureTaken = (photo) => {
   }
 };
 
+const VERCEL_BACKEND_URL = "https://oilguard-backend-8hvtyqhno-ni3yyns-projects.vercel.app/api/analyze.js";
+
 const processImageWithGemini = async (uri) => {
   setLoading(true);
   setIsGeminiLoading(true);
   changeStep(3);
 
   try {
-      // 1. Move Fetch INSIDE the try block so errors are caught
-      await remoteConfig().fetchAndActivate();
-      const apiKey = remoteConfig().getValue('gemini_api_key').asString();
+    const base64Data = await uriToBase64(uri);
 
-      // 2. Handle missing key safely
-      if (!apiKey) {
-          console.error("Remote Config: API Key not found");
-          Alert.alert("Configuration Error", "Could not retrieve API configuration.");
-          // IMPORTANT: Stop the loading state!
-          setIsGeminiLoading(false);
-          setLoading(false);
-          changeStep(0);
-          return;
-      }
+    // Call your new Vercel backend
+    const response = await fetch(VERCEL_BACKEND_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ base64Data: base64Data }),
+    });
 
-      const base64Data = await uriToBase64(uri);
-      
-      // 3. Use the fetched apiKey here
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-      
-      const validTypes = "shampoo, hair_mask, serum, lotion_cream, cleanser, toner, mask, sunscreen, oil_blend, other";
-      const prompt = `
-            You are an expert cosmetic chemist AI. Analyze the provided image.
-            
-            Task 1: Identify the Product Type.
-            Based on the packaging, texture, or text, classify the product into EXACTLY one of these categories: [${validTypes}].
-            If you cannot determine it, use "other".
+    const responseData = await response.json();
 
-            Task 2: Your primary task is to act as a specialized ingredient extractor. You MUST analyze the provided image and perform the following steps : 1-Locate the Ingredient List: Focus ONLY on the text within the section explicitly labeled 'Ingredients', 'INCI', 'المكونات', or a similar title. 2-Ignore Everything Else: You MUST completely ignore and NOT include in your output: brand names, marketing claims (e.g., 'anti-wrinkle', 'hydrating'), logos, barcodes, usage instructions, warnings, or any text outside the official ingredient list. 3-Extract and Translate: REALISTICALLY! i dont want cutt-off ingredients names. For every single ingredient you identify, you MUST provide its standard English name AND its accurate Arabic translation and alternative names found in other products for the same ingredient. 4-Strict Formatting: Present the entire output as a multi-lines, numbered list. Each line MUST follow this exact format, including all spaces: [Number]- [English Name] || [Arabic Name] ,Example 1: 1- Aqua / ماء , Example 2: 2- Niacinamide / نياسيناميد , Example 3: 3- Simmondsia Chinensis Seed Oil / زيت بذور الجوجوبا . Language Policy: The output MUST be in English and Arabic ONLY. French and all other languages are STRICTLY FORBIDDEN. If an ingredient name is complex, provide the best possible translation for both required languages. Do not add any extra notes or explanations. REWRITE FRENCH INGREDIENTS IN ENGLISH".
-            
-            OUTPUT FORMAT:
-            Return a RAW JSON object (no markdown formatting, no backticks).
-            {
-                "detected_type": "string (one of the valid categories)",
-                "ingredients_text": "string (the full list as a numbered string with line breaks)"
-            }
-        `;
+    if (!response.ok) {
+      // If the server responded with an error, throw it
+      throw new Error(responseData.error || "An error occurred in the backend.");
+    }
 
-      const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
-      const response = await result.response;
-      let text = response.text().replace(/```json|```/g, '').trim();
+    let text = responseData.result.replace(/```json|```/g, '').trim();
 
-      const jsonResponse = JSON.parse(text);
-      const { ingredients } = await extractIngredientsFromAIText(jsonResponse.ingredients_text);
+    const jsonResponse = JSON.parse(text);
+    const { ingredients } = await extractIngredientsFromAIText(jsonResponse.ingredients_text);
 
-      if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
+    if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
 
-      setOcrText(jsonResponse.ingredients_text); 
-      setPreProcessedIngredients(ingredients); 
-      setProductType(jsonResponse.detected_type || 'other');
-      
-      setIsGeminiLoading(false);
-      setLoading(false);
-      changeStep(1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setOcrText(jsonResponse.ingredients_text);
+    setPreProcessedIngredients(ingredients);
+    setProductType(jsonResponse.detected_type || 'other');
+
+    setIsGeminiLoading(false);
+    setLoading(false);
+    changeStep(1);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
   } catch (error) {
-      console.error("Gemini/Config Error:", error);
-      Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
-      setIsGeminiLoading(false);
-      setLoading(false);
-      changeStep(0);
+    console.error("Vercel Backend Error:", error);
+    Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
+    setIsGeminiLoading(false);
+    setLoading(false);
+    changeStep(0);
   }
 };
   
