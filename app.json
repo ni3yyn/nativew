@@ -22,6 +22,7 @@
     },
     "android": {
       "package": "com.wathiq.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A2D27"
