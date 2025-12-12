@@ -48,9 +48,13 @@ jobs:
           # -Pandroid.injected.build.abi=arm64-v8a -> Small size
           ./gradlew assembleDebug -PbundleInDebug=true -Pandroid.injected.build.abi=arm64-v8a --no-daemon --build-cache
 
+      # Added a debug step to list files so you can see where it went in the logs if it fails again
+      - name: 🕵️ List Build Outputs
+        run: find android/app/build/outputs -name "*.apk"
+
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-standalone
-          # CHANGED: Use *.apk to catch whatever name Gradle gives it (likely app-arm64-v8a-debug.apk)
-          path: android/app/build/outputs/apk/debug/*.apk
+          # CHANGED: The ** means "look in all subfolders"
+          path: android/app/build/outputs/apk/**/*.apk
