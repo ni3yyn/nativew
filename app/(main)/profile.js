@@ -3076,12 +3076,12 @@ export default function ProfileScreen() {
             </Animated.View>
 
             {/* --- MAIN SCROLL --- */}
-            <View style={{ flex: 1, paddingTop: headerMaxHeight }}>
-    <Animated.View style={{ 
-        opacity: contentOpacity, 
-        transform: [{ translateX: contentTranslate }],
-        flex: 1 // Make it fill the container
-    }}>
+            <Animated.ScrollView
+                contentContainerStyle={{ 
+                    paddingHorizontal: 15, 
+                    paddingTop: headerMaxHeight + 20,
+                    paddingBottom: 100 
+                }}
                 scrollEventThrottle={16}
                 onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -3146,7 +3146,7 @@ export default function ProfileScreen() {
                     )}
 
                 </Animated.View>
-            </View>
+            </Animated.ScrollView>
 
         {/* --- FLOATING GLASS DOCK & MODAL RENDERED AT TOP LEVEL --- */}
         <NatureDock 
