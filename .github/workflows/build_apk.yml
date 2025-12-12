@@ -1,60 +1,82 @@
-name: Build Standalone Debug APK
+name: Turbo Build APK
 
 on:
+  # This enables the manual "Run" button
   workflow_dispatch:
+  
+  # This enables Auto-Run on Push
   push:
     branches:
-      - main
+      - main   # <--- Verify this matches your branch name (main or master)
     paths-ignore:
-      - 'README.md'
+      - 'README.md'   # Don't build if you only change documentation
+      - '.gitignore'
 
 jobs:
   build:
-    name: 🤖 Build Android Standalone APK
+    name: 🚀 Build Android APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📦 Checkout Repository
+      # 1. Checkout Code
+      - name: 🏗 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java 17
+      # 2. Setup Java (Required for Android Gradle)
+      - name: ☕ Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # 3. Gradle Caching (The Speed Booster)
+      - name: 🐘 Cache Gradle
+        uses: actions/cache@v4
+        with:
+          # The Pipe symbol '|' below is MANDATORY for multiple lines
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          # Ensure this key line is indented exactly under 'path'
+          key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-v5-
+
+      # 4. Setup Node & NPM Cache
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
           cache: 'npm'
 
-      - name: 🐘 Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: false
+      # 5. Install Global Tools
+      - name: 🛠 Install EAS CLI
+        run: npm install -g eas-cli
 
+      # 6. Install Dependencies (Robust Mode)
+      # We delete package-lock first to prevent sync errors
       - name: 📦 Install Dependencies
-        run: npm install
-
-      - name: ⚙️ Expo Prebuild
-        run: npx expo prebuild --platform android
-
-      - name: 🔨 Build APK (Offline & Small)
         run: |
-          cd android
-          chmod +x gradlew
-          # -PbundleInDebug=true -> Bundles JS (Offline support)
-          # -Pandroid.injected.build.abi=arm64-v8a -> Small size
-          ./gradlew assembleDebug -PbundleInDebug=true -Pandroid.injected.build.abi=arm64-v8a --no-daemon --build-cache
+          rm -f package-lock.json
+          npm install
 
-      # Added a debug step to list files so you can see where it went in the logs if it fails again
-      - name: 🕵️ List Build Outputs
-        run: find android/app/build/outputs -name "*.apk"
+      # 7. Build the APK
+      # We explicitly pass EXPO_TOKEN env var to this step
+      - name: 📱 Build APK (Local Mode)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Boost Java memory to 4GB to prevent "Unknown" crashes
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
+            exit 1
+          fi
+          # Clear EAS cache to ensure it generates fresh android folders
+          eas build --local --clear-cache --platform android --profile preview --non-interactive --output ./wathiq.apk
 
-      - name: 📤 Upload APK Artifact
+      # 8. Upload Result
+      - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-standalone
-          # CHANGED: The ** means "look in all subfolders"
-          path: android/app/build/outputs/apk/**/*.apk
+          name: wathiq-release-apk
+          path: wathiq.apk
