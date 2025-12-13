@@ -1823,7 +1823,7 @@ const handlePictureTaken = (photo) => {
   }
 };
 
-const VERCEL_BACKEND_URL = "https://oilguard-backend-8hvtyqhno-ni3yyns-projects.vercel.app/api/analyze.js";
+const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
 
 const processImageWithGemini = async (uri) => {
   setLoading(true);
