@@ -338,21 +338,23 @@ const AnimatedCount = ({ value, style }) => {
 // 5. STAGGERED LIST ITEM
 const StaggeredItem = ({ index, children }) => {
     const anim = useRef(new Animated.Value(0)).current;
-    const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
-    const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] });
 
     useEffect(() => {
-        Animated.spring(anim, { 
+        Animated.timing(anim, { 
           toValue: 1, 
-          friction: 7, 
-          tension: 40, 
-          delay: index * 70, 
+          duration: 350,       // Slightly slower for elegance
+          delay: index * 50,   // Tighter staggering
           useNativeDriver: true 
         }).start();
     }, []);
 
+    const translateY = anim.interpolate({ 
+        inputRange: [0, 1], 
+        outputRange: [20, 0] // Simple 20px slide up
+    });
+
     return (
-        <Animated.View style={{ opacity: anim, transform: [{ translateY }, { scale }] }}>
+        <Animated.View style={{ opacity: anim, transform: [{ translateY }] }}>
             {children}
         </Animated.View>
     );
@@ -1480,44 +1482,50 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
   };
 
   const switchPeriod = (period) => {
-      if (period === activePeriod) return;
-      Haptics.selectionAsync();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setActivePeriod(period);
-  };
+    if (period === activePeriod) return;
+    Haptics.selectionAsync();
+    // REMOVED: LayoutAnimation.configureNext(...) <- This caused the glitch
+    setActivePeriod(period);
+};
 
-  const handleAddStep = (stepName) => {
-    if (stepName) {
-        const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
-        const newRoutines = JSON.parse(JSON.stringify(routines));
-        if (!newRoutines[activePeriod]) newRoutines[activePeriod] = [];
-        newRoutines[activePeriod].push(newStep);
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-        saveRoutines(newRoutines);
-    }
+const handleAddStep = (stepName) => {
+  if (stepName) {
+      const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
+      const newRoutines = JSON.parse(JSON.stringify(routines));
+      
+      if (!newRoutines[activePeriod]) newRoutines[activePeriod] = [];
+      newRoutines[activePeriod].push(newStep);
+      
+      // REMOVED: LayoutAnimation.configureNext(...) <- Rely on StaggeredItem instead
+      
+      saveRoutines(newRoutines);
+      
+      // Scroll to bottom roughly (optional, if you have a ref to FlatList)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }
 };
 
 const handleDeleteStep = (stepId) => {
-    Alert.alert(
-        "حذف الخطوة",
-        "هل أنت متأكد من حذف هذه الخطوة من الروتين؟",
-        [
-            { text: "إلغاء", style: "cancel" },
-            {
-                text: "حذف",
-                style: "destructive",
-                onPress: () => {
-                    const newRoutines = JSON.parse(JSON.stringify(routines));
-                    // Filter out the step from the active period
-                    newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
-                    
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    saveRoutines(newRoutines);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }
-            }
-        ]
-    );
+  Alert.alert(
+      "حذف الخطوة",
+      "هل أنت متأكد من حذف هذه الخطوة من الروتين؟",
+      [
+          { text: "إلغاء", style: "cancel" },
+          {
+              text: "حذف",
+              style: "destructive",
+              onPress: () => {
+                  const newRoutines = JSON.parse(JSON.stringify(routines));
+                  newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
+                  
+                  // REMOVED: LayoutAnimation.configureNext(...) 
+                  
+                  saveRoutines(newRoutines);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+          }
+      ]
+  );
 };
 
   const handleUpdateStep = (stepId, newProductIds) => {
@@ -1919,53 +1927,55 @@ const IngredientsSection = ({ products }) => {
     ];
 
     const renderIngredientItem = ({ item, index }) => {
-        // Determine stats color
         const isRisk = item.warnings?.some(w => w.level === 'risk');
-        const isCaution = item.warnings?.some(w => w.level === 'caution');
-        const statusColor = isRisk ? COLORS.danger : isCaution ? COLORS.warning : COLORS.textSecondary;
-
+        
         return (
             <StaggeredItem index={index}>
                 <PressableScale 
-                    style={styles.ingRowEnhanced} 
+                    style={styles.ingCard} 
                     onPress={() => item.isRich ? setSelectedIngredient(item) : null}
                     disabled={!item.isRich}
                 >
-                    <View style={styles.ingRowLeft}>
-                        <View style={[styles.countCircle, {backgroundColor: item.isRich ? COLORS.accentGreen : COLORS.card}]}>
-                            <Text style={[styles.countNumber, {color: item.isRich ? COLORS.textOnAccent : COLORS.textDim}]}>
+                    {/* Inner Layout Container to force Row Direction */}
+                    <View style={styles.ingCardContent}>
+                        
+                        {/* 1. Count Badge (Right) */}
+                        <View style={[styles.ingCountBadge, {backgroundColor: item.isRich ? COLORS.accentGreen : COLORS.card}]}>
+                            <Text style={[styles.ingCountText, {color: item.isRich ? COLORS.textOnAccent : COLORS.textDim}]}>
                                 {item.count}
                             </Text>
                         </View>
-                    </View>
-                    
-                    <View style={{flex: 1}}>
-                        <View style={{flexDirection:'row-reverse', alignItems:'center', gap: 8}}>
-                            <Text style={styles.ingNameEnhanced}>{item.displayName}</Text>
-                            {isRisk && <FontAwesome5 name="exclamation-circle" size={12} color={COLORS.danger} />}
-                        </View>
-                        
-                        {item.scientific_name && (
-                            <Text style={styles.ingScientific} numberOfLines={1}>{item.scientific_name}</Text>
-                        )}
-                        
-                        <View style={{flexDirection:'row-reverse', gap: 6, marginTop: 6}}>
-                            <View style={styles.ingTag}>
-                                <Text style={styles.ingTagText}>{item.functionalCategory}</Text>
-                            </View>
-                            {item.chemicalType && (
-                                <View style={[styles.ingTag, {backgroundColor: 'rgba(255,255,255,0.05)'}]}>
-                                    <Text style={styles.ingTagText}>{item.chemicalType}</Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
 
-                    {item.isRich && (
-                        <View style={styles.arrowContainer}>
-                            <FontAwesome5 name="chevron-left" size={12} color={COLORS.textDim} />
+                        {/* 2. Text Info (Middle) */}
+                        <View style={styles.ingInfoContainer}>
+                            <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 6}}>
+                                <Text style={styles.ingNameText}>{item.displayName}</Text>
+                                {isRisk && <FontAwesome5 name="exclamation-circle" size={12} color={COLORS.danger} />}
+                            </View>
+                            
+                            {item.scientific_name && (
+                                <Text style={styles.ingSciText} numberOfLines={1}>{item.scientific_name}</Text>
+                            )}
+
+                            <View style={styles.ingTagsRow}>
+                                <View style={styles.ingCategoryTag}>
+                                    <Text style={styles.ingTagLabel}>{item.functionalCategory}</Text>
+                                </View>
+                                {item.chemicalType && (
+                                    <View style={[styles.ingCategoryTag, {backgroundColor: 'rgba(255,255,255,0.05)', borderColor: COLORS.border}]}>
+                                        <Text style={[styles.ingTagLabel, {color: COLORS.textSecondary}]}>{item.chemicalType}</Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
-                    )}
+
+                        {/* 3. Arrow (Left) - Only if rich data exists */}
+                        {item.isRich && (
+                            <View style={{ paddingLeft: 8 }}>
+                                <FontAwesome5 name="chevron-left" size={12} color={COLORS.border} />
+                            </View>
+                        )}
+                    </View>
                 </PressableScale>
             </StaggeredItem>
         );
@@ -2030,12 +2040,14 @@ const IngredientsSection = ({ products }) => {
 };
 
 const findIngredientData = (name) => {
+    if (!name) return null; // Safety check for input
     const search = name.toLowerCase().trim();
+    
     return combinedOilsDB.ingredients.find(item => 
-        item.id === search || 
-        item.name.toLowerCase() === search || 
-        item.scientific_name.toLowerCase() === search ||
-        item.searchKeywords.some(k => k.toLowerCase() === search)
+        (item.id === search) || 
+        (item.name && item.name.toLowerCase() === search) || 
+        (item.scientific_name && item.scientific_name.toLowerCase() === search) ||
+        (item.searchKeywords && item.searchKeywords.some(k => k && k.toLowerCase() === search))
     );
 };
 
@@ -2692,28 +2704,39 @@ const ShelfActionGroup = ({ router }) => {
 
     const toggleMenu = () => {
         const toValue = isOpen ? 0 : 1;
+        // Haptics only when toggling the main FAB, not when clicking actions
+        // (Actions have their own haptics in PressableScale)
         if (isOpen) {
              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } else {
              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
+        animateMenu(toValue);
+        setIsOpen(!isOpen);
+    };
+
+    // Extract animation logic to reuse it without triggering haptics/state toggles unnecessarily
+    const animateMenu = (toValue) => {
         Animated.spring(anim, {
             toValue,
             friction: 5,
             tension: 40,
             useNativeDriver: true,
         }).start();
-
-        setIsOpen(!isOpen);
     };
 
     const handlePressAction = (route) => {
-        Haptics.selectionAsync();
-        toggleMenu();
-        setTimeout(() => {
+        // 1. Close menu visually immediately
+        animateMenu(0);
+        setIsOpen(false);
+
+        // 2. Navigate immediately using requestAnimationFrame
+        // This ensures the touch event clears before pushing, removing the latency
+        // without the need for an arbitrary setTimeout.
+        requestAnimationFrame(() => {
             router.push(route);
-        }, 80);
+        });
     };
 
     // --- Animations ---
@@ -2745,28 +2768,24 @@ const ShelfActionGroup = ({ router }) => {
                 </Pressable>
             )}
 
-            {/* --- BUTTON 1: COMPARISON (Top - Deeper Green) --- */}
+            {/* --- BUTTON 1: COMPARISON --- */}
             <Animated.View style={[styles.actionBtnWrap, { opacity: action1Opacity, transform: [{ translateY: action1Y }] }]}>
                 <Label text="مقارنة منتجات" />
                 <PressableScale 
                     onPress={() => handlePressAction('/comparison')} 
-                    // UPDATED: Using a deeper green from your gradient palette
                     style={[styles.actionBtn, { backgroundColor: '#4a8a73' }]}
                 >
-                    {/* UPDATED: Icon color matches textOnAccent (Dark Green) */}
                     <FontAwesome5 name="balance-scale" size={16} color={COLORS.textOnAccent} />
                 </PressableScale>
             </Animated.View>
 
-            {/* --- BUTTON 2: SCAN/ADD (Middle - Accent Green) --- */}
+            {/* --- BUTTON 2: SCAN/ADD --- */}
             <Animated.View style={[styles.actionBtnWrap, { opacity: action2Opacity, transform: [{ translateY: action2Y }] }]}>
                 <Label text="فحص منتج" />
                 <PressableScale 
                     onPress={() => handlePressAction('/oilguard')} 
-                    // UPDATED: Using the primary Accent Green
                     style={[styles.actionBtn, { backgroundColor: COLORS.accentGreen }]}
                 >
-                    {/* UPDATED: Icon color matches textOnAccent (Dark Green) */}
                     <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
                 </PressableScale>
             </Animated.View>
@@ -2774,7 +2793,6 @@ const ShelfActionGroup = ({ router }) => {
             {/* --- MAIN TRIGGER --- */}
             <PressableScale style={styles.mainFab} onPress={toggleMenu}>
                 <LinearGradient 
-                    // UPDATED: Red for close state, your Green Gradient for open state
                     colors={isOpen ? [COLORS.danger, '#991b1b'] : [COLORS.accentGreen, '#4a8a73']} 
                     style={styles.fabGradient}
                 >
@@ -3124,16 +3142,6 @@ export default function ProfileScreen() {
       { id: 'ingredients', label: 'مكونات', icon: 'flask' },
       { id: 'settings', label: 'إعدادات', icon: 'cog' },
   ];
-
-  const findIngredientData = (name) => {
-    const search = name.toLowerCase().trim();
-    return combinedOilsDB.ingredients.find(item => 
-        item.id === search || 
-        item.name.toLowerCase() === search || 
-        item.scientific_name.toLowerCase() === search ||
-        item.searchKeywords.some(k => k.toLowerCase() === search)
-    );
-};
 
   return (
     <View style={styles.container}>
@@ -4105,9 +4113,8 @@ editIndicator: {
   // ========================================================================
   // --- 9. SECTION: INGREDIENTS ---
   // ========================================================================
-  // ========================================================================
-  // --- INGREDIENTS SECTION (LIST & FILTERS) ---
-  // ========================================================================
+  
+  // --- Search & Filters ---
   searchBar: {
     flexDirection: 'row-reverse',
     backgroundColor: COLORS.card,
@@ -4118,8 +4125,8 @@ editIndicator: {
     marginBottom: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
-},
-searchInput: {
+  },
+  searchInput: {
     flex: 1,
     fontFamily: 'Tajawal-Regular',
     color: COLORS.textPrimary,
@@ -4127,8 +4134,8 @@ searchInput: {
     fontSize: 14,
     textAlign: 'right',
     paddingVertical: 10,
-},
-filterPill: {
+  },
+  filterPill: {
     backgroundColor: COLORS.card,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -4138,114 +4145,121 @@ filterPill: {
     gap: 6,
     borderWidth: 1,
     borderColor: COLORS.border,
-},
-filterPillActive: {
+  },
+  filterPillActive: {
     backgroundColor: COLORS.accentGreen,
     borderColor: COLORS.accentGreen,
-},
-filterText: {
+  },
+  filterText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: COLORS.textSecondary,
-},
-filterTextActive: {
+  },
+  filterTextActive: {
     color: COLORS.textOnAccent,
     fontFamily: 'Tajawal-Bold',
-},
+  },
 
-// --- Enhanced List Item ---
-ingRowEnhanced: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    padding: 16,
-    borderRadius: 18,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    // Shadow for depth
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-},
-ingRowLeft: {
-    marginLeft: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-},
-countCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-},
-countNumber: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-},
-ingNameEnhanced: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-},
-ingScientific: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.textDim,
-    textAlign: 'right',
-    fontStyle: 'italic',
-    marginTop: 2,
-},
-ingTag: {
-    backgroundColor: 'rgba(90, 156, 132, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-},
-ingTagText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 10,
-    color: COLORS.accentGreen,
-},
-arrowContainer: {
-    marginRight: 10,
-    opacity: 0.5,
-},
+  // --- UPDATED LIST ITEMS (Compact & Fixed Layout) ---
+  ingCard: {
+      backgroundColor: COLORS.card,
+      borderRadius: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+      overflow: 'hidden',
+      // Subtle shadow
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
+  },
+  ingCardContent: {
+      flexDirection: 'row-reverse', // Critical: Forces RTL layout
+      alignItems: 'center',
+      padding: 12,
+      gap: 12,
+      width: '100%',
+  },
+  ingCountBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+  },
+  ingCountText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+  },
+  ingInfoContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      gap: 2,
+  },
+  ingNameText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 15,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  ingSciText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textDim,
+      textAlign: 'right',
+      fontStyle: 'italic',
+      marginTop: -2,
+  },
+  ingTagsRow: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 6,
+  },
+  ingCategoryTag: {
+      backgroundColor: 'rgba(90, 156, 132, 0.1)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(90, 156, 132, 0.2)',
+  },
+  ingTagLabel: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 10,
+      color: COLORS.accentGreen,
+  },
 
-// ========================================================================
-// --- INGREDIENT DETAILS MODAL (BOTTOM SHEET) ---
-// ========================================================================
-
-// Header Area
-ingModalHeader: {
+  // --- INGREDIENT DETAILS MODAL (BOTTOM SHEET) ---
+  
+  // Header Area
+  ingModalHeader: {
     backgroundColor: COLORS.card,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-},
-ingModalTitle: {
+  },
+  ingModalTitle: {
     fontFamily: 'Tajawal-ExtraBold',
     fontSize: 22,
     color: COLORS.textPrimary,
     textAlign: 'right',
     marginBottom: 4,
-},
-ingModalScientific: {
+  },
+  ingModalScientific: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 13,
     color: COLORS.textSecondary,
     textAlign: 'right',
     fontStyle: 'italic',
     marginBottom: 12,
-},
-ingTypeBadge: {
+  },
+  ingTypeBadge: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
@@ -4253,36 +4267,36 @@ ingTypeBadge: {
     paddingVertical: 6,
     borderRadius: 20,
     alignSelf: 'flex-start',
-},
-ingTypeText: {
+  },
+  ingTypeText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 12,
-},
-ingBadgesRow: {
+  },
+  ingBadgesRow: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 15,
-},
-ingBadge: {
+  },
+  ingBadge: {
     backgroundColor: COLORS.background,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-},
-ingBadgeText: {
+  },
+  ingBadgeText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 11,
     color: COLORS.textSecondary,
-},
+  },
 
-// Content Sections
-ingSection: {
+  // Content Sections
+  ingSection: {
     marginBottom: 30,
-},
-ingSectionTitle: {
+  },
+  ingSectionTitle: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 16,
     color: COLORS.textPrimary,
@@ -4291,105 +4305,103 @@ ingSectionTitle: {
     borderRightWidth: 3,
     borderRightColor: COLORS.accentGreen,
     paddingRight: 10,
-},
+  },
 
-// Benefits Charts
-benefitRow: {
+  // Benefits Charts
+  benefitRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     marginBottom: 12,
-},
-benefitLabel: {
+  },
+  benefitLabel: {
     flex: 1.2,
     textAlign: 'right',
     fontFamily: 'Tajawal-Regular',
     fontSize: 13,
     color: COLORS.textSecondary,
-},
-benefitBarContainer: {
+  },
+  benefitBarContainer: {
     flex: 2,
     height: 6,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 3,
     marginHorizontal: 12,
-    // Important for RTL bar animation
     flexDirection: 'row-reverse', 
-},
-benefitBarFill: {
+  },
+  benefitBarFill: {
     height: '100%',
     backgroundColor: COLORS.accentGreen,
     borderRadius: 3,
-},
-benefitScore: {
+  },
+  benefitScore: {
     width: 30,
     textAlign: 'left',
     fontFamily: 'Tajawal-Bold',
     fontSize: 12,
     color: COLORS.textPrimary,
-},
+  },
 
-// Warnings
-warningBox: {
+  // Warnings
+  warningBox: {
     flexDirection: 'row-reverse',
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
     gap: 12,
     alignItems: 'flex-start',
-},
-warningBoxRisk: {
+  },
+  warningBoxRisk: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-},
-warningBoxCaution: {
+  },
+  warningBoxCaution: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.3)',
-},
-warningText: {
+  },
+  warningText: {
     flex: 1,
     textAlign: 'right',
     fontFamily: 'Tajawal-Regular',
     fontSize: 13,
     lineHeight: 20,
-},
+  },
 
-// Synergies & Conflicts
-interactionHeader: {
+  // Synergies & Conflicts
+  interactionHeader: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
     color: COLORS.textPrimary,
     marginBottom: 10,
     textAlign: 'right',
-},
-synergyItem: {
+  },
+  synergyItem: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: COLORS.success,
     marginBottom: 6,
     textAlign: 'right',
     paddingRight: 5,
-},
-conflictItem: {
+  },
+  conflictItem: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: COLORS.danger,
     marginBottom: 6,
     textAlign: 'right',
     paddingRight: 5,
-},
-noDataText: {
+  },
+  noDataText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: COLORS.textDim,
     fontStyle: 'italic',
     textAlign: 'right',
     opacity: 0.7,
-},
-
-// Products List
-productChip: {
+  },
+  // --- Products List (Inside Ingredient Modal) ---
+  productChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
@@ -4400,26 +4412,14 @@ productChip: {
     marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-},
-productChipText: {
+  },
+  productChipText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
     color: COLORS.textSecondary,
     flex: 1,
     textAlign: 'right',
-},
-closeButton: {
-    marginTop: 30,
-    paddingVertical: 15,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-},
-closeButtonText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: '#fff', // Always white for contrast on colored buttons
-},
+  },
   
   // ========================================================================
   // --- 10. SECTION: MIGRATION ---

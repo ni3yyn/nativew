@@ -23067,6 +23067,23 @@ export const combinedOilsDB = {
       synergy: {},
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'المصطلح "عطر" قد يخفي تحته عشرات المواد الكيميائية التي قد تسبب الحساسية للبعض دون الإفصاح عنها.' }],
-    }
+    },
+    {
+  id: 'rapeseed-oil',
+  name: 'زيت بذور اللفت',
+  scientific_name: 'Brassica Campestris (Rapeseed) Seed Oil',
+  searchKeywords: ['rapeseed oil', 'canola oil', 'brassica campestris', 'زيت اللفت', 'كانولا'],
+  usageScope: ['hair', 'body', 'face'],
+  functionalCategory: 'مطرّي',
+  chemicalType: 'زيت نباتي',
+  benefits: { 'ترطيب عميق': 0.88, 'فك تشابك الشعر': 0.8, 'حماية من الأكسدة': 0.75 },
+  synergy: { 'glycerin':1.0, 'vitamin e': 0.9},
+  negativeSynergy: {},
+  warnings: [
+    { level: 'info', text: 'يُعرف أيضاً باسم "زيت الكانولا" (النسخة منخفضة الحمض). غني جداً بأحماض أوميغا 3 و 6 وفيتامين E، مما يجعله ممتازاً للشعر الجاف.' },
+    { level: 'caution', text: 'له قوام دهني غني، وقد يسبب انسداد المسام (Comedogenic) لأصحاب البشرة الدهنية جداً أو المعرضة لحب الشباب عند استخدامه على الوجه.' }
+  ],
+},
+
   ]
 };
