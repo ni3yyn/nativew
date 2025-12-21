@@ -1,6 +1,6 @@
 export const combinedOilsDB = {
-    ingredients: [
-  {
+  ingredients: [
+{
         id: 'jojoba',
         name: 'زيت الجوجوبا',
         scientific_name: 'Simmondsia Chinensis Seed Oil',
@@ -15,7 +15,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يشبه في تركيبه دهون البشرة الطبيعية، مما يجعله مناسبا لجميع أنواع البشرة.' }
         ],
       },
-  {
+{
         id: 'argan',
         name: 'زيت الأرغان',
         scientific_name: 'Argania Spinosa Kernel Oil',
@@ -28,7 +28,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sweet-almond',
         name: 'زيت اللوز الحلو',
         scientific_name: 'Prunus Amygdalus Dulcis Oil',
@@ -44,7 +44,7 @@ export const combinedOilsDB = {
         ],
         
       },
-  {
+{
         id: 'rosehip',
         name: 'زيت بذور الورد',
         scientific_name: 'Rosa Canina Seed Oil',
@@ -60,7 +60,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب تهيجا لحب الشباب النشط والملتهب بسبب خصائصه المحفزة لتجدد الخلايا.' }
         ],
       },
-  {
+{
         id: 'squalane',
         name: 'السكوالان',
         scientific_name: 'Squalane',
@@ -75,7 +75,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت خفيف جدا، غير كوميدوجينيك، ومناسب لجميع أنواع البشرة بما في ذلك الدهنية.' }
         ],
       },
-  {
+{
         id: 'coconut',
         name: 'زيت جوز الهند',
         scientific_name: 'Cocos Nucifera Oil',
@@ -90,7 +90,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون كوميدوجينيك (يسد المسام) وغير مناسب لبشرة الوجه المعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'castor',
         name: 'زيت الخروع',
         scientific_name: 'Ricinus Communis Seed Oil',
@@ -105,7 +105,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'زيت ثقيل ولزج، قد يكون من الصعب غسله من الشعر.' }
         ],
       },
-  {
+{
         id: 'grapeseed',
         name: 'زيت بذور العنب',
         scientific_name: 'Vitis Vinifera Seed Oil',
@@ -120,7 +120,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت خفيف وسريع الامتصاص، مناسب للبشرة الدهنية والمختلطة.' }
         ],
       },
-  {
+{
         id: 'avocado',
         name: 'زيت الأفوكادو',
         scientific_name: 'Persea Gratissima Oil',
@@ -135,7 +135,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت غني ومغذي، مثالي للبشرة الجافة والناضجة.' }
         ],
       },
-  {
+{
         id: 'olive',
         name: 'زيت الزيتون',
         scientific_name: 'Olea Europaea Fruit Oil',
@@ -150,7 +150,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'زيت ثقيل وقد يسد المسام للبشرة المعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'sunflower',
         name: 'زيت دوار الشمس',
         scientific_name: 'Helianthus Annuus Seed Oil',
@@ -165,7 +165,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني بحمض اللينوليك، مما يجعله خيارا جيدا لدعم حاجز البشرة دون أن يكون ثقيلا.' }
         ],
       },
-  {
+{
         id: 'hemp-seed',
         name: 'زيت بذور القنب',
         scientific_name: 'Cannabis Sativa Seed Oil',
@@ -180,7 +180,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'لا يحتوي على مركبات نفسية (THC). ممتاز لتهدئة البشرة المتهيجة والمعرضة للأكزيما.' }
         ],
       },
-  {
+{
         id: 'shea-butter',
         name: 'زبدة الشيا',
         scientific_name: 'Butyrospermum Parkii Butter',
@@ -195,7 +195,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد تكون ثقيلة على بشرة الوجه الدهنية أو المعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'cocoa-butter',
         name: 'زبدة الكاكاو',
         scientific_name: 'Theobroma Cacao Seed Butter',
@@ -210,7 +210,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'كوميدوجينيك (قد تسد المسام) وغير مناسبة للوجه إذا كانت البشرة دهنية.' }
         ],
       },
-  {
+{
         id: 'mango-butter',
         name: 'زبدة المانجو',
         scientific_name: 'Mangifera Indica Seed Butter',
@@ -225,7 +225,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أخف قواما من زبدة الشيا والكاكاو، مما يجعلها خيارا جيدا للكريمات الأقل دهنية.' }
         ],
       },
-  {
+{
         id: 'tamanu',
         name: 'زيت التامانو',
         scientific_name: 'Calophyllum Inophyllum Seed Oil',
@@ -240,7 +240,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'له رائحة عشبية قوية قد لا تكون مقبولة للجميع.' }
         ],
       },
-  {
+{
         id: 'neem',
         name: 'زيت النيم',
         scientific_name: 'Azadirachta Indica Seed Oil',
@@ -255,7 +255,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'له رائحة قوية جدا وغير مستساغة.' }
         ],
       },
-  {
+{
         id: 'black-seed',
         name: 'زيت حبة البركة',
         scientific_name: 'Nigella Sativa Seed Oil',
@@ -268,7 +268,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pomegranate-seed',
         name: 'زيت بذور الرمان',
         scientific_name: 'Punica Granatum Seed Oil',
@@ -281,7 +281,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'prickly-pear-seed',
         name: 'زيت بذور التين الشوكي',
         scientific_name: 'Opuntia Ficus-Indica Seed Oil',
@@ -296,7 +296,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت فاخر وغني بفيتامين K، ممتاز للمساعدة في تقليل مظهر الهالات السوداء.' }
         ],
       },
-  {
+{
         id: 'seabuckthorn',
         name: 'زيت نبق البحر',
         scientific_name: 'Hippophae Rhamnoides Fruit Oil',
@@ -311,7 +311,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'لونه برتقالي غامق وقد يصبغ البشرة والملابس مؤقتا. يفضل استخدامه ليلا.' }
         ],
       },
-  {
+{
         id: 'borage-oil',
         name: 'زيت لسان الثور',
         scientific_name: 'Borago Officinalis Seed Oil',
@@ -326,7 +326,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني جدا بحمض جاما لينولينيك (GLA)، ممتاز للبشرة التي تعاني من الإكزيما والتهيج.' }
         ],
       },
-  {
+{
         id: 'evening-primrose',
         name: 'زيت زهرة الربيع المسائية',
         scientific_name: 'Oenothera Biennis Oil',
@@ -339,7 +339,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'marula',
         name: 'زيت المارولا',
         scientific_name: 'Sclerocarya Birrea Seed Oil',
@@ -352,7 +352,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'moringa',
         name: 'زيت المورينجا',
         scientific_name: 'Moringa Oleifera Seed Oil',
@@ -365,7 +365,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'broccoli-seed',
         name: 'زيت بذور البروكلي',
         scientific_name: 'Brassica Oleracea Italica Seed Oil',
@@ -380,7 +380,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعطي انزلاقا ولمعانا للشعر يشبه تأثير السيليكون.' }
         ],
       },
-  {
+{
         id: 'abyssinian',
         name: 'الزيت الحبشي',
         scientific_name: 'Crambe Abyssinica Seed Oil',
@@ -395,7 +395,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'خفيف الوزن للغاية ومقاوم للحرارة، بديل ممتاز للسيليكونات المتطايرة.' }
         ],
       },
-  {
+{
         id: 'amla-oil',
         name: 'زيت الأملا',
         scientific_name: 'Phyllanthus Emblica Fruit Extract',
@@ -410,7 +410,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يغمق لون الشعر الفاتح مع الاستخدام المتكرر.' }
         ],
       },
-  {
+{
         id: 'fenugreek-oil',
         name: 'زيت الحلبة',
         scientific_name: 'Trigonella Foenum-Graecum Seed Oil',
@@ -425,7 +425,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'له رائحة قوية تشبه شراب القيقب قد تبقى في الشعر.' }
         ],
       },
-  {
+{
         id: 'pumpkin-seed',
         name: 'زيت بذور اليقطين',
         scientific_name: 'Cucurbita Pepo Seed Oil',
@@ -440,7 +440,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يُعتقد أنه يساعد في منع تساقط الشعر الوراثي عن طريق تثبيط إنزيم 5-alpha-reductase.' }
         ],
       },
-  {
+{
         id: 'flaxseed',
         name: 'زيت بذور الكتان',
         scientific_name: 'Linum Usitatissimum Seed Oil',
@@ -453,7 +453,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'macadamia',
         name: 'زيت المكاديميا',
         scientific_name: 'Macadamia Ternifolia Seed Oil',
@@ -468,7 +468,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'apricot-kernel',
         name: 'زيت بذور المشمش',
         scientific_name: 'Prunus Armeniaca Kernel Oil',
@@ -483,7 +483,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مشابه لزيت اللوز الحلو في القوام والفوائد.' }
         ],
       },
-  {
+{
         id: 'safflower',
         name: 'زيت القرطم',
         scientific_name: 'Carthamus Tinctorius Seed Oil',
@@ -498,7 +498,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'خيار ممتاز للبشرة المعرضة لحب الشباب بسبب محتواه العالي من حمض اللينوليك.' }
         ],
       },
-  {
+{
         id: 'sesame',
         name: 'زيت السمسم',
         scientific_name: 'Sesamum Indicum Seed Oil',
@@ -511,7 +511,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'camellia-seed',
         name: 'زيت بذور الكاميليا',
         scientific_name: 'Camellia Oleifera Seed Oil',
@@ -524,7 +524,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'baobab',
         name: 'زيت الباوباب',
         scientific_name: 'Adansonia Digitata Seed Oil',
@@ -537,7 +537,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'red-raspberry-seed',
         name: 'زيت بذور التوت الأحمر',
         scientific_name: 'Rubus Idaeus Seed Oil',
@@ -552,7 +552,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'لا يمكن الاعتماد عليه كواقي شمسي منفرد، ولكنه يعزز الحماية عند دمجه مع فلاتر الشمس.' }
         ],
       },
-  {
+{
         id: 'cranberry-seed',
         name: 'زيت بذور التوت البري',
         scientific_name: 'Vaccinium Macrocarpon Seed Oil',
@@ -565,7 +565,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'wheat-germ',
         name: 'زيت جنين القمح',
         scientific_name: 'Triticum Vulgare Germ Oil',
@@ -581,7 +581,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية القمح أو الغلوتين.' }
         ],
       },
-  {
+{
         id: 'kukui-nut',
         name: 'زيت جوز الكوكوي',
         scientific_name: 'Aleurites Moluccanus Seed Oil',
@@ -596,7 +596,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'meadowfoam-seed',
         name: 'زيت بذور الميدوفوم',
         scientific_name: 'Limnanthes Alba Seed Oil',
@@ -611,7 +611,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مستقر جدا ويساعد على إطالة عمر الزيوت الأخرى في التركيبة.' }
         ],
       },
-  {
+{
         id: 'calendula',
         name: 'زيت الكاليندولا (الآذريون)',
         scientific_name: 'Calendula Officinalis Flower Extract',
@@ -627,7 +627,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية نباتات عائلة الأقحوان (مثل الرجيد والأقحوان).' }
         ],
       },
-  {
+{
         id: 'cress-seed-oil',
         name: 'زيت حب الرشاد',
         scientific_name: 'Lepidium Sativum Seed Oil',
@@ -640,7 +640,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lupine-oil',
         name: 'زيت الترمس',
         scientific_name: 'Lupinus Albus Seed Oil',
@@ -655,7 +655,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الترمس أو البقوليات.' }
         ],
       },
-  {
+{
         id: 'costus-root-oil',
         name: 'زيت القسط الهندي',
         scientific_name: 'Saussurea Costus Root Oil',
@@ -671,7 +671,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب حساسية لبعض الأشخاص.' }
         ],
       },
-  {
+{
         id: 'harmal-oil',
         name: 'زيت الحرمل',
         scientific_name: 'Peganum Harmala Seed Oil',
@@ -687,7 +687,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه داخليا أو بتركيزات عالية دون إشراف متخصص.' }
         ],
       },
-  {
+{
         id: 'lettuce-seed-oil',
         name: 'زيت بذور الخس',
         scientific_name: 'Lactuca Sativa Seed Oil',
@@ -700,7 +700,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'garlic-oil',
         name: 'زيت الثوم',
         scientific_name: 'Allium Sativum Bulb Oil',
@@ -716,7 +716,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب تهيجا للفروة الحساسة إذا استخدم بتركيز عالٍ.' }
         ],
       },
-  {
+{
         id: 'emu',
         name: 'زيت الإيمو',
         scientific_name: 'Dromaius Novaehollandiae Oil',
@@ -731,7 +731,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'منتج حيواني قد لا يناسب الجميع.' }
         ],
       },
-  {
+{
         id: 'tea-tree-essential',
         name: 'زيت شجرة الشاي العطري',
         scientific_name: 'Melaleuca Alternifolia Leaf Oil',
@@ -747,7 +747,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب تهيجا للبشرة الحساسة جدا.' }
         ],
       },
-  {
+{
         id: 'lavender-essential',
         name: 'زيت اللافندر العطري',
         scientific_name: 'Lavandula Angustifolia Oil',
@@ -763,7 +763,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يحتوي على مسببات حساسية طبيعية مثل لينالول وجيرانيول. يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية اللافندر.' }
         ],
       },
-  {
+{
         id: 'rosemary-essential',
         name: 'زيت إكليل الجبل العطري',
         scientific_name: 'Rosmarinus Officinalis Leaf Oil',
@@ -779,7 +779,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح به أثناء الحمل، أو لمن يعانون من ضغط دم مرتفع أو الصرع دون استشارة طبيب.' }
         ],
       },
-  {
+{
         id: 'peppermint-essential',
         name: 'زيت النعناع الفلفلي العطري',
         scientific_name: 'Mentha Piperita Oil',
@@ -795,7 +795,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه للأطفال الصغار أو أثناء الحمل.' }
         ],
       },
-  {
+{
         id: 'frankincense-essential',
         name: 'زيت اللبان العطري',
         scientific_name: 'Boswellia Carterii Oil',
@@ -810,7 +810,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يتم استخدامه بتركيزات منخفضة في المنتجات النهائية.' }
         ],
       },
-  {
+{
         id: 'chamomile-essential',
         name: 'زيت البابونج العطري',
         scientific_name: 'Chamomilla Recutita (German) / Anthemis Nobilis (Roman) Flower Oil',
@@ -826,7 +826,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية نباتات عائلة الأقحوان.' }
         ],
       },
-  {
+{
         id: 'lemon-essential',
         name: 'زيت الليمون العطري',
         scientific_name: 'Citrus Limon Peel Oil',
@@ -842,7 +842,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون مهيجا للبشرة الحساسة جدا.' }
         ],
       },
-  {
+{
         id: 'orange-essential',
         name: 'زيت البرتقال العطري',
         scientific_name: 'Citrus Sinensis Peel Oil',
@@ -857,7 +857,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'قد يسبب حساسية للضوء. يفضل تجنب التعرض للشمس بعد استخدامه في المنتجات التي تترك على الجلد.' }
         ],
       },
-  {
+{
         id: 'eucalyptus-essential',
         name: 'زيت الأوكالبتوس العطري',
         scientific_name: 'Eucalyptus Globulus Leaf Oil',
@@ -873,7 +873,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه للأطفال الصغار أو بالقرب من الوجه، أو من قبل مرضى الربو.' }
         ],
       },
-  {
+{
         id: 'geranium-essential',
         name: 'زيت الجيرانيوم العطري',
         scientific_name: 'Pelargonium Graveolens Oil',
@@ -888,7 +888,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يتم استخدامه بتركيزات منخفضة في المنتجات النهائية.' }
         ],
       },
-  {
+{
         id: 'clary-sage-essential',
         name: 'زيت المريمية العطري',
         scientific_name: 'Salvia Sclarea Oil',
@@ -904,7 +904,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا يستخدم أثناء الحمل أو الرضاعة. لا يستخدم مع الكحول لأنه قد يزيد من تأثيره.' }
         ],
       },
-  {
+{
         id: 'cedarwood-essential',
         name: 'زيت خشب الأرز العطري',
         scientific_name: 'Cedrus Atlantica Wood Oil',
@@ -919,7 +919,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يتم استخدامه بتركيزات منخفضة في المنتجات النهائية.' }
         ],
       },
-  {
+{
         id: 'ylang-ylang-essential',
         name: 'زيت الإيلنغ العطري',
         scientific_name: 'Cananga Odorata Flower Oil',
@@ -934,7 +934,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'رائحته قوية جدا، قد تسبب الصداع للبعض.' }
         ],
       },
-  {
+{
         id: 'murumuru-butter',
         name: 'زبدة المورومورو',
         scientific_name: 'Astrocaryum Murumuru Seed Butter',
@@ -949,7 +949,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بديل ممتاز للسيليكون في منتجات الشعر، حيث يغلف الشعر بطبقة خفيفة وواقية دون إثقاله.' }
         ],
       },
-  {
+{
         id: 'cupuacu-butter',
         name: 'زبدة الكوبواسو',
         scientific_name: 'Theobroma Grandiflorum Seed Butter',
@@ -964,7 +964,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يمكنها امتصاص ما يصل إلى 4 أضعاف وزنها من الماء، مما يجعلها مرطبا فائقا للبشرة والشعر شديدي الجفاف.' }
         ],
       },
-  {
+{
         id: 'kokum-butter',
         name: 'زبدة الكوكوم',
         scientific_name: 'Garcinia Indica Seed Butter',
@@ -979,7 +979,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'تتميز بقوامها الصلب الذي يذوب عند ملامسة الجلد، وهي خيار ممتاز للبشرة المعرضة لحب الشباب لأنها لا تسد المسام.' }
         ],
       },
-  {
+{
         id: 'buriti-oil',
         name: 'زيت البوريتي',
         scientific_name: 'Mauritia Flexuosa Fruit Oil',
@@ -995,7 +995,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'لونه أحمر غامق وقد يصبغ البشرة مؤقتا.' }
         ],
       },
-  {
+{
         id: 'acai-oil',
         name: 'زيت الآساي',
         scientific_name: 'Euterpe Oleracea Fruit Oil',
@@ -1008,7 +1008,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'brazil-nut-oil',
         name: 'زيت الجوز البرازيلي',
         scientific_name: 'Bertholletia Excelsa Seed Oil',
@@ -1023,7 +1023,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'andiroba-oil',
         name: 'زيت الأنديروبا',
         scientific_name: 'Carapa Guaianensis Seed Oil',
@@ -1036,7 +1036,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pequi-oil',
         name: 'زيت البيكي',
         scientific_name: 'Caryocar Brasiliense Fruit Oil',
@@ -1051,7 +1051,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت شائع في البرازيل، ممتاز للشعر المجعد لتعزيز التحديد والتحكم في الهيشان.' }
         ],
       },
-  {
+{
         id: 'mongongo-oil',
         name: 'زيت المونجونجو',
         scientific_name: 'Schinziophyton Rautanenii Kernel Oil',
@@ -1066,7 +1066,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يكون طبقة واقية على الشعر والجلد عند تعرضه للأشعة فوق البنفسجية، مما يوفر حماية طبيعية.' }
         ],
       },
-  {
+{
         id: 'kalahari-melon-oil',
         name: 'زيت بطيخ كالاهاري',
         scientific_name: 'Citrullus Lanatus (Watermelon) Seed Oil',
@@ -1081,7 +1081,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت خفيف جدا وممتاز للبشرة الدهنية والمعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'cherry-kernel-oil',
         name: 'زيت نواة الكرز',
         scientific_name: 'Prunus Avium Seed Oil',
@@ -1094,7 +1094,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'plum-kernel-oil',
         name: 'زيت نواة البرقوق',
         scientific_name: 'Prunus Domestica Seed Oil',
@@ -1109,7 +1109,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'له رائحة لوزية طبيعية جميلة.' }
         ],
       },
-  {
+{
         id: 'chia-seed-oil',
         name: 'زيت بذور الشيا',
         scientific_name: 'Salvia Hispanica Seed Oil',
@@ -1122,7 +1122,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hazelnut-oil',
         name: 'زيت البندق',
         scientific_name: 'Corylus Avellana Seed Oil',
@@ -1137,7 +1137,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'walnut-oil',
         name: 'زيت الجوز',
         scientific_name: 'Juglans Regia Seed Oil',
@@ -1152,7 +1152,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'kiwi-seed-oil',
         name: 'زيت بذور الكيوي',
         scientific_name: 'Actinidia Chinensis Seed Oil',
@@ -1165,7 +1165,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'poppy-seed-oil',
         name: 'زيت بذور الخشخاش',
         scientific_name: 'Papaver Somniferum Seed Oil',
@@ -1178,7 +1178,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tomato-seed-oil',
         name: 'زيت بذور الطماطم',
         scientific_name: 'Solanum Lycopersicum Seed Oil',
@@ -1191,7 +1191,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cucumber-seed-oil',
         name: 'زيت بذور الخيار',
         scientific_name: 'Cucumis Sativus Seed Oil',
@@ -1204,7 +1204,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'blueberry-seed-oil',
         name: 'زيت بذور التوت الأزرق',
         scientific_name: 'Vaccinium Corymbosum Seed Oil',
@@ -1217,7 +1217,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'oat-kernel-oil',
         name: 'زيت نواة الشوفان',
         scientific_name: 'Avena Sativa Kernel Oil',
@@ -1232,7 +1232,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'ممتاز للبشرة الحساسة جدا والمعرضة للأكزيما.' }
         ],
       },
-  {
+{
         id: 'coffee-bean-oil',
         name: 'زيت حبوب البن',
         scientific_name: 'Coffea Arabica Seed Oil',
@@ -1245,7 +1245,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'chaulmoogra-oil',
         name: 'زيت الشولموجرا',
         scientific_name: 'Hydnocarpus Wightianus Seed Oil',
@@ -1260,7 +1260,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم تقليديا في طب الأيورفيدا لعلاج الأمراض الجلدية المزمنة.' }
         ],
       },
-  {
+{
         id: 'perilla-seed-oil',
         name: 'زيت بذور البريلا',
         scientific_name: 'Perilla Ocymoides Seed Oil',
@@ -1275,7 +1275,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت جاف (سريع الامتصاص)، ممتاز للبشرة الحساسة والمتهيجة.' }
         ],
       },
-  {
+{
         id: 'elemi-essential',
         name: 'زيت الإليمي العطري',
         scientific_name: 'Canarium Luzonicum Gum Oil',
@@ -1290,7 +1290,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'من نفس عائلة اللبان والمر، له رائحة ليمونية راتنجية.' }
         ],
       },
-  {
+{
         id: 'galbanum-essential',
         name: 'زيت الجلبانوم العطري',
         scientific_name: 'Ferula Galbaniflua Resin Oil',
@@ -1305,7 +1305,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'له رائحة خضراء ترابية قوية، ويستخدم في العطور الفاخرة.' }
         ],
       },
-  {
+{
         id: 'palo-santo-essential',
         name: 'زيت بالو سانتو العطري',
         scientific_name: 'Bursera Graveolens Wood Oil',
@@ -1320,7 +1320,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يجب التأكد من أنه من مصادر مستدامة.' }
         ],
       },
-  {
+{
         id: 'hinoki-essential',
         name: 'زيت الهينوكي العطري',
         scientific_name: 'Chamaecyparis Obtusa Wood Oil',
@@ -1333,7 +1333,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'davana-essential',
         name: 'زيت الدافانا العطري',
         scientific_name: 'Artemisia Pallens Flower Oil',
@@ -1348,7 +1348,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'له رائحة فاكهية معقدة تتغير على جلد كل شخص.' }
         ],
       },
-  {
+{
         id: 'osmanthus-essential',
         name: 'زيت الأوسمانثوس العطري',
         scientific_name: 'Osmanthus Fragrans Flower Extract',
@@ -1363,7 +1363,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مكلف جدا، يستخدم في العطور الفاخرة.' }
         ],
       },
-  {
+{
         id: 'petitgrain-essential',
         name: 'زيت البيتيتغرين العطري',
         scientific_name: 'Citrus Aurantium Amara Leaf/Twig Oil',
@@ -1378,7 +1378,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يُستخرج من أوراق وأغصان شجرة البرتقال المر، وهو أقل حساسية للضوء من زيوت الحمضيات القشرية.' }
         ],
       },
-  {
+{
         id: 'green-mandarin-essential',
         name: 'زيت المندرين الأخضر العطري',
         scientific_name: 'Citrus Nobilis Peel Oil',
@@ -1393,7 +1393,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب حساسية للضوء.' }
         ],
       },
-  {
+{
         id: 'yuzu-essential',
         name: 'زيت اليوزو العطري',
         scientific_name: 'Citrus Junos Peel Oil',
@@ -1408,7 +1408,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب حساسية للضوء.' }
         ],
       },
-  {
+{
         id: 'spearmint-essential',
         name: 'زيت النعناع السنبلي العطري',
         scientific_name: 'Mentha Spicata Herb Oil',
@@ -1423,7 +1423,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'ألطف من زيت النعناع الفلفلي لأنه يحتوي على كمية أقل بكثير من المنثول.' }
         ],
       },
-  {
+{
         id: 'basil-essential',
         name: 'زيت الريحان العطري',
         scientific_name: 'Ocimum Basilicum Oil',
@@ -1436,7 +1436,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'marjoram-essential',
         name: 'زيت المردقوش العطري',
         scientific_name: 'Origanum Majorana Leaf Oil',
@@ -1449,7 +1449,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fennel-essential',
         name: 'زيت الشمر العطري',
         scientific_name: 'Foeniculum Vulgare Oil',
@@ -1464,7 +1464,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح به أثناء الحمل أو لمن يعانون من الصرع.' }
         ],
       },
-  {
+{
         id: 'spikenard-essential',
         name: 'زيت السنبل العطري',
         scientific_name: 'Nardostachys Jatamansi Oil',
@@ -1477,7 +1477,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'niaouli-essential',
         name: 'زيت النياولي العطري',
         scientific_name: 'Melaleuca Viridiflora Leaf Oil',
@@ -1492,7 +1492,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'من نفس عائلة شجرة الشاي والأوكالبتوس، ولكنه ألطف على الجلد.' }
         ],
       },
-  {
+{
         id: 'ravensara-essential',
         name: 'زيت الرافنسارا العطري',
         scientific_name: 'Ravensara Aromatica Leaf Oil',
@@ -1505,7 +1505,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lime-essential',
         name: 'زيت اللايم العطري',
         scientific_name: 'Citrus Aurantifolia Oil',
@@ -1520,7 +1520,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'الزيت المعصور على البارد (Expressed) يسبب حساسية شديدة للضوء. الزيت المقطر بالبخار (Distilled) آمن للاستخدام.' }
         ],
       },
-  {
+{
         id: 'blue-cypress-essential',
         name: 'زيت السرو الأزرق العطري',
         scientific_name: 'Callitris Intratropica Wood Oil',
@@ -1535,7 +1535,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يحتوي على مركب الغوايازولين الذي يعطيه لونا أزرقا وخصائص مهدئة.' }
         ],
       },
-  {
+{
         id: 'lentisk-oil',
         name: 'زيت الضرو (المستكة)',
         scientific_name: 'Pistacia Lentiscus Fruit Oil',
@@ -1550,7 +1550,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت تقليدي ثمين في الجزائر، يستخدم لعلاج الحروق، الأكزيما، والتهابات الجلد بفضل خصائصه المرممة القوية.' }
         ],
       },
-  {
+{
         id: 'cade-oil',
         name: 'زيت القطران (العرعار)',
         scientific_name: 'Juniperus Oxycedrus Wood Tar',
@@ -1568,7 +1568,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا يستخدم أثناء الحمل أو الرضاعة أو على الجروح المفتوحة.' }
         ],
       },
-  {
+{
         id: 'henna-oil',
         name: 'زيت الحناء',
         scientific_name: 'Lawsonia Inermis Extract',
@@ -1584,7 +1584,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يضفي لونا نحاسيا خفيفا على الشعر الفاتح جدا مع الاستخدام المتكرر.' }
         ],
       },
-  {
+{
         id: 'arugula-seed-oil',
         name: 'زيت الجرجير',
         scientific_name: 'Eruca Sativa Seed Oil',
@@ -1599,7 +1599,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'زيت مشهور جدا في منطقة الخليج والشرق الأوسط لفوائده في تعزيز نمو الشعر وكثافته.' }
         ],
       },
-  {
+{
         id: 'mustard-oil',
         name: 'زيت الخردل',
         scientific_name: 'Brassica Nigra (Mustard) Seed Oil',
@@ -1615,7 +1615,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يحتوي على نسبة عالية من حمض الإيروسيك. استخدامه الموضعي على نطاق واسع مقيد في بعض البلدان (مثل الاتحاد الأوروبي) بسبب مخاوف من الامتصاص الجلدي.' }
         ],
       },
-  {
+{
         id: 'date-seed-oil',
         name: 'زيت نواة التمر',
         scientific_name: 'Phoenix Dactylifera Seed Oil',
@@ -1628,7 +1628,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pistachio-oil',
         name: 'زيت الفستق',
         scientific_name: 'Pistacia Vera Seed Oil',
@@ -1643,7 +1643,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'watercress-oil',
         name: 'زيت الجرجير المائي',
         scientific_name: 'Nasturtium Officinale Seed Oil',
@@ -1656,7 +1656,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carob-oil',
         name: 'زيت الخروب',
         scientific_name: 'Ceratonia Siliqua Seed Oil',
@@ -1669,7 +1669,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'coriander-seed-oil',
         name: 'زيت بذور الكزبرة',
         scientific_name: 'Coriandrum Sativum Seed Oil',
@@ -1682,7 +1682,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'bitter-almond-oil',
         name: 'زيت اللوز المر',
         scientific_name: 'Prunus Amygdalus Amara Kernel Oil',
@@ -1698,7 +1698,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'cumin-seed-oil',
         name: 'زيت بذور الكمون',
         scientific_name: 'Cuminum Cyminum Seed Oil',
@@ -1711,7 +1711,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'parsley-seed-oil',
         name: 'زيت بذور البقدونس',
         scientific_name: 'Carum Petroselinum Seed Oil',
@@ -1724,7 +1724,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'radish-seed-oil',
         name: 'زيت بذور الفجل',
         scientific_name: 'Raphanus Sativus Seed Oil',
@@ -1739,7 +1739,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعطي ملمسا انزلاقيا مشابها للسيليكونات دون أن يكون سيليكونا.' }
         ],
       },
-  {
+{
         id: 'papaya-seed-oil',
         name: 'زيت بذور البابايا',
         scientific_name: 'Carica Papaya Seed Oil',
@@ -1754,7 +1754,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يحتوي على إنزيم الباباين الذي يساعد على تقشير خلايا الجلد الميتة بلطف.' }
         ],
       },
-  {
+{
         id: 'guava-seed-oil',
         name: 'زيت بذور الجوافة',
         scientific_name: 'Psidium Guajava Seed Oil',
@@ -1767,7 +1767,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'passionfruit-seed-oil',
         name: 'زيت بذور فاكهة العاطفة (ماراكوجا)',
         scientific_name: 'Passiflora Edulis Seed Oil',
@@ -1782,7 +1782,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني جدا بحمض اللينوليك، مما يجعله ممتازا للبشرة المعرضة لحب الشباب والجافة.' }
         ],
       },
-  {
+{
         id: 'pecan-oil',
         name: 'زيت البقان',
         scientific_name: 'Carya Illinoinensis Seed Oil',
@@ -1797,7 +1797,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية المكسرات.' }
         ],
       },
-  {
+{
         id: 'rice-bran-oil',
         name: 'زيت نخالة الأرز',
         scientific_name: 'Oryza Sativa Bran Oil',
@@ -1812,7 +1812,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني بمركب جاما أوريزانول، وهو مضاد أكسدة قوي.' }
         ],
       },
-  {
+{
         id: 'cotton-seed-oil',
         name: 'زيت بذور القطن',
         scientific_name: 'Gossypium Herbaceum Seed Oil',
@@ -1827,7 +1827,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون كوميدوجينيك.' }
         ],
       },
-  {
+{
         id: 'elderberry-seed-oil',
         name: 'زيت بذور البلسان',
         scientific_name: 'Sambucus Nigra Seed Oil',
@@ -1840,7 +1840,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cloudberry-seed-oil',
         name: 'زيت بذور التوت السحابي',
         scientific_name: 'Rubus Chamaemorus Seed Oil',
@@ -1853,7 +1853,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lingonberry-seed-oil',
         name: 'زيت بذور عنب الثور',
         scientific_name: 'Vaccinium Vitis-Idaea Seed Oil',
@@ -1866,7 +1866,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'blackcurrant-seed-oil',
         name: 'زيت بذور الكشمش الأسود',
         scientific_name: 'Ribes Nigrum Seed Oil',
@@ -1881,7 +1881,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني بكل من أحماض أوميغا 3 (ALA) وأوميغا 6 (GLA)، مما يجعله ممتازا لتهدئة الالتهابات.' }
         ],
       },
-  {
+{
         id: 'celery-seed-oil-essential',
         name: 'زيت بذور الكرفس العطري',
         scientific_name: 'Apium Graveolens Seed Oil',
@@ -1894,7 +1894,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dill-essential-oil',
         name: 'زيت الشبت العطري',
         scientific_name: 'Anethum Graveolens Herb Oil',
@@ -1907,7 +1907,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'anise-essential-oil',
         name: 'زيت اليانسون العطري',
         scientific_name: 'Pimpinella Anisum Seed Oil',
@@ -1920,7 +1920,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'star-anise-essential-oil',
         name: 'زيت اليانسون النجمي العطري',
         scientific_name: 'Illicium Verum Fruit/Seed Oil',
@@ -1935,7 +1935,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مصدر حمض الشيكيميك، الذي يستخدم في صناعة الأدوية المضادة للفيروسات.' }
         ],
       },
-  {
+{
         id: 'laurel-berry-oil',
         name: 'زيت غار حلب',
         scientific_name: 'Laurus Nobilis Fruit Oil',
@@ -1950,7 +1950,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'المكون الرئيسي في صابون حلب التقليدي. له خصائص تطهيرية وعلاجية قوية.' }
         ],
       },
-  {
+{
         id: 'spearmint-oil',
         name: 'زيت النعناع السنبلي',
         scientific_name: 'Mentha Spicata Herb Oil',
@@ -1965,7 +1965,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'ألطف بكثير من النعناع الفلفلي لأنه يحتوي على كمية قليلة من المنثول.' }
         ],
       },
-  {
+{
         id: 'caraway-seed-oil',
         name: 'زيت بذور الكراوية',
         scientific_name: 'Carum Carvi Seed Oil',
@@ -1978,7 +1978,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'magnolia-bark-oil',
         name: 'زيت لحاء الماغنوليا',
         scientific_name: 'Magnolia Officinalis Bark Extract',
@@ -1991,7 +1991,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ambrette-seed-oil',
         name: 'زيت بذور المسك',
         scientific_name: 'Abelmoschus Moschatus Seed Oil',
@@ -2006,7 +2006,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم في العطور الفاخرة كبديل نباتي لرائحة المسك الحيواني.' }
         ],
       },
-  {
+{
         id: 'cassia-essential-oil',
         name: 'زيت الكاسيا العطري',
         scientific_name: 'Cinnamomum Cassia Leaf Oil',
@@ -2021,7 +2021,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'قوي جدا ومهيج للجلد. يجب استخدامه بتركيزات منخفضة للغاية وبحذر شديد.' }
         ],
       },
-  {
+{
         id: 'litsea-cubeba-essential-oil',
         name: 'زيت ليتسيا كوبيبا العطري',
         scientific_name: 'Litsea Cubeba Fruit Oil',
@@ -2034,7 +2034,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tuberose-oil',
         name: 'زيت مسك الروم',
         scientific_name: 'Polianthes Tuberosa Flower Oil',
@@ -2049,7 +2049,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مكلف جدا، يستخدم بشكل أساسي في صناعة العطور الراقية.' }
         ],
       },
-  {
+{
         id: 'violet-leaf-oil',
         name: 'زيت ورق البنفسج',
         scientific_name: 'Viola Odorata Leaf Extract',
@@ -2062,7 +2062,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fir-needle-essential-oil',
         name: 'زيت إبر التنوب العطري',
         scientific_name: 'Abies Sibirica Oil',
@@ -2075,7 +2075,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pine-needle-essential-oil',
         name: 'زيت إبر الصنوبر العطري',
         scientific_name: 'Pinus Sylvestris Leaf Oil',
@@ -2088,7 +2088,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cajeput-essential-oil',
         name: 'زيت الكاجيبوت العطري',
         scientific_name: 'Melaleuca Leucadendron Cajaputi Oil',
@@ -2103,7 +2103,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'من نفس عائلة شجرة الشاي، له رائحة طبية قوية.' }
         ],
       },
-  {
+{
         id: 'palmarosa-essential-oil',
         name: 'زيت بالماروزا العطري',
         scientific_name: 'Cymbopogon Martini Oil',
@@ -2118,7 +2118,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'له رائحة وردية ليمونية، وهو ممتاز للبشرة الدهنية والمعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'thuja-essential-oil',
         name: 'زيت العفص العطري',
         scientific_name: 'Thuja Occidentalis Leaf Oil',
@@ -2133,7 +2133,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يحتوي على مركب الثوجون الذي قد يكون ساما للأعصاب بتركيزات عالية. يجب استخدامه بحذر شديد وبتركيزات منخفضة جدا.' }
         ],
       },
-  {
+{
         id: 'sodium-lauryl-sulfate',
         name: 'صوديوم لوريل سلفات (SLS)',
         scientific_name: 'Sodium Lauryl Sulfate',
@@ -2149,7 +2149,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح به للشعر الجاف، المصبوغ، أو فروة الرأس الحساسة والمعرضة للأكزيما.' }
         ],
       },
-  {
+{
         id: 'sodium-laureth-sulfate',
         name: 'صوديوم لوريث سلفات (SLES)',
         scientific_name: 'Sodium Laureth Sulfate',
@@ -2165,7 +2165,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مخاوف تلوثه بـ 1,4-dioxane تم التعامل معها إلى حد كبير في الصناعة الحديثة من خلال عمليات التنقية.' }
         ],
       },
-  {
+{
         id: 'ammonium-lauryl-sulfate',
         name: 'كبريتات لوريل الأمونيوم (ALS)',
         scientific_name: 'Ammonium Lauryl Sulfate',
@@ -2180,7 +2180,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مشابه لـ SLS في قوته وقد يكون مجففا ومهيجا، خاصة لفروة الرأس الحساسة.' }
         ],
       },
-  {
+{
         id: 'ammonium-laureth-sulfate',
         name: 'كبريتات لوريث الأمونيوم (ALES)',
         scientific_name: 'Ammonium Laureth Sulfate',
@@ -2195,7 +2195,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مشابه لـ SLES، وهو ألطف من ALS ولكنه لا يزال منظفا قويا.' }
         ],
       },
-  {
+{
         id: 'sodium-c14-16-olefin-sulfonate',
         name: 'صوديوم C14-16 أوليفين سلفونات',
         scientific_name: 'Sodium C14-16 Olefin Sulfonate',
@@ -2210,7 +2210,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'على الرغم من أنه "خالٍ من السلفات"، إلا أنه منظف قوي جدا ويمكن أن يكون مجففا تقريبا مثل SLES.' }
         ],
       },
-  {
+{
         id: 'sodium-cocoyl-isethionate',
         name: 'صوديوم كوكويل إيزثيونات (SCI)',
         scientific_name: 'Sodium Cocoyl Isethionate',
@@ -2225,7 +2225,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'منظف لطيف جدا مشتق من جوز الهند، مثالي للشامبو الصلب والمنتجات المخصصة للشعر الجاف أو المصبوغ.' }
         ],
       },
-  {
+{
         id: 'sodium-lauroyl-methyl-isethionate',
         name: 'صوديوم لورويل ميثيل إيزثيونات (SLMI)',
         scientific_name: 'Sodium Lauroyl Methyl Isethionate',
@@ -2240,7 +2240,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أحد أفضل بدائل السلفات، يوفر رغوة ممتازة مع الحفاظ على لطفه وقابل للتحلل بيولوجيا.' }
         ],
       },
-  {
+{
         id: 'disodium-laureth-sulfosuccinate',
         name: 'ثنائي الصوديوم لوريث سلفوساكسينات',
         scientific_name: 'Disodium Laureth Sulfosuccinate',
@@ -2255,7 +2255,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'على الرغم من اسمه، فهو ليس سلفات. جزيئاته كبيرة ولا تخترق الجلد، مما يجعله لطيفا جدا وغير مهيج.' }
         ],
       },
-  {
+{
         id: 'sodium-lauroyl-sarcosinate',
         name: 'صوديوم لورويل ساركوسينات',
         scientific_name: 'Sodium Lauroyl Sarcosinate',
@@ -2270,7 +2270,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مشتق من حمض أميني، وهو لطيف على الشعر والجلد.' }
         ],
       },
-  {
+{
         id: 'sodium-methyl-cocoyl-taurate',
         name: 'صوديوم ميثيل كوكويل توريت',
         scientific_name: 'Sodium Methyl Cocoyl Taurate',
@@ -2285,7 +2285,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'منظف ممتاز مشتق من حمض أميني، فعال حتى في وجود الماء العسر والزيوت.' }
         ],
       },
-  {
+{
         id: 'cocamidopropyl-betaine',
         name: 'كوكاميدوبروبيل بيتين (CAPB)',
         scientific_name: 'Cocamidopropyl Betaine',
@@ -2301,7 +2301,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب حساسية تلامسية لدى بعض الأفراد بسبب الشوائب الناتجة عن عملية التصنيع، على الرغم من أن هذا أصبح نادرا.' }
         ],
       },
-  {
+{
         id: 'cocamidopropyl-hydroxysultaine',
         name: 'كوكاميدوبروبيل هيدروكسي سولتين (CAHS)',
         scientific_name: 'Cocamidopropyl Hydroxysultaine',
@@ -2316,7 +2316,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعتبر نسخة محسنة وأكثر لطفا من Cocamidopropyl Betaine مع رغوة أفضل.' }
         ],
       },
-  {
+{
         id: 'lauramidopropyl-betaine',
         name: 'لوراميدوبروبيل بيتين',
         scientific_name: 'Lauramidopropyl Betaine',
@@ -2329,7 +2329,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'disodium-cocoamphodiacetate',
         name: 'ثنائي الصوديوم كوكو أمفو ثنائي الأسيتات',
         scientific_name: 'Disodium Cocoamphodiacetate',
@@ -2344,7 +2344,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'لطيف جدا، يستخدم في شامبوهات الأطفال والمنظفات المخصصة للبشرة الحساسة.' }
         ],
       },
-  {
+{
         id: 'sodium-lauroamphoacetate',
         name: 'صوديوم لورو أمفو أسيتات',
         scientific_name: 'Sodium Lauroamphoacetate',
@@ -2357,7 +2357,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'babassuamidopropyl-betaine',
         name: 'باباسو أميدوبروبيل بيتين',
         scientific_name: 'Babassuamidopropyl Betaine',
@@ -2372,7 +2372,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مشتق من زيت الباباسو، وهو بديل شائع لـ Cocamidopropyl Betaine في التركيبات الطبيعية.' }
         ],
       },
-  {
+{
         id: 'decyl-glucoside',
         name: 'ديسيل جلوكوسايد',
         scientific_name: 'Decyl Glucoside',
@@ -2387,7 +2387,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'لطيف للغاية ومثالي للبشرة الحساسة جدا. رغوته قد تكون أقل كثافة من المنظفات التقليدية.' }
         ],
       },
-  {
+{
         id: 'coco-glucoside',
         name: 'كوكو جلوكوسايد',
         scientific_name: 'Coco-Glucoside',
@@ -2400,7 +2400,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lauryl-glucoside',
         name: 'لوريل جلوكوسايد',
         scientific_name: 'Lauryl Glucoside',
@@ -2415,7 +2415,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'من نفس عائلة الجلوكوسيدات، لطيف ومثالي للتركيبات الطبيعية.' }
         ],
       },
-  {
+{
         id: 'caprylyl-capryl-glucoside',
         name: 'كابريليل/كابريل جلوكوسايد',
         scientific_name: 'Caprylyl/Capryl Glucoside',
@@ -2428,7 +2428,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-7-glyceryl-cocoate',
         name: 'PEG-7 غليسيريل كوكوات',
         scientific_name: 'PEG-7 Glyceryl Cocoate',
@@ -2443,7 +2443,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعمل كمطري قابل للذوبان في الماء، يساعد على تقليل التأثير المجفف للمنظفات القاسية ويترك الشعر ناعما.' }
         ],
       },
-  {
+{
         id: 'behentrimonium-chloride',
         name: 'كلوريد بيهينتريمونيوم',
         scientific_name: 'Behentrimonium Chloride',
@@ -2458,7 +2458,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مكيف قوي جدا وفعال، ولكنه قد يسبب تراكما على الشعر الناعم مع الاستخدام المفرط.' }
         ],
       },
-  {
+{
         id: 'cetrimonium-chloride',
         name: 'كلوريد السيتريمونيوم',
         scientific_name: 'Cetrimonium Chloride',
@@ -2473,7 +2473,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أخف من BTMS و Behentrimonium Chloride، جيد للشعر العادي إلى الناعم.' }
         ],
       },
-  {
+{
         id: 'behentrimonium-methosulfate',
         name: 'ميثوسلفات البيهينتريمونيوم (BTMS)',
         scientific_name: 'Behentrimonium Methosulfate',
@@ -2488,7 +2488,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعتبر من أفضل مكيفات الشعر وأكثرها لطفا. على الرغم من اسمه، فهو **ليس سلفات** مجفف.' }
         ],
       },
-  {
+{
         id: 'stearamidopropyl-dimethylamine',
         name: 'ستيراميدوبروبيل ثنائي ميثيل أمين',
         scientific_name: 'Stearamidopropyl Dimethylamine',
@@ -2503,7 +2503,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يصبح موجب الشحنة في البيئة الحمضية للشامبو والبلسم، فيعمل كمكيف فعال. بديل جيد للكواتس التقليدية.' }
         ],
       },
-  {
+{
         id: 'dicetyldimonium-chloride',
         name: 'كلوريد ثنائي سيتيل دايمونيوم',
         scientific_name: 'Dicetyldimonium Chloride',
@@ -2516,7 +2516,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steartrimonium-chloride',
         name: 'كلوريد ستيرتريمونيوم',
         scientific_name: 'Steartrimonium Chloride',
@@ -2529,7 +2529,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyquaternium-7',
         name: 'بولي كواتيرنيوم-7',
         scientific_name: 'Polyquaternium-7',
@@ -2544,7 +2544,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'يشكل طبقة رقيقة على الشعر لتنعيمه. قد يتراكم على الشعر الناعم مع الاستخدام المتكرر بدون تنظيف عميق.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-10',
         name: 'بولي كواتيرنيوم-10',
         scientific_name: 'Polyquaternium-10',
@@ -2559,7 +2559,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مشتق من السليلوز، وهو بوليمر شائع جدا في منتجات الشعر. قد يتراكم على الشعر.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-39',
         name: 'بولي كواتيرنيوم-39',
         scientific_name: 'Polyquaternium-39',
@@ -2574,7 +2574,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يتراكم على الشعر مع الاستخدام المتكرر.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-11',
         name: 'بولي كواتيرنيوم-11',
         scientific_name: 'Polyquaternium-11',
@@ -2589,7 +2589,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم غالبا في رغوة الشعر (الموس) ومنتجات التصفيف لتوفير ثبات مرن.' }
         ],
       },
-  {
+{
         id: 'guar-hydroxypropyltrimonium-chloride',
         name: 'كلوريد غوار هيدروكسي بروبيل تريمونيوم',
         scientific_name: 'Guar Hydroxypropyltrimonium Chloride',
@@ -2604,7 +2604,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مشتق من صمغ الغوار، وهو مكيف ومكثف طبيعي. قد يتراكم على الشعر.' }
         ],
       },
-  {
+{
         id: 'dimethicone',
         name: 'دايميثيكون',
         scientific_name: 'Dimethicone',
@@ -2619,7 +2619,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'سيليكون غير قابل للذوبان في الماء. يتراكم على الشعر بمرور الوقت، مما يتطلب استخدام شامبو منظف (clarifying) لإزالته.' }
         ],
       },
-  {
+{
         id: 'amodimethicone',
         name: 'أمodimethicone',
         scientific_name: 'Amodimethicone',
@@ -2634,7 +2634,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون "ذكي" يلتصق بالمناطق الأكثر تلفا في الشعر. من الصعب إزالته بالمنظفات اللطيفة ولكنه لا يتراكم على نفسه مثل الدايميثيكون.' }
         ],
       },
-  {
+{
         id: 'cyclopentasiloxane',
         name: 'سيكلوبنتاسيلوكسان (D5)',
         scientific_name: 'Cyclopentasiloxane',
@@ -2649,7 +2649,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون خفيف جدا يتبخر بعد التطبيق، تاركا وراءه المكونات الأخرى. يستخدم لإعطاء ملمس خفيف وغير دهني.' }
         ],
       },
-  {
+{
         id: 'dimethiconol',
         name: 'دايميثيكونول',
         scientific_name: 'Dimethiconol',
@@ -2664,7 +2664,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'سيليكون عالي اللزوجة، غالبا ما يتم مزجه مع سيليكونات متطايرة لتسهيل انتشاره. يتراكم على الشعر.' }
         ],
       },
-  {
+{
         id: 'peg-12-dimethicone',
         name: 'PEG-12 دايميثيكون',
         scientific_name: 'PEG-12 Dimethicone',
@@ -2679,7 +2679,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بما أنه قابل للذوبان في الماء، فإنه لا يتراكم على الشعر ويمكن غسله بسهولة.' }
         ],
       },
-  {
+{
         id: 'cetyl-alcohol',
         name: 'كحول السيتيل',
         scientific_name: 'Cetyl Alcohol',
@@ -2694,7 +2694,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'كحول دهني "جيد" يساعد على ترطيب وتنعيم الشعر، وليس من الكحوليات المجففة.' }
         ],
       },
-  {
+{
         id: 'stearyl-alcohol',
         name: 'كحول الستياريل',
         scientific_name: 'Stearyl Alcohol',
@@ -2709,7 +2709,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'كحول دهني "جيد"، أثقل قليلا من كحول السيتيل ويعطي ملمسا أكثر ثراء.' }
         ],
       },
-  {
+{
         id: 'cetearyl-alcohol',
         name: 'كحول السيتريل',
         scientific_name: 'Cetearyl Alcohol',
@@ -2724,7 +2724,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مزيج من كحول السيتيل والستياريل، وهو مكون شائع جدا في البلسمات والكريمات.' }
         ],
       },
-  {
+{
         id: 'salicylic-acid',
         name: 'حمض الساليسيليك',
         scientific_name: 'Salicylic Acid',
@@ -2739,7 +2739,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'ممتاز لفروة الرأس الدهنية والمعرضة للقشرة لأنه يذوب في الزيت وينظف بصيلات الشعر بعمق.' },
         ],
       },
-  {
+{
         id: 'aloe-vera-juice',
         name: 'عصير الألوفيرا',
         scientific_name: 'Aloe Barbadensis Leaf Juice',
@@ -2752,7 +2752,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-oat-protein',
         name: 'بروتين الشوفان المهدرج',
         scientific_name: 'Hydrolyzed Oat Protein',
@@ -2765,7 +2765,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'bamboo-extract',
         name: 'مستخلص الخيزران',
         scientific_name: 'Bambusa Vulgaris Extract',
@@ -2778,7 +2778,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hibiscus-extract',
         name: 'مستخلص الكركديه',
         scientific_name: 'Hibiscus Sabdariffa Flower Extract',
@@ -2791,7 +2791,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ginseng-root-extract',
         name: 'مستخلص جذور الجينسنغ',
         scientific_name: 'Panax Ginseng Root Extract',
@@ -2804,7 +2804,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'phenoxyethanol',
         name: 'فينوكسي إيثانول',
         scientific_name: 'Phenoxyethanol',
@@ -2819,7 +2819,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مادة حافظة شائعة جدا تعتبر بديلا آمنا للبارابين عند استخدامها بتركيز يصل إلى 1%.' }
         ],
       },
-  {
+{
         id: 'sodium-benzoate',
         name: 'بنزوات الصوديوم',
         scientific_name: 'Sodium Benzoate',
@@ -2834,7 +2834,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يتفاعل مع حمض الأسكوربيك (فيتامين C) في وجود أيونات المعادن والضوء لتكوين البنزين، وهو مادة مسرطنة. المصنعون المحترفون يتحكمون في التركيبة لتجنب هذا التفاعل.' }
         ],
       },
-  {
+{
         id: 'potassium-sorbate',
         name: 'سوربات البوتاسيوم',
         scientific_name: 'Potassium Sorbate',
@@ -2847,7 +2847,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'benzyl-alcohol',
         name: 'كحول بنزيلي',
         scientific_name: 'Benzyl Alcohol',
@@ -2862,7 +2862,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مادة حافظة طبيعية ومكون عطري، يجب الإفصاح عنه كمسبب للحساسية في أوروبا.' }
         ],
       },
-  {
+{
         id: 'ethylhexylglycerin',
         name: 'إيثيل هكسيل جليسرين',
         scientific_name: 'Ethylhexylglycerin',
@@ -2877,7 +2877,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'لا يستخدم كمادة حافظة بمفرده، بل يعزز فعالية المواد الحافظة الأخرى مثل الفينوكسي إيثانول.' }
         ],
       },
-  {
+{
         id: 'dmdm-hydantoin',
         name: 'DMDM هيدانتوين',
         scientific_name: 'DMDM Hydantoin',
@@ -2892,7 +2892,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مادة حافظة مثيرة للجدل تطلق ببطء مادة الفورمالديهايد، وهي مادة مسرطنة معروفة ومسببة للحساسية.' }
         ],
       },
-  {
+{
         id: 'methylisothiazolinone',
         name: 'ميثيل أيزوثيازولينون (MIT)',
         scientific_name: 'Methylisothiazolinone',
@@ -2907,7 +2907,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مسبب قوي جدا لحساسية الجلد التلامسية. تم حظره في المنتجات التي تترك على الجلد في أوروبا، ويُسمح به فقط بتركيزات منخفضة جدا في المنتجات التي تُشطف.' }
         ],
       },
-  {
+{
         id: 'methylchloroisothiazolinone',
         name: 'ميثيل كلورو أيزوثيازولينون (MCI)',
         scientific_name: 'Methylchloroisothiazolinone',
@@ -2922,7 +2922,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'غالبا ما يستخدم مع MIT. وهو أيضا مسبب قوي جدا للحساسية ومقيد بشدة في الاستخدام.' }
         ],
       },
-  {
+{
         id: 'hydroxypropyl-guar',
         name: 'هيدروكسي بروبيل غوار',
         scientific_name: 'Hydroxypropyl Guar',
@@ -2935,7 +2935,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-120-methyl-glucose-dioleate',
         name: 'PEG-120 ميثيل جلوكوز ثنائي الأوليات',
         scientific_name: 'PEG-120 Methyl Glucose Dioleate',
@@ -2950,7 +2950,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مكثف شائع جدا وفعال للغاية في أنظمة المنظفات.' }
         ],
       },
-  {
+{
         id: 'acrylates-c10-30-alkyl-acrylate-crosspolymer',
         name: 'أكريلات/C10-30 ألكيل أكريليت كروسبوليمر',
         scientific_name: 'Acrylates/C10-30 Alkyl Acrylate Crosspolymer',
@@ -2963,7 +2963,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydroxypropyl-methylcellulose',
         name: 'هيدروكسي بروبيل ميثيل سلولوز (HPMC)',
         scientific_name: 'Hydroxypropyl Methylcellulose',
@@ -2976,7 +2976,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cellulose-gum',
         name: 'صمغ السليلوز',
         scientific_name: 'Cellulose Gum',
@@ -2989,7 +2989,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'magnesium-aluminum-silicate',
         name: 'سيليكات المغنيسيوم والألومنيوم',
         scientific_name: 'Magnesium Aluminum Silicate',
@@ -3004,7 +3004,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'طين منقى يستخدم لتكثيف القوام وتثبيت المستحلبات.' }
         ],
       },
-  {
+{
         id: 'pvp',
         name: 'PVP (بولي فينيل بيروليدون)',
         scientific_name: 'PVP',
@@ -3019,7 +3019,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مكون أساسي في جل ومثبتات الشعر، يستخدم أحيانا في الشامبو لإضافة قوام خفيف.' }
         ],
       },
-  {
+{
         id: 'sclerotium-gum',
         name: 'صمغ Sclerotium',
         scientific_name: 'Sclerotium Gum',
@@ -3032,7 +3032,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-40-hydrogenated-castor-oil',
         name: 'زيت الخروع المهدرج PEG-40',
         scientific_name: 'PEG-40 Hydrogenated Castor Oil',
@@ -3047,7 +3047,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم لإذابة المكونات الزيتية (مثل العطور والزيوت العطرية) في التركيبات المائية مثل الشامبو.' }
         ],
       },
-  {
+{
         id: 'peg-60-hydrogenated-castor-oil',
         name: 'زيت الخروع المهدرج PEG-60',
         scientific_name: 'PEG-60 Hydrogenated Castor Oil',
@@ -3060,7 +3060,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'phytic-acid',
         name: 'حمض الفيتيك',
         scientific_name: 'Phytic Acid',
@@ -3075,7 +3075,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بديل طبيعي لـ EDTA، يساعد على تحسين استقرار المنتج.' }
         ],
       },
-  {
+{
         id: 'tetrasodium-glutamate-diacetate',
         name: 'رباعي صوديوم جلوتامات ثنائي الأسيتات',
         scientific_name: 'Tetrasodium Glutamate Diacetate',
@@ -3090,7 +3090,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بديل ممتاز وصديق للبيئة لـ EDTA.' }
         ],
       },
-  {
+{
         id: 'potassium-hydroxide',
         name: 'هيدروكسيد البوتاسيوم',
         scientific_name: 'Potassium Hydroxide',
@@ -3105,7 +3105,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم بكميات صغيرة جدا لرفع درجة حموضة المنتج.' }
         ],
       },
-  {
+{
         id: 'lactic-acid',
         name: 'حمض اللاكتيك',
         scientific_name: 'Lactic Acid',
@@ -3120,7 +3120,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم بكميات صغيرة لخفض درجة حموضة الشامبو لتكون متوافقة مع الشعر (pH 4.5-5.5).' }
         ],
       },
-  {
+{
         id: 'sodium-citrate',
         name: 'سترات الصوديوم',
         scientific_name: 'Sodium Citrate',
@@ -3135,7 +3135,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يساعد على الحفاظ على درجة حموضة المنتج ثابتة.' }
         ],
       },
-  {
+{
         id: 'mica',
         name: 'ميكا',
         scientific_name: 'Mica',
@@ -3150,7 +3150,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون هناك مخاوف أخلاقية بشأن عمالة الأطفال في تعدين الميكا. ابحث عن علامات تجارية تستخدم مصادر مسؤولة.' }
         ],
       },
-  {
+{
         id: 'titanium-dioxide-ci-77891',
         name: 'ثاني أكسيد التيتانيوم (CI 77891)',
         scientific_name: 'Titanium Dioxide (CI 77891)',
@@ -3165,7 +3165,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'عندما يدرج كـ CI 77891، فإنه يستخدم كملون وليس كفلتر شمسي فعال.' }
         ],
       },
-  {
+{
         id: 'iron-oxides',
         name: 'أكاسيد الحديد',
         scientific_name: 'Iron Oxides (CI 77491, CI 77492, CI 77499)',
@@ -3180,7 +3180,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'تستخدم لإعطاء ألوان (أحمر، أصفر، أسود) للشامبو، خاصة في الشامبو الملون.' }
         ],
       },
-  {
+{
         id: 'tin-oxide',
         name: 'أكسيد القصدير',
         scientific_name: 'Tin Oxide',
@@ -3195,7 +3195,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم لتغليف جزيئات الميكا لإعطاء تأثير لامع ومتلألئ.' }
         ],
       },
-  {
+{
         id: 'disodium-phosphate',
         name: 'ثنائي فوسفات الصوديوم',
         scientific_name: 'Disodium Phosphate',
@@ -3208,7 +3208,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dipropylene-glycol',
         name: 'ثنائي بروبيلين جلايكول',
         scientific_name: 'Dipropylene Glycol',
@@ -3221,7 +3221,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-8',
         name: 'PEG-8',
         scientific_name: 'PEG-8',
@@ -3234,7 +3234,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-12',
         name: 'PEG-12',
         scientific_name: 'PEG-12',
@@ -3247,7 +3247,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pentylene-glycol',
         name: 'بنتيلين جليكول',
         scientific_name: 'Pentylene Glycol',
@@ -3262,7 +3262,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعمل أيضا كمعزز للمواد الحافظة.' }
         ],
       },
-  {
+{
         id: 'caprylyl-glycol',
         name: 'كابريليل جليكول',
         scientific_name: 'Caprylyl Glycol',
@@ -3277,7 +3277,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مرطب فعال جدا يعمل أيضا كجزء من نظام الحفظ في العديد من التركيبات الخالية من البارابين.' }
         ],
       },
-  {
+{
         id: 'hexylene-glycol',
         name: 'هيكسيلين جلايكول',
         scientific_name: 'Hexylene Glycol',
@@ -3290,7 +3290,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: '1,2-hexanediol',
         name: '1،2-هيكسانيديول',
         scientific_name: '1,2-Hexanediol',
@@ -3303,7 +3303,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'honey',
         name: 'العسل',
         scientific_name: 'Honey / Mel',
@@ -3316,7 +3316,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-honey-protein',
         name: 'بروتين العسل المهدرج',
         scientific_name: 'Hydrolyzed Honey Protein',
@@ -3329,7 +3329,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saponaria-officinalis-extract',
         name: 'مستخلص عرق الحلاوة',
         scientific_name: 'Saponaria Officinalis Leaf/Root Extract',
@@ -3344,7 +3344,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'نبات غني بالصابونين، وهو منظف طبيعي يستخدم في الشامبوهات التقليدية.' }
         ],
       },
-  {
+{
         id: 'sapindus-mukorossi-extract',
         name: 'مستخلص الريثا (بندق الصابون)',
         scientific_name: 'Sapindus Mukorossi Fruit Extract',
@@ -3359,7 +3359,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'فاكهة غنية بالصابونين، تستخدم كبديل طبيعي للشامبو في طب الأيورفيدا.' }
         ],
       },
-  {
+{
         id: 'acacia-concinna-extract',
         name: 'مستخلص الشيكاكاي',
         scientific_name: 'Acacia Concinna Fruit Extract',
@@ -3374,7 +3374,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'عشب أيورفيدي آخر يستخدم لتنظيف الشعر بلطف دون تجريده من زيوته.' }
         ],
       },
-  {
+{
         id: 'sodium-cocoyl-glutamate',
         name: 'صوديوم كوكويل جلوتامات',
         scientific_name: 'Sodium Cocoyl Glutamate',
@@ -3389,7 +3389,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'منظف لطيف جدا، مناسب للتركيبات الطبيعية والحساسة.' }
         ],
       },
-  {
+{
         id: 'disodium-cocoyl-glutamate',
         name: 'ثنائي الصوديوم كوكويل جلوتامات',
         scientific_name: 'Disodium Cocoyl Glutamate',
@@ -3402,7 +3402,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-cocoyl-glycinate',
         name: 'صوديوم كوكويل جليسينات',
         scientific_name: 'Sodium Cocoyl Glycinate',
@@ -3417,7 +3417,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مشتق من حمض الجلايسين الأميني، يعطي إحساسا فاخرا للرغوة ولا يجرد البشرة.' }
         ],
       },
-  {
+{
         id: 'potassium-cocoyl-glycinate',
         name: 'بوتاسيوم كوكويل جليسينات',
         scientific_name: 'Potassium Cocoyl Glycinate',
@@ -3430,7 +3430,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-lauroyl-oat-amino-acids',
         name: 'صوديوم لورويل أحماض الشوفان الأمينية',
         scientific_name: 'Sodium Lauroyl Oat Amino Acids',
@@ -3445,7 +3445,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'منظف فائق اللطف مشتق من الشوفان، مثالي لفروة الرأس الحساسة والمتهيجة.' }
         ],
       },
-  {
+{
         id: 'sodium-cocoyl-apple-amino-acids',
         name: 'صوديوم كوكويل أحماض التفاح الأمينية',
         scientific_name: 'Sodium Cocoyl Apple Amino Acids',
@@ -3458,7 +3458,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-lauryl-glucose-carboxylate',
         name: 'صوديوم لوريل جلوكوز كاربوكسيلات',
         scientific_name: 'Sodium Lauryl Glucose Carboxylate',
@@ -3471,7 +3471,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-myreth-sulfate',
         name: 'صوديوم ميريث سلفات',
         scientific_name: 'Sodium Myreth Sulfate',
@@ -3486,7 +3486,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'بديل لـ SLES، ولكنه لا يزال من عائلة السلفات القوية وقد يكون مجففا.' }
         ],
       },
-  {
+{
         id: 'tea-lauryl-sulfate',
         name: 'TEA-لوريل سلفات',
         scientific_name: 'TEA-Lauryl Sulfate',
@@ -3501,7 +3501,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'لا يزال من عائلة السلفات، وقد يكون مجففا.' }
         ],
       },
-  {
+{
         id: 'sodium-coco-sulfate',
         name: 'صوديوم كوكو سلفات (SCS)',
         scientific_name: 'Sodium Coco-Sulfate',
@@ -3516,7 +3516,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'غالبا ما يتم تسويقه كبديل "طبيعي" لـ SLS، ولكنه كيميائيا مزيج من السلفات (بما في ذلك SLS). لا يزال منظفا قويا وقد يكون مجففا.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-6',
         name: 'بولي كواتيرنيوم-6',
         scientific_name: 'Polyquaternium-6',
@@ -3531,7 +3531,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يتراكم على الشعر الناعم.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-37',
         name: 'بولي كواتيرنيوم-37',
         scientific_name: 'Polyquaternium-37',
@@ -3546,7 +3546,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مكيف ومكثف قوي جدا، قد يتراكم على الشعر.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-44',
         name: 'بولي كواتيرنيوم-44',
         scientific_name: 'Polyquaternium-44',
@@ -3561,7 +3561,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'ممتاز للشعر الناعم لأنه يوفر تكييفا مع حجم إضافي دون إثقال الشعر.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-55',
         name: 'بولي كواتيرنيوم-55',
         scientific_name: 'Polyquaternium-55',
@@ -3576,7 +3576,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بوليمر متعدد الوظائف، مثالي للشعر المصبوغ والمجعد.' }
         ],
       },
-  {
+{
         id: 'polyquaternium-67',
         name: 'بولي كواتيرنيوم-67',
         scientific_name: 'Polyquaternium-67',
@@ -3589,7 +3589,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'quaternium-80',
         name: 'كواتيرنيوم-80',
         scientific_name: 'Quaternium-80',
@@ -3604,7 +3604,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون معدل (quat) قابل للذوبان في الماء، يوفر تكييفا ممتازا دون تراكم.' }
         ],
       },
-  {
+{
         id: 'silicone-quaternium-16',
         name: 'سيليكون كواتيرنيوم-16',
         scientific_name: 'Silicone Quaternium-16',
@@ -3619,7 +3619,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون أميني لا يتراكم بسهولة ويحمي الشعر من التلف.' }
         ],
       },
-  {
+{
         id: 'bis-aminopropyl-dimethicone',
         name: 'بيس-أمينوبروبيل دايميثيكون',
         scientific_name: 'Bis-Aminopropyl Dimethicone',
@@ -3634,7 +3634,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون أميني متقدم يلتصق بقوة بالمناطق التالفة من الشعر لإصلاحها، ويوفر تكييفا دائما حتى بعد عدة غسلات.' }
         ],
       },
-  {
+{
         id: 'brassicamidopropyl-dimethylamine',
         name: 'براسيكاميدوبروبيل ثنائي ميثيل أمين',
         scientific_name: 'Brassicamidopropyl Dimethylamine',
@@ -3649,7 +3649,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مشتق من زيت بذور اللفت (Brassica)، وهو بديل ممتاز وصديق للبيئة للمكيفات التقليدية.' }
         ],
       },
-  {
+{
         id: 'isostearamidopropyl-morpholine-lactate',
         name: 'أيزوستيراميدوبروبيل مورفولين لاكتات',
         scientific_name: 'Isostearamidopropyl Morpholine Lactate',
@@ -3664,7 +3664,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم بشكل خاص لتقليل الهيشان والكهرباء الساكنة.' }
         ],
       },
-  {
+{
         id: 'peg-ppg-18-18-dimethicone',
         name: 'PEG/PPG-18/18 دايميثيكون',
         scientific_name: 'PEG/PPG-18/18 Dimethicone',
@@ -3679,7 +3679,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'سيليكون قابل للذوبان في الماء يعمل كعامل تكييف ومستحلب.' }
         ],
       },
-  {
+{
         id: 'polyimide-1',
         name: 'بولي إيميد-1',
         scientific_name: 'Polyimide-1',
@@ -3694,7 +3694,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بوليمر يستخدم في منتجات التصفيف لتوفير ثبات ومقاومة للرطوبة.' }
         ],
       },
-  {
+{
         id: 'hydrolyzed-baobab-protein',
         name: 'بروتين الباوباب المهدرج',
         scientific_name: 'Hydrolyzed Adansonia Digitata Seed Extract',
@@ -3709,7 +3709,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بروتين قوي يحمي الشعر من أضرار الأشعة فوق البنفسجية والحرارة والتلوث.' }
         ],
       },
-  {
+{
         id: 'hydrolyzed-quinoa-protein',
         name: 'بروتين الكينوا المهدرج',
         scientific_name: 'Hydrolyzed Quinoa',
@@ -3724,7 +3724,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يحتوي على جميع الأحماض الأمينية الأساسية الثمانية، وهو ممتاز للشعر المصبوغ لتعزيز اللون وإصلاح التلف.' }
         ],
       },
-  {
+{
         id: 'hydrolyzed-lupine-protein',
         name: 'بروتين الترمس المهدرج',
         scientific_name: 'Hydrolyzed Lupine Protein',
@@ -3739,7 +3739,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الترمس أو البقوليات.' }
         ],
       },
-  {
+{
         id: 'laurdimonium-hydroxypropyl-hydrolyzed-wheat-protein',
         name: 'بروتين القمح المهدرج لورديمونيوم هيدروكسي بروبيل',
         scientific_name: 'Laurdimonium Hydroxypropyl Hydrolyzed Wheat Protein',
@@ -3754,7 +3754,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'شكل معدل من بروتين القمح يلتصق بالشعر بشكل أفضل لتوفير تكييف وإصلاح مستهدف.' }
         ],
       },
-  {
+{
         id: 'cocodimonium-hydroxypropyl-hydrolyzed-keratin',
         name: 'كيراتين مهدرج كوكوديمونيوم هيدروكسي بروبيل',
         scientific_name: 'Cocodimonium Hydroxypropyl Hydrolyzed Keratin',
@@ -3769,7 +3769,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'شكل معدل من الكيراتين يلتصق بالمناطق التالفة من الشعر لإصلاحها بفعالية.' }
         ],
       },
-  {
+{
         id: 'potassium-cocoyl-hydrolyzed-collagen',
         name: 'كولاجين مهدرج بوتاسيوم كوكويل',
         scientific_name: 'Potassium Cocoyl Hydrolyzed Collagen',
@@ -3782,7 +3782,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'apigenin',
         name: 'أبيجينين',
         scientific_name: 'Apigenin',
@@ -3797,7 +3797,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'فلافونويد موجود في البقدونس والكرفس، يستخدم في علاجات تساقط الشعر لتحسين صحة البصيلات.' }
         ],
       },
-  {
+{
         id: 'oleanolic-acid',
         name: 'حمض الأوليانوليك',
         scientific_name: 'Oleanolic Acid',
@@ -3812,7 +3812,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مستخلص من أوراق الزيتون، يستخدم لمكافحة تساقط الشعر الوراثي.' }
         ],
       },
-  {
+{
         id: 'ziziphus-joazeiro-bark-extract',
         name: 'مستخلص لحاء السدر',
         scientific_name: 'Ziziphus Joazeiro Bark Extract',
@@ -3827,7 +3827,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'بديل نباتي فعال لعوامل القشرة الكيميائية مثل بيريثيون الزنك.' }
         ],
       },
-  {
+{
         id: 'epilobium-angustifolium-extract',
         name: 'مستخلص زهرة الصفصاف',
         scientific_name: 'Epilobium Angustifolium Flower/Leaf/Stem Extract',
@@ -3840,7 +3840,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharum-officinarum-extract',
         name: 'مستخلص قصب السكر',
         scientific_name: 'Saccharum Officinarum (Sugarcane) Extract',
@@ -3853,7 +3853,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'citrus-limon-fruit-extract',
         name: 'مستخلص فاكهة الليمون',
         scientific_name: 'Citrus Limon (Lemon) Fruit Extract',
@@ -3866,7 +3866,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pyrus-malus-fruit-extract',
         name: 'مستخلص فاكهة التفاح',
         scientific_name: 'Pyrus Malus (Apple) Fruit Extract',
@@ -3881,7 +3881,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مصدر طبيعي لحمض الماليك.' }
         ],
       },
-  {
+{
         id: 'saccharomyces-cerevisiae-extract',
         name: 'مستخلص خميرة البيرة',
         scientific_name: 'Saccharomyces Cerevisiae Extract',
@@ -3894,7 +3894,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'burdock-root-extract',
         name: 'مستخلص جذور الأرقطيون',
         scientific_name: 'Arctium Lappa Root Extract',
@@ -3907,7 +3907,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sage-leaf-extract',
         name: 'مستخلص أوراق المريمية',
         scientific_name: 'Salvia Officinalis (Sage) Leaf Extract',
@@ -3920,7 +3920,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'calendula-officinalis-flower-extract',
         name: 'مستخلص زهرة الآذريون',
         scientific_name: 'Calendula Officinalis Flower Extract',
@@ -3935,17 +3935,17 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية نباتات عائلة الأقحوان.' }
         ],
       },
-  { id: 'sodium-sulfate', name: 'كبريتات الصوديوم', scientific_name: 'Sodium Sulfate', searchKeywords: ['sodium sulfate'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'ملح', benefits: {'مكثف للقوام': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'ليس منظفا، بل ملح يستخدم لزيادة لزوجة الشامبو. قد يكون مجففا.'}]},
-  { id: 'ppg-9', name: 'PPG-9', scientific_name: 'PPG-9', searchKeywords: ['ppg-9', 'ppg 9'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'بوليمر', benefits: {'يعطي ملمسا ناعما': 0.8, 'مذيب': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'laureth-23', name: 'لوريث-23', scientific_name: 'Laureth-23', searchKeywords: ['laureth-23', 'لوريث 23'], usageScope: ['hair', 'skin'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب': 0.85, 'عامل منظف': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'laureth-4', name: 'لوريث-4', scientific_name: 'Laureth-4', searchKeywords: ['laureth-4', 'لوريث 4'], usageScope: ['hair', 'skin'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب (يخلط الزيت بالماء)': 0.9, 'عامل رغوي': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'قد يكون كوميدوجينيك ويسد المسام إذا استخدم في منتجات تترك على البشرة.'}]},
-  { id: 'peg-150-pentaerythrityl-tetrastearate', name: 'PEG-150 بنتاريثريتيل تتراستيرات', scientific_name: 'PEG-150 Pentaerythrityl Tetrastearate', searchKeywords: ['peg-150 pentaerythrityl tetrastearate'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'بوليمر', benefits: {'مكثف فعال جدا': 0.9, 'يعطي ملمسا فاخرا': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'ppg-2-hydroxyethyl-cocamide', name: 'PPG-2 هيدروكسي إيثيل كوكاميد', scientific_name: 'PPG-2 Hydroxyethyl Cocamide', searchKeywords: ['ppg-2 hydroxyethyl cocamide'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'أمين دهني', benefits: {'مكثف للقوام': 0.88, 'معزز للرغوة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'maleic-acid', name: 'حمض الماليك (للروابط)', scientific_name: 'Maleic Acid', searchKeywords: ['maleic acid', 'bond repair'], usageScope: ['hair'], functionalCategory: 'تقوية الشعر', chemicalType: 'حمض عضوي', benefits: {'إصلاح روابط الشعر': 0.92, 'تقوية الشعر التالف': 0.9, 'حماية من التلف الكيميائي': 0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يستخدم في تقنيات إصلاح روابط الشعر (مثل Olaplex) للمساعدة في إعادة توصيل الروابط ثنائية الكبريتيد المكسورة داخل الشعر.'}]},
-  { id: 'bis-cetearyl-amodimethicone', name: 'بيس-سيتريل أمodimethicone', scientific_name: 'Bis-Cetearyl Amodimethicone', searchKeywords: ['bis-cetearyl amodimethicone'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'سيليكون', benefits: {'تكييف عميق': 0.9, 'تنعيم الشعر': 0.88, 'حماية اللون': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'c12-13-pareth-23', name: 'C12-13 باريث-23', scientific_name: 'C12-13 Pareth-23', searchKeywords: ['c12-13 pareth-23'], usageScope: ['hair'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب': 0.8, 'منظف ثانوي': 0.75}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'divinyldimethicone-dimethicone-copolymer', name: 'دايفينيل دايميثيكون/دايميثيكون كوبوليمر', scientific_name: 'Divinyldimethicone/Dimethicone Copolymer', searchKeywords: ['divinyldimethicone/dimethicone copolymer'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'سيليكون', benefits: {'تكوين طبقة حماية قوية': 0.9, 'لمعان فائق': 0.88, 'مقاومة للماء': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'سيليكون ثقيل جدا، يوفر حماية ولمعانا استثنائيين ولكنه يتراكم بكثرة.'}]},
-  {
+{ id: 'sodium-sulfate', name: 'كبريتات الصوديوم', scientific_name: 'Sodium Sulfate', searchKeywords: ['sodium sulfate'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'ملح', benefits: {'مكثف للقوام': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'ليس منظفا، بل ملح يستخدم لزيادة لزوجة الشامبو. قد يكون مجففا.'}]},
+{ id: 'ppg-9', name: 'PPG-9', scientific_name: 'PPG-9', searchKeywords: ['ppg-9', 'ppg 9'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'بوليمر', benefits: {'يعطي ملمسا ناعما': 0.8, 'مذيب': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'laureth-23', name: 'لوريث-23', scientific_name: 'Laureth-23', searchKeywords: ['laureth-23', 'لوريث 23'], usageScope: ['hair', 'skin'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب': 0.85, 'عامل منظف': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'laureth-4', name: 'لوريث-4', scientific_name: 'Laureth-4', searchKeywords: ['laureth-4', 'لوريث 4'], usageScope: ['hair', 'skin'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب (يخلط الزيت بالماء)': 0.9, 'عامل رغوي': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'قد يكون كوميدوجينيك ويسد المسام إذا استخدم في منتجات تترك على البشرة.'}]},
+{ id: 'peg-150-pentaerythrityl-tetrastearate', name: 'PEG-150 بنتاريثريتيل تتراستيرات', scientific_name: 'PEG-150 Pentaerythrityl Tetrastearate', searchKeywords: ['peg-150 pentaerythrityl tetrastearate'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'بوليمر', benefits: {'مكثف فعال جدا': 0.9, 'يعطي ملمسا فاخرا': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'ppg-2-hydroxyethyl-cocamide', name: 'PPG-2 هيدروكسي إيثيل كوكاميد', scientific_name: 'PPG-2 Hydroxyethyl Cocamide', searchKeywords: ['ppg-2 hydroxyethyl cocamide'], usageScope: ['hair'], functionalCategory: 'محسن قوام', chemicalType: 'أمين دهني', benefits: {'مكثف للقوام': 0.88, 'معزز للرغوة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'maleic-acid', name: 'حمض الماليك (للروابط)', scientific_name: 'Maleic Acid', searchKeywords: ['maleic acid', 'bond repair'], usageScope: ['hair'], functionalCategory: 'تقوية الشعر', chemicalType: 'حمض عضوي', benefits: {'إصلاح روابط الشعر': 0.92, 'تقوية الشعر التالف': 0.9, 'حماية من التلف الكيميائي': 0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يستخدم في تقنيات إصلاح روابط الشعر (مثل Olaplex) للمساعدة في إعادة توصيل الروابط ثنائية الكبريتيد المكسورة داخل الشعر.'}]},
+{ id: 'bis-cetearyl-amodimethicone', name: 'بيس-سيتريل أمodimethicone', scientific_name: 'Bis-Cetearyl Amodimethicone', searchKeywords: ['bis-cetearyl amodimethicone'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'سيليكون', benefits: {'تكييف عميق': 0.9, 'تنعيم الشعر': 0.88, 'حماية اللون': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'c12-13-pareth-23', name: 'C12-13 باريث-23', scientific_name: 'C12-13 Pareth-23', searchKeywords: ['c12-13 pareth-23'], usageScope: ['hair'], functionalCategory: 'مستحلب', chemicalType: 'مستحلب', benefits: {'مستحلب': 0.8, 'منظف ثانوي': 0.75}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'divinyldimethicone-dimethicone-copolymer', name: 'دايفينيل دايميثيكون/دايميثيكون كوبوليمر', scientific_name: 'Divinyldimethicone/Dimethicone Copolymer', searchKeywords: ['divinyldimethicone/dimethicone copolymer'], usageScope: ['hair'], functionalCategory: 'مكيف للشعر', chemicalType: 'سيليكون', benefits: {'تكوين طبقة حماية قوية': 0.9, 'لمعان فائق': 0.88, 'مقاومة للماء': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'سيليكون ثقيل جدا، يوفر حماية ولمعانا استثنائيين ولكنه يتراكم بكثرة.'}]},
+{
         id: 'linoleic-acid',
         name: 'حمض اللينوليك (أوميغا 6)',
         scientific_name: 'Linoleic Acid',
@@ -3960,7 +3960,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'حمض دهني أساسي. البشرة المعرضة لحب الشباب غالبا ما يكون لديها نقص فيه، مما يجعله مكونا ممتازا لإعادة توازنها.' }
         ],
       },
-  {
+{
         id: 'alpha-linolenic-acid',
         name: 'حمض ألفا لينولينيك (أوميغا 3)',
         scientific_name: 'Alpha-Linolenic Acid',
@@ -3975,7 +3975,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'حمض دهني أساسي معروف بخصائصه القوية المضادة للالتهابات، ممتاز للبشرة الحساسة.' }
         ],
       },
-  {
+{
         id: 'oleic-acid',
         name: 'حمض الأوليك (أوميغا 9)',
         scientific_name: 'Oleic Acid',
@@ -3990,7 +3990,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون كوميدوجينيك (ساد للمسام) ومزعجا للبشرة المعرضة لحب الشباب أو التي تعاني من ضعف الحاجز. يوجد بكثرة في زيت الزيتون والأفوكادو.' }
         ],
       },
-  {
+{
         id: 'palmitic-acid',
         name: 'حمض البالمتيك',
         scientific_name: 'Palmitic Acid',
@@ -4005,7 +4005,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'أحد أكثر الأحماض الدهنية المشبعة شيوعا. قد يكون كوميدوجينيك بتركيزات عالية.' }
         ],
       },
-  {
+{
         id: 'stearic-acid',
         name: 'حمض الستياريك',
         scientific_name: 'Stearic Acid',
@@ -4020,7 +4020,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'يستخدم على نطاق واسع في الكريمات لإعطاء قوام غني وشمعي. قد يكون كوميدوجينيك بشكل طفيف.' }
         ],
       },
-  {
+{
         id: 'myristic-acid',
         name: 'حمض الميريستيك',
         scientific_name: 'Myristic Acid',
@@ -4035,7 +4035,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يعتبر من الأحماض الدهنية العالية السد للمسام (كوميدوجينيك). شائع في غسولات الوجه الكريمية.' }
         ],
       },
-  {
+{
         id: 'lauric-acid',
         name: 'حمض اللوريك',
         scientific_name: 'Lauric Acid',
@@ -4051,7 +4051,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون مجففا عند استخدامه في المنظفات.' }
         ],
       },
-  {
+{
         id: 'capric-acid',
         name: 'حمض الكابريك',
         scientific_name: 'Capric Acid',
@@ -4064,7 +4064,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'caprylic-acid',
         name: 'حمض الكابريليك',
         scientific_name: 'Caprylic Acid',
@@ -4079,7 +4079,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'فعال ضد الفطريات المسببة لحب الشباب الفطري (Malassezia).' }
         ],
       },
-  {
+{
         id: 'behenic-acid',
         name: 'حمض البيهينيك',
         scientific_name: 'Behenic Acid',
@@ -4092,7 +4092,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isostearic-acid',
         name: 'حمض الأيزوستيريك',
         scientific_name: 'Isostearic Acid',
@@ -4107,7 +4107,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يساعد على توزيع الأصباغ وفلاتر الشمس المعدنية بشكل متساوٍ في التركيبة.' }
         ],
       },
-  {
+{
         id: 'palmitoleic-acid',
         name: 'حمض البالميتوليك (أوميغا 7)',
         scientific_name: 'Palmitoleic Acid',
@@ -4122,7 +4122,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يوجد بشكل طبيعي في دهون البشرة الشابة ويقل مع تقدم العمر. زيت المكاديميا ونبق البحر غنيان به.' }
         ],
       },
-  {
+{
         id: 'arachidic-acid',
         name: 'حمض الأراكيديك',
         scientific_name: 'Arachidic Acid',
@@ -4135,7 +4135,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'caproic-acid',
         name: 'حمض الكابرويك',
         scientific_name: 'Caproic Acid',
@@ -4148,7 +4148,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pelargonic-acid',
         name: 'حمض البيلارجونيك',
         scientific_name: 'Pelargonic Acid',
@@ -4161,7 +4161,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'arginine',
         name: 'أرجينين',
         scientific_name: 'Arginine',
@@ -4176,7 +4176,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'حمض أميني أساسي يساعد في الحفاظ على ترطيب البشرة وإصلاحها.' }
         ],
       },
-  {
+{
         id: 'glycine',
         name: 'جلايسين',
         scientific_name: 'Glycine',
@@ -4191,7 +4191,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أصغر حمض أميني، وهو مكون رئيسي للكولاجين.' }
         ],
       },
-  {
+{
         id: 'proline',
         name: 'برولين',
         scientific_name: 'Proline',
@@ -4204,7 +4204,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'serine',
         name: 'سيرين',
         scientific_name: 'Serine',
@@ -4217,7 +4217,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'threonine',
         name: 'ثريونين',
         scientific_name: 'Threonine',
@@ -4230,7 +4230,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'alanine',
         name: 'ألانين',
         scientific_name: 'Alanine',
@@ -4243,7 +4243,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'valine',
         name: 'فالين',
         scientific_name: 'Valine',
@@ -4256,7 +4256,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isoleucine',
         name: 'آيزوليوسين',
         scientific_name: 'Isoleucine',
@@ -4269,7 +4269,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'leucine',
         name: 'ليوسين',
         scientific_name: 'Leucine',
@@ -4282,7 +4282,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'phenylalanine',
         name: 'فينيل ألانين',
         scientific_name: 'Phenylalanine',
@@ -4295,7 +4295,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'histidine',
         name: 'هيستيدين',
         scientific_name: 'Histidine',
@@ -4308,7 +4308,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lysine',
         name: 'لايسين',
         scientific_name: 'Lysine',
@@ -4321,7 +4321,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'methionine',
         name: 'ميثيونين',
         scientific_name: 'Methionine',
@@ -4334,7 +4334,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cysteine',
         name: 'سيستين',
         scientific_name: 'Cysteine',
@@ -4347,7 +4347,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tyrosine',
         name: 'تيروسين',
         scientific_name: 'Tyrosine',
@@ -4362,7 +4362,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم أحيانا في منتجات تسمير البشرة الذاتية.' }
         ],
       },
-  {
+{
         id: 'glutamic-acid',
         name: 'حمض الجلوتاميك',
         scientific_name: 'Glutamic Acid',
@@ -4375,7 +4375,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'aspartic-acid',
         name: 'حمض الأسبارتيك',
         scientific_name: 'Aspartic Acid',
@@ -4388,7 +4388,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pca',
         name: 'PCA (حمض البيروليدون الكربوكسيلي)',
         scientific_name: 'PCA (Pyrrolidone Carboxylic Acid)',
@@ -4403,7 +4403,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غالبا ما يوجد في شكل ملح مثل Sodium PCA لزيادة استقراره.' }
         ],
       },
-  {
+{
         id: 'capryloyl-salicylic-acid',
         name: 'حمض كابريلويل الساليسيليك (LHA)',
         scientific_name: 'Capryloyl Salicylic Acid',
@@ -4419,7 +4419,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }
         ],
       },
-  {
+{
         id: 'etidronic-acid',
         name: 'حمض الإيتيدرونيك',
         scientific_name: 'Etidronic Acid',
@@ -4434,7 +4434,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'عامل خالب يربط أيونات المعادن في التركيبة للحفاظ على استقرارها.' }
         ],
       },
-  {
+{
         id: 'sebacic-acid',
         name: 'حمض السيباسيك',
         scientific_name: 'Sebacic Acid',
@@ -4447,7 +4447,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'levulinic-acid',
         name: 'حمض الليفولينيك',
         scientific_name: 'Levulinic Acid',
@@ -4462,7 +4462,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مادة حافظة طبيعية مشتقة من السكر.' }
         ],
       },
-  {
+{
         id: 'anisic-acid',
         name: 'حمض الأنيسيك',
         scientific_name: 'p-Anisic Acid',
@@ -4477,7 +4477,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مادة حافظة طبيعية مشتقة من اليانسون.' }
         ],
       },
-  {
+{
         id: 'salicylhydroxamic-acid',
         name: 'حمض الساليسيل هيدروكساميك',
         scientific_name: 'Salicylhydroxamic Acid',
@@ -4490,7 +4490,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydroxyethylpiperazine-ethane-sulfonic-acid',
         name: 'حمض هيدروكسي إيثيل بيبيرازين إيثان السلفونيك (HEPES)',
         scientific_name: 'Hydroxyethylpiperazine Ethane Sulfonic Acid',
@@ -4505,7 +4505,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يعمل على استقرار درجة حموضة التركيبة ويعزز فعالية الإنزيمات الطبيعية المقشرة في الجلد.' }
         ],
       },
-  {
+{
         id: 'glycyrrhetinic-acid',
         name: 'حمض الجليسيرتينيك',
         scientific_name: 'Glycyrrhetinic Acid',
@@ -4520,7 +4520,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'المكون النشط المضاد للالتهابات في جذر عرق السوس.' }
         ],
       },
-  {
+{
         id: 'asiatic-acid',
         name: 'حمض الآسياتيك',
         scientific_name: 'Asiatic Acid',
@@ -4535,7 +4535,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أحد المركبات النشطة الرئيسية في السنتيلا (Cica).' }
         ],
       },
-  {
+{
         id: 'madecassic-acid',
         name: 'حمض الماديكاسيك',
         scientific_name: 'Madecassic Acid',
@@ -4550,7 +4550,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'أحد المركبات النشطة الرئيسية في السنتيلا (Cica).' }
         ],
       },
-  {
+{
         id: 'ursolic-acid',
         name: 'حمض اليورسوليك',
         scientific_name: 'Ursolic Acid',
@@ -4565,7 +4565,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يوجد في العديد من النباتات مثل إكليل الجبل وقشور التفاح.' }
         ],
       },
-  {
+{
         id: 'boswellic-acid',
         name: 'حمض البوزويليك',
         scientific_name: 'Boswellic Acid',
@@ -4580,17 +4580,17 @@ export const combinedOilsDB = {
           { level: 'info', text: 'المكون النشط الرئيسي في اللبان (Frankincense)، معروف بخصائصه المهدئة القوية.' }
         ],
       },
-  { id: 'shikimic-acid', name: 'حمض الشيكيميك', scientific_name: 'Shikimic Acid', searchKeywords: ['shikimic acid'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض عضوي', benefits: { 'تقشير': 0.8, 'مضاد للميكروبات': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'مقشر لطيف مشتق من اليانسون النجمي.' }] },
-  { id: 'suberic-acid', name: 'حمض السوبريك', scientific_name: 'Suberic Acid', searchKeywords: ['suberic acid'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض ثنائي الكربوكسيل', benefits: { 'مكافحة حب الشباب': 0.8, 'تنظيم الإفرازات الدهنية': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'eicosapentaenoic-acid', name: 'حمض الإيكوسابنتاينويك (EPA)', scientific_name: 'Eicosapentaenoic Acid', searchKeywords: ['eicosapentaenoic acid', 'epa'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'حمض دهني', benefits: { 'مضاد للالتهابات': 0.95, 'دعم حاجز البشرة': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'حمض أوميغا 3 قوي جدا، يوجد في زيت السمك.' }] },
-  { id: 'docosahexaenoic-acid', name: 'حمض الدوكوساهيكسانويك (DHA)', scientific_name: 'Docosahexaenoic Acid', searchKeywords: ['docosahexaenoic acid', 'dha'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'حمض دهني', benefits: { 'مضاد للالتهابات': 0.92, 'صحة أغشية الخلايا': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'حمض أوميغا 3 أساسي لصحة الجلد والدماغ.' }] },
-  { id: 'carnitine-hcl', name: 'كارنيتين هيدروكلوريد', scientific_name: 'Carnitine HCl', searchKeywords: ['carnitine hcl'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض أميني', benefits: { 'تنظيم الإفرازات الدهنية': 0.8, 'تقشير لطيف': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'hydroxycaproic-acid', name: 'حمض هيدروكسي كابرويك', scientific_name: 'Hydroxycaproic Acid', searchKeywords: ['hydroxycaproic acid'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض عضوي', benefits: { 'تقشير': 0.75, 'تجديد الخلايا': 0.7 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'hydroxycinnamic-acid', name: 'حمض هيدروكسي سيناميك', scientific_name: 'Hydroxycinnamic Acid', searchKeywords: ['hydroxycinnamic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض فينولي', benefits: { 'مضاد أكسدة': 0.88, 'حماية من أضرار الشمس': 0.8 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'vanillic-acid', name: 'حمض الفانيليك', scientific_name: 'Vanillic Acid', searchKeywords: ['vanillic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض فينولي', benefits: { 'مضاد أكسدة': 0.8, 'مضاد للميكروبات': 0.7 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'salicylic-acid-betaine', name: 'ساليسيلات البيتين', scientific_name: 'Betaine Salicylate', searchKeywords: ['betaine salicylate'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض بيتا هيدروكسي (BHA)', benefits: { 'تقشير لطيف': 0.9, 'مكافحة حب الشباب': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'مركب من حمض الساليسيليك والبيتين المرطب، مما يجعله ألطف على البشرة.' }, { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }] },
-  { id: 'thioctic-acid', name: 'حمض الثيوكتيك', scientific_name: 'Thioctic Acid', searchKeywords: ['thioctic acid', 'alpha lipoic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض دهني', benefits: { 'مضاد أكسدة قوي': 0.92, 'مكافحة الشيخوخة': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'risk', text: 'قوي جدا ويزيد من حساسية البشرة للشمس. يجب استخدامه بحذر وبضع مرات في الأسبوع فقط.' }] },
-  {
+{ id: 'shikimic-acid', name: 'حمض الشيكيميك', scientific_name: 'Shikimic Acid', searchKeywords: ['shikimic acid'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض عضوي', benefits: { 'تقشير': 0.8, 'مضاد للميكروبات': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'مقشر لطيف مشتق من اليانسون النجمي.' }] },
+{ id: 'suberic-acid', name: 'حمض السوبريك', scientific_name: 'Suberic Acid', searchKeywords: ['suberic acid'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض ثنائي الكربوكسيل', benefits: { 'مكافحة حب الشباب': 0.8, 'تنظيم الإفرازات الدهنية': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'eicosapentaenoic-acid', name: 'حمض الإيكوسابنتاينويك (EPA)', scientific_name: 'Eicosapentaenoic Acid', searchKeywords: ['eicosapentaenoic acid', 'epa'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'حمض دهني', benefits: { 'مضاد للالتهابات': 0.95, 'دعم حاجز البشرة': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'حمض أوميغا 3 قوي جدا، يوجد في زيت السمك.' }] },
+{ id: 'docosahexaenoic-acid', name: 'حمض الدوكوساهيكسانويك (DHA)', scientific_name: 'Docosahexaenoic Acid', searchKeywords: ['docosahexaenoic acid', 'dha'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'حمض دهني', benefits: { 'مضاد للالتهابات': 0.92, 'صحة أغشية الخلايا': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'حمض أوميغا 3 أساسي لصحة الجلد والدماغ.' }] },
+{ id: 'carnitine-hcl', name: 'كارنيتين هيدروكلوريد', scientific_name: 'Carnitine HCl', searchKeywords: ['carnitine hcl'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض أميني', benefits: { 'تنظيم الإفرازات الدهنية': 0.8, 'تقشير لطيف': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'hydroxycaproic-acid', name: 'حمض هيدروكسي كابرويك', scientific_name: 'Hydroxycaproic Acid', searchKeywords: ['hydroxycaproic acid'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض عضوي', benefits: { 'تقشير': 0.75, 'تجديد الخلايا': 0.7 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'hydroxycinnamic-acid', name: 'حمض هيدروكسي سيناميك', scientific_name: 'Hydroxycinnamic Acid', searchKeywords: ['hydroxycinnamic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض فينولي', benefits: { 'مضاد أكسدة': 0.88, 'حماية من أضرار الشمس': 0.8 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'vanillic-acid', name: 'حمض الفانيليك', scientific_name: 'Vanillic Acid', searchKeywords: ['vanillic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض فينولي', benefits: { 'مضاد أكسدة': 0.8, 'مضاد للميكروبات': 0.7 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'salicylic-acid-betaine', name: 'ساليسيلات البيتين', scientific_name: 'Betaine Salicylate', searchKeywords: ['betaine salicylate'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض بيتا هيدروكسي (BHA)', benefits: { 'تقشير لطيف': 0.9, 'مكافحة حب الشباب': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'info', text: 'مركب من حمض الساليسيليك والبيتين المرطب، مما يجعله ألطف على البشرة.' }, { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }] },
+{ id: 'thioctic-acid', name: 'حمض الثيوكتيك', scientific_name: 'Thioctic Acid', searchKeywords: ['thioctic acid', 'alpha lipoic acid'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'حمض دهني', benefits: { 'مضاد أكسدة قوي': 0.92, 'مكافحة الشيخوخة': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [{ level: 'risk', text: 'قوي جدا ويزيد من حساسية البشرة للشمس. يجب استخدامه بحذر وبضع مرات في الأسبوع فقط.' }] },
+{
         id: 'sh-polypeptide-50',
         name: 'sh-Polypeptide-50 (FGF)',
         scientific_name: 'sh-Polypeptide-50',
@@ -4603,7 +4603,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'عامل نمو مُصنّع بيولوجيا يحاكي عامل نمو الخلايا الليفية في الجسم، وهو ضروري لتجديد الجلد وإنتاج الكولاجين.' }],
       },
-  {
+{
         id: 'sh-oligopeptide-1',
         name: 'sh-Oligopeptide-1 (EGF)',
         scientific_name: 'sh-Oligopeptide-1',
@@ -4616,7 +4616,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'عامل نمو البشرة، وهو ببتيد قوي يساعد على تسريع إصلاح وتجديد خلايا الجلد.' }],
       },
-  {
+{
         id: 'palmitoyl-dipeptide-5-diaminobutyroyl-hydroxythreonine',
         name: 'بالميتويل ثنائي الببتيد-5',
         scientific_name: 'Palmitoyl Dipeptide-5 Diaminobutyroyl Hydroxythreonine',
@@ -4629,7 +4629,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم SYN®-TACKS. يستهدف تقاطع البشرة مع الأدمة لتحسين التواصل الخلوي وزيادة صلابة الجلد.' }],
       },
-  {
+{
         id: 'palmitoyl-tripeptide-38',
         name: 'بالميتويل ثلاثي الببتيد-38',
         scientific_name: 'Palmitoyl Tripeptide-38',
@@ -4642,7 +4642,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Matrixyl® synthe\'6®. يستهدف 6 مكونات رئيسية في بنية الجلد لملء التجاعيد من الداخل.' }],
       },
-  {
+{
         id: 'tetrapeptide-30',
         name: 'رباعي الببتيد-30',
         scientific_name: 'Tetrapeptide-30',
@@ -4655,7 +4655,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل على تفتيح البشرة عن طريق تقليل نشاط الخلايا الصباغية.' }],
       },
-  {
+{
         id: 'acetyl-arginyltryptophyl-diphenylglycine',
         name: 'أسيتيل أرجينيل تريبتوفيل ثنائي فينيل جلايسين',
         scientific_name: 'Acetyl Arginyltryptophyl Diphenylglycine',
@@ -4668,7 +4668,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Relistase™. يعمل على تثبيط الإيلاستاز، وهو الإنزيم الذي يكسر الإيلاستين في الجلد.' }],
       },
-  {
+{
         id: 'nonapeptide-1',
         name: 'نوناببتيد-1',
         scientific_name: 'Nonapeptide-1',
@@ -4681,7 +4681,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل على منع إنتاج الميلانين عن طريق منع هرمون تحفيز الخلايا الصباغية (MSH).' }],
       },
-  {
+{
         id: 'hexapeptide-11',
         name: 'سداسي الببتيد-11',
         scientific_name: 'Hexapeptide-11',
@@ -4694,7 +4694,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد مُصنّع بيولوجيا من الخميرة، يساعد على زيادة إنتاج الكولاجين وتحسين صحة الجلد بشكل عام.' }],
       },
-  {
+{
         id: 'quercetin',
         name: 'كيرسيتين',
         scientific_name: 'Quercetin',
@@ -4707,7 +4707,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلافونويد قوي موجود في العديد من النباتات مثل البصل والتفاح، معروف بخصائصه المضادة للأكسدة والالتهابات.' }],
       },
-  {
+{
         id: 'silymarin',
         name: 'سيليمارين',
         scientific_name: 'Silymarin',
@@ -4720,7 +4720,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المكون النشط في حليب الشوك، فعال جدا في حماية البشرة الدهنية من أكسدة الدهون التي تؤدي إلى حب الشباب.' }],
       },
-  {
+{
         id: 'pycnogenol',
         name: 'بيكنوجينول',
         scientific_name: 'Pinus Pinaster Bark Extract',
@@ -4733,7 +4733,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص من لحاء الصنوبر البحري الفرنسي، وهو مضاد أكسدة قوي جدا يعيد تدوير فيتامين C ويحمي الكولاجين.' }],
       },
-  {
+{
         id: 'glabridin',
         name: 'جلابريدين',
         scientific_name: 'Glabridin',
@@ -4746,7 +4746,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المكون النشط الرئيسي المسؤول عن تفتيح البشرة في مستخلص جذور عرق السوس.' }],
       },
-  {
+{
         id: 'curcuminoids',
         name: 'كركمينويدات',
         scientific_name: 'Curcuma Longa (Turmeric) Root Extract',
@@ -4759,7 +4759,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يصبغ البشرة باللون الأصفر مؤقتا.' }],
       },
-  {
+{
         id: 'emodin',
         name: 'إيمودين',
         scientific_name: 'Emodin',
@@ -4772,7 +4772,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب نشط يوجد في الألوفيرا والراوند، له خصائص علاجية.' }],
       },
-  {
+{
         id: 'sodium-polyglutamate',
         name: 'بولي جلوتامات الصوديوم (PGA)',
         scientific_name: 'Sodium Polyglutamate',
@@ -4785,7 +4785,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر من حمض الجلوتاميك الأميني، يمكنه الاحتفاظ بالماء بما يصل إلى 5000 مرة من وزنه، مكونا طبقة مرطبة ناعمة على الجلد.' }],
       },
-  {
+{
         id: 'polyhydroxy-acids',
         name: 'أحماض البولي هيدروكسي (PHA)',
         scientific_name: 'Gluconolactone, Lactobionic Acid, Galactose',
@@ -4798,7 +4798,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'الجيل الجديد من الأحماض المقشرة. جزيئاتها كبيرة جدا، تقشر بلطف شديد وتعمل كمرطب. مناسبة للبشرة الحساسة جدا.' }],
       },
-  {
+{
         id: 'aquaxyl',
         name: 'أكواكسيل',
         scientific_name: 'Xylitylglucoside, Anhydroxylitol, Xylitol',
@@ -4811,7 +4811,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب ترطيب حاصل على براءة اختراع، يعمل على تحسين تدفق المياه في طبقات الجلد وتقوية حاجز البشرة.' }],
       },
-  {
+{
         id: 'ciclopirox-olamine',
         name: 'سيكلوبيروكس أولامين',
         scientific_name: 'Ciclopirox Olamine',
@@ -4824,7 +4824,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'عامل طبي فعال جدا لعلاج القشرة والتهاب الجلد الدهني.' }],
       },
-  {
+{
         id: 'aminexil',
         name: 'أمينيكسيل',
         scientific_name: 'Diaminopyrimidine Oxide',
@@ -4837,7 +4837,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون حاصل على براءة اختراع (مشابه للمينوكسيديل) يهدف إلى منع تصلب غلاف الكولاجين حول بصيلات الشعر، مما يسمح للشعر بالنمو بشكل أقوى.' }],
       },
-  {
+{
         id: 'stemoxydine',
         name: 'ستيموكسيدين',
         scientific_name: 'Stemoxydine',
@@ -4850,7 +4850,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون حاصل على براءة اختراع يعمل على خلق بيئة منخفضة الأكسجين حول الخلايا الجذعية في بصيلات الشعر، مما يساعد على "إيقاظ" البصيلات الخاملة.' }],
       },
-  {
+{
         id: 'redensyl',
         name: 'ريدينسيل',
         scientific_name: 'Glycerin, Aqua, Sodium Metabisulfite, Larix Europaea Wood Extract, Glycine, Zinc Chloride, Camellia Sinensis Leaf Extract',
@@ -4863,7 +4863,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب حاصل على براءة اختراع يستهدف الخلايا الجذعية في بصيلات الشعر لتحفيز مرحلة نمو الشعر (Anagen).' }],
       },
-  {
+{
         id: 'capixyl',
         name: 'كابيكسيل',
         scientific_name: 'Butylene Glycol, Aqua, Dextran, Acetyl Tetrapeptide-3, Trifolium Pratense (Clover) Flower Extract',
@@ -4876,7 +4876,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب يجمع بين ببتيد ومستخلص البرسيم الأحمر لمنع تساقط الشعر وتحفيز نموه.' }],
       },
-  {
+{
         id: 'procapil',
         name: 'بروكابيل',
         scientific_name: 'Butylene Glycol, Aqua, PPG-26-Buteth-26, PEG-40 Hydrogenated Castor Oil, Apigenin, Oleanolic Acid, Biotinoyl Tripeptide-1',
@@ -4889,7 +4889,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب ثلاثي المفعول يحارب شيخوخة البصيلات، ويمنع تساقط الشعر، ويقوي الشعر من الجذور.' }],
       },
-  {
+{
         id: 'tripeptide-10-citrulline',
         name: 'ثلاثي الببتيد-10 سيترولين',
         scientific_name: 'Tripeptide-10 Citrulline',
@@ -4902,7 +4902,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Decorinyl®. يساعد على تنظيم ألياف الكولاجين للحصول على بشرة أكثر نعومة وتجانسا.' }],
       },
-  {
+{
         id: 'hexanoyl-dipeptide-3-norleucine-acetate',
         name: 'هيكسانويل ثنائي الببتيد-3 نورليوسين أسيتات',
         scientific_name: 'Hexanoyl Dipeptide-3 Norleucine Acetate',
@@ -4915,7 +4915,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم PerfectionPeptide P3™. ببتيد مقشر يعيد تنشيط عملية التقشير الطبيعية للبشرة.' }],
       },
-  {
+{
         id: 'myristoyl-pentapeptide-17',
         name: 'ميريستويل خماسي الببتيد-17',
         scientific_name: 'Myristoyl Pentapeptide-17',
@@ -4928,7 +4928,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد شائع في سيرومات الرموش، يعزز إنتاج الكيراتين في بصيلات الشعر.' }],
       },
-  {
+{
         id: 'acetyl-tetrapeptide-2',
         name: 'أسيتيل رباعي الببتيد-2',
         scientific_name: 'Acetyl Tetrapeptide-2',
@@ -4941,7 +4941,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Uplevity™. يحفز إنتاج الكولاجين والإيلاستين لمكافحة الترهل الناتج عن الجاذبية.' }],
       },
-  {
+{
         id: 'palmitoyl-hexapeptide-12',
         name: 'بالميتويل سداسي الببتيد-12',
         scientific_name: 'Palmitoyl Hexapeptide-12',
@@ -4954,7 +4954,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tripeptide-1',
         name: 'ثلاثي الببتيد-1',
         scientific_name: 'Tripeptide-1',
@@ -4967,7 +4967,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزء من ببتيد النحاس الشهير (GHK-Cu)، وهو فعال في إصلاح الجلد وتحفيز الكولاجين.' }],
       },
-  {
+{
         id: 'genistein',
         name: 'جينيستين',
         scientific_name: 'Genistein',
@@ -4980,7 +4980,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ايسوفلافون من الصويا، له تأثير شبيه بالإستروجين يساعد على مكافحة شيخوخة الجلد الناتجة عن انقطاع الطمث.' }],
       },
-  {
+{
         id: 'viniferine',
         name: 'فينيفرين',
         scientific_name: 'Vitis Vinifera (Grape) Vine Extract',
@@ -4993,7 +4993,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص من نسغ شجرة العنب، يقال إنه أكثر فعالية من فيتامين C في تفتيح البقع الداكنة.' }],
       },
-  {
+{
         id: 'hesperidin',
         name: 'هيسبيريدين',
         scientific_name: 'Hesperidin Methyl Chalcone',
@@ -5006,7 +5006,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يوجد في قشور الحمضيات، وهو ممتاز لتقوية الشعيرات الدموية وتقليل الانتفاخ والهالات السوداء حول العين.' }],
       },
-  {
+{
         id: 'baicalin',
         name: 'بايكالين',
         scientific_name: 'Scutellaria Baicalensis Root Extract',
@@ -5019,7 +5019,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'mangosteen-extract',
         name: 'مستخلص المانغوستين',
         scientific_name: 'Garcinia Mangostana Peel Extract',
@@ -5032,7 +5032,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني بالزانثونات، وهي مضادات أكسدة قوية جدا.' }],
       },
-  {
+{
         id: 'edelweiss-extract',
         name: 'مستخلص زهرة إديلويس',
         scientific_name: 'Leontopodium Alpinum Extract',
@@ -5045,7 +5045,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ceramide-np',
         name: 'سيراميد NP (سيراميد 3)',
         scientific_name: 'Ceramide NP',
@@ -5058,7 +5058,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد أكثر أنواع السيراميد شيوعا وأهمية في الحفاظ على صحة حاجز البشرة.' }],
       },
-  {
+{
         id: 'ceramide-ap',
         name: 'سيراميد AP (سيراميد 6-II)',
         scientific_name: 'Ceramide AP',
@@ -5071,7 +5071,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ceramide-eop',
         name: 'سيراميد EOP (سيراميد 1)',
         scientific_name: 'Ceramide EOP',
@@ -5084,7 +5084,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل كـ "مادة لاصقة" تربط خلايا حاجز البشرة معا.' }],
       },
-  {
+{
         id: 'glycosphingolipids',
         name: 'جلايكوسفينجوليبيد',
         scientific_name: 'Glycosphingolipids',
@@ -5097,7 +5097,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'لبنة بناء للسيراميدات في الجلد.' }],
       },
-  {
+{
         id: 'sodium-hyaluronate-crosspolymer',
         name: 'صوديوم هيالورونات كروسبوليمر',
         scientific_name: 'Sodium Hyaluronate Crosspolymer',
@@ -5110,7 +5110,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شبكة ثلاثية الأبعاد من حمض الهيالورونيك تشكل طبقة مرطبة على سطح الجلد وتطلق الرطوبة ببطء.' }],
       },
-  {
+{
         id: 'hydrolyzed-hyaluronic-acid',
         name: 'حمض الهيالورونيك المهدرج',
         scientific_name: 'Hydrolyzed Hyaluronic Acid',
@@ -5123,7 +5123,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزيئات صغيرة من حمض الهيالورونيك يمكنها اختراق طبقات أعمق من الجلد لتوفير الترطيب من الداخل.' }],
       },
-  {
+{
         id: 'sodium-acetylated-hyaluronate',
         name: 'هيالورونات الصوديوم الأسيتيلية',
         scientific_name: 'Sodium Acetylated Hyaluronate',
@@ -5136,7 +5136,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف باسم "Super Hyaluronic Acid". شكل معدل يلتصق بالجلد بقوة ويوفر ترطيبا مضاعفا.' }],
       },
-  {
+{
         id: 'hydroxypropyltrimonium-hyaluronate',
         name: 'هيالورونات هيدروكسي بروبيل تريمونيوم',
         scientific_name: 'Hydroxypropyltrimonium Hyaluronate',
@@ -5149,7 +5149,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض هيالورونيك موجب الشحنة، مما يجعله يلتصق بالجلد والشعر (سالب الشحنة) ولا يُشطف بسهولة، موفرا ترطيبا طويل الأمد.' }],
       },
-  {
+{
         id: 'biotinoyl-tripeptide-1',
         name: 'بيوتينويل ثلاثي الببتيد-1',
         scientific_name: 'Biotinoyl Tripeptide-1',
@@ -5162,7 +5162,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد معدل من البيوتين، وهو المكون الرئيسي في مركب Procapil®.' }],
       },
-  {
+{
         id: 'thermal-spring-water',
         name: 'مياه الينابيع الحرارية',
         scientific_name: 'Aqua / Thermal Spring Water',
@@ -5175,7 +5175,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون أساسي في علامات تجارية مثل La Roche-Posay وAvène وVichy. غنية بالمعادن النادرة مثل السيلينيوم والسترونتيوم التي تهدئ البشرة.' }],
       },
-  {
+{
         id: 'acetyl-dipeptide-1-cetyl-ester',
         name: 'أسيتيل ثنائي الببتيد-1 سيتيل استر (Neurosensine)',
         scientific_name: 'Acetyl Dipeptide-1 Cetyl Ester',
@@ -5188,7 +5188,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Neurosensine™. ببتيد مهدئ قوي يقلل من إحساس البشرة بالوخز والحرارة عن طريق تنظيم استجابة الأعصاب للمهيجات.' }],
       },
-  {
+{
         id: 'vitreoscilla-ferment',
         name: 'خميرة الفيتروسيلا (Life Plankton™)',
         scientific_name: 'Vitreoscilla Ferment',
@@ -5201,7 +5201,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Life Plankton™ (Biotherm). وهو مكون بروبيوتيك يساعد على تهدئة البشرة وتقوية دفاعاتها الطبيعية.' }],
       },
-  {
+{
         id: 'i-rhamnose',
         name: 'رامنوز',
         scientific_name: 'Rhamnose',
@@ -5214,7 +5214,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'سكر نباتي حاصل على براءة اختراع (Vichy)، يساعد على تواصل الخلايا ويعزز صحة الجلد ومكافحة الشيخوخة.' }],
       },
-  {
+{
         id: 'lha',
         name: 'حمض ليبو هيدروكسي (LHA)',
         scientific_name: 'Capryloyl Salicylic Acid',
@@ -5230,7 +5230,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }
         ],
       },
-  {
+{
         id: 'terephthalylidene-dicamphor-sulfonic-acid',
         name: 'حمض تريفثاليليدين ثنائي الكافور السلفونيك (Mexoryl SX)',
         scientific_name: 'Terephthalylidene Dicamphor Sulfonic Acid',
@@ -5243,7 +5243,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Mexoryl® SX. فلتر UVA قوي جدا ومستقر، وهو حصري لعلامات تجارية مثل La Roche-Posay.' }],
       },
-  {
+{
         id: 'drometrizole-trisiloxane',
         name: 'دروميتريزول تريسيلوكسان (Mexoryl XL)',
         scientific_name: 'Drometrizole Trisiloxane',
@@ -5256,7 +5256,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Mexoryl® XL. فلتر واسع الطيف قابل للذوبان في الزيت، يعمل بتآزر مع Mexoryl SX.' }],
       },
-  {
+{
         id: 'bis-ethylhexyloxyphenol-methoxyphenyl-triazine',
         name: 'بس-إيثيل هكسيلوكسي فينول ميثوكسي فينيل تريازين (Tinosorb S)',
         scientific_name: 'Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine',
@@ -5269,7 +5269,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Tinosorb® S. يعتبر من أفضل فلاتر الشمس في العالم لاستقراره وتغطيته الواسعة. معتمد في أوروبا وآسيا ولكن ليس بعد في الولايات المتحدة.' }],
       },
-  {
+{
         id: 'methylene-bis-benzotriazolyl-tetramethylbutylphenol',
         name: 'ميثيلين بس-بنزوتريازوليل رباعي ميثيل بوتيل فينول (Tinosorb M)',
         scientific_name: 'Methylene Bis-Benzotriazolyl Tetramethylbutylphenol',
@@ -5285,7 +5285,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يترك طبقة بيضاء طفيفة لأنه جسيمات دقيقة (nano).' }
         ],
       },
-  {
+{
         id: 'diethylhexyl-butamido-triazone',
         name: 'ثنائي إيثيل هكسيل بوتاميدو تريازون (Uvasorb HEB)',
         scientific_name: 'Diethylhexyl Butamido Triazone',
@@ -5298,7 +5298,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Uvasorb® HEB. أحد أكثر فلاتر UVB استقرارا وفعالية.' }],
       },
-  {
+{
         id: 'ethylhexyl-triazone',
         name: 'إيثيل هكسيل تريازون (Uvinul T 150)',
         scientific_name: 'Ethylhexyl Triazone',
@@ -5311,7 +5311,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Uvinul® T 150. لديه أعلى قدرة امتصاص لأشعة UVB بين جميع فلاتر الشمس المتاحة.' }],
       },
-  {
+{
         id: 'diethylamino-hydroxybenzoyl-hexyl-benzoate',
         name: 'ثنائي إيثيل أمينو هيدروكسي بنزويل هيكسيل بنزوات (Uvinul A Plus)',
         scientific_name: 'Diethylamino Hydroxybenzoyl Hexyl Benzoate',
@@ -5324,7 +5324,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Uvinul® A Plus. يوفر حماية ممتازة من أشعة UVA ويساعد على منع تلف الكولاجين.' }],
       },
-  {
+{
         id: 'tris-biphenyl-triazine-nano',
         name: 'تريس-ثنائي فينيل تريازين (Tinosorb A2B)',
         scientific_name: 'Tris-Biphenyl Triazine',
@@ -5337,7 +5337,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Tinosorb® A2B. فعال بشكل خاص في سد الفجوة بين حماية UVB و UVA.' }],
       },
-  {
+{
         id: 'o-cymen-5-ol',
         name: 'o-سيمين-5-أول (Biosol)',
         scientific_name: 'o-Cymen-5-ol',
@@ -5350,7 +5350,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون مضاد للبكتيريا والفطريات مشتق من الزعتر، يستخدم في منتجات حب الشباب والمنتجات المهدئة.' }],
       },
-  {
+{
         id: 'symcalmin',
         name: 'سيمكالمين',
         scientific_name: 'Hydroxyphenyl Propamidobenzoic Acid',
@@ -5363,7 +5363,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب صناعي يحاكي المكونات المهدئة في الشوفان (الأفينانثراميدات)، وهو فعال جدا في تخفيف الحكة والاحمرار.' }],
       },
-  {
+{
         id: 'tazman-pepper-extract',
         name: 'مستخلص فلفل تسمانيا',
         scientific_name: 'Tasmannia Lanceolata Fruit/Leaf Extract',
@@ -5376,7 +5376,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص نباتي فعال جدا في تهدئة البشرة الحساسة والمتهيجة بشكل فوري.' }],
       },
-  {
+{
         id: 'sphingosine',
         name: 'سفينغوزين',
         scientific_name: 'Sphingosine',
@@ -5389,7 +5389,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'n-acetyl-ethanolamine',
         name: 'N-أسيتيل إيثانولامين (PEA)',
         scientific_name: 'Palmitamide MEA',
@@ -5402,7 +5402,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض دهني طبيعي في الجسم يساعد على تهدئة الالتهابات واستجابات الحساسية في الجلد.' }],
       },
-  {
+{
         id: 'phloretin',
         name: 'فلوريتين',
         scientific_name: 'Phloretin',
@@ -5415,7 +5415,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مضاد أكسدة قوي مستخلص من التفاح، مشهور في سيرومات Skinceuticals.' }],
       },
-  {
+{
         id: 'thiamidol',
         name: 'ثياميدول',
         scientific_name: 'Isobutylamido Thiazolyl Resorcinol',
@@ -5428,7 +5428,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون حاصل على براءة اختراع من Eucerin، وهو أحد أقوى مثبطات إنتاج الميلانين المتاحة.' }],
       },
-  {
+{
         id: 'hexylresorcinol',
         name: 'هيكسيل ريزورسينول',
         scientific_name: 'Hexylresorcinol',
@@ -5441,7 +5441,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carnosine',
         name: 'كارنوزين',
         scientific_name: 'Carnosine',
@@ -5454,7 +5454,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد طبيعي في الجسم يحارب عملية الغلايكيشن (ارتباط السكر بالكولاجين)، والتي تسبب تصلب الجلد وظهور التجاعيد.' }],
       },
-  {
+{
         id: 'dimethylmethoxy-chromanol',
         name: 'ثنائي ميثيل ميثوكسي كرومانول',
         scientific_name: 'Dimethylmethoxy Chromanol',
@@ -5467,7 +5467,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Lipochroman®. مضاد أكسدة قوي جدا يحمي من أنواع متعددة من الجذور الحرة الناتجة عن التلوث والأشعة فوق البنفسجية.' }],
       },
-  {
+{
         id: 'thioredoxin',
         name: 'ثيوريدوكسين',
         scientific_name: 'Thioredoxin',
@@ -5480,7 +5480,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بروتين طبيعي في الجسم يعمل كمضاد أكسدة قوي ويساعد على إصلاح تلف الخلايا.' }],
       },
-  {
+{
         id: 'vitis-vinifera-seed-extract',
         name: 'مستخلص بذور العنب',
         scientific_name: 'Vitis Vinifera (Grape) Seed Extract',
@@ -5493,7 +5493,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني بالبروأنثوسيانيدينات (OPCs)، وهي مضادات أكسدة أقوى من فيتامين C و E.' }],
       },
-  {
+{
         id: 'palmitoyl-grape-seed-extract',
         name: 'مستخلص بذور العنب بالميتويل',
         scientific_name: 'Palmitoyl Grape Seed Extract',
@@ -5506,7 +5506,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب حاصل على براءة اختراع من Caudalie، يجمع بين بوليفينولات بذور العنب وحمض دهني لتحسين الامتصاص والفعالية.' }],
       },
-  {
+{
         id: '4-t-butylcyclohexanol',
         name: '4-تي-بوتيل سيكلوهكسانول',
         scientific_name: '4-t-Butylcyclohexanol',
@@ -5519,7 +5519,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم SymSitive®. مكون فعال جدا للبشرة شديدة الحساسية، يعمل على تنظيم مستقبلات الحساسية في الجلد لتهدئة فورية.' }],
       },
-  {
+{
         id: 'mirabilis-jalapa-extract',
         name: 'مستخلص زهرة الساعة الرابعة',
         scientific_name: 'Mirabilis Jalapa Extract',
@@ -5532,7 +5532,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على تهدئة البشرة الحساسة وتقوية حاجزها لتقليل تفاعلها مع المهيجات.' }],
       },
-  {
+{
         id: 'ophiopogon-japonicus-root-extract',
         name: 'مستخلص جذور الأفعى الملتحية',
         scientific_name: 'Ophiopogon Japonicus Root Extract',
@@ -5545,7 +5545,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'stearyl-glycyrrhetinate',
         name: 'ستيريل جليسيرتينات',
         scientific_name: 'Stearyl Glycyrrhetinate',
@@ -5558,7 +5558,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق زيتي من حمض الجليسيرتينيك (الموجود في عرق السوس)، مما يحسن امتصاصه وفعاليته كمهدئ.' }],
       },
-  {
+{
         id: 'ruscus-aculeatus-root-extract',
         name: 'مستخلص جذور السفندر',
         scientific_name: 'Ruscus Aculeatus Root Extract',
@@ -5571,7 +5571,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في منتجات البشرة الحساسة المعرضة للوردية والاحمرار.' }],
       },
-  {
+{
         id: 'mannitol',
         name: 'مانيتول',
         scientific_name: 'Mannitol',
@@ -5584,7 +5584,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'سكر كحولي يستخدم كمرطب ومضاد أكسدة، خاصة في منتجات Bioderma الحاصلة على براءة اختراع.' }],
       },
-  {
+{
         id: 'fructooligosaccharides',
         name: 'فركت أوليجو سكاريدات',
         scientific_name: 'Fructooligosaccharides',
@@ -5597,7 +5597,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بريبيوتيك يغذي البكتيريا المفيدة على سطح الجلد.' }],
       },
-  {
+{
         id: 'nctf-complex',
         name: 'مركب NCTF',
         scientific_name: 'NCTF (New Cellular Treatment Factor)',
@@ -5610,7 +5610,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب حاصل على براءة اختراع من Filorga يحتوي على أكثر من 50 مكونا (فيتامينات، أحماض أمينية، معادن، إنزيمات مساعدة) يحاكي تركيبات حقن الميزوثيرابي.' }],
       },
-  {
+{
         id: 'pro-xylane',
         name: 'برو-كسيلان',
         scientific_name: 'Hydroxypropyl Tetrahydropyrantriol',
@@ -5623,7 +5623,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزيء حاصل على براءة اختراع من L\'Oréal، مشتق من خشب الزان. يعمل على تحفيز إنتاج الجليكوز أمينوجليكان (GAGs) مثل حمض الهيالورونيك، مما يعزز كثافة وامتلاء الجلد.' }],
       },
-  {
+{
         id: 'ambophenol',
         name: 'أمبوفينول',
         scientific_name: 'Tambourissa Trichophylla Leaf Extract',
@@ -5636,7 +5636,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص نباتي حاصل على براءة اختراع (La Roche-Posay) فعال في تقليل الاحمرار المصاحب للوردية.' }],
       },
-  {
+{
         id: 'myrtus-communis-leaf-extract',
         name: 'مستخلص أوراق الآس',
         scientific_name: 'Myrtus Communis Leaf Extract',
@@ -5649,7 +5649,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في منتجات البشرة الدهنية للمساعدة في تنظيم إفراز الدهون ومكافحة البكتيريا.' }],
       },
-  {
+{
         id: 'peumus-boldus-leaf-extract',
         name: 'مستخلص أوراق البولدو',
         scientific_name: 'Peumus Boldus Leaf Extract',
@@ -5662,7 +5662,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على تحفيز دفاعات البشرة الطبيعية (β-defensins) لتحقيق توازن في ميكروبيوم الجلد.' }],
       },
-  {
+{
         id: 'glyceryl-stearate',
         name: 'جليسريل ستيرات',
         scientific_name: 'Glyceryl Stearate',
@@ -5675,7 +5675,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك بشكل طفيف لبعض أنواع البشرة.' }],
       },
-  {
+{
         id: 'peg-100-stearate',
         name: 'ستيرات PEG-100',
         scientific_name: 'PEG-100 Stearate',
@@ -5688,7 +5688,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'مثل مركبات PEG الأخرى، قد يكون هناك مخاوف نظرية بشأن التلوث بالإيثيلين أوكسيد أثناء التصنيع، ولكنها منظمة بشدة.' }],
       },
-  {
+{
         id: 'cetearyl-glucoside',
         name: 'سيتريل غلوكوزيد',
         scientific_name: 'Cetearyl Glucoside',
@@ -5701,7 +5701,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستحلب طبيعي معتمد من Ecocert، لطيف جدا ومناسب للبشرة الحساسة.' }],
       },
-  {
+{
         id: 'sorbitan-oleate',
         name: 'أوليات السوربيتان',
         scientific_name: 'Sorbitan Oleate',
@@ -5714,7 +5714,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polysorbate-20',
         name: 'بوليسوربات 20',
         scientific_name: 'Polysorbate 20',
@@ -5727,7 +5727,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polysorbate-60',
         name: 'بوليسوربات 60',
         scientific_name: 'Polysorbate 60',
@@ -5740,7 +5740,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polysorbate-80',
         name: 'بوليسوربات 80',
         scientific_name: 'Polysorbate 80',
@@ -5753,7 +5753,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب مشاكل للبشرة المعرضة لحب الشباب الفطري.' }],
       },
-  {
+{
         id: 'ceteareth-20',
         name: 'سيتاريث-20',
         scientific_name: 'Ceteareth-20',
@@ -5769,7 +5769,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه على البشرة المتضررة أو المجروحة بسبب مخاوف قديمة بشأن التلوث.' }
         ],
       },
-  {
+{
         id: 'steareth-2',
         name: 'ستيريث-2',
         scientific_name: 'Steareth-2',
@@ -5782,7 +5782,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steareth-20',
         name: 'ستيريث-20',
         scientific_name: 'Steareth-20',
@@ -5795,7 +5795,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cetearyl-olivate',
         name: 'سيتريل أوليفات',
         scientific_name: 'Cetearyl Olivate',
@@ -5808,7 +5808,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم غالبا مع "Sorbitan Olivate" لتكوين نظام استحلاب كامل (Olivem 1000).' }],
       },
-  {
+{
         id: 'sorbitan-olivate',
         name: 'سوربيتان أوليفات',
         scientific_name: 'Sorbitan Olivate',
@@ -5821,7 +5821,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم غالبا مع "Cetearyl Olivate".' }],
       },
-  {
+{
         id: 'lecithin',
         name: 'ليسيثين',
         scientific_name: 'Lecithin',
@@ -5834,7 +5834,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون مصدره الصويا أو البيض أو دوار الشمس، مما قد يثير قلق أصحاب الحساسية.' }],
       },
-  {
+{
         id: 'hydrogenated-lecithin',
         name: 'ليسيثين مهدرج',
         scientific_name: 'Hydrogenated Lecithin',
@@ -5847,7 +5847,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شكل أكثر استقرارا من الليسيثين العادي.' }],
       },
-  {
+{
         id: 'potassium-cetyl-phosphate',
         name: 'فوسفات سيتيل البوتاسيوم',
         scientific_name: 'Potassium Cetyl Phosphate',
@@ -5860,7 +5860,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'alcohol-denat',
         name: 'كحول مشوه (محوّل)',
         scientific_name: 'Alcohol Denat.',
@@ -5876,7 +5876,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'على الرغم من سمعته السيئة، إلا أنه يستخدم في بعض التركيبات لتحسين امتصاص المكونات النشطة وتقليل الملمس الدهني.' }
         ],
       },
-  {
+{
         id: 'isopropyl-alcohol',
         name: 'كحول الأيزوبروبيل',
         scientific_name: 'Isopropyl Alcohol',
@@ -5891,7 +5891,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مجفف ومهيج جدا للبشرة. يجب تجنبه في مستحضرات التجميل التي تترك على الجلد.' }
         ],
       },
-  {
+{
         id: 'methylpropanediol',
         name: 'ميثيل بروبانيديول',
         scientific_name: 'Methylpropanediol',
@@ -5904,7 +5904,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ethoxydiglycol',
         name: 'إيثوكسي ديجليكول',
         scientific_name: 'Ethoxydiglycol',
@@ -5919,7 +5919,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'فعال جدا في إذابة المكونات الصعبة مثل فيتامين C ومشتقاته، وتحسين توصيلها إلى الجلد.' }
         ],
       },
-  {
+{
         id: 'isododecane',
         name: 'أيزودوديكان',
         scientific_name: 'Isododecane',
@@ -5932,7 +5932,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يتبخر بسرعة بعد التطبيق تاركا وراءه الأصباغ والمكونات الأخرى، مما يجعله مثاليا لأحمر الشفاه السائل وكريمات الأساس طويلة الأمد.' }],
       },
-  {
+{
         id: 'isohexadecane',
         name: 'أيزوهيكساديكان',
         scientific_name: 'Isohexadecane',
@@ -5945,7 +5945,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ammonium-polyacryloyldimethyl-taurate',
         name: 'أمونيوم بولي أكريلويل دايميثيل توريت',
         scientific_name: 'Ammonium Polyacryloyldimethyl Taurate',
@@ -5958,7 +5958,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعطي ملمسا مخمليا منعشا للتركيبات.' }],
       },
-  {
+{
         id: 'hydroxyethyl-acrylate-sodium-acryloyldimethyl-taurate-copolymer',
         name: 'هيدروكسي إيثيل أكريلات/صوديوم أكريلويل دايميثيل توريت كوبوليمر',
         scientific_name: 'Hydroxyethyl Acrylate/Sodium Acryloyldimethyl Taurate Copolymer',
@@ -5971,7 +5971,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ممتاز لتركيبات الجل-كريم.' }],
       },
-  {
+{
         id: 'sodium-polyacrylate',
         name: 'بولي أكريلات الصوديوم',
         scientific_name: 'Sodium Polyacrylate',
@@ -5984,7 +5984,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'acacia-senegal-gum',
         name: 'صمغ السنغال (الصمغ العربي)',
         scientific_name: 'Acacia Senegal Gum',
@@ -5997,7 +5997,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carrageenan',
         name: 'كاراجينان',
         scientific_name: 'Carrageenan',
@@ -6010,7 +6010,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'هناك جدل حوله، حيث تشير بعض الدراسات إلى أنه قد يكون مهيجا ومسببا للالتهابات، على الرغم من أن الهيئات التنظيمية تعتبره آمنا للاستخدام الموضعي.' }],
       },
-  {
+{
         id: 'chlorphenesin',
         name: 'كلورفينيسين',
         scientific_name: 'Chlorphenesin',
@@ -6023,7 +6023,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مقيد الاستخدام بتركيزات منخفضة (عادة حوالي 0.3%) في أوروبا. قد يسبب حساسية تلامسية للبعض.' }],
       },
-  {
+{
         id: 'chlorhexidine-digluconate',
         name: 'كلورهيكسيدين ديجلوكونات',
         scientific_name: 'Chlorhexidine Digluconate',
@@ -6036,7 +6036,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'مقيد بتركيز أقصى 0.3% في أوروبا. قد يسبب حساسية نادرة ولكنها شديدة.' }],
       },
-  {
+{
         id: 'polyaminopropyl-biguanide',
         name: 'بولي أمينوبروبيل بيجوانيد (PHMB)',
         scientific_name: 'Polyaminopropyl Biguanide',
@@ -6049,7 +6049,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مقيد بتركيز أقصى 0.1% في أوروبا ومصنف كمادة مسرطنة مشتبه بها من الفئة 2.' }],
       },
-  {
+{
         id: 'capryloyl-glycine',
         name: 'كابريلويل جلايسين',
         scientific_name: 'Capryloyl Glycine',
@@ -6062,7 +6062,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على الحفاظ على صحة ميكروبيوم البشرة.' }],
       },
-  {
+{
         id: 'undecylenoyl-phenylalanine',
         name: 'أنديسيلينويل فينيل ألانين',
         scientific_name: 'Undecylenoyl Phenylalanine',
@@ -6075,7 +6075,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Sepiwhite™ MSH. يعمل عن طريق منع هرمون تحفيز الخلايا الصباغية (MSH).' }],
       },
-  {
+{
         id: 'panax-ginseng-root-extract',
         name: 'مستخلص جذور الجينسنغ',
         scientific_name: 'Panax Ginseng Root Extract',
@@ -6088,7 +6088,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'نبات أدابتوجيني يساعد البشرة على مقاومة الإجهاد البيئي ويعزز حيويتها.' }],
       },
-  {
+{
         id: 'ganoderma-lucidum-extract',
         name: 'مستخلص فطر الريشي',
         scientific_name: 'Ganoderma Lucidum (Reishi Mushroom) Extract',
@@ -6101,7 +6101,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فطر أدابتوجيني قوي، غني بالبيتا جلوكان والبوليسكاريدات المهدئة والمرطبة.' }],
       },
-  {
+{
         id: 'rhodiola-rosea-root-extract',
         name: 'مستخلص جذور الروديولا الوردية',
         scientific_name: 'Rhodiola Rosea Root Extract',
@@ -6114,7 +6114,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'نبات أدابتوجيني يساعد على حماية البشرة من الإجهاد الناتج عن العوامل البيئية مثل الأشعة فوق البنفسجية والتلوث.' }],
       },
-  {
+{
         id: 'withania-somnifera-root-extract',
         name: 'مستخلص جذور الأشواغاندا',
         scientific_name: 'Withania Somnifera (Ashwagandha) Root Extract',
@@ -6127,7 +6127,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'inonotus-obliquus-extract',
         name: 'مستخلص فطر الشاجا',
         scientific_name: 'Inonotus Obliquus (Chaga Mushroom) Extract',
@@ -6140,7 +6140,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يحتوي على مستويات عالية جدا من مضادات الأكسدة لحماية البشرة من الجذور الحرة.' }],
       },
-  {
+{
         id: 'schisandra-chinensis-fruit-extract',
         name: 'مستخلص فاكهة الشيساندرا',
         scientific_name: 'Schisandra Chinensis Fruit Extract',
@@ -6153,7 +6153,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'astragalus-membranaceus-root-extract',
         name: 'مستخلص جذور القتاد',
         scientific_name: 'Astragalus Membranaceus Root Extract',
@@ -6166,7 +6166,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'camellia-sinensis-leaf-extract',
         name: 'مستخلص أوراق الشاي (الأخضر، الأبيض، الأسود)',
         scientific_name: 'Camellia Sinensis Leaf Extract',
@@ -6179,7 +6179,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني بالبوليفينولات، خاصة EGCG، التي تحمي البشرة من الإجهاد التأكسدي.' }],
       },
-  {
+{
         id: 'vitis-vinifera-fruit-extract',
         name: 'مستخلص فاكهة العنب',
         scientific_name: 'Vitis Vinifera (Grape) Fruit Extract',
@@ -6192,7 +6192,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'punica-granatum-extract',
         name: 'مستخلص الرمان',
         scientific_name: 'Punica Granatum Extract',
@@ -6205,7 +6205,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'coffea-arabica-seed-extract',
         name: 'مستخلص بذور البن',
         scientific_name: 'Coffea Arabica (Coffee) Seed Extract',
@@ -6218,7 +6218,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'theobroma-cacao-extract',
         name: 'مستخلص الكاكاو',
         scientific_name: 'Theobroma Cacao (Cocoa) Extract',
@@ -6231,7 +6231,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'euterpe-oleracea-fruit-extract',
         name: 'مستخلص فاكهة الآساي',
         scientific_name: 'Euterpe Oleracea (Acai) Fruit Extract',
@@ -6244,7 +6244,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lycium-barbarum-fruit-extract',
         name: 'مستخلص فاكهة الغوجي',
         scientific_name: 'Lycium Barbarum (Goji) Fruit Extract',
@@ -6257,7 +6257,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'malpighia-emarginata-fruit-extract',
         name: 'مستخلص كرز الأسيرولا',
         scientific_name: 'Malpighia Emarginata (Acerola) Fruit Extract',
@@ -6270,7 +6270,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد أغنى المصادر الطبيعية لفيتامين C في العالم.' }],
       },
-  {
+{
         id: 'morus-alba-root-extract',
         name: 'مستخلص جذور التوت الأبيض',
         scientific_name: 'Morus Alba (White Mulberry) Root Extract',
@@ -6283,7 +6283,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'chrysanthemum-indicum-flower-extract',
         name: 'مستخلص زهرة الأقحوان',
         scientific_name: 'Chrysanthemum Indicum Flower Extract',
@@ -6296,7 +6296,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'قد يسبب حساسية للأشخاص الذين يعانون من حساسية نباتات عائلة الأقحوان.' }],
       },
-  {
+{
         id: 'spirulina-platensis-extract',
         name: 'مستخلص سبيرولينا',
         scientific_name: 'Spirulina Platensis Extract',
@@ -6309,7 +6309,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'laminaria-digitata-extract',
         name: 'مستخلص لاميناريا ديجيتاتا',
         scientific_name: 'Laminaria Digitata Extract',
@@ -6322,7 +6322,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fucus-vesiculosus-extract',
         name: 'مستخلص الفوقس الحويصلي',
         scientific_name: 'Fucus Vesiculosus Extract',
@@ -6335,7 +6335,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'chondrus-crispus-extract',
         name: 'مستخلص الطحلب الأيرلندي',
         scientific_name: 'Chondrus Crispus (Carrageenan) Extract',
@@ -6348,7 +6348,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مصدر طبيعي للكاراجينان، يشكل طبقة رقيقة ومرطبة على الجلد.' }],
       },
-  {
+{
         id: 'astrocaryum-vulgare-pulp-extract',
         name: 'مستخلص لب توكوما',
         scientific_name: 'Astrocaryum Vulgare Pulp Extract',
@@ -6361,17 +6361,17 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  { id: 'lentinula-edodes-extract', name: 'مستخلص فطر شيتاكي', scientific_name: 'Lentinula Edodes Extract', searchKeywords: ['shiitake mushroom', 'lentinula edodes'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تفتيح وتوحيد اللون': 0.85, 'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'cordyceps-sinensis-extract', name: 'مستخلص فطر كورديسيبس', scientific_name: 'Cordyceps Sinensis Extract', searchKeywords: ['cordyceps'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي', benefits: {'مضاد للالتهابات': 0.88, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'algae-extract', name: 'مستخلص الطحالب', scientific_name: 'Algae Extract', searchKeywords: ['algae extract', 'seaweed'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مستخلص طحالب', benefits: {'ترطيب': 0.9, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'paeonia-lactiflora-root-extract', name: 'مستخلص جذور الفاوانيا', scientific_name: 'Paeonia Lactiflora Root Extract', searchKeywords: ['peony extract'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تفتيح وتوحيد اللون': 0.88, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'ananas-sativus-fruit-extract', name: 'مستخلص فاكهة الأناناس', scientific_name: 'Ananas Sativus (Pineapple) Fruit Extract', searchKeywords: ['pineapple extract'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'مستخلص نباتي', benefits: {'تقشير إنزيمي': 0.85, 'مضاد للالتهابات': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحتوي على إنزيم البروميلين الذي يقشر البشرة بلطف.'}]},
-  { id: 'carica-papaya-fruit-extract', name: 'مستخلص فاكهة البابايا', scientific_name: 'Carica Papaya (Papaya) Fruit Extract', searchKeywords: ['papaya extract'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'مستخلص نباتي', benefits: {'تقشير إنزيمي': 0.88, 'تفتيح وتوحيد اللون': 0.82}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحتوي على إنزيم الباباين الذي يقشر خلايا الجلد الميتة.'}]},
-  { id: 'ficus-carica-fruit-extract', name: 'مستخلص فاكهة التين', scientific_name: 'Ficus Carica (Fig) Fruit Extract', searchKeywords: ['fig extract'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي', benefits: {'مضاد أكسدة': 0.85, 'ترطيب': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'alchemilla-vulgaris-extract', name: 'مستخلص عباءة السيدة', scientific_name: 'Alchemilla Vulgaris Extract', searchKeywords: ['lady\'s mantle'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'مضاد أكسدة': 0.8, 'قابض للمسام': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'malva-sylvestris-extract', name: 'مستخلص الخبيزة', scientific_name: 'Malva Sylvestris (Mallow) Extract', searchKeywords: ['mallow extract'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي', benefits: {'ملطف ومرمم': 0.9, 'مضاد للالتهابات': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'melissa-officinalis-leaf-extract', name: 'مستخلص أوراق المليسة', scientific_name: 'Melissa Officinalis Leaf Extract', searchKeywords: ['lemon balm'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي', benefits: {'مهدئ': 0.9, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  {
+{ id: 'lentinula-edodes-extract', name: 'مستخلص فطر شيتاكي', scientific_name: 'Lentinula Edodes Extract', searchKeywords: ['shiitake mushroom', 'lentinula edodes'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تفتيح وتوحيد اللون': 0.85, 'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'cordyceps-sinensis-extract', name: 'مستخلص فطر كورديسيبس', scientific_name: 'Cordyceps Sinensis Extract', searchKeywords: ['cordyceps'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي', benefits: {'مضاد للالتهابات': 0.88, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'algae-extract', name: 'مستخلص الطحالب', scientific_name: 'Algae Extract', searchKeywords: ['algae extract', 'seaweed'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مستخلص طحالب', benefits: {'ترطيب': 0.9, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'paeonia-lactiflora-root-extract', name: 'مستخلص جذور الفاوانيا', scientific_name: 'Paeonia Lactiflora Root Extract', searchKeywords: ['peony extract'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تفتيح وتوحيد اللون': 0.88, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'ananas-sativus-fruit-extract', name: 'مستخلص فاكهة الأناناس', scientific_name: 'Ananas Sativus (Pineapple) Fruit Extract', searchKeywords: ['pineapple extract'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'مستخلص نباتي', benefits: {'تقشير إنزيمي': 0.85, 'مضاد للالتهابات': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحتوي على إنزيم البروميلين الذي يقشر البشرة بلطف.'}]},
+{ id: 'carica-papaya-fruit-extract', name: 'مستخلص فاكهة البابايا', scientific_name: 'Carica Papaya (Papaya) Fruit Extract', searchKeywords: ['papaya extract'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'مستخلص نباتي', benefits: {'تقشير إنزيمي': 0.88, 'تفتيح وتوحيد اللون': 0.82}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحتوي على إنزيم الباباين الذي يقشر خلايا الجلد الميتة.'}]},
+{ id: 'ficus-carica-fruit-extract', name: 'مستخلص فاكهة التين', scientific_name: 'Ficus Carica (Fig) Fruit Extract', searchKeywords: ['fig extract'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي', benefits: {'مضاد أكسدة': 0.85, 'ترطيب': 0.8}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'alchemilla-vulgaris-extract', name: 'مستخلص عباءة السيدة', scientific_name: 'Alchemilla Vulgaris Extract', searchKeywords: ['lady\'s mantle'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'مضاد أكسدة': 0.8, 'قابض للمسام': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'malva-sylvestris-extract', name: 'مستخلص الخبيزة', scientific_name: 'Malva Sylvestris (Mallow) Extract', searchKeywords: ['mallow extract'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي', benefits: {'ملطف ومرمم': 0.9, 'مضاد للالتهابات': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'melissa-officinalis-leaf-extract', name: 'مستخلص أوراق المليسة', scientific_name: 'Melissa Officinalis Leaf Extract', searchKeywords: ['lemon balm'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي', benefits: {'مهدئ': 0.9, 'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{
         id: 'hericium-erinaceus-extract',
         name: 'مستخلص فطر عرف الأسد',
         scientific_name: 'Hericium Erinaceus (Mushroom) Extract',
@@ -6384,7 +6384,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على تعزيز إصلاح الجلد وتجديد الخلايا.' }],
       },
-  {
+{
         id: 'grifola-frondosa-extract',
         name: 'مستخلص فطر المايتاكي',
         scientific_name: 'Grifola Frondosa Extract',
@@ -6397,7 +6397,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'trametes-versicolor-extract',
         name: 'مستخلص فطر ذيل الديك الرومي',
         scientific_name: 'Trametes Versicolor Extract',
@@ -6410,7 +6410,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني جدا بمضادات الأكسدة والبريبيوتيك التي تدعم صحة الجلد.' }],
       },
-  {
+{
         id: 'poria-cocos-extract',
         name: 'مستخلص فطر بوريا كوكوس',
         scientific_name: 'Poria Cocos Extract',
@@ -6423,7 +6423,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في الطب الصيني التقليدي لتهدئة البشرة وتقليل الانتفاخ.' }],
       },
-  {
+{
         id: 'phellinus-linteus-extract',
         name: 'مستخلص فطر ميشيما',
         scientific_name: 'Phellinus Linteus Extract',
@@ -6436,7 +6436,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fomitopsis-officinalis-extract',
         name: 'مستخلص فطر أغاريكون',
         scientific_name: 'Fomitopsis Officinalis (Mushroom) Extract',
@@ -6449,7 +6449,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل على تقليل حجم المسام والتحكم في لمعان البشرة الدهنية.' }],
       },
-  {
+{
         id: 'pleurotus-ostreatus-extract',
         name: 'مستخلص فطر المحار',
         scientific_name: 'Pleurotus Ostreatus (Oyster Mushroom) Extract',
@@ -6462,7 +6462,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'flammulina-velutipes-extract',
         name: 'مستخلص فطر إينوكي',
         scientific_name: 'Flammulina Velutipes Extract',
@@ -6475,7 +6475,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'auricularia-auricula-judae-extract',
         name: 'مستخلص فطر أذن يهوذا',
         scientific_name: 'Auricularia Auricula-Judae Extract',
@@ -6488,7 +6488,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يشبه فطر الثلج في قدرته على الترطيب.' }],
       },
-  {
+{
         id: 'albatrellus-confluens-extract',
         name: 'مستخلص فطر ألباتريلوس',
         scientific_name: 'Albatrellus Confluens (Mushroom) Extract',
@@ -6501,7 +6501,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في منتجات البشرة الحساسة لتهدئة الإحساس بالوخز والحرقة.' }],
       },
-  {
+{
         id: 'sparassis-crispa-extract',
         name: 'مستخلص فطر سباراسيس كريسبا',
         scientific_name: 'Sparassis Crispa Extract',
@@ -6514,7 +6514,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'agaricus-bisporus-extract',
         name: 'مستخلص فطر الأغاريكوس (الفطر الشائع)',
         scientific_name: 'Agaricus Bisporus (Mushroom) Extract',
@@ -6527,7 +6527,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'coprinus-comatus-extract',
         name: 'مستخلص فطر كوباينس',
         scientific_name: 'Coprinus Comatus (Mushroom) Extract',
@@ -6540,7 +6540,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pleurotus-eryngii-extract',
         name: 'مستخلص فطر المحار الملكي',
         scientific_name: 'Pleurotus Eryngii Extract',
@@ -6553,7 +6553,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fomes-fomentarius-extract',
         name: 'مستخلص فطر فوميس',
         scientific_name: 'Fomes Fomentarius Extract',
@@ -6566,7 +6566,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ganoderma-applanatum-extract',
         name: 'مستخلص فطر جانوديرما أبلاناتوم',
         scientific_name: 'Ganoderma Applanatum (Artist\'s Conk) Extract',
@@ -6579,7 +6579,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'schizophyllum-commune-extract',
         name: 'مستخلص فطر شيزوفيلوم',
         scientific_name: 'Schizophyllum Commune Extract',
@@ -6592,7 +6592,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني بالبيتا جلوكان.' }],
       },
-  {
+{
         id: 'tuber-melanosporum-extract',
         name: 'مستخلص الكمأة السوداء',
         scientific_name: 'Tuber Melanosporum (Black Truffle) Extract',
@@ -6605,7 +6605,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون فاخر يستخدم في منتجات مكافحة الشيخوخة الراقية.' }],
       },
-  {
+{
         id: 'tuber-magnatum-extract',
         name: 'مستخلص الكمأة البيضاء',
         scientific_name: 'Tuber Magnatum Extract',
@@ -6618,7 +6618,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tricholoma-matsutake-extract',
         name: 'مستخلص فطر ماتسوتاكي',
         scientific_name: 'Tricholoma Matsutake Extract',
@@ -6631,7 +6631,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشهور في مستحضرات التجميل الآسيوية لقدرته على تفتيح البشرة ومنع التصبغات.' }],
       },
-  {
+{
         id: 'laetiporus-sulphureus-extract',
         name: 'مستخلص فطر دجاجة الغابة',
         scientific_name: 'Laetiporus Sulphureus (Chicken of the Woods) Extract',
@@ -6644,7 +6644,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'morchella-esculenta-extract',
         name: 'مستخلص فطر الموريل',
         scientific_name: 'Morchella Esculenta (Morel) Extract',
@@ -6657,7 +6657,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hypsizygus-marmoreus-extract',
         name: 'مستخلص فطر الزان',
         scientific_name: 'Hypsizygus Marmoreus Extract',
@@ -6670,7 +6670,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'boletus-edulis-extract',
         name: 'مستخلص فطر البوليط',
         scientific_name: 'Boletus Edulis (Porcini) Extract',
@@ -6683,7 +6683,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cantharellus-cibarius-extract',
         name: 'مستخلص فطر الشانتريل',
         scientific_name: 'Cantharellus Cibarius (Chanterelle) Extract',
@@ -6696,7 +6696,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'armillaria-mellea-extract',
         name: 'مستخلص فطر العسل',
         scientific_name: 'Armillaria Mellea (Honey Mushroom) Extract',
@@ -6709,7 +6709,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'volvariella-volvacea-extract',
         name: 'مستخلص فطر قش الأرز',
         scientific_name: 'Volvariella Volvacea Extract',
@@ -6722,7 +6722,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'auricularia-polytricha-extract',
         name: 'مستخلص فطر الأذن السحابي',
         scientific_name: 'Auricularia Polytricha Extract',
@@ -6735,7 +6735,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'grifola-umbellata-extract',
         name: 'مستخلص فطر غريفولا أومبيلاتا',
         scientific_name: 'Grifola Umbellata (Zhu Ling) Extract',
@@ -6748,7 +6748,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'wolfiporia-extensa-extract',
         name: 'مستخلص وولفيبوريا إكستنسا',
         scientific_name: 'Wolfiporia Extensa Extract',
@@ -6761,7 +6761,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزء آخر من فطر Poria Cocos.' }],
       },
-  {
+{
         id: 'ustulina-deusta-extract',
         name: 'مستخلص فطر أوستولينا',
         scientific_name: 'Ustulina Deusta Extract',
@@ -6774,7 +6774,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'amanita-muscaria-extract',
         name: 'مستخلص فطر أمانيتا موسكاريا',
         scientific_name: 'Amanita Muscaria Extract',
@@ -6787,22 +6787,22 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'فطر سام عند تناوله، ولكن مستخلصاته المعالجة تستخدم بتركيزات منخفضة جدا لخصائصها المضادة للالتهابات.' }],
       },
-  { id: 'lactarius-deliciosus-extract', name: 'مستخلص فطر لاكتاريوس', scientific_name: 'Lactarius Deliciosus Extract', searchKeywords: ['saffron milk cap'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'russula-virescens-extract', name: 'مستخلص فطر روسولا', scientific_name: 'Russula Virescens Extract', searchKeywords: ['russula virescens'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'suillus-bovinus-extract', name: 'مستخلص فطر سويليوس', scientific_name: 'Suillus Bovinus Extract', searchKeywords: ['suillus bovinus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'paxillus-involutus-extract', name: 'مستخلص فطر باكسيلوس', scientific_name: 'Paxillus Involutus Extract', searchKeywords: ['paxillus involutus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.7}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'lycoperdon-perlatum-extract', name: 'مستخلص فطر ليكوبيردون', scientific_name: 'Lycoperdon Perlatum Extract', searchKeywords: ['common puffball'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'ملطف ومرمم': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'ganoderma-sinense-extract', name: 'مستخلص فطر جانوديرما سينينس', scientific_name: 'Ganoderma Sinense Extract', searchKeywords: ['ganoderma sinense'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'ophiocordyceps-sinensis-extract', name: 'مستخلص أوفيوكورديسيبس', scientific_name: 'Ophiocordyceps Sinensis Extract', searchKeywords: ['ophiocordyceps sinensis'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.9, 'مكافحة الشيخوخة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'pholiota-nameko-extract', name: 'مستخلص فطر ناميكو', scientific_name: 'Pholiota Nameko Extract', searchKeywords: ['pholiota nameko', 'nameko mushroom'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'ترطيب': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'agrocybe-aegerita-extract', name: 'مستخلص فطر أغروسايب', scientific_name: 'Agrocybe Aegerita Extract', searchKeywords: ['agrocybe aegerita', 'pioppino'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'coprinellus-micaceus-extract', name: 'مستخلص فطر كوبرينيلوس', scientific_name: 'Coprinellus Micaceus Extract', searchKeywords: ['coprinellus micaceus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'hydnum-repandum-extract', name: 'مستخلص فطر هيدنوم', scientific_name: 'Hydnum Repandum Extract', searchKeywords: ['hydnum repandum', 'hedgehog mushroom'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'lepista-nuda-extract', name: 'مستخلص فطر ليبيستا', scientific_name: 'Lepista Nuda Extract', searchKeywords: ['lepista nuda', 'wood blewit'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'marasmius-oreades-extract', name: 'مستخلص فطر ماراسميوس', scientific_name: 'Marasmius Oreades Extract', searchKeywords: ['marasmius oreades', 'fairy ring mushroom'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'stereum-hirsutum-extract', name: 'مستخلص فطر ستيريوم', scientific_name: 'Stereum Hirsutum Extract', searchKeywords: ['stereum hirsutum', 'hairy curtain crust'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'piptoporus-betulinus-extract', name: 'مستخلص فطر بيتوليناس', scientific_name: 'Piptoporus Betulinus Extract', searchKeywords: ['piptoporus betulinus', 'birch polypore'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد للالتهابات': 0.85, 'مضاد للميكروبات': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  {
+{ id: 'lactarius-deliciosus-extract', name: 'مستخلص فطر لاكتاريوس', scientific_name: 'Lactarius Deliciosus Extract', searchKeywords: ['saffron milk cap'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'russula-virescens-extract', name: 'مستخلص فطر روسولا', scientific_name: 'Russula Virescens Extract', searchKeywords: ['russula virescens'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'suillus-bovinus-extract', name: 'مستخلص فطر سويليوس', scientific_name: 'Suillus Bovinus Extract', searchKeywords: ['suillus bovinus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'paxillus-involutus-extract', name: 'مستخلص فطر باكسيلوس', scientific_name: 'Paxillus Involutus Extract', searchKeywords: ['paxillus involutus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.7}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'lycoperdon-perlatum-extract', name: 'مستخلص فطر ليكوبيردون', scientific_name: 'Lycoperdon Perlatum Extract', searchKeywords: ['common puffball'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'ملطف ومرمم': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'ganoderma-sinense-extract', name: 'مستخلص فطر جانوديرما سينينس', scientific_name: 'Ganoderma Sinense Extract', searchKeywords: ['ganoderma sinense'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'ophiocordyceps-sinensis-extract', name: 'مستخلص أوفيوكورديسيبس', scientific_name: 'Ophiocordyceps Sinensis Extract', searchKeywords: ['ophiocordyceps sinensis'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.9, 'مكافحة الشيخوخة': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'pholiota-nameko-extract', name: 'مستخلص فطر ناميكو', scientific_name: 'Pholiota Nameko Extract', searchKeywords: ['pholiota nameko', 'nameko mushroom'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'ترطيب': 0.85}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'agrocybe-aegerita-extract', name: 'مستخلص فطر أغروسايب', scientific_name: 'Agrocybe Aegerita Extract', searchKeywords: ['agrocybe aegerita', 'pioppino'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'coprinellus-micaceus-extract', name: 'مستخلص فطر كوبرينيلوس', scientific_name: 'Coprinellus Micaceus Extract', searchKeywords: ['coprinellus micaceus'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'hydnum-repandum-extract', name: 'مستخلص فطر هيدنوم', scientific_name: 'Hydnum Repandum Extract', searchKeywords: ['hydnum repandum', 'hedgehog mushroom'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'lepista-nuda-extract', name: 'مستخلص فطر ليبيستا', scientific_name: 'Lepista Nuda Extract', searchKeywords: ['lepista nuda', 'wood blewit'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'marasmius-oreades-extract', name: 'مستخلص فطر ماراسميوس', scientific_name: 'Marasmius Oreades Extract', searchKeywords: ['marasmius oreades', 'fairy ring mushroom'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.75}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'stereum-hirsutum-extract', name: 'مستخلص فطر ستيريوم', scientific_name: 'Stereum Hirsutum Extract', searchKeywords: ['stereum hirsutum', 'hairy curtain crust'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد أكسدة': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'piptoporus-betulinus-extract', name: 'مستخلص فطر بيتوليناس', scientific_name: 'Piptoporus Betulinus Extract', searchKeywords: ['piptoporus betulinus', 'birch polypore'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مستخلص نباتي (فطر)', benefits: {'مضاد للالتهابات': 0.85, 'مضاد للميكروبات': 0.8}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{
         id: 'tea-dodecylbenzenesulfonate',
         name: 'TEA-دوديسيل بنزين سلفونات',
         scientific_name: 'TEA-Dodecylbenzenesulfonate',
@@ -6815,7 +6815,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'منظف أنيوني قوي، قد يكون مجففا.' }],
       },
-  {
+{
         id: 'trideceth-10',
         name: 'ترايديسيث-10',
         scientific_name: 'Trideceth-10',
@@ -6828,7 +6828,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-salicylate',
         name: 'ساليسيلات الصوديوم',
         scientific_name: 'Sodium Salicylate',
@@ -6844,7 +6844,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }
         ],
       },
-  {
+{
         id: 'sodium-acetate',
         name: 'أسيتات الصوديوم',
         scientific_name: 'Sodium Acetate',
@@ -6857,7 +6857,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isopropyl-palmitate',
         name: 'بالميتات الآيزوبروبيل',
         scientific_name: 'Isopropyl Palmitate',
@@ -6870,7 +6870,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يعتبر من المواد شديدة السد للمسام (كوميدوجينيك). يجب تجنبه على البشرة المعرضة لحب الشباب.' }],
       },
-  {
+{
         id: 'isopropyl-myristate',
         name: 'ميريستات الآيزوبروبيل',
         scientific_name: 'Isopropyl Myristate',
@@ -6883,7 +6883,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يعتبر من المواد شديدة السد للمسام (كوميدوجينيك).' }],
       },
-  {
+{
         id: 'polyquaternium-4',
         name: 'بولي كواتيرنيوم-4',
         scientific_name: 'Polyquaternium-4',
@@ -6896,7 +6896,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في منتجات التصفيف مثل الجل والموس لإعطاء ثبات مرن.' }],
       },
-  {
+{
         id: 'polyquaternium-16',
         name: 'بولي كواتيرنيوم-16',
         scientific_name: 'Polyquaternium-16',
@@ -6909,7 +6909,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyquaternium-22',
         name: 'بولي كواتيرنيوم-22',
         scientific_name: 'Polyquaternium-22',
@@ -6922,7 +6922,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyquaternium-28',
         name: 'بولي كواتيرنيوم-28',
         scientific_name: 'Polyquaternium-28',
@@ -6935,7 +6935,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyquaternium-47',
         name: 'بولي كواتيرنيوم-47',
         scientific_name: 'Polyquaternium-47',
@@ -6948,7 +6948,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyquaternium-74',
         name: 'بولي كواتيرنيوم-74',
         scientific_name: 'Polyquaternium-74',
@@ -6961,7 +6961,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'vp-va-copolymer',
         name: 'VP/VA كوبوليمر',
         scientific_name: 'VP/VA Copolymer',
@@ -6974,7 +6974,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر أساسي في مثبتات الشعر (السبراي) والجل.' }],
       },
-  {
+{
         id: 'acrylates-beheneth-25-methacrylate-copolymer',
         name: 'أكريلات/بيهينيث-25 ميثاكريليت كوبوليمر',
         scientific_name: 'Acrylates/Beheneth-25 Methacrylate Copolymer',
@@ -6987,7 +6987,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'nigella-sativa-seed-extract',
         name: 'مستخلص بذور حبة البركة',
         scientific_name: 'Nigella Sativa Seed Extract',
@@ -7000,7 +7000,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون شائع جدا في المنتجات الموجهة للسوق الإقليمية لفوائده التقليدية.' }],
       },
-  {
+{
         id: 'argania-spinosa-kernel-extract',
         name: 'مستخلص نواة الأرغان',
         scientific_name: 'Argania Spinosa Kernel Extract',
@@ -7013,7 +7013,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يختلف عن زيت الأرغان؛ هذا هو المستخلص المائي الذي يحتوي على البروتينات والبوليفينولات.' }],
       },
-  {
+{
         id: 'prunus-amygdalus-dulcis-seed-extract',
         name: 'مستخلص بذور اللوز الحلو',
         scientific_name: 'Prunus Amygdalus Dulcis (Sweet Almond) Seed Extract',
@@ -7026,7 +7026,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'butyrospermum-parkii-butter-extract',
         name: 'مستخلص زبدة الشيا',
         scientific_name: 'Butyrospermum Parkii (Shea) Butter Extract',
@@ -7039,7 +7039,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'anthemis-nobilis-flower-extract',
         name: 'مستخلص زهرة البابونج الروماني',
         scientific_name: 'Anthemis Nobilis Flower Extract',
@@ -7052,7 +7052,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'urtica-dioica-leaf-extract',
         name: 'مستخلص أوراق نبات القراص',
         scientific_name: 'Urtica Dioica (Nettle) Leaf Extract',
@@ -7065,7 +7065,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'paullinia-cupana-seed-extract',
         name: 'مستخلص بذور الغوارانا',
         scientific_name: 'Paullinia Cupana Seed Extract',
@@ -7078,7 +7078,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lawsonia-inermis-extract',
         name: 'مستخلص الحناء',
         scientific_name: 'Lawsonia Inermis (Henna) Extract',
@@ -7093,7 +7093,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'يعطي لونا للشعر، قد لا يكون مرغوبا للجميع. قد يتفاعل بشكل سيء مع الصبغات الكيميائية.' }
         ],
       },
-  {
+{
         id: 'eclipta-prostrata-extract',
         name: 'مستخلص البرينجراج',
         scientific_name: 'Eclipta Prostrata Extract',
@@ -7106,7 +7106,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'عشب أيورفيدي مشهور لصحة الشعر.' }],
       },
-  {
+{
         id: 'centaurea-cyanus-flower-extract',
         name: 'مستخلص زهرة القنطريون العنبري',
         scientific_name: 'Centaurea Cyanus Flower Extract',
@@ -7119,7 +7119,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'iodopropynyl-butylcarbamate',
         name: 'يودوبروبينيل بوتيل كاربامات (IPBC)',
         scientific_name: 'Iodopropynyl Butylcarbamate',
@@ -7135,7 +7135,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'سام عند الاستنشاق، لا يستخدم في منتجات الرش (سبراي).' }
         ],
       },
-  {
+{
         id: 'imidazolidinyl-urea',
         name: 'إيميدازوليدينيل يوريا',
         scientific_name: 'Imidazolidinyl Urea',
@@ -7150,7 +7150,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يطلق ببطء مادة الفورمالديهايد، وهي مادة مسرطنة معروفة ومسببة للحساسية.' }
         ],
       },
-  {
+{
         id: 'diazolidinyl-urea',
         name: 'ديازوليدينيل يوريا',
         scientific_name: 'Diazolidinyl Urea',
@@ -7165,7 +7165,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يطلق ببطء مادة الفورمالديهايد، وهي مادة مسرطنة معروفة ومسببة للحساسية.' }
         ],
       },
-  {
+{
         id: 'quaternium-15',
         name: 'كواتيرنيوم-15',
         scientific_name: 'Quaternium-15',
@@ -7180,7 +7180,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'أقوى مطلق للفورمالديهايد ومسبب شائع جدا لالتهاب الجلد التماسي التحسسي.' }
         ],
       },
-  {
+{
         id: 'ppg-5-ceteth-20',
         name: 'PPG-5 سيتيث-20',
         scientific_name: 'PPG-5-Ceteth-20',
@@ -7193,7 +7193,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-55-propylene-glycol-oleate',
         name: 'PEG-55 بروبيلين جلايكول أوليات',
         scientific_name: 'PEG-55 Propylene Glycol Oleate',
@@ -7206,7 +7206,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'trideceth-12',
         name: 'ترايديسيث-12',
         scientific_name: 'Trideceth-12',
@@ -7219,7 +7219,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غالبا ما يستخدم مع Amodimethicone لجعله أسهل في الشطف ومنع تراكمه.' }],
       },
-  {
+{
         id: 'c11-15-pareth-7',
         name: 'C11-15 باريث-7',
         scientific_name: 'C11-15 Pareth-7',
@@ -7232,7 +7232,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'zinc-oxide',
         name: 'أكسيد الزنك',
         scientific_name: 'Zinc Oxide',
@@ -7245,7 +7245,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يترك أثرا أبيض على البشرة (white cast)، خاصة في التركيبات غير النانوية وعلى البشرة الداكنة.' }],
       },
-  {
+{
         id: 'titanium-dioxide',
         name: 'ثاني أكسيد التيتانيوم',
         scientific_name: 'Titanium Dioxide',
@@ -7262,7 +7262,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'شكله كمسحوق (powder) مصنف كمسرطن محتمل (الفئة 2B) عند الاستنشاق، ولكنه يعتبر آمنا في الكريمات والمستحضرات.' }
         ],
       },
-  {
+{
         id: 'avobenzone',
         name: 'أفوبينزون',
         scientific_name: 'Butyl Methoxydibenzoylmethane',
@@ -7280,7 +7280,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب تهيجا للعينين أو حساسية جلدية لدى البعض.' }
         ],
       },
-  {
+{
         id: 'octinoxate',
         name: 'أوكتينوكسات',
         scientific_name: 'Ethylhexyl Methoxycinnamate',
@@ -7296,7 +7296,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون له تأثير هرموني طفيف (شبيه بالإستروجين). غير مستقر ضوئيا ويمكن أن يزعزع استقرار فلاتر أخرى مثل الأفوبينزون.' }
         ],
       },
-  {
+{
         id: 'oxybenzone',
         name: 'أوكسي بنزون',
         scientific_name: 'Oxybenzone / Benzophenone-3',
@@ -7312,7 +7312,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مسبب شائع للحساسية الجلدية التلامسية. العديد من أطباء الجلد يوصون بتجنبه.' }
         ],
       },
-  {
+{
         id: 'homosalate',
         name: 'هوموسالات',
         scientific_name: 'Homosalate',
@@ -7328,7 +7328,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يكون له تأثير هرموني طفيف ويُمتص عبر الجلد.' }
         ],
       },
-  {
+{
         id: 'octisalate',
         name: 'أوكتيسالات',
         scientific_name: 'Ethylhexyl Salicylate',
@@ -7341,7 +7341,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلتر UVB مستقر ولكنه ضعيف نسبيا، يستخدم دائما مع فلاتر أخرى لتعزيز الحماية.' }],
       },
-  {
+{
         id: 'octocrylene',
         name: 'أوكتوكريلين',
         scientific_name: 'Octocrylene',
@@ -7357,7 +7357,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'تم تقييد استخدامه في بعض المناطق بسبب مخاوف التحلل.' }
         ],
       },
-  {
+{
         id: 'ensulizole',
         name: 'إنسوليزول',
         scientific_name: 'Phenylbenzimidazole Sulfonic Acid',
@@ -7370,7 +7370,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلتر شمسي قابل للذوبان في الماء، مما يعطي إحساسا خفيفا جدا للمنتج. لا يوفر حماية من UVA، يجب دمجه مع فلاتر UVA.' }],
       },
-  {
+{
         id: 'paba',
         name: 'PABA (حمض بارا أمينوبنزويك)',
         scientific_name: 'Para-Aminobenzoic Acid',
@@ -7383,7 +7383,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'فلتر قديم جدا لم يعد مستخدما تقريبا بسبب ارتفاع معدلات الحساسية الجلدية وتسببه في تلطيخ الملابس باللون الأصفر.' }],
       },
-  {
+{
         id: 'cinoxate',
         name: 'سينوكسات',
         scientific_name: 'Cinoxate',
@@ -7396,7 +7396,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'فلتر UVB ضعيف وغير مستقر، لم يعد مستخدما في واقيات الشمس الحديثة.' }],
       },
-  {
+{
         id: 'tinosorb-s',
         name: 'تينوسورب إس (Bemotrizinol)',
         scientific_name: 'Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine',
@@ -7409,7 +7409,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعتبر من أفضل فلاتر الشمس في العالم لاستقراره وتغطيته الواسعة. معتمد في أوروبا وآسيا ولكن ليس بعد في الولايات المتحدة.' }],
       },
-  {
+{
         id: 'tinosorb-m',
         name: 'تينوسورب إم (Bisoctrizole)',
         scientific_name: 'Methylene Bis-Benzotriazolyl Tetramethylbutylphenol',
@@ -7425,7 +7425,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يترك طبقة بيضاء طفيفة لأنه جسيمات دقيقة (nano).' }
         ],
       },
-  {
+{
         id: 'uvinul-a-plus',
         name: 'يوفينول أ بلس',
         scientific_name: 'Diethylamino Hydroxybenzoyl Hexyl Benzoate',
@@ -7438,7 +7438,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يوفر حماية ممتازة من أشعة UVA ويساعد على منع تلف الكولاجين. معتمد في أوروبا وآسيا ولكن ليس بعد في الولايات المتحدة.' }],
       },
-  {
+{
         id: 'uvinul-t-150',
         name: 'يوفينول تي 150',
         scientific_name: 'Ethylhexyl Triazone',
@@ -7451,7 +7451,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'لديه أعلى قدرة امتصاص لأشعة UVB بين جميع فلاتر الشمس المتاحة. معتمد في أوروبا وآسيا ولكن ليس بعد في الولايات المتحدة.' }],
       },
-  {
+{
         id: 'mexoryl-sx',
         name: 'ميكسوريل SX',
         scientific_name: 'Terephthalylidene Dicamphor Sulfonic Acid',
@@ -7464,7 +7464,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلتر UVA قوي جدا ومستقر، حاصل على براءة اختراع من L\'Oréal. قابل للذوبان في الماء.' }],
       },
-  {
+{
         id: 'mexoryl-xl',
         name: 'ميكسوريل XL',
         scientific_name: 'Drometrizole Trisiloxane',
@@ -7477,7 +7477,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلتر واسع الطيف قابل للذوبان في الزيت، يعمل بتآزر مع Mexoryl SX. حاصل على براءة اختراع من L\'Oréal.' }],
       },
-  {
+{
         id: 'iscotrizinol',
         name: 'إيسكوتريزينول (Uvasorb HEB)',
         scientific_name: 'Diethylhexyl Butamido Triazone',
@@ -7490,7 +7490,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Uvasorb® HEB. أحد أكثر فلاتر UVB استقرارا وفعالية.' }],
       },
-  {
+{
         id: 'tinosorb-a2b',
         name: 'تينوسورب A2B',
         scientific_name: 'Tris-Biphenyl Triazine (nano)',
@@ -7503,7 +7503,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فعال بشكل خاص في سد الفجوة بين حماية UVB و UVA، مما يوفر حماية أكثر توازنا.' }],
       },
-  {
+{
         id: 'polysilicone-15',
         name: 'بولي سيليكون-15 (Parsol SLX)',
         scientific_name: 'Polysilicone-15',
@@ -7516,7 +7516,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فلتر UVB قائم على السيليكون، مما يمنح المنتج ملمسا حريريا وغير دهني.' }],
       },
-  {
+{
         id: 'neo-heliopan-ap',
         name: 'نيو هيليوبان AP',
         scientific_name: 'Disodium Phenyl Dibenzimidazole Tetrasulfonate',
@@ -7529,7 +7529,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'mexoryl-400',
         name: 'ميكسوريل 400',
         scientific_name: 'Methoxypropylamino Cyclohexenylidene Ethoxyethylcyanoacetate',
@@ -7542,7 +7542,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحدث فلتر حاصل على براءة اختراع من L\'Oréal، وهو الفلتر الوحيد القادر على الحماية بفعالية من نهاية طيف أشعة UVA الطويلة (380-400 نانومتر).' }],
       },
-  {
+{
         id: 'ectoin',
         name: 'إكتوين',
         scientific_name: 'Ectoin',
@@ -7555,7 +7555,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض أميني طبيعي يحمي الخلايا من الإجهاد البيئي مثل التلوث والأشعة فوق البنفسجية والضوء المرئي.' }],
       },
-  {
+{
         id: 'scutellaria-baicalensis-root-extract',
         name: 'مستخلص جذور سكوتيلاريا بايكالينسيس',
         scientific_name: 'Scutellaria Baicalensis Root Extract',
@@ -7568,7 +7568,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pentaerythrityl-tetra-di-t-butyl-hydroxyhydrocinnamate',
         name: 'بنتاريثريتيل تترا-دي-تي-بوتيل هيدروكسي هيدروسينامات',
         scientific_name: 'Pentaerythrityl Tetra-di-t-butyl Hydroxyhydrocinnamate',
@@ -7581,7 +7581,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'لا يقدم فائدة مباشرة للبشرة، بل هو مضاد أكسدة قوي يحافظ على استقرار وجودة واقي الشمس نفسه.' }],
       },
-  {
+{
         id: 'thermus-thermophillus-ferment',
         name: 'خميرة ثيرموس ثيرموفيلوس',
         scientific_name: 'Thermus Thermophillus Ferment',
@@ -7594,7 +7594,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون يتم تنشيطه بالحرارة والأشعة فوق البنفسجية، يوفر حماية مضادة للأكسدة ضد أضرار الأشعة تحت الحمراء.' }],
       },
-  {
+{
         id: 'artemia-extract',
         name: 'مستخلص الأرتيميا',
         scientific_name: 'Artemia Extract',
@@ -7607,7 +7607,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص من العوالق البحرية، يساعد على حماية خلايا الجلد من الإجهاد الناتج عن الأشعة فوق البنفسجية.' }],
       },
-  {
+{
         id: 'polygonum-aviculare-extract',
         name: 'مستخلص عصا الراعي',
         scientific_name: 'Polygonum Aviculare Extract',
@@ -7620,9 +7620,9 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستهدف أضرار الأشعة تحت الحمراء لمنع فقدان مرونة الجلد.' }],
       },
-  { id: 'bisabolol', name: 'بيسابولول', scientific_name: 'Bisabolol', searchKeywords: ['bisabolol'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مركب نشط نباتي', benefits: {'مضاد للالتهابات':0.92, 'ملطف ومرمم':0.9}, synergy: {}, negativeSynergy: {}, warnings: [{level:'info',text:'المكون النشط في البابونج، يضاف لواقيات الشمس لتهدئة البشرة.'}] },
-  { id: 'hydrolyzed-wheat-protein-pg-propyl-silanetriol', name: 'بروتين القمح المهدرج PG-بروبيل سيلانتريول', scientific_name: 'Hydrolyzed Wheat Protein/PVP Crosspolymer', searchKeywords: ['cromoist'], usageScope: ['skin'], functionalCategory: 'مكون طبقة رقيقة', chemicalType: 'بروتين معدل', benefits: {'تكوين طبقة مقاومة للماء':0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level:'info',text:'يشكل طبقة رقيقة على الجلد للمساعدة في مقاومة الماء.'}] },
-  {
+{ id: 'bisabolol', name: 'بيسابولول', scientific_name: 'Bisabolol', searchKeywords: ['bisabolol'], usageScope: ['skin'], functionalCategory: 'ملطف ومرمم', chemicalType: 'مركب نشط نباتي', benefits: {'مضاد للالتهابات':0.92, 'ملطف ومرمم':0.9}, synergy: {}, negativeSynergy: {}, warnings: [{level:'info',text:'المكون النشط في البابونج، يضاف لواقيات الشمس لتهدئة البشرة.'}] },
+{ id: 'hydrolyzed-wheat-protein-pg-propyl-silanetriol', name: 'بروتين القمح المهدرج PG-بروبيل سيلانتريول', scientific_name: 'Hydrolyzed Wheat Protein/PVP Crosspolymer', searchKeywords: ['cromoist'], usageScope: ['skin'], functionalCategory: 'مكون طبقة رقيقة', chemicalType: 'بروتين معدل', benefits: {'تكوين طبقة مقاومة للماء':0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level:'info',text:'يشكل طبقة رقيقة على الجلد للمساعدة في مقاومة الماء.'}] },
+{
         id: 'isostearyl-isostearate',
         name: 'أيزوستيرات الأيزوستيريل',
         scientific_name: 'Isostearyl Isostearate',
@@ -7635,7 +7635,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pentaerythrityl-tetraisostearate',
         name: 'بنتاريثريتيل تترا أيزوستيرات',
         scientific_name: 'Pentaerythrityl Tetraisostearate',
@@ -7648,7 +7648,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'triisostearin',
         name: 'ثلاثي الأيزوستيرين',
         scientific_name: 'Triisostearin',
@@ -7661,7 +7661,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'diisopropyl-sebacate',
         name: 'ثنائي أيزوبروبيل سيباكات',
         scientific_name: 'Diisopropyl Sebacate',
@@ -7674,7 +7674,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ممتاز في واقيات الشمس لتحسين الملمس النهائي.' }],
       },
-  {
+{
         id: 'diisopropyl-adipate',
         name: 'ثنائي أيزوبروبيل أديبات',
         scientific_name: 'Diisopropyl Adipate',
@@ -7687,7 +7687,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dibutyl-adipate',
         name: 'ثنائي بوتيل أديبات',
         scientific_name: 'Dibutyl Adipate',
@@ -7700,7 +7700,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'coco-caprylate',
         name: 'كوكو-كابريلات',
         scientific_name: 'Coco-Caprylate',
@@ -7715,7 +7715,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'مطري طبيعي وخفيف مشتق من جوز الهند. يعتبر بديلاً ممتازاً للسيليكونات المتطايرة لإعطاء ملمس ناعم وحريري دون إحساس دهني.' }
         ],
       },
-  {
+{
         id: 'coco-caprylate-caprate',
         name: 'كوكو-كابريلات/كبرات',
         scientific_name: 'Coco-Caprylate/Caprate',
@@ -7728,7 +7728,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cetyl-ricinoleate',
         name: 'ريسينولات السيتيل',
         scientific_name: 'Cetyl Ricinoleate',
@@ -7741,7 +7741,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cetyl-acetate',
         name: 'أسيتات السيتيل',
         scientific_name: 'Cetyl Acetate',
@@ -7754,7 +7754,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'acetylated-lanolin-alcohol',
         name: 'كحول اللانولين المؤستل',
         scientific_name: 'Acetylated Lanolin Alcohol',
@@ -7767,7 +7767,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك ومسببا للحساسية لدى الأشخاص الذين يعانون من حساسية الصوف.' }],
       },
-  {
+{
         id: 'dipotassium-phosphate',
         name: 'ثنائي فوسفات البوتاسيوم',
         scientific_name: 'Dipotassium Phosphate',
@@ -7780,7 +7780,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'potassium-phosphate',
         name: 'فوسفات البوتاسيوم',
         scientific_name: 'Potassium Phosphate',
@@ -7793,7 +7793,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'poloxamer-407',
         name: 'بولوكسامير 407',
         scientific_name: 'Poloxamer 407',
@@ -7806,7 +7806,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في بعض غسولات الفم والمنظفات اللطيفة.' }],
       },
-  {
+{
         id: 'poloxamer-184',
         name: 'بولوكسامير 184',
         scientific_name: 'Poloxamer 184',
@@ -7819,7 +7819,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المكون الرئيسي المسؤول عن تكوين الميسيلات في العديد من منتجات ماء الميسيلار.' }],
       },
-  {
+{
         id: 'peg-6-caprylic-capric-glycerides',
         name: 'PEG-6 كابريليك/كابريك جليسريدات',
         scientific_name: 'PEG-6 Caprylic/Capric Glycerides',
@@ -7832,7 +7832,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون شائع آخر في ماء الميسيلار، يعمل كمنظف لطيف ومطري في نفس الوقت.' }],
       },
-  {
+{
         id: '2-oleamido-1-3-octadecanediol',
         name: '2-أولياميدو-1،3-أوكتاديكانيديول',
         scientific_name: '2-Oleamido-1,3-Octadecanediol',
@@ -7845,7 +7845,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزيء حاصل على براءة اختراع من L\'Oréal، وهو سيراميد صناعي يقوي حاجز البشرة ويصلح الشعر.' }],
       },
-  {
+{
         id: 'nylon-12',
         name: 'نايلون-12',
         scientific_name: 'Nylon-12',
@@ -7858,7 +7858,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hdi-trimethylol-hexyllactone-crosspolymer',
         name: 'HDI/تريميثيلول هيكسيلاكتون كروسبوليمر',
         scientific_name: 'HDI/Trimethylol Hexyllactone Crosspolymer',
@@ -7871,7 +7871,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مسحوق بوليمري يخلق تأثير "التركيز الناعم" (soft-focus) الذي يقلل بصريا من ظهور الخطوط الدقيقة والعيوب.' }],
       },
-  {
+{
         id: 'lithium-magnesium-sodium-silicate',
         name: 'سيليكات ليثيوم مغنيسيوم صوديوم',
         scientific_name: 'Lithium Magnesium Sodium Silicate',
@@ -7884,7 +7884,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Laponite®.' }],
       },
-  {
+{
         id: 'ammonium-acryloyldimethyltaurate-beheneth-25-methacrylate-crosspolymer',
         name: 'أمونيوم أكريلويل دايميثيل تورات/بيهينيث-25 ميثاكريليت كروسبوليمر',
         scientific_name: 'Ammonium Acryloyldimethyltaurate/Beheneth-25 Methacrylate Crosspolymer',
@@ -7897,7 +7897,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steareth-100-hdi-peg-136-copolymer',
         name: 'ستيريث-100/HDI/PEG-136 كوبوليمر',
         scientific_name: 'Steareth-100/PEG-136/HDI Copolymer',
@@ -7910,18 +7910,18 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر يستخدم في منتجات التصفيف لتوفير ثبات قوي ومرن.' }],
       },
-  { id: 'c12-13-alkyl-lactate', name: 'C12-13 ألكيل لاكتات', scientific_name: 'C12-13 Alkyl Lactate', searchKeywords: ['c12-13 alkyl lactate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري خفيف':0.88, 'مقشر لطيف':0.7}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'propylene-glycol-dicaprylate-dicaprate', name: 'بروبيلين جلايكول ثنائي الكابريلات/الكبرات', scientific_name: 'Propylene Glycol Dicaprylate/Dicaprate', searchKeywords: ['propylene glycol dicaprylate/dicaprate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري خفيف':0.9, 'تحسين انتشار المنتج':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'cetearyl-isononanoate', name: 'سيتريل أيزونونانوات', scientific_name: 'Cetearyl Isononanoate', searchKeywords: ['cetearyl isononanoate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري مقاوم للماء':0.88, 'ملمس ناعم':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'peg-30-dipolyhydroxystearate', name: 'PEG-30 ثنائي بولي هيدروكسي ستيرات', scientific_name: 'PEG-30 Dipolyhydroxystearate', searchKeywords: ['peg-30 dipolyhydroxystearate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب', benefits: {'مستحلب قوي للماء في الزيت':0.95, 'مثالي للكريمات الغنية':0.9}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'polyglyceryl-4-isostearate', name: 'بولي جليسريل-4 أيزوستيرات', scientific_name: 'Polyglyceryl-4 Isostearate', searchKeywords: ['polyglyceryl-4 isostearate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب', benefits: {'مستحلب قوي للماء في الزيت':0.92, 'يتحمل كمية كبيرة من الماء':0.9}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'cetyl-peg-ppg-10-1-dimethicone', name: 'سيتيل PEG/PPG-10/1 دايميثيكون', scientific_name: 'Cetyl PEG/PPG-10/1 Dimethicone', searchKeywords: ['cetyl peg/ppg-10/1 dimethicone'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب سيليكوني', benefits: {'مستحلب قوي للماء في السيليكون':0.95, 'يعطي ملمسا ناعما':0.9}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'شائع جدا في كريمات الأساس وواقيات الشمس طويلة الأمد.'}]},
-  { id: 'hectorite', name: 'هيكتوريت', scientific_name: 'Hectorite', searchKeywords: ['hectorite', 'هيكتوريت'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'طين طبيعي', benefits: {'مكثف طبيعي من الطين':0.9, 'يثبت المستحلبات':0.88, 'يعطي قواما كريميا':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'stearalkonium-hectorite', name: 'ستيرالكونيوم هيكتوريت', scientific_name: 'Stearalkonium Hectorite', searchKeywords: ['stearalkonium hectorite'], usageScope: ['skin'], functionalCategory: 'محسن قوام',
+{ id: 'c12-13-alkyl-lactate', name: 'C12-13 ألكيل لاكتات', scientific_name: 'C12-13 Alkyl Lactate', searchKeywords: ['c12-13 alkyl lactate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري خفيف':0.88, 'مقشر لطيف':0.7}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'propylene-glycol-dicaprylate-dicaprate', name: 'بروبيلين جلايكول ثنائي الكابريلات/الكبرات', scientific_name: 'Propylene Glycol Dicaprylate/Dicaprate', searchKeywords: ['propylene glycol dicaprylate/dicaprate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري خفيف':0.9, 'تحسين انتشار المنتج':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'cetearyl-isononanoate', name: 'سيتريل أيزونونانوات', scientific_name: 'Cetearyl Isononanoate', searchKeywords: ['cetearyl isononanoate'], usageScope: ['skin'], functionalCategory: 'مرطب / مطري', chemicalType: 'مطري', benefits: {'مطري مقاوم للماء':0.88, 'ملمس ناعم':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'peg-30-dipolyhydroxystearate', name: 'PEG-30 ثنائي بولي هيدروكسي ستيرات', scientific_name: 'PEG-30 Dipolyhydroxystearate', searchKeywords: ['peg-30 dipolyhydroxystearate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب', benefits: {'مستحلب قوي للماء في الزيت':0.95, 'مثالي للكريمات الغنية':0.9}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'polyglyceryl-4-isostearate', name: 'بولي جليسريل-4 أيزوستيرات', scientific_name: 'Polyglyceryl-4 Isostearate', searchKeywords: ['polyglyceryl-4 isostearate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب', benefits: {'مستحلب قوي للماء في الزيت':0.92, 'يتحمل كمية كبيرة من الماء':0.9}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'cetyl-peg-ppg-10-1-dimethicone', name: 'سيتيل PEG/PPG-10/1 دايميثيكون', scientific_name: 'Cetyl PEG/PPG-10/1 Dimethicone', searchKeywords: ['cetyl peg/ppg-10/1 dimethicone'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'مستحلب سيليكوني', benefits: {'مستحلب قوي للماء في السيليكون':0.95, 'يعطي ملمسا ناعما':0.9}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'شائع جدا في كريمات الأساس وواقيات الشمس طويلة الأمد.'}]},
+{ id: 'hectorite', name: 'هيكتوريت', scientific_name: 'Hectorite', searchKeywords: ['hectorite', 'هيكتوريت'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'طين طبيعي', benefits: {'مكثف طبيعي من الطين':0.9, 'يثبت المستحلبات':0.88, 'يعطي قواما كريميا':0.85}, synergy: {}, negativeSynergy: {}, warnings: []},
+{ id: 'stearalkonium-hectorite', name: 'ستيرالكونيوم هيكتوريت', scientific_name: 'Stearalkonium Hectorite', searchKeywords: ['stearalkonium hectorite'], usageScope: ['skin'], functionalCategory: 'محسن قوام',
         chemicalType: 'مثبت', benefits: {'يثبت المستحلبات':0.9, 'يعلق الأصباغ':0.88}, synergy: {}, negativeSynergy: {}, warnings: []},
-  { id: 'propylene-carbonate', name: 'كربونات البروبيلين', scientific_name: 'Propylene Carbonate', searchKeywords: ['propylene carbonate'], usageScope: ['skin'], functionalCategory: 'مذيب', chemicalType: 'مذيب', benefits: {'مذيب':0.9, 'ينشط مكثفات الطين':0.85}, synergy: {'disteardimonium-hectorite': 1.05}, negativeSynergy: {}, warnings: []},
-  { id: 'trimethylsiloxysilicate', name: 'تريميثيل سيلوكسي سيليكات', scientific_name: 'Trimethylsiloxysilicate', searchKeywords: ['trimethylsiloxysilicate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'سيليكون', benefits: {'تكوين طبقة مقاومة للماء والنقل':0.98, 'تثبيت المكياج':0.95}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'راتنج سيليكوني يشكل طبقة قوية ومقاومة للماء، وهو المكون الرئيسي في معظم منتجات المكياج طويلة الأمد.'}]},
-  {
+{ id: 'propylene-carbonate', name: 'كربونات البروبيلين', scientific_name: 'Propylene Carbonate', searchKeywords: ['propylene carbonate'], usageScope: ['skin'], functionalCategory: 'مذيب', chemicalType: 'مذيب', benefits: {'مذيب':0.9, 'ينشط مكثفات الطين':0.85}, synergy: {'disteardimonium-hectorite': 1.05}, negativeSynergy: {}, warnings: []},
+{ id: 'trimethylsiloxysilicate', name: 'تريميثيل سيلوكسي سيليكات', scientific_name: 'Trimethylsiloxysilicate', searchKeywords: ['trimethylsiloxysilicate'], usageScope: ['skin'], functionalCategory: 'محسن قوام', chemicalType: 'سيليكون', benefits: {'تكوين طبقة مقاومة للماء والنقل':0.98, 'تثبيت المكياج':0.95}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'راتنج سيليكوني يشكل طبقة قوية ومقاومة للماء، وهو المكون الرئيسي في معظم منتجات المكياج طويلة الأمد.'}]},
+{
         id: 'behenamidopropyl-dimethylamine',
         name: 'بيهيناميدوبروبيل ثنائي ميثيل أمين',
         scientific_name: 'Behenamidopropyl Dimethylamine',
@@ -7934,7 +7934,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل كمكيف فعال في البيئة الحمضية للبلسم. يعتبر بديلا صديقا للبيئة للمكيفات الرباعية التقليدية.' }],
       },
-  {
+{
         id: 'cetyl-esters',
         name: 'استرات السيتيل',
         scientific_name: 'Cetyl Esters',
@@ -7947,7 +7947,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شمع صناعي يحاكي شمع العنبرية (spermaceti)، يستخدم لإعطاء قوام غني وكريمي للبلسمات والكريمات.' }],
       },
-  {
+{
         id: 'lanolin-alcohol',
         name: 'كحول اللانولين',
         scientific_name: 'Lanolin Alcohol',
@@ -7960,7 +7960,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'فعال جدا ولكن قد يسبب حساسية لدى الأشخاص الذين يعانون من حساسية الصوف.' }],
       },
-  {
+{
         id: 'ppg-3-benzyl-ether-myristate',
         name: 'PPG-3 بنزيل إيثر ميريستات',
         scientific_name: 'PPG-3 Benzyl Ether Myristate',
@@ -7973,7 +7973,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مطري مصمم خصيصا لإعطاء لمعان شديد للشعر، ويعتبر بديلا ممتازا لبعض السيليكونات.' }],
       },
-  {
+{
         id: 'isoamyl-laurate',
         name: 'أيزو أميل لوريت',
         scientific_name: 'Isoamyl Laurate',
@@ -7986,7 +7986,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مطري طبيعي معتمد من Ecocert، يعطي ملمسا خفيفا وغير دهني مشابها للسيكلوميثيكون.' }],
       },
-  {
+{
         id: 'hydrogenated-ethylhexyl-olivate',
         name: 'أوليفات الإيثيل هكسيل المهدرج',
         scientific_name: 'Hydrogenated Ethylhexyl Olivate',
@@ -7999,7 +7999,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من زيت الزيتون، يوفر ملمسا أنيقا وانزلاقا مشابها للسيليكون.' }],
       },
-  {
+{
         id: 'cystine-bis-pg-propyl-silanetriol',
         name: 'سيستين بيس-PG-بروبيل سيلانتريول',
         scientific_name: 'Cystine Bis-PG-Propyl Silanetriol',
@@ -8012,7 +8012,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب هجين من السيليكون والحمض الأميني (السيستين) حاصل على براءة اختراع، يعمل على إعادة توصيل الروابط ثنائية الكبريتيد المكسورة داخل الشعر.' }],
       },
-  {
+{
         id: 'acrylates-octylacrylamide-copolymer',
         name: 'أكريلات/أوكتيل أكريلاميد كوبوليمر',
         scientific_name: 'Acrylates/Octylacrylamide Copolymer',
@@ -8025,7 +8025,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر أساسي في مثبتات الشعر (السبراي).' }],
       },
-  {
+{
         id: 'amp-acrylates-copolymer',
         name: 'AMP-أكريلات كوبوليمر',
         scientific_name: 'AMP-Acrylates Copolymer',
@@ -8038,7 +8038,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyurethane-14',
         name: 'بولي يوريثان-14',
         scientific_name: 'Polyurethane-14',
@@ -8051,7 +8051,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر حديث يساعد الشعر على "تذكر" شكله، مما يوفر ثباتا طويل الأمد.' }],
       },
-  {
+{
         id: 'octylacrylamide-acrylates-butylaminoethyl-methacrylate-copolymer',
         name: 'أوكتيل أكريلاميد/أكريلات/بيوتيل أمينو إيثيل ميثاكريليت كوبوليمر',
         scientific_name: 'Octylacrylamide/Acrylates/Butylaminoethyl Methacrylate Copolymer',
@@ -8064,7 +8064,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر شائع جدا في مثبتات الشعر الاحترافية لقوته ومقاومته للرطوبة.' }],
       },
-  {
+{
         id: 'hydrolyzed-pea-protein',
         name: 'بروتين البازلاء المهدرج',
         scientific_name: 'Hydrolyzed Pea Protein',
@@ -8077,7 +8077,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'talc',
         name: 'التلك',
         scientific_name: 'Talc',
@@ -8093,7 +8093,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'استنشاق مسحوق التلك خطير على الرئتين. تم ربطه بزيادة خطر الإصابة بسرطان المبيض عند استخدامه بشكل متكرر في منطقة الأعضاء التناسلية.' }
         ],
       },
-  {
+{
         id: 'ultramarines-ci-77007',
         name: 'ألترامارين (CI 77007)',
         scientific_name: 'Ultramarines (CI 77007)',
@@ -8106,7 +8106,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'آمن بشكل عام، ولكنه غير مسموح به في الولايات المتحدة للاستخدام في منتجات الشفاه.' }],
       },
-  {
+{
         id: 'chromium-oxide-greens-ci-77288',
         name: 'أخضر أكسيد الكروم (CI 77288)',
         scientific_name: 'Chromium Oxide Greens (CI 77288)',
@@ -8119,7 +8119,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'آمن بشكل عام، ولكنه غير مسموح به في الولايات المتحدة للاستخدام في منتجات الشفاه.' }],
       },
-  {
+{
         id: 'manganese-violet-ci-77742',
         name: 'بنفسجي المنغنيز (CI 77742)',
         scientific_name: 'Manganese Violet (CI 77742)',
@@ -8132,7 +8132,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'آمن بشكل عام، ولكنه غير مسموح به في الولايات المتحدة للاستخدام في منتجات الشفاه.' }],
       },
-  {
+{
         id: 'bismuth-oxychloride-ci-77163',
         name: 'أوكسي كلوريد البزموت (CI 77163)',
         scientific_name: 'Bismuth Oxychloride (CI 77163)',
@@ -8145,7 +8145,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب تهيجا أو حكة لدى بعض الأشخاص، خاصة في المكياج المعدني.' }],
       },
-  {
+{
         id: 'zinc-stearate',
         name: 'ستيرات الزنك',
         scientific_name: 'Zinc Stearate',
@@ -8158,7 +8158,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'magnesium-myristate',
         name: 'ميريستات المغنيسيوم',
         scientific_name: 'Magnesium Myristate',
@@ -8171,7 +8171,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'synthetic-fluorphlogopite',
         name: 'فلورفلوغوبيت صناعي',
         scientific_name: 'Synthetic Fluorphlogopite',
@@ -8184,7 +8184,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بديل للميكا الطبيعية، يتميز بنقائه ولمعانه الفائق، ويتجنب المخاوف الأخلاقية المتعلقة بتعدين الميكا.' }],
       },
-  {
+{
         id: 'calcium-sodium-borosilicate',
         name: 'بوروسيليكات الكالسيوم والصوديوم',
         scientific_name: 'Calcium Sodium Borosilicate',
@@ -8197,7 +8197,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'رقائق زجاجية صغيرة جدا مغلفة بأكاسيد المعادن، تستخدم لخلق تأثير الجليتر والبريق في ظلال العيون والهايلايتر.' }],
       },
-  {
+{
         id: 'red-7-lake-ci-15850',
         name: 'Red 7 Lake (CI 15850)',
         scientific_name: 'CI 15850',
@@ -8210,7 +8210,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'red-6-lake-ci-15850',
         name: 'Red 6 Lake (CI 15850)',
         scientific_name: 'CI 15850',
@@ -8223,7 +8223,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'yellow-5-lake-ci-19140',
         name: 'Yellow 5 Lake (CI 19140)',
         scientific_name: 'CI 19140',
@@ -8236,7 +8236,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب حساسية نادرة لدى بعض الأشخاص، خاصة الذين يعانون من حساسية الأسبرين.' }],
       },
-  {
+{
         id: 'blue-1-lake-ci-42090',
         name: 'Blue 1 Lake (CI 42090)',
         scientific_name: 'CI 42090',
@@ -8249,7 +8249,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'red-40-lake-ci-16035',
         name: 'Red 40 Lake (CI 16035)',
         scientific_name: 'CI 16035',
@@ -8262,7 +8262,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydroxytyrosol',
         name: 'هيدروكسي إيروسول',
         scientific_name: 'Hydroxytyrosol',
@@ -8275,7 +8275,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد أقوى مضادات الأكسدة الموجودة في زيت الزيتون وأوراقه.' }],
       },
-  {
+{
         id: 'caesalpinia-spinosa-gum',
         name: 'صمغ تارا',
         scientific_name: 'Caesalpinia Spinosa Gum',
@@ -8288,7 +8288,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'moringa-pterygosperma-seed-extract',
         name: 'مستخلص بذور المورينجا',
         scientific_name: 'Moringa Pterygosperma Seed Extract',
@@ -8301,7 +8301,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على منع جزيئات التلوث من الالتصاق بسطح الجلد.' }],
       },
-  {
+{
         id: 'buddleja-davidii-extract',
         name: 'مستخلص بودليجا (شجيرة الفراشة)',
         scientific_name: 'Buddleja Davidii Extract',
@@ -8314,7 +8314,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-phytate',
         name: 'فيتات الصوديوم',
         scientific_name: 'Sodium Phytate',
@@ -8327,7 +8327,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بديل طبيعي ممتاز لـ EDTA، مشتق من نخالة الأرز.' }],
       },
-  {
+{
         id: 'sh-polypeptide-121',
         name: 'sh-Polypeptide-121 (كولاجين بشري نباتي)',
         scientific_name: 'sh-Polypeptide-121',
@@ -8340,7 +8340,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'قطعة من الكولاجين البشري من النوع 21، مُصنّعة بيولوجيا في النباتات. مصممة لتكون متطابقة بيولوجيا مع كولاجين البشرة لفعالية عالية.' }],
       },
-  {
+{
         id: 'palmitoyl-tripeptide-8',
         name: 'بالميتويل ثلاثي الببتيد-8',
         scientific_name: 'Palmitoyl Tripeptide-8',
@@ -8353,7 +8353,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Neutrazen™. ببتيد مصمم خصيصا لتهدئة ومنع الالتهابات العصبية في البشرة، مما يجعله مثاليا للبشرة الحساسة والمتهيجة.' }],
       },
-  {
+{
         id: 'acetyl-octapeptide-3',
         name: 'أسيتيل أوكتاببتيد-3',
         scientific_name: 'Acetyl Octapeptide-3',
@@ -8366,7 +8366,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم SNAP-8™. نسخة مطولة وأكثر قوة من الأرجيرلاين (Acetyl Hexapeptide-8)، يعمل على إرخاء العضلات السطحية للوجه.' }],
       },
-  {
+{
         id: 'pentapeptide-18',
         name: 'خماسي الببتيد-18',
         scientific_name: 'Pentapeptide-18',
@@ -8379,7 +8379,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Leuphasyl®. يعمل بطريقة مختلفة عن الأرجيرلاين لتقليل تقلصات العضلات، وعندما يتم دمجهما، يكون لهما تأثير تآزري قوي.' }],
       },
-  {
+{
         id: 'diaminopropionoyl-tripeptide-33',
         name: 'ديامينوبروبيونيل ثلاثي الببتيد-33',
         scientific_name: 'Diaminopropionoyl Tripeptide-33',
@@ -8392,7 +8392,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Preventhelia®. ببتيد يحمي خلايا الجلد من التلف الناتج عن الأشعة فوق البنفسجية والتلوث.' }],
       },
-  {
+{
         id: 'acetyl-hexapeptide-1',
         name: 'أسيتيل سداسي الببتيد-1',
         scientific_name: 'Acetyl Hexapeptide-1',
@@ -8405,7 +8405,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Melitane™. يحاكي هرمون تحفيز الخلايا الصباغية لتعزيز إنتاج الميلانين، مما يوفر حماية طبيعية للبشرة ويعزز السمرة.' }],
       },
-  {
+{
         id: 'tetrapeptide-21',
         name: 'رباعي الببتيد-21',
         scientific_name: 'Tetrapeptide-21',
@@ -8418,7 +8418,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'nicotiana-benthamiana-hexapeptide-40-sh-polypeptide-76',
         name: 'ببتيد عامل نمو البشرة النباتي',
         scientific_name: 'Nicotiana Benthamiana Hexapeptide-40 sh-Polypeptide-76',
@@ -8431,7 +8431,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شكل من أشكال عامل نمو البشرة (EGF) يتم إنتاجه في نبات الشعير، وهو المكون النجمي في منتجات Bioeffect.' }],
       },
-  {
+{
         id: 'idebenone',
         name: 'أيديبينون',
         scientific_name: 'Hydroxydecyl Ubiquinone',
@@ -8447,7 +8447,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب حساسية تلامسية لدى بعض الأفراد. قد يصبغ المنتجات باللون الأصفر أو البرتقالي.' }
         ],
       },
-  {
+{
         id: 'fullerene',
         name: 'الفوليرين',
         scientific_name: 'Fullerenes',
@@ -8460,7 +8460,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزيء كربون كروي يعمل كـ "إسفنجة للجذور الحرة"، وهو مضاد أكسدة قوي جدا وطويل الأمد. شائع في مستحضرات التجميل اليابانية.' }],
       },
-  {
+{
         id: 'spin-trap',
         name: 'مصيدة الدوران (Phenyl t-Butylnitrone)',
         scientific_name: 'Phenyl t-Butylnitrone',
@@ -8473,7 +8473,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مضاد أكسدة "ذكي" لا يدمر الجذور الحرة فحسب، بل يحبسها ويحولها إلى مواد مفيدة مثل الأكسجين.' }],
       },
-  {
+{
         id: 'pyruvic-acid',
         name: 'حمض البيروفيك',
         scientific_name: 'Pyruvic Acid',
@@ -8486,7 +8486,7 @@ export const combinedOilsDB = {
         negativeSynergy: { 'retinoid-serum': { reason: 'خطر تهيج شديد وحروق كيميائية.' } },
         warnings: [{ level: 'risk', text: 'حمض قوي جدا، يتحول جزئيا إلى حمض اللاكتيك في الجلد. يجب استخدامه فقط تحت إشراف متخصص في عيادات التجميل.' }],
       },
-  {
+{
         id: 'diglucosyl-gallic-acid',
         name: 'حمض الغاليك ثنائي الجلوكوزيل',
         scientific_name: 'Diglucosyl Gallic Acid',
@@ -8499,7 +8499,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Brightenyl®. جيل جديد من مكونات التفتيح يتم تنشيطه بواسطة ميكروبيوم الجلد ليعمل على 7 مستويات مختلفة من عملية التصبغ.' }],
       },
-  {
+{
         id: 'dimethyl-isosorbide',
         name: 'ثنائي ميثيل إيزوسوربيد (DMI)',
         scientific_name: 'Dimethyl Isosorbide',
@@ -8512,7 +8512,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مذيب ممتاز يساعد على توصيل المكونات النشطة (مثل الريتينويدات وفيتامين C) إلى طبقات أعمق من الجلد، مما يزيد من فعاليتها ويقلل من تهيجها السطحي.' }],
       },
-  {
+{
         id: 'pseudoalteromonas-ferment-extract',
         name: 'مستخلص تخمير سودوألتروموناس',
         scientific_name: 'Pseudoalteromonas Ferment Extract',
@@ -8525,7 +8525,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Antarcticine®. بروتين سكري من بكتيريا تم اكتشافها في الأنهار الجليدية في القارة القطبية الجنوبية، يحمي الجلد من الجفاف والبرد الشديد.' }],
       },
-  {
+{
         id: 'betula-alba-juice',
         name: 'عصارة شجرة البتولا',
         scientific_name: 'Betula Alba (Birch) Juice',
@@ -8538,7 +8538,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غنية بالمعادن والأحماض الأمينية والسكريات، وهي مرطب طبيعي ممتاز.' }],
       },
-  {
+{
         id: 'sugarcane-derived-squalane',
         name: 'سكوالان مشتق من قصب السكر',
         scientific_name: 'Squalane',
@@ -8551,7 +8551,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شكل من أشكال السكوالان يتم إنتاجه بشكل مستدام من تخمير قصب السكر.' }],
       },
-  {
+{
         id: 'hydrolyzed-algin',
         name: 'ألجين مهدرج',
         scientific_name: 'Hydrolyzed Algin',
@@ -8564,7 +8564,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من الطحالب البحرية، يشكل طبقة واقية على الجلد لمنع التصاق جزيئات التلوث.' }],
       },
-  {
+{
         id: 'saccharide-hydrolysate',
         name: 'سكاريد مهدرج',
         scientific_name: 'Saccharide Hydrolysate',
@@ -8577,12 +8577,12 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  { id: 'erythrulose', name: 'إريثرولوز', scientific_name: 'Erythrulose', searchKeywords: ['erythrulose'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'عامل تسمير ذاتي', benefits: {'تسمير ذاتي طبيعي المظهر':0.9, 'يدوم أطول من DHA':0.85}, synergy: {'dihydroxyacetone': 1.1}, negativeSynergy: {}, warnings: [{level: 'info', text: 'سكر كيتوني يتفاعل مع الأحماض الأمينية في الجلد لإنتاج سمرة. يعطي لونا أبطأ وأكثر طبيعية من DHA.'}] },
-  { id: 'dihydroxyacetone', name: 'ثنائي هيدروكسي أسيتون (DHA)', scientific_name: 'Dihydroxyacetone', searchKeywords: ['dihydroxyacetone', 'dha', 'self-tanner'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'عامل تسمير ذاتي', benefits: {'تسمير ذاتي سريع':0.92}, synergy: {'erythrulose': 1.1}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'المكون الأكثر شيوعا في منتجات التسمير الذاتي. قد يعطي لونا برتقاليا ورائحة مميزة.'}] },
-  { id: 'hydrolyzed-candida-saitoana-extract', name: 'مستخلص كانديدا سايتوانا المهدرج', scientific_name: 'Hydrolyzed Candida Saitoana Extract', searchKeywords: ['candida saitoana', 'cell-detox'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مكون مخمر', benefits: {'تعزيز الالتهام الذاتي للخلايا':0.9, 'إزالة السموم':0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحفز عملية "إعادة التدوير" الطبيعية للخلايا (الالتهام الذاتي) للتخلص من الفضلات الخلوية وتحسين إشراقة البشرة.'}] },
-  { id: 'acetyl-glucosamine-6-phosphate-disodium-salt', name: 'ملح فوسفات أسيتيل الجلوكوزامين', scientific_name: 'Disodium Acetyl Glucosamine Phosphate', searchKeywords: ['disodium acetyl glucosamine phosphate', 'novhyal'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مركب سكري', benefits: {'تحفيز إنتاج حمض الهيالورونيك':0.92}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'crocus-chrysanthus-bulb-extract', name: 'مستخلص بصلة الزعفران', scientific_name: 'Crocus Chrysanthus Bulb Extract', searchKeywords: ['crocus chrysanthus', 'dermcom'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تحسين تواصل الخلايا':0.9, 'تحفيز الكولاجين والإيلاستين':0.88}, synergy: {}, negativeSynergy: {}, warnings: [] },
-  {
+{ id: 'erythrulose', name: 'إريثرولوز', scientific_name: 'Erythrulose', searchKeywords: ['erythrulose'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'عامل تسمير ذاتي', benefits: {'تسمير ذاتي طبيعي المظهر':0.9, 'يدوم أطول من DHA':0.85}, synergy: {'dihydroxyacetone': 1.1}, negativeSynergy: {}, warnings: [{level: 'info', text: 'سكر كيتوني يتفاعل مع الأحماض الأمينية في الجلد لإنتاج سمرة. يعطي لونا أبطأ وأكثر طبيعية من DHA.'}] },
+{ id: 'dihydroxyacetone', name: 'ثنائي هيدروكسي أسيتون (DHA)', scientific_name: 'Dihydroxyacetone', searchKeywords: ['dihydroxyacetone', 'dha', 'self-tanner'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'عامل تسمير ذاتي', benefits: {'تسمير ذاتي سريع':0.92}, synergy: {'erythrulose': 1.1}, negativeSynergy: {}, warnings: [{level: 'caution', text: 'المكون الأكثر شيوعا في منتجات التسمير الذاتي. قد يعطي لونا برتقاليا ورائحة مميزة.'}] },
+{ id: 'hydrolyzed-candida-saitoana-extract', name: 'مستخلص كانديدا سايتوانا المهدرج', scientific_name: 'Hydrolyzed Candida Saitoana Extract', searchKeywords: ['candida saitoana', 'cell-detox'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مكون مخمر', benefits: {'تعزيز الالتهام الذاتي للخلايا':0.9, 'إزالة السموم':0.88}, synergy: {}, negativeSynergy: {}, warnings: [{level: 'info', text: 'يحفز عملية "إعادة التدوير" الطبيعية للخلايا (الالتهام الذاتي) للتخلص من الفضلات الخلوية وتحسين إشراقة البشرة.'}] },
+{ id: 'acetyl-glucosamine-6-phosphate-disodium-salt', name: 'ملح فوسفات أسيتيل الجلوكوزامين', scientific_name: 'Disodium Acetyl Glucosamine Phosphate', searchKeywords: ['disodium acetyl glucosamine phosphate', 'novhyal'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مركب سكري', benefits: {'تحفيز إنتاج حمض الهيالورونيك':0.92}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'crocus-chrysanthus-bulb-extract', name: 'مستخلص بصلة الزعفران', scientific_name: 'Crocus Chrysanthus Bulb Extract', searchKeywords: ['crocus chrysanthus', 'dermcom'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مستخلص نباتي', benefits: {'تحسين تواصل الخلايا':0.9, 'تحفيز الكولاجين والإيلاستين':0.88}, synergy: {}, negativeSynergy: {}, warnings: [] },
+{
         id: 'maris-aqua',
         name: 'ماء البحر',
         scientific_name: 'Maris Aqua / Sea Water',
@@ -8595,7 +8595,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يحتوي على تركيز عالٍ من المعادن مثل المغنيسيوم والبوتاسيوم والكالسيوم، مما يساعد على تهدئة البشرة وتقوية حاجزها.' }],
       },
-  {
+{
         id: 'methylsilanol-mannuronate',
         name: 'ميثيل سيلانول مانورونات',
         scientific_name: 'Methylsilanol Mannuronate',
@@ -8608,7 +8608,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من السيليكون العضوي والطحالب البحرية، يساعد على إعادة هيكلة الجلد وحمايته من الجذور الحرة.' }],
       },
-  {
+{
         id: 'hydroxypropyl-cyclodextrin',
         name: 'هيدروكسي بروبيل سيكلودكسترين',
         scientific_name: 'Hydroxypropyl Cyclodextrin',
@@ -8621,7 +8621,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جزيء سكري يشكل بنية قفصية لتغليف المكونات النشطة (مثل الريتينول)، مما يحسن من استقرارها وتوصيلها إلى الجلد.' }],
       },
-  {
+{
         id: 'swertia-chirata-extract',
         name: 'مستخلص عشبة السويرتيا',
         scientific_name: 'Swertia Chirata Extract',
@@ -8634,7 +8634,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في السيرومات المتقدمة لمكافحة الشيخوخة، حيث يحفز تجدد طبقة البشرة ويقلل من ظهور التجاعيد العميقة.' }],
       },
-  {
+{
         id: 'tephrosia-purpurea-seed-extract',
         name: 'مستخلص بذور تفروسيا',
         scientific_name: 'Tephrosia Purpurea Seed Extract',
@@ -8647,7 +8647,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Neurophroline™. مستخلص نباتي يساعد على كسر حلقة الإجهاد في الجلد عن طريق تقليل إنتاج الكورتيزول وتعزيز إطلاق الإندورفين المهدئ.' }],
       },
-  {
+{
         id: 'palmitoyl-tripeptide-1',
         name: 'بالميتويل ثلاثي الببتيد-1',
         scientific_name: 'Palmitoyl Tripeptide-1',
@@ -8660,7 +8660,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد مكوني مركب "Matrixyl 3000" الشهير.' }],
       },
-  {
+{
         id: 'palmitoyl-tetrapeptide-7',
         name: 'بالميتويل رباعي الببتيد-7',
         scientific_name: 'Palmitoyl Tetrapeptide-7',
@@ -8673,7 +8673,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المكون الثاني في "Matrixyl 3000"، يعمل على تقليل الالتهابات التي تساهم في شيخوخة الجلد.' }],
       },
-  {
+{
         id: 'acetyl-tetrapeptide-9',
         name: 'أسيتيل رباعي الببتيد-9',
         scientific_name: 'Acetyl Tetrapeptide-9',
@@ -8686,7 +8686,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Dermican™. يحفز إنتاج بروتين "لوميكان" الذي يساعد على تنظيم ألياف الكولاجين بشكل صحيح.' }],
       },
-  {
+{
         id: 'acetyl-tetrapeptide-11',
         name: 'أسيتيل رباعي الببتيد-11',
         scientific_name: 'Acetyl Tetrapeptide-11',
@@ -8699,7 +8699,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Syniorage™. يستهدف بروتينات محددة لتحسين تماسك وتواصل خلايا البشرة المتقدمة في السن.' }],
       },
-  {
+{
         id: 'bacopa-monnieri-extract',
         name: 'مستخلص الباكوبا',
         scientific_name: 'Bacopa Monnieri Extract',
@@ -8712,7 +8712,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'عشب أيورفيدي يستخدم لخصائصه الوقائية العصبية ومضادة للأكسدة.' }],
       },
-  {
+{
         id: 'terminalia-chebula-fruit-extract',
         name: 'مستخلص فاكهة الهليلج',
         scientific_name: 'Terminalia Chebula Fruit Extract',
@@ -8725,7 +8725,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعتبر من أقوى مضادات الأكسدة في طب الأيورفيدا.' }],
       },
-  {
+{
         id: 'phyllanthus-emblica-fruit-extract',
         name: 'مستخلص فاكهة الأملا',
         scientific_name: 'Phyllanthus Emblica (Amla) Fruit Extract',
@@ -8738,7 +8738,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sophora-flavescens-root-extract',
         name: 'مستخلص جذور الصفيراء',
         scientific_name: 'Sophora Flavescens Root Extract',
@@ -8751,7 +8751,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في الطب الصيني التقليدي (TCM) لعلاج مشاكل الجلد الالتهابية وتثبيط إنتاج الميلانين.' }],
       },
-  {
+{
         id: 'angelica-gigas-root-extract',
         name: 'مستخلص جذور حشيشة الملاك الكورية',
         scientific_name: 'Angelica Gigas Root Extract',
@@ -8764,7 +8764,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cnidium-officinale-root-extract',
         name: 'مستخلص جذور السنيديوم',
         scientific_name: 'Cnidium Officinale Root Extract',
@@ -8777,7 +8777,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'bixa-orellana-seed-extract',
         name: 'مستخلص بذور الأناتو',
         scientific_name: 'Bixa Orellana Seed Extract',
@@ -8790,7 +8790,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على التحكم في لمعان البشرة وتقليل العيوب الناتجة عن زيادة إفراز الدهون.' }],
       },
-  {
+{
         id: 'anogeissus-leiocarpa-bark-extract',
         name: 'مستخلص لحاء أنوجيسوس',
         scientific_name: 'Anogeissus Leiocarpa Bark Extract',
@@ -8803,7 +8803,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على حماية وتحفيز بروتين الفيبريلين الضروري لمرونة الجلد.' }],
       },
-  {
+{
         id: 'xylitylglucoside',
         name: 'إكسيليتيل غلوكوزيد',
         scientific_name: 'Xylitylglucoside',
@@ -8816,7 +8816,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد مكونات مركب الترطيب "Aquaxyl".' }],
       },
-  {
+{
         id: 'anhydroxylitol',
         name: 'أنهيدروكسيليتول',
         scientific_name: 'Anhydroxylitol',
@@ -8829,7 +8829,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد مكونات مركب الترطيب "Aquaxyl".' }],
       },
-  {
+{
         id: 'xylitol',
         name: 'إكسيليتول',
         scientific_name: 'Xylitol',
@@ -8842,7 +8842,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد مكونات مركب الترطيب "Aquaxyl".' }],
       },
-  {
+{
         id: 'lactococcus-ferment-lysate',
         name: 'خميرة اللاكتوكوكس',
         scientific_name: 'Lactococcus Ferment Lysate',
@@ -8855,7 +8855,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون بروبيوتيك يعزز عملية التقشير الطبيعية للبشرة ويقوي حاجزها.' }],
       },
-  {
+{
         id: 'saccharomyces-lysate-extract',
         name: 'مستخلص خميرة السكاروميسيس',
         scientific_name: 'Saccharomyces Lysate Extract',
@@ -8868,7 +8868,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'bacillus-ferment',
         name: 'خميرة الباسيلس',
         scientific_name: 'Bacillus Ferment',
@@ -8881,7 +8881,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يوفر تقشيرا لطيفا عن طريق الإنزيمات بدلا من الأحماض.' }],
       },
-  {
+{
         id: 'imperata-cylindrica-root-extract',
         name: 'مستخلص جذور الإمبراتا سيلندريكا',
         scientific_name: 'Imperata Cylindrica Root Extract',
@@ -8894,7 +8894,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'نبات صحراوي يحتفظ بالماء بكفاءة عالية، يوفر ترطيبا مكثفا وطويل الأمد للبشرة.' }],
       },
-  {
+{
         id: 'acetyl-tetrapeptide-15',
         name: 'أسيتيل رباعي الببتيد-15',
         scientific_name: 'Acetyl Tetrapeptide-15',
@@ -8907,7 +8907,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد مصمم لزيادة عتبة تحمل البشرة الحساسة، مما يجعلها أقل تفاعلا مع المهيجات.' }],
       },
-  {
+{
         id: 'acetyl-tetrapeptide-17-colloidal-platinum',
         name: 'أسيتيل رباعي الببتيد-17 (مع البلاتين)',
         scientific_name: 'Acetyl Tetrapeptide-17, Colloidal Platinum',
@@ -8920,7 +8920,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ببتيد مرتبط بجزيئات البلاتين الغروية، والتي تعمل كنظام توصيل لتحسين استقرار وفعالية الببتيد.' }],
       },
-  {
+{
         id: 'copper-lysinate-prolinate',
         name: 'ليسينات/برولينات النحاس',
         scientific_name: 'Methylglucoside Phosphate, Copper Lysinate/Prolinate',
@@ -8933,7 +8933,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Neodermyl®. مركب يوفر طاقة للخلايا الليفية لإنتاج الكولاجين والإيلاستين بكفاءة.' }],
       },
-  {
+{
         id: 'hydrolyzed-yeast-protein',
         name: 'بروتين الخميرة المهدرج',
         scientific_name: 'Hydrolyzed Yeast Protein',
@@ -8946,7 +8946,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-sesame-protein-pg-propyl-methylsilanediol',
         name: 'بروتين السمسم المهدرج',
         scientific_name: 'Hydrolyzed Sesame Protein PG-Propyl Methylsilanediol',
@@ -8959,7 +8959,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب يشكل طبقة رقيقة على الجلد، مما يعطي تأثير شد فوري ومؤقت.' }],
       },
-  {
+{
         id: 'albizia-julibrissin-bark-extract',
         name: 'مستخلص لحاء شجرة الحرير',
         scientific_name: 'Albizia Julibrissin Bark Extract',
@@ -8972,7 +8972,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يحمي البشرة من التلف الناتج عن عملية الغلايكيشن (ارتباط السكر بالكولاجين) ويساعد على تقليل مظهر العيون المتعبة.' }],
       },
-  {
+{
         id: 'evodia-rutaecarpa-fruit-extract',
         name: 'مستخلص فاكهة إيفوديا',
         scientific_name: 'Evodia Rutaecarpa Fruit Extract',
@@ -8985,7 +8985,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lespedeza-capitata-leaf-stem-extract',
         name: 'مستخلص عشبة الليسبيديزا',
         scientific_name: 'Lespedeza Capitata Leaf/Stem Extract',
@@ -8998,7 +8998,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يساعد على إعادة تنظيم إيقاع الساعة البيولوجية للبشرة الذي يختل بسبب التعرض للضوء الأزرق والإجهاد.' }],
       },
-  {
+{
         id: 'plantago-lanceolata-leaf-extract',
         name: 'مستخلص أوراق لسان الحمل',
         scientific_name: 'Plantago Lanceolata Leaf Extract',
@@ -9011,7 +9011,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lepidium-sativum-sprout-extract',
         name: 'مستخلص براعم حب الرشاد',
         scientific_name: 'Lepidium Sativum Sprout Extract',
@@ -9024,7 +9024,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'غني بالسلفورافان، وهو مضاد أكسدة قوي يساعد على تفتيح البقع الداكنة وحماية البشرة.' }],
       },
-  {
+{
         id: 'kigelia-africana-fruit-extract',
         name: 'مستخلص فاكهة الكجلة',
         scientific_name: 'Kigelia Africana Fruit Extract',
@@ -9037,7 +9037,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'quillaja-saponaria-bark-extract',
         name: 'مستخلص لحاء الصابونية',
         scientific_name: 'Quillaja Saponaria Bark Extract',
@@ -9050,7 +9050,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مصدر طبيعي للصابونين، يستخدم كمنظف لطيف جدا في الشامبوهات الطبيعية.' }],
       },
-  {
+{
         id: 'marrubium-vulgare-extract',
         name: 'مستخلص حشيشة الكلب',
         scientific_name: 'Marrubium Vulgare (White Horehound) Extract',
@@ -9063,7 +9063,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يحمي البشرة من أضرار التلوث ويقوي حاجزها.' }],
       },
-  {
+{
         id: 'laminaria-ochroleuca-extract',
         name: 'مستخلص لاميناريا أوكروليuca',
         scientific_name: 'Laminaria Ochroleuca Extract',
@@ -9076,7 +9076,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Antileukine 6. طحلب يساعد على تقليل الالتهابات الناتجة عن الأشعة فوق البنفسجية.' }],
       },
-  {
+{
         id: 'artichoke-leaf-extract',
         name: 'مستخلص أوراق الخرشوف',
         scientific_name: 'Cynara Scolymus (Artichoke) Leaf Extract',
@@ -9089,7 +9089,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'biosaccharide-gum-1',
         name: 'صمغ البيوسكاريد-1',
         scientific_name: 'Biosaccharide Gum-1',
@@ -9102,7 +9102,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'متعدد السكاريد مخمر، يشكل طبقة مرطبة ومهدئة على البشرة، مما يقلل من التهيج ويعطي إحساسا بالنعومة.' }],
       },
-  {
+{
         id: 'biosaccharide-gum-4',
         name: 'صمغ البيوسكاريد-4',
         scientific_name: 'Biosaccharide Gum-4',
@@ -9115,7 +9115,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يشكل طبقة واقية غير مرئية على سطح الجلد لحمايته من جزيئات التلوث والمعادن الثقيلة والأشعة فوق البنفسجية.' }],
       },
-  {
+{
         id: 'taurine',
         name: 'تورين',
         scientific_name: 'Taurine',
@@ -9128,7 +9128,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض أميني يساعد على تنشيط خلايا الجلد وحمايتها من الجفاف والإجهاد.' }],
       },
-  {
+{
         id: 'hydroxyethyl-urea',
         name: 'هيدروكسي إيثيل يوريا',
         scientific_name: 'Hydroxyethyl Urea',
@@ -9141,7 +9141,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من اليوريا يوفر ترطيبا مكافئا للجلسرين ولكن بملمس أخف وأقل لزوجة.' }],
       },
-  {
+{
         id: 'ornithine',
         name: 'أورنيثين',
         scientific_name: 'Ornithine',
@@ -9154,7 +9154,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض أميني مغلف في أنظمة توصيل (ionosomes) للمساعدة في زيادة حجم الخلايا الدهنية موضعيا، مما يعطي تأثير ملء للتجاعيد.' }],
       },
-  {
+{
         id: 'arabinogalactan',
         name: 'أرابينو جالاكتان',
         scientific_name: 'Galactoarabinan',
@@ -9167,7 +9167,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'متعدد السكاريد مستخلص من شجرة الأرز، يعمل كمقشر لطيف ويقلل من فقدان الماء عبر البشرة.' }],
       },
-  {
+{
         id: 'ethylhexyl-palmitate',
         name: 'بالميتات الإيثيل هكسيل',
         scientific_name: 'Ethylhexyl Palmitate',
@@ -9180,7 +9180,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'قد يكون كوميدوجينيك (ساد للمسام) بدرجة عالية لبعض الأشخاص، خاصة المعرضين لحب الشباب.' }],
       },
-  {
+{
         id: 'ethylhexyl-stearate',
         name: 'ستيرات الإيثيل هكسيل',
         scientific_name: 'Ethylhexyl Stearate',
@@ -9193,7 +9193,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'قد يكون كوميدوجينيك بدرجة عالية.' }],
       },
-  {
+{
         id: 'pentaerythrityl-tetraethylhexanoate',
         name: 'بنتاريثريتيل تترا إيثيل هكسانوات',
         scientific_name: 'Pentaerythrityl Tetraethylhexanoate',
@@ -9206,7 +9206,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'triethylhexanoin',
         name: 'ثلاثي إيثيل الهكسانوين',
         scientific_name: 'Triethylhexanoin',
@@ -9219,7 +9219,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cetyl-ethylhexanoate',
         name: 'سيتيل إيثيل هكسانوات',
         scientific_name: 'Cetyl Ethylhexanoate',
@@ -9232,7 +9232,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'neopentyl-glycol-dicaprate',
         name: 'نيوبنتيل جليكول ثنائي الكابرات',
         scientific_name: 'Neopentyl Glycol Dicaprate',
@@ -9245,7 +9245,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrogenated-polydecene',
         name: 'بولي ديسين مهدرج',
         scientific_name: 'Hydrogenated Polydecene',
@@ -9258,7 +9258,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ppg-15-stearyl-ether',
         name: 'PPG-15 ستياريلي إيثر',
         scientific_name: 'PPG-15 Stearyl Ether',
@@ -9271,7 +9271,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'myristyl-myristate',
         name: 'ميريستات الميريستيل',
         scientific_name: 'Myristyl Myristate',
@@ -9284,7 +9284,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك (ساد للمسام) بدرجة عالية.' }],
       },
-  {
+{
         id: 'cetyl-palmitate',
         name: 'بالميتات السيتيل',
         scientific_name: 'Cetyl Palmitate',
@@ -9297,7 +9297,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'shea-butter-ethyl-esters',
         name: 'استرات إيثيل زبدة الشيا',
         scientific_name: 'Shea Butter Ethyl Esters',
@@ -9310,7 +9310,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يقدم فوائد ترطيب الشيا ولكن بملمس أخف وأقل دهنية.' }],
       },
-  {
+{
         id: 'di-c12-13-alkyl-malate',
         name: 'ثنائي C12-13 ألكيل مالات',
         scientific_name: 'Di-C12-13 Alkyl Malate',
@@ -9323,7 +9323,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrogenated-castor-oil',
         name: 'زيت الخروع المهدرج',
         scientific_name: 'Hydrogenated Castor Oil',
@@ -9336,7 +9336,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'trehalose',
         name: 'تريهالوز',
         scientific_name: 'Trehalose',
@@ -9349,7 +9349,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'سكر طبيعي يوجد في النباتات الصحراوية، يساعدها على البقاء على قيد الحياة في ظروف الجفاف الشديد.' }],
       },
-  {
+{
         id: 'methyl-gluceth-10',
         name: 'ميثيل جلوكيث-10',
         scientific_name: 'Methyl Gluceth-10',
@@ -9362,7 +9362,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-lactate',
         name: 'لاكتات الصوديوم',
         scientific_name: 'Sodium Lactate',
@@ -9375,7 +9375,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ملح حمض اللاكتيك، يعمل بشكل أساسي كمرطب وليس مقشر.' }],
       },
-  {
+{
         id: 'peg-4',
         name: 'PEG-4',
         scientific_name: 'PEG-4',
@@ -9388,7 +9388,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-10',
         name: 'PEG-10',
         scientific_name: 'PEG-10',
@@ -9401,7 +9401,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'paraffinum-liquidum',
         name: 'زيت البارافين (الزيت المعدني)',
         scientific_name: 'Paraffinum Liquidum / Mineral Oil',
@@ -9417,7 +9417,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'الزيوت المعدنية المستخدمة في مستحضرات التجميل عالية النقاء ولا تسبب مشاكل صحية.' }
         ],
       },
-  {
+{
         id: 'cera-microcristallina',
         name: 'شمع مايكروكريستالين',
         scientific_name: 'Cera Microcristallina / Microcrystalline Wax',
@@ -9430,7 +9430,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شمع مشتق من البترول، يستخدم غالبا في بلسم الشفاه والكريمات الكثيفة.' }],
       },
-  {
+{
         id: 'polyisobutene',
         name: 'بولي أيزوبيوتين',
         scientific_name: 'Polyisobutene',
@@ -9443,7 +9443,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lanolin',
         name: 'لانولين',
         scientific_name: 'Lanolin',
@@ -9459,7 +9459,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'قد يسبب حساسية لدى الأشخاص الذين يعانون من حساسية الصوف.' }
         ],
       },
-  {
+{
         id: 'candelilla-cera',
         name: 'شمع الكانديليلا',
         scientific_name: 'Euphorbia Cerifera (Candelilla) Wax',
@@ -9472,7 +9472,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carnauba-wax',
         name: 'شمع الكرنوبا',
         scientific_name: 'Copernicia Cerifera (Carnauba) Wax',
@@ -9485,7 +9485,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في الماسكارا وأحمر الشفاه لإعطاء صلابة ومتانة.' }],
       },
-  {
+{
         id: 'ozokerite',
         name: 'أوزوكريت',
         scientific_name: 'Ozokerite',
@@ -9498,7 +9498,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'synthetic-wax',
         name: 'شمع صناعي',
         scientific_name: 'Synthetic Wax',
@@ -9511,7 +9511,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'squalene',
         name: 'السكوالين',
         scientific_name: 'Squalene',
@@ -9526,7 +9526,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مادة غير مستقرة وتتأكسد بسرعة عند تعرضها للهواء، مما يجعلها كوميدوجينيك. السكوالان (Squalane) هو النسخة المهدرجة والمستقرة والمفضلة في مستحضرات التجميل.' }
         ],
       },
-  {
+{
         id: 'ceramide-ng',
         name: 'سيراميد NG (سيراميد 2)',
         scientific_name: 'Ceramide NG',
@@ -9539,7 +9539,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ceramide-ns',
         name: 'سيراميد NS',
         scientific_name: 'Ceramide NS',
@@ -9552,7 +9552,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ppg-14-butyl-ether',
         name: 'PPG-14 بوتيل إيثر',
         scientific_name: 'PPG-14 Butyl Ether',
@@ -9565,7 +9565,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شائع جدا في مزيلات العرق ومضادات التعرق لإعطاء ملمس ناعم وجاف.' }],
       },
-  {
+{
         id: 'pentaerythrityl-distearate',
         name: 'ثنائي ستيرات بنتاريثريتيل',
         scientific_name: 'Pentaerythrityl Distearate',
@@ -9578,7 +9578,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'myristyl-lactate',
         name: 'لاكتات الميريستيل',
         scientific_name: 'Myristyl Lactate',
@@ -9591,7 +9591,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك بدرجة متوسطة.' }],
       },
-  {
+{
         id: 'oleyl-oleate',
         name: 'أوليات الأولييل',
         scientific_name: 'Oleyl Oleate',
@@ -9604,7 +9604,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'octyldodecyl-myristate',
         name: 'ميريستات الأوكتيل دوديسيل',
         scientific_name: 'Octyldodecyl Myristate',
@@ -9617,7 +9617,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isocetyl-stearate',
         name: 'ستيرات الأيزوسيتيل',
         scientific_name: 'Isocetyl Stearate',
@@ -9630,7 +9630,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يعتبر من المواد شديدة السد للمسام (كوميدوجينيك).' }],
       },
-  {
+{
         id: 'decyl-oleate',
         name: 'أوليات الديسيل',
         scientific_name: 'Decyl Oleate',
@@ -9643,7 +9643,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك.' }],
       },
-  {
+{
         id: 'hexyldecyl-stearate',
         name: 'ستيرات الهيكسيل ديسيل',
         scientific_name: 'Hexyldecyl Stearate',
@@ -9656,7 +9656,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ethylhexyl-isononanoate',
         name: 'أيزونونانوات الإيثيل هكسيل',
         scientific_name: 'Ethylhexyl Isononanoate',
@@ -9669,7 +9669,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'propylene-glycol-isostearate',
         name: 'أيزوستيرات البروبيلين جلايكول',
         scientific_name: 'Propylene Glycol Isostearate',
@@ -9682,7 +9682,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-75',
         name: 'PEG-75',
         scientific_name: 'PEG-75',
@@ -9695,7 +9695,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-150',
         name: 'PEG-150',
         scientific_name: 'PEG-150',
@@ -9708,7 +9708,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glycereth-26',
         name: 'جليسيريث-26',
         scientific_name: 'Glycereth-26',
@@ -9721,7 +9721,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من الجلسرين يوفر ترطيبا ممتازا مع إحساس أقل لزوجة.' }],
       },
-  {
+{
         id: 'methyl-gluceth-20',
         name: 'ميثيل جلوكيث-20',
         scientific_name: 'Methyl Gluceth-20',
@@ -9734,7 +9734,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'diglycerin',
         name: 'ديجليسرين',
         scientific_name: 'Diglycerin',
@@ -9747,7 +9747,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'erythritol',
         name: 'إريثريتول',
         scientific_name: 'Erythritol',
@@ -9760,7 +9760,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'سكر كحولي يعمل كمرطب.' }],
       },
-  {
+{
         id: 'fructose',
         name: 'فركتوز',
         scientific_name: 'Fructose',
@@ -9773,7 +9773,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glucose',
         name: 'جلوكوز',
         scientific_name: 'Glucose',
@@ -9786,7 +9786,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-gluconate',
         name: 'جلوكونات الصوديوم',
         scientific_name: 'Sodium Gluconate',
@@ -9799,7 +9799,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بديل طبيعي لـ EDTA.' }],
       },
-  {
+{
         id: 'glyceryl-stearate-citrate',
         name: 'سيترات ستيرات الجليسريل',
         scientific_name: 'Glyceryl Stearate Citrate',
@@ -9812,7 +9812,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyglyceryl-3-methylglucose-distearate',
         name: 'بولي جليسريل-3 ميثيل جلوكوز ثنائي الستيارات',
         scientific_name: 'Polyglyceryl-3 Methylglucose Distearate',
@@ -9825,7 +9825,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-polyacryloyldimethyl-taurate',
         name: 'صوديوم بولي أكريلويل دايميثيل توريت',
         scientific_name: 'Sodium Polyacryloyldimethyl Taurate',
@@ -9838,7 +9838,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-acrylate-sodium-acryloyldimethyl-taurate-copolymer',
         name: 'صوديوم أكريلات/صوديوم أكريلويل دايميثيل توريت كوبوليمر',
         scientific_name: 'Sodium Acrylate/Sodium Acryloyldimethyl Taurate Copolymer',
@@ -9851,7 +9851,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyacrylate-crosspolymer-6',
         name: 'بولي أكريلات كروسبوليمر-6',
         scientific_name: 'Polyacrylate Crosspolymer-6',
@@ -9864,7 +9864,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بوليمر حديث وقوي جدا، قادر على تكثيف التركيبات الصعبة التي تحتوي على الأحماض أو الأملاح.' }],
       },
-  {
+{
         id: 'microcrystalline-cellulose',
         name: 'سليلوز بلوري دقيق',
         scientific_name: 'Microcrystalline Cellulose',
@@ -9877,7 +9877,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'magnesium-stearate',
         name: 'ستيرات المغنيسيوم',
         scientific_name: 'Magnesium Stearate',
@@ -9890,7 +9890,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'distarch-phosphate',
         name: 'فوسفات النشا',
         scientific_name: 'Distarch Phosphate',
@@ -9903,7 +9903,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'niacinamide',
         name: 'النياسيناميد (فيتامين B3)',
         scientific_name: 'Niacinamide',
@@ -9916,7 +9916,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'قد يسبب احمرارا أو حكة خفيفة في بداية الاستخدام، خاصة بتركيزات عالية (أعلى من 5%).' }],
       },
-  {
+{
         id: 'retinoid-serum',
         name: 'الريتينويدات (ريتينول، ريتينال)',
         scientific_name: 'Retinol, Retinal, etc.',
@@ -9933,7 +9933,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'غير آمن للاستخدام أثناء الحمل أو الرضاعة.' }
         ],
       },
-  {
+{
         id: 'vitamin-c',
         name: 'فيتامين C (حمض الأسكوربيك النقي)',
         scientific_name: 'Ascorbic Acid',
@@ -9949,7 +9949,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب وخزا أو تهيجا، خاصة بتركيزات عالية أو على البشرة الحساسة.' }
         ],
       },
-  {
+{
         id: 'glycolic-acid',
         name: 'حمض الجليكوليك',
         scientific_name: 'Glycolic Acid',
@@ -9965,7 +9965,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب وخزا أو احمرارا عند الاستخدام، خاصة للمبتدئين.' }
         ],
       },
-  {
+{
         id: 'azelaic-acid',
         name: 'حمض الأزيليك',
         scientific_name: 'Azelaic Acid',
@@ -9978,7 +9978,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب وخزا أو حكة خفيفة في بداية الاستخدام، وعادة ما يزول مع اعتياد البشرة عليه.' }],
       },
-  {
+{
         id: 'alpha-arbutin-serum',
         name: 'ألفا أربوتين',
         scientific_name: 'Alpha-Arbutin',
@@ -9991,7 +9991,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعتبر بديلا آمنا وفعالا للهيدروكينون.' }],
       },
-  {
+{
         id: 'peptide-serum',
         name: 'الببتيدات',
         scientific_name: 'Peptides',
@@ -10004,7 +10004,7 @@ export const combinedOilsDB = {
         negativeSynergy: { 'glycolic-acid': { reason: 'الأحماض القوية قد تفكك روابط الببتيد وتقلل من فعاليته.' } },
         warnings: [],
       },
-  {
+{
         id: 'ascorbyl-glucoside',
         name: 'أسكوربيل غلوكوزيد',
         scientific_name: 'Ascorbyl Glucoside',
@@ -10017,7 +10017,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق مستقر من فيتامين C، يتحول إلى حمض الأسكوربيك في الجلد، مما يجعله فعالا ولكنه لطيف جدا ومناسب للبشرة الحساسة.' }],
       },
-  {
+{
         id: 'hyaluronic-acid-serum',
         name: 'حمض الهيالورونيك',
         scientific_name: 'Hyaluronic Acid / Sodium Hyaluronate',
@@ -10030,7 +10030,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'لأفضل النتائج، يجب تطبيقه على بشرة رطبة ثم وضع مرطب فوقه لحبس الرطوبة.' }],
       },
-  {
+{
         id: 'glycerin',
         name: 'الجلسرين',
         scientific_name: 'Glycerin',
@@ -10043,7 +10043,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'في الأجواء شديدة الجفاف، قد يسحب الرطوبة من الطبقات العميقة للجلد إلى السطح إذا لم يستخدم مع مكونات عازلة.' }],
       },
-  {
+{
         id: 'ceramides',
         name: 'السيراميدات',
         scientific_name: 'Ceramide NP, AP, EOP, etc.',
@@ -10056,7 +10056,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المكون الأساسي لحاجز البشرة الصحي. ضروري للبشرة الجافة، الحساسة، أو المعرضة للأكزيما.' }],
       },
-  {
+{
         id: 'cholesterol',
         name: 'الكوليسترول',
         scientific_name: 'Cholesterol',
@@ -10069,7 +10069,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون حيوي (يشكل ~25% من دهون الحاجز) يعمل مع السيراميدات والأحماض الدهنية للحفاظ على صحة الجلد.' }],
       },
-  {
+{
         id: 'panthenol',
         name: 'البانثينول (برو-فيتامين B5)',
         scientific_name: 'Panthenol',
@@ -10082,7 +10082,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'butylene-glycol',
         name: 'بيوتيلين جلايكول',
         scientific_name: 'Butylene Glycol',
@@ -10095,7 +10095,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-ppg-polybutylene-glycol-8-5-3-glycerin',
         name: 'بيج/بي بي جي/بولي بيوتيلين جلايكول-8/5/3 جليسرين',
         scientific_name: 'PEG/PPG/Polybutylene Glycol-8/5/3 Glycerin',
@@ -10108,7 +10108,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isononyl-isononanoate',
         name: 'أيزونونيل أيزونونانوات',
         scientific_name: 'Isononyl Isononanoate',
@@ -10121,7 +10121,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: '2-mercaptonicotinoyl-glycine',
         name: '٢-ميركابتونيكوتينويل جلايسين',
         scientific_name: '2-Mercaptonicotinoyl Glycine',
@@ -10134,7 +10134,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'silica',
         name: 'سيليكا',
         scientific_name: 'Silica',
@@ -10147,7 +10147,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'adenosine',
         name: 'أدينوزين',
         scientific_name: 'Adenosine',
@@ -10160,7 +10160,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'trisodium-ethylenediamine-disuccinate',
         name: 'ثلاثي صوديوم إيثيلين ديامين ديسكسينات',
         scientific_name: 'Trisodium Ethylenediamine Disuccinate',
@@ -10173,7 +10173,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'xanthan-gum',
         name: 'صمغ الزانثان',
         scientific_name: 'Xanthan Gum',
@@ -10186,7 +10186,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'tocopheryl-acetate',
         name: 'توكوفيريل أسيتات',
         scientific_name: 'Tocopheryl Acetate',
@@ -10199,7 +10199,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'شكل استر ومستقر من فيتامين E. يعمل بشكل أساسي كمضاد أكسدة لحماية التركيبة، وفعاليته على الجلد أقل من التوكوفيرول النقي.' }],
       },
-  {
+{
         id: 'ci-15510-orange-4',
         name: 'CI 15510 / برتقالي 4',
         scientific_name: 'CI 15510',
@@ -10212,7 +10212,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'قد يسبب حساسية لدى بعض الأفراد.' }],
       },
-  {
+{
         id: 'ci-19140-yellow-5',
         name: 'CI 19140 / أصفر 5',
         scientific_name: 'CI 19140',
@@ -10225,7 +10225,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'ارتبط بحساسية نادرة لدى بعض الأشخاص، خاصة الذين يعانون من حساسية الأسبرين.' }],
       },
-  {
+{
         id: 'parfum-fragrance',
         name: 'عطر',
         scientific_name: 'Parfum / Fragrance',
@@ -10238,7 +10238,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'أحد أكثر المسببات شيوعا لردود الفعل التحسسية والتهيج في مستحضرات التجميل. يمكن أن يخفي عشرات المكونات الكيميائية.' }],
       },
-  {
+{
         id: 'oud-oil',
         name: 'زيت العود',
         scientific_name: 'Aquilaria Malaccensis Oil',
@@ -10254,7 +10254,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يتم استخدامه بتركيزات منخفضة جدا في المنتجات النهائية.' }
         ],
       },
-  {
+{
         id: 'amber-oil',
         name: 'زيت العنبر',
         scientific_name: 'Pinus Succinifera Oil',
@@ -10269,7 +10269,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غالبا ما يكون زيتا عطريا مركبا وليس من مصدر واحد. يتم استخدامه بتركيزات منخفضة.' }
         ],
       },
-  {
+{
         id: 'taif-rose-oil',
         name: 'زيت الورد الطائفي',
         scientific_name: 'Rosa Damascena var. Trigintipetala Oil',
@@ -10285,7 +10285,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يتم استخدامه بتركيزات منخفضة جدا.' }
         ],
       },
-  {
+{
         id: 'q10-serum',
         name: 'سيروم إنزيم Q10',
         scientific_name: 'Ubiquinone',
@@ -10298,7 +10298,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'growth-factors-serum',
         name: 'سيروم عوامل النمو',
         scientific_name: 'EGF, FGF, etc.',
@@ -10314,7 +10314,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يجب استشارة طبيب الجلدية لتحديد مدى ملاءمتها.' }
         ],
       },
-  {
+{
         id: 'stem-cell-serum',
         name: 'سيروم الخلايا الجذعية',
         scientific_name: 'Stem Cell Conditioned Media / Plant Stem Cells',
@@ -10329,7 +10329,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'غالبا ما تكون المنتجات مكلفة. الأدلة العلمية على الخلايا الجذعية النباتية لا تزال قيد البحث.' }
         ],
       },
-  {
+{
         id: 'matrixyl-serum',
         name: 'سيروم ماتريكسيل',
         scientific_name: 'Palmitoyl Pentapeptide-4 / Palmitoyl Tripeptide-1',
@@ -10342,7 +10342,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'illuminyl-serum',
         name: 'سيروم إلومينيل',
         scientific_name: 'Diglucosyl Gallic Acid',
@@ -10355,7 +10355,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'جيل جديد من مكونات التفتيح يتم تنشيطه بواسطة ميكروبيوم الجلد.' }],
       },
-  {
+{
         id: 'argireline-serum',
         name: 'سيروم الأرجيرلاين',
         scientific_name: 'Acetyl Hexapeptide-8',
@@ -10368,7 +10368,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل عن طريق إرخاء العضلات السطحية للوجه، مما يقلل من ظهور التجاعيد الناتجة عن الحركة.' }],
       },
-  {
+{
         id: 'azelaic-acid-suspension',
         name: 'حمض الأزيليك (معلق)',
         scientific_name: 'Azelaic Acid',
@@ -10384,7 +10384,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'قد يسبب وخزا أو حكة خفيفة في بداية الاستخدام.' }
         ],
       },
-  {
+{
         id: 'selenium',
         name: 'السيلينيوم',
         scientific_name: 'Selenium',
@@ -10397,7 +10397,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-compounds',
         name: 'مركبات PEG',
         scientific_name: 'Polyethylene Glycol',
@@ -10413,7 +10413,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه على البشرة المتضررة أو المجروحة.' }
         ],
       },
-  {
+{
         id: 'parabens',
         name: 'البارابين (عام)',
         scientific_name: 'Parabens',
@@ -10428,7 +10428,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'مادة حافظة مثيرة للجدل. على الرغم من أن الهيئات التنظيمية مثل SCCS و CIR تعتبرها آمنة بالتركيزات المستخدمة، إلا أن هناك مخاوف عامة بشأن تأثيرها الهرموني المحتمل.' }
         ],
       },
-  {
+{
         id: 'methylparaben',
         name: 'ميثيل بارابين',
         scientific_name: 'Methylparaben',
@@ -10441,7 +10441,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'أحد أكثر أنواع البارابين شيوعا وأقلها إثارة للجدل. يعتبر آمنا بالتركيزات المسموح بها.' }],
       },
-  {
+{
         id: 'propylparaben',
         name: 'بروبيل بارابين',
         scientific_name: 'Propylparaben',
@@ -10454,7 +10454,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'بارابين فعال جدا، ولكنه أكثر إثارة للجدل من الميثيل بارابين بسبب نشاطه الهرموني الطفيف في الدراسات المخبرية.' }],
       },
-  {
+{
         id: 'butylparaben',
         name: 'بوتيل بارابين',
         scientific_name: 'Butylparaben',
@@ -10467,7 +10467,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'أقوى وأكثر إثارة للجدل من البروبيل بارابين. تم تقييد استخدامه بشدة في الاتحاد الأوروبي.' }],
       },
-  {
+{
         id: 'ethylparaben',
         name: 'إيثيل بارابين',
         scientific_name: 'Ethylparaben',
@@ -10480,7 +10480,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'يعتبر من البارابينات الأكثر أمانا نسبيا.' }],
       },
-  {
+{
         id: 'formaldehyde',
         name: 'الفورمالديهايد',
         scientific_name: 'Formaldehyde',
@@ -10493,7 +10493,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مادة مسرطنة معروفة ومهيجة قوية للجلد والجهاز التنفسي. محظور استخدامه كمكون مباشر في مستحضرات التجميل في العديد من المناطق.' }],
       },
-  {
+{
         id: 'formaldehyde-releasers',
         name: 'مطلقات الفورمالديهايد (عام)',
         scientific_name: 'Formaldehyde Releasers',
@@ -10508,7 +10508,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مجموعة من المواد الحافظة التي تطلق الفورمالديهايد ببطء للحفاظ على المنتج. يمكن أن تسبب حساسية لدى الأشخاص الذين يعانون من حساسية الفورمالديهايد.' }
         ],
       },
-  {
+{
         id: 'triclosan',
         name: 'تريكلوسان',
         scientific_name: 'Triclosan',
@@ -10523,7 +10523,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'تم حظره من قبل إدارة الغذاء والدواء الأمريكية في منتجات الغسول المطهرة. مرتبط بمخاوف بشأن مقاومة البكتيريا واضطراب الهرمونات.' }
         ],
       },
-  {
+{
         id: 'mineral-oil',
         name: 'الزيت المعدني',
         scientific_name: 'Mineral Oil / Paraffinum Liquidum',
@@ -10538,7 +10538,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'فعال جدا في حبس الرطوبة، ولكنه قد يكون كوميدوجينيك (ساد للمسام) للبشرة المعرضة بشدة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'petrolatum',
         name: 'الفازلين (بترولاتوم)',
         scientific_name: 'Petrolatum',
@@ -10553,7 +10553,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'يعتبر المعيار الذهبي لحماية حاجز البشرة (slugging)، ولكنه ثقيل جدا وقد يكون كوميدوجينيك للبشرة المعرضة لحب الشباب.' }
         ],
       },
-  {
+{
         id: 'phthalates',
         name: 'الفثالات',
         scientific_name: 'Phthalates',
@@ -10568,7 +10568,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مجموعة من المواد الكيميائية المرتبطة باضطرابات هرمونية ومشاكل في النمو. غالبا ما تكون مخفية تحت كلمة "Parfum". محظورة في مستحضرات التجميل في الاتحاد الأوروبي.' }
         ],
       },
-  {
+{
         id: 'polyethylene-glycol',
         name: 'بولي إيثيلين جلايكول (PEG)',
         scientific_name: 'Polyethylene Glycol',
@@ -10584,7 +10584,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه على البشرة المتضررة أو المجروحة.' }
         ],
       },
-  {
+{
         id: 'cocamide-dea',
         name: 'كوكاميد DEA',
         scientific_name: 'Cocamide DEA',
@@ -10599,7 +10599,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مكون مثير للجدل. قد يتفاعل مع مكونات أخرى لتكوين النتروزامينات المسرطنة. تم تقييده في بعض المناطق.' }
         ],
       },
-  {
+{
         id: '2-bromo-2-nitropropane-1-3-diol',
         name: '2-برومو-2-نيتروبروبان-1،3-ديول (برونوبول)',
         scientific_name: '2-Bromo-2-Nitropropane-1,3-Diol',
@@ -10612,7 +10612,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مادة حافظة تطلق الفورمالديهايد ويمكن أن تتفاعل لتكوين النتروزامينات المسرطنة.' }],
       },
-  {
+{
         id: 'toluene',
         name: 'تولوين',
         scientific_name: 'Toluene',
@@ -10625,7 +10625,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مذيب سام للأعصاب والجهاز التنفسي. ممنوع في العديد من المناطق، ولكن قد يوجد في طلاء الأظافر وصبغات الشعر.' }],
       },
-  {
+{
         id: 'resorcinol',
         name: 'ريسورسينول',
         scientific_name: 'Resorcinol',
@@ -10638,7 +10638,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مكون فعال في بعض علاجات حب الشباب وصبغات الشعر، ولكنه مهيج قوي للجلد ومثير للقلق بشأن اضطراب الغدة الدرقية. مقيد بشدة.' }],
       },
-  {
+{
         id: 'coal-tar',
         name: 'قطران الفحم',
         scientific_name: 'Coal Tar',
@@ -10651,7 +10651,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مادة مسرطنة معروفة، ولكن لا يزال مسموحا بها بتركيزات منخفضة في الشامبوهات العلاجية التي لا تستلزم وصفة طبية لعلاج الصدفية والتهاب الجلد الدهني.' }],
       },
-  {
+{
         id: 'lead-acetate',
         name: 'خلات الرصاص',
         scientific_name: 'Lead Acetate',
@@ -10664,7 +10664,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'سم عصبي يتراكم في الجسم. محظور في معظم أنحاء العالم، ولكن لا يزال موجودا في بعض صبغات الشعر "التدريجية" القديمة في الولايات المتحدة.' }],
       },
-  {
+{
         id: 'methanol',
         name: 'الميثانول',
         scientific_name: 'Methanol',
@@ -10679,7 +10679,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مادة سامة جدا عند الامتصاص عبر الجلد أو الاستنشاق. قد يسبب العمى أو الوفاة. يوجد أحيانا في المنتجات المقلدة أو غير المرخصة.' }
         ],
       },
-  {
+{
         id: 'azeloyl-diglycinate',
         name: 'أزويل ديجليسينات',
         scientific_name: 'Potassium Azeloyl Diglycinate',
@@ -10692,7 +10692,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق من حمض الأزيليك، يوفر فوائد مشابهة (تفتيح، تنظيم الدهون) مع تهيج أقل بكثير وقوام مائي أنيق.' }],
       },
-  {
+{
         id: 'bis-peg-18-methyl-ether-dimethyl-silane',
         name: 'بس-PEG-18 ميثيل إيثر ثنائي ميثيل سيلان',
         scientific_name: 'Bis-PEG-18 Methyl Ether Dimethyl Silane',
@@ -10705,7 +10705,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'سيليكون قابل للذوبان في الماء، لا يتراكم ويعطي إحساسا بالنعومة والترطيب.' }],
       },
-  {
+{
         id: 'vp-eicosene-copolymer',
         name: 'VP/إيكوسين كوبوليمر',
         scientific_name: 'VP/Eicosene Copolymer',
@@ -10718,7 +10718,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم في واقيات الشمس لجعلها مقاومة للماء ولتحسين توزيع فلاتر الشمس على الجلد.' }],
       },
-  {
+{
         id: 'polymethyl-methacrylate',
         name: 'بولي ميثيل ميثاكريلات (PMMA)',
         scientific_name: 'Polymethyl Methacrylate',
@@ -10731,7 +10731,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'corn-starch-modified',
         name: 'نشا الذرة المعدل',
         scientific_name: 'Zea Mays (Corn) Starch / Corn Starch Modified',
@@ -10744,7 +10744,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'calcium-gluconate',
         name: 'جلوكونات الكالسيوم',
         scientific_name: 'Calcium Gluconate',
@@ -10757,7 +10757,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-hydroxymethylglycinate',
         name: 'هيدروكسي ميثيل جليسينات الصوديوم',
         scientific_name: 'Sodium Hydroxymethylglycinate',
@@ -10770,7 +10770,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مادة حافظة تطلق الفورمالديهايد. تعتبر مهيجة للجلد ومسببة للحساسية.' }],
       },
-  {
+{
         id: 'lanolin-wax',
         name: 'شمع اللانولين',
         scientific_name: 'Lanolin Cera',
@@ -10783,7 +10783,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'قد يسبب حساسية لدى الأشخاص الذين يعانون من حساسية الصوف.' }],
       },
-  {
+{
         id: 'oleyl-alcohol',
         name: 'كحول الأولييل',
         scientific_name: 'Oleyl Alcohol',
@@ -10796,7 +10796,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isocetyl-alcohol',
         name: 'كحول الأيزوسيتيل',
         scientific_name: 'Isocetyl Alcohol',
@@ -10809,7 +10809,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يعتبر من المواد شديدة السد للمسام (كوميدوجينيك).' }],
       },
-  {
+{
         id: 'glyceryl-laurate',
         name: 'لورات الجليسريل',
         scientific_name: 'Glyceryl Laurate',
@@ -10822,7 +10822,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-levulinate',
         name: 'ليفولينات الصوديوم',
         scientific_name: 'Sodium Levulinate',
@@ -10835,7 +10835,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-anisate',
         name: 'أنيسات الصوديوم',
         scientific_name: 'Sodium Anisate',
@@ -10848,7 +10848,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glyceryl-caprylate',
         name: 'كابريلات الجليسريل',
         scientific_name: 'Glyceryl Caprylate',
@@ -10861,7 +10861,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'potassium-palmitoyl-hydrolyzed-wheat-protein',
         name: 'بروتين القمح المهدرج بالميتويل البوتاسيوم',
         scientific_name: 'Potassium Palmitoyl Hydrolyzed Wheat Protein',
@@ -10874,7 +10874,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية القمح أو الغلوتين.' }],
       },
-  {
+{
         id: 'calcium-pca',
         name: 'كالسيوم PCA',
         scientific_name: 'Calcium PCA',
@@ -10887,7 +10887,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'magnesium-pca',
         name: 'مغنيسيوم PCA',
         scientific_name: 'Magnesium PCA',
@@ -10900,7 +10900,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'manganese-pca',
         name: 'منغنيز PCA',
         scientific_name: 'Manganese PCA',
@@ -10913,7 +10913,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lauryl-laurate',
         name: 'لورات اللوريل',
         scientific_name: 'Lauryl Laurate',
@@ -10926,7 +10926,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hexyldecanol',
         name: 'هيكسيلديكانول',
         scientific_name: 'Hexyldecanol',
@@ -10939,7 +10939,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hexyldecyl-laurate',
         name: 'لورات هيكسيلديسيل',
         scientific_name: 'Hexyldecyl Laurate',
@@ -10952,7 +10952,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'isostearyl-neopentanoate',
         name: 'نيوبنتانوات الأيزوستيريل',
         scientific_name: 'Isostearyl Neopentanoate',
@@ -10965,7 +10965,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'propanediol-dicaprylate',
         name: 'ثنائي كابريلات البروبانيديول',
         scientific_name: 'Propanediol Dicaprylate',
@@ -10978,7 +10978,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-polyaspartate',
         name: 'بولي أسبارتات الصوديوم',
         scientific_name: 'Sodium Polyaspartate',
@@ -10991,7 +10991,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'p-anisic-acid',
         name: 'حمض الأنيسيك-p',
         scientific_name: 'p-Anisic Acid',
@@ -11004,7 +11004,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'behenoxy-dimethicone',
         name: 'بيهينوكسي دايميثيكون',
         scientific_name: 'Behenoxy Dimethicone',
@@ -11017,7 +11017,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steareth-10',
         name: 'ستيريث-10',
         scientific_name: 'Steareth-10',
@@ -11030,7 +11030,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sucrose-cocoate',
         name: 'كوكوات السكروز',
         scientific_name: 'Sucrose Cocoate',
@@ -11043,7 +11043,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستحلب طبيعي مشتق من السكر وزيت جوز الهند.' }],
       },
-  {
+{
         id: 'phytosphingosine',
         name: 'فيتوسفينجوزين',
         scientific_name: 'Phytosphingosine',
@@ -11056,7 +11056,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'دهون طبيعية في البشرة، تساعد على تنظيم الميكروبيوم وتهدئة الالتهابات.' }],
       },
-  {
+{
         id: 'allantoin',
         name: 'آلانتوين',
         scientific_name: 'Allantoin',
@@ -11069,7 +11069,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'beta-glucan',
         name: 'بيتا جلوكان',
         scientific_name: 'Beta-Glucan',
@@ -11082,7 +11082,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'متعدد السكاريد مشتق من الشوفان أو الفطر، معروف بقدرته الفائقة على تهدئة البشرة وترطيبها.' }],
       },
-  {
+{
         id: 'madecassoside',
         name: 'ماديكاسوسيد',
         scientific_name: 'Madecassoside',
@@ -11095,7 +11095,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد المركبات النشطة الرئيسية في عشبة السيكا (Centella Asiatica)، فعال جدا في إصلاح البشرة وتهدئة الاحمرار.' }],
       },
-  {
+{
         id: 'asiaticoside',
         name: 'آسياتيكوسيد',
         scientific_name: 'Asiaticoside',
@@ -11108,7 +11108,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد المركبات النشطة الرئيسية في عشبة السيكا (Centella Asiatica).' }],
       },
-  {
+{
         id: 'tranexamic-acid',
         name: 'حمض الترانيكساميك',
         scientific_name: 'Tranexamic Acid',
@@ -11121,7 +11121,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'فعال جدا في علاج التصبغات الناتجة عن الالتهابات والشمس.' }],
       },
-  {
+{
         id: 'kojic-acid',
         name: 'حمض الكوجيك',
         scientific_name: 'Kojic Acid',
@@ -11134,7 +11134,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'غير مستقر ويميل للتأكسد وتغيير لونه. قد يسبب حساسية لدى البعض. مشتقاته (Kojic Dipalmitate) أكثر استقرارا.' }],
       },
-  {
+{
         id: 'bakuchiol',
         name: 'باكوتشيول',
         scientific_name: 'Bakuchiol',
@@ -11147,7 +11147,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مستخلص نباتي أظهرت الدراسات أن له تأثيرات مشابهة للريتينول (في تقليل التجاعيد والتصبغات) ولكن مع تهيج أقل بكثير.' }],
       },
-  {
+{
         id: 'superoxide-dismutase',
         name: 'سوبر أكسيد ديسميوتاز (SOD)',
         scientific_name: 'Superoxide Dismutase',
@@ -11160,7 +11160,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'إنزيم مضاد للأكسدة موجود بشكل طبيعي في الجسم، وهو خط الدفاع الأول ضد الجذور الحرة الأكثر ضررا.' }],
       },
-  {
+{
         id: 'glutathione',
         name: 'الجلوتاثيون',
         scientific_name: 'Glutathione',
@@ -11173,7 +11173,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يعمل على تفتيح البشرة عن طريق تحويل إنتاج الميلانين الداكن إلى ميلانين أفتح.' }],
       },
-  {
+{
         id: 'ergothioneine',
         name: 'إرغوثيونين',
         scientific_name: 'Ergothioneine',
@@ -11186,7 +11186,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مضاد أكسدة قوي يوجد بكثرة في الفطر، له نظام نقل خاص به في خلايا الجلد، مما يشير إلى أهميته البيولوجية.' }],
       },
-  {
+{
         id: 'alpha-glucan-oligosaccharide',
         name: 'ألفا-جلوكان أوليجوسكاريد',
         scientific_name: 'Alpha-Glucan Oligosaccharide',
@@ -11199,7 +11199,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بريبيوتيك يغذي البكتيريا المفيدة على سطح الجلد ويساعد على الحفاظ على توازن صحي للميكروبيوم.' }],
       },
-  {
+{
         id: 'inulin',
         name: 'إينولين',
         scientific_name: 'Inulin',
@@ -11212,7 +11212,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'بريبيوتيك مشتق من جذور الهندباء، يدعم صحة ميكروبيوم الجلد.' }],
       },
-  {
+{
         id: 'sodium-ascorbyl-phosphate',
         name: 'فوسفات أسكوربيل الصوديوم (SAP)',
         scientific_name: 'Sodium Ascorbyl Phosphate',
@@ -11225,7 +11225,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق فيتامين C لطيف ومستقر، فعال بشكل خاص للبشرة المعرضة لحب الشباب لخصائصه المضادة للميكروبات.' }],
       },
-  {
+{
         id: 'magnesium-ascorbyl-phosphate',
         name: 'فوسفات أسكوربيل المغنيسيوم (MAP)',
         scientific_name: 'Magnesium Ascorbyl Phosphate',
@@ -11238,7 +11238,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد ألطف مشتقات فيتامين C وأكثرها ترطيبا، مثالي للبشرة الجافة والحساسة.' }],
       },
-  {
+{
         id: 'tetrahexyldecyl-ascorbate',
         name: 'رباعي هيكسيل ديسيل أسكوربات (THDA)',
         scientific_name: 'Tetrahexyldecyl Ascorbate',
@@ -11251,7 +11251,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق فيتامين C فاخر قابل للذوبان في الزيت، يخترق الجلد بعمق. مستقر جدا ولكنه مكلف.' }],
       },
-  {
+{
         id: 'ethyl-ascorbic-acid',
         name: 'حمض الأسكوربيك الإيثيلي (3-O-Ethyl Ascorbic Acid)',
         scientific_name: '3-O-Ethyl Ascorbic Acid',
@@ -11264,7 +11264,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مشتق فيتامين C حديث ومستقر للغاية، يعتبر الأقرب في فعاليته لحمض الأسكوربيك النقي ولكن بتهيج أقل بكثير.' }],
       },
-  {
+{
         id: 'ascorbyl-palmitate',
         name: 'بالميتات الأسكوربيل',
         scientific_name: 'Ascorbyl Palmitate',
@@ -11277,7 +11277,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'مشتق فيتامين C قابل للذوبان في الزيت، ولكنه ضعيف جدا مقارنة بالمشتقات الأخرى ويعمل بشكل أساسي كمضاد أكسدة لحماية التركيبة نفسها.' }],
       },
-  {
+{
         id: 'ascorbyl-tetraisopalmitate',
         name: 'رباعي أيزوبالميتات الأسكوربيل',
         scientific_name: 'Ascorbyl Tetraisopalmitate',
@@ -11290,7 +11290,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'اسم آخر لـ Tetrahexyldecyl Ascorbate، شائع جدا في مستحضرات التجميل الآسيوية.' }],
       },
-  {
+{
         id: 'retinyl-palmitate',
         name: 'بالميتات الريتينيل',
         scientific_name: 'Retinyl Palmitate',
@@ -11306,7 +11306,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'هناك جدل حول سلامته في واقيات الشمس، حيث تشير بعض الدراسات إلى أنه قد يزيد من ضرر الجذور الحرة عند تعرضه للشمس.' }
         ],
       },
-  {
+{
         id: 'retinyl-retinoate',
         name: 'ريتينوات الريتينيل',
         scientific_name: 'Retinyl Retinoate',
@@ -11319,7 +11319,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'ريتينويد هجين يجمع بين الريتينول وحمض الريتينويك، وهو فعال وقوي ولكن ألطف بكثير من حمض الريتينويك النقي.' }],
       },
-  {
+{
         id: 'hydroxypinacolone-retinoate',
         name: 'هيدروكسي بيناكولون ريتينوات (Granactive Retinoid)',
         scientific_name: 'Hydroxypinacolone Retinoate',
@@ -11332,7 +11332,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'استر من حمض الريتينويك، يعمل مباشرة على المستقبلات في الجلد دون الحاجة للتحول، مما يوفر فعالية عالية مع تهيج منخفض جدا.' }],
       },
-  {
+{
         id: 'mandelic-acid',
         name: 'حمض المندليك',
         scientific_name: 'Mandelic Acid',
@@ -11345,7 +11345,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض ألفا هيدروكسي ذو جزيئات كبيرة، يخترق الجلد ببطء مما يجعله ألطف بكثير من حمض الجليكوليك ومناسب للبشرة الحساسة والمعرضة لحب الشباب.' }],
       },
-  {
+{
         id: 'tartaric-acid',
         name: 'حمض الطرطريك',
         scientific_name: 'Tartaric Acid',
@@ -11358,7 +11358,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم بشكل أساسي للمساعدة في الحفاظ على درجة الحموضة المناسبة في تركيبات الأحماض الأخرى.' }],
       },
-  {
+{
         id: 'malic-acid',
         name: 'حمض الماليك',
         scientific_name: 'Malic Acid',
@@ -11371,7 +11371,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض ألفا هيدروكسي ذو جزيئات أكبر من الجليكوليك، يوفر تقشيرا ألطف مع فوائد ترطيبية.' }],
       },
-  {
+{
         id: 'lactobionic-acid',
         name: 'حمض اللاكتوبيونيك',
         scientific_name: 'Lactobionic Acid',
@@ -11384,7 +11384,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'حمض PHA من الجيل الثاني، مقشر لطيف جدا يعمل كمرطب قوي ومضاد للأكسدة.' }],
       },
-  {
+{
         id: 'gluconolactone',
         name: 'جلوكونولاكتون',
         scientific_name: 'Gluconolactone',
@@ -11397,7 +11397,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أشهر أحماض PHA، يقشر بلطف شديد ويرطب ويقوي حاجز البشرة. مناسب للبشرة الحساسة.' }],
       },
-  {
+{
         id: 'ferulic-acid',
         name: 'حمض الفيروليك',
         scientific_name: 'Ferulic Acid',
@@ -11410,7 +11410,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مضاد أكسدة قوي، عند دمجه مع فيتامين C و E، فإنه يضاعف حمايتهما الضوئية ويجعلهما أكثر استقرارا.' }],
       },
-  {
+{
         id: 'caffeic-acid',
         name: 'حمض الكافيك',
         scientific_name: 'Caffeic Acid',
@@ -11423,7 +11423,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
       id: 'zinc-pyrithione',
       name: 'بيريثيون الزنك',
       scientific_name: 'Zinc Pyrithione',
@@ -11439,7 +11439,7 @@ export const combinedOilsDB = {
         { level: 'risk', text: 'تم تقييد استخدامه بشدة في مستحضرات التجميل في الاتحاد الأوروبي بسبب مخاوف تتعلق بالسمية البيئية والسمية الجينية المحتملة.' }
       ],
     },
-  {
+{
       id: 'selenium-sulfide',
       name: 'كبريتيد السيلينيوم',
       scientific_name: 'Selenium Sulfide',
@@ -11455,7 +11455,7 @@ export const combinedOilsDB = {
         { level: 'caution', text: 'قد يغير لون الشعر المصبوغ أو الفاتح.' }
       ],
     },
-  {
+{
       id: 'piroctone-olamine',
       name: 'بيروكتون أولامين',
       scientific_name: 'Piroctone Olamine',
@@ -11468,7 +11468,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'بديل حديث ولطيف لبيريثيون الزنك، فعال ضد الفطريات المسببة للقشرة.' }],
     },
-  {
+{
       id: 'climbazole',
       name: 'كليمبازول',
       scientific_name: 'Climbazole',
@@ -11481,7 +11481,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مادة حافظة ومضادة للفطريات تستخدم في الشامبوهات المضادة للقشرة.' }],
     },
-  {
+{
       id: 'ketoconazole',
       name: 'كيتوكونازول',
       scientific_name: 'Ketoconazole',
@@ -11496,7 +11496,7 @@ export const combinedOilsDB = {
         { level: 'info', text: 'مكون دوائي فعال جدا، يوجد بتركيزات منخفضة (1%) في الشامبوهات المتاحة دون وصفة طبية.' }
       ],
     },
-  {
+{
       id: 'salix-alba-bark-extract',
       name: 'مستخلص لحاء الصفصاف الأبيض',
       scientific_name: 'Salix Alba (Willow) Bark Extract',
@@ -11509,7 +11509,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مصدر طبيعي للساليسين، الذي يتحول إلى حمض الساليسيليك. يعمل على تقشير فروة الرأس بلطف.' }],
     },
-  {
+{
       id: 'zinc-pca',
       name: 'زنك PCA',
       scientific_name: 'Zinc PCA',
@@ -11522,7 +11522,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'ممتاز لفروة الرأس الدهنية والمعرضة لحب الشباب.' }],
     },
-  {
+{
       id: 'juniperus-communis-fruit-extract',
       name: 'مستخلص توت العرعر',
       scientific_name: 'Juniperus Communis Fruit Extract',
@@ -11535,7 +11535,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'glycol-distearate',
       name: 'جلايكول ثنائي الستيارات',
       scientific_name: 'Glycol Distearate',
@@ -11548,7 +11548,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'المكون المسؤول عن المظهر الأبيض اللؤلؤي اللامع في العديد من الشامبوهات والكريمات.' }],
     },
-  {
+{
       id: 'glycol-stearate',
       name: 'ستيارات الجلايكول',
       scientific_name: 'Glycol Stearate',
@@ -11561,7 +11561,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-150-distearate',
       name: 'PEG-150 ثنائي الستيارات',
       scientific_name: 'PEG-150 Distearate',
@@ -11574,7 +11574,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مكثف شائع جدا وفعال للغاية في أنظمة المنظفات.' }],
     },
-  {
+{
       id: 'cocamide-mea',
       name: 'كوكاميد MEA',
       scientific_name: 'Cocamide MEA',
@@ -11587,7 +11587,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مثل Cocamide DEA، قد يكون هناك مخاوف بشأن تكون النتروزامينات المسرطنة إذا لم يتم تصنيعه بشكل صحيح.' }],
     },
-  {
+{
       id: 'cocamide-mipa',
       name: 'كوكاميد MIPA',
       scientific_name: 'Cocamide MIPA',
@@ -11600,7 +11600,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'lauryl-hydroxysultaine',
       name: 'لوريل هيدروكسي سولتين',
       scientific_name: 'Lauryl Hydroxysultaine',
@@ -11613,7 +11613,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'styrene-acrylates-copolymer',
       name: 'ستيرين/أكريلات كوبوليمر',
       scientific_name: 'Styrene/Acrylates Copolymer',
@@ -11626,7 +11626,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يستخدم لجعل التركيبات الشفافة تبدو بيضاء حليبية وكريمية.' }],
     },
-  {
+{
       id: 'acrylates-copolymer',
       name: 'أكريلات كوبوليمر',
       scientific_name: 'Acrylates Copolymer',
@@ -11639,7 +11639,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-40-stearate',
       name: 'ستيرات PEG-40',
       scientific_name: 'PEG-40 Stearate',
@@ -11652,7 +11652,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sorbitan-stearate',
       name: 'ستيرات السوربيتان',
       scientific_name: 'Sorbitan Stearate',
@@ -11665,7 +11665,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hydrolyzed-soy-protein',
       name: 'بروتين الصويا المهدرج',
       scientific_name: 'Hydrolyzed Soy Protein',
@@ -11678,7 +11678,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hydrolyzed-rice-protein',
       name: 'بروتين الأرز المهدرج',
       scientific_name: 'Hydrolyzed Rice Protein',
@@ -11691,7 +11691,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'بروتين ممتاز للشعر الناعم والرقيق لأنه يقوي ويضيف حجما دون إثقاله.' }],
     },
-  {
+{
       id: 'hydrolyzed-vegetable-protein',
       name: 'بروتين نباتي مهدرج',
       scientific_name: 'Hydrolyzed Vegetable Protein',
@@ -11704,7 +11704,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hydrolyzed-vegetable-protein-pg-propyl-silanetriol',
       name: 'بروتين نباتي مهدرج PG-بروبيل سيلانتريول',
       scientific_name: 'Hydrolyzed Vegetable Protein PG-Propyl Silanetriol',
@@ -11717,7 +11717,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مركب حاصل على براءة اختراع (Keravis™)، مصمم لاختراق قشرة الشعر وتقويته من الداخل، مع تكوين طبقة واقية على السطح.' }],
     },
-  {
+{
       id: 'sodium-pca',
       name: 'صوديوم PCA',
       scientific_name: 'Sodium PCA',
@@ -11730,7 +11730,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'جزء من عامل الترطيب الطبيعي (NMF) للجلد، وهو مرطب ممتاز للشعر أيضا.' }],
     },
-  {
+{
       id: 'silk-amino-acids',
       name: 'أحماض الحرير الأمينية',
       scientific_name: 'Silk Amino Acids',
@@ -11743,7 +11743,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'جزيئات صغيرة جدا من بروتين الحرير، قادرة على اختراق جذع الشعرة لترطيبها وتقويتها من الداخل.' }],
     },
-  {
+{
       id: 'cocoyl-hydrolyzed-collagen',
       name: 'كولاجين مهدرج كوكويل',
       scientific_name: 'Cocoyl Hydrolyzed Collagen',
@@ -11756,7 +11756,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hydrolyzed-elastin',
       name: 'إيلاستين مهدرج',
       scientific_name: 'Hydrolyzed Elastin',
@@ -11769,7 +11769,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyquaternium-80',
       name: 'بولي كواتيرنيوم-80',
       scientific_name: 'Polyquaternium-80',
@@ -11782,7 +11782,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'بوليمر مشتق من النبات، يوفر تكييفا جيدا دون تراكم.' }],
     },
-  {
+{
       id: 'polyquaternium-68',
       name: 'بولي كواتيرنيوم-68',
       scientific_name: 'Polyquaternium-68',
@@ -11795,7 +11795,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يستخدم في منتجات التصفيف لتوفير ثبات قوي.' }],
     },
-  {
+{
       id: 'silicone-quaternium-18',
       name: 'سيليكون كواتيرنيوم-18',
       scientific_name: 'Silicone Quaternium-18',
@@ -11808,7 +11808,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'silicone-quaternium-22',
       name: 'سيليكون كواتيرنيوم-22',
       scientific_name: 'Silicone Quaternium-22',
@@ -11821,7 +11821,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يوفر فوائد التكييف العميق للسيليكونات الأمينية مع تقليل التراكم.' }],
     },
-  {
+{
       id: 'peg-ppg-15-15-dimethicone',
       name: 'PEG/PPG-15/15 دايميثيكون',
       scientific_name: 'PEG/PPG-15/15 Dimethicone',
@@ -11834,7 +11834,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'phenyl-trimethicone',
       name: 'فينيل ثلاثي الميثيكون',
       scientific_name: 'Phenyl Trimethicone',
@@ -11847,7 +11847,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'سيليكون مصمم خصيصا لزيادة لمعان الشعر وانعكاس الضوء.' }],
     },
-  {
+{
       id: 'c13-14-isoparaffin',
       name: 'C13-14 إيزوبرافين',
       scientific_name: 'C13-14 Isoparaffin',
@@ -11860,7 +11860,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'غالبا ما يوجد كمذيب في مكثفات البوليمر مثل Sepigel 305.' }],
     },
-  {
+{
       id: 'laureth-7',
       name: 'لوريث-7',
       scientific_name: 'Laureth-7',
@@ -11873,7 +11873,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'غالبا ما يوجد كمستحلب في مكثفات البوليمر مثل Sepigel 305.' }],
     },
-  {
+{
       id: 'polyacrylamide',
       name: 'بولي أكريلاميد',
       scientific_name: 'Polyacrylamide',
@@ -11886,7 +11886,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مثير للجدل بسبب احتمال تلوثه بمادة الأكريلاميد المونومر، وهي مادة مسرطنة وسامة للأعصاب. الهيئات التنظيمية تضع حدودا صارمة جدا على مستويات الأكريلاميد المتبقية.' }],
     },
-  {
+{
       id: 'equisetum-arvense-extract',
       name: 'مستخلص ذيل الحصان',
       scientific_name: 'Equisetum Arvense Extract',
@@ -11899,7 +11899,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'serenoa-serrulata-fruit-extract',
       name: 'مستخلص البلميط المنشاري',
       scientific_name: 'Serenoa Serrulata (Saw Palmetto) Fruit Extract',
@@ -11912,7 +11912,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يُعتقد أنه يساعد في منع تساقط الشعر الوراثي عن طريق تثبيط الإنزيم الذي يحول التستوستيرون إلى DHT.' }],
     },
-  {
+{
       id: 'humulus-lupulus-extract',
       name: 'مستخلص الجنجل',
       scientific_name: 'Humulus Lupulus (Hops) Extract',
@@ -11925,7 +11925,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'achillea-millefolium-extract',
       name: 'مستخلص الأخيليا الألفية',
       scientific_name: 'Achillea Millefolium Extract',
@@ -11938,7 +11938,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'tussilago-farfara-leaf-extract',
       name: 'مستخلص أوراق حشيشة السعال',
       scientific_name: 'Tussilago Farfara (Coltsfoot) Leaf Extract',
@@ -11951,7 +11951,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'cinchona-succirubra-bark-extract',
       name: 'مستخلص لحاء الكينا',
       scientific_name: 'Cinchona Succirubra Bark Extract',
@@ -11964,7 +11964,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'غني بالكينين، الذي يستخدم لتقوية الشعر وتنشيط فروة الرأس.' }],
     },
-  {
+{
       id: 'biotin',
       name: 'البيوتين (فيتامين B7)',
       scientific_name: 'Biotin',
@@ -11977,7 +11977,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'على الرغم من شهرته، إلا أن فعاليته عند التطبيق الموضعي محدودة مقارنة بتناوله كمكمل غذائي.' }],
     },
-  {
+{
       id: 'menthyl-lactate',
       name: 'لاكتات المنثيل',
       scientific_name: 'Menthyl Lactate',
@@ -11990,7 +11990,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يوفر إحساسا بالبرودة والانتعاش ولكن بشكل ألطف وبدون الرائحة القوية للمنثول أو النعناع.' }],
     },
-  {
+{
       id: 'laureth-2',
       name: 'لوريث-2',
       scientific_name: 'Laureth-2',
@@ -12003,7 +12003,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-3-distearate',
       name: 'PEG-3 ثنائي الستيارات',
       scientific_name: 'PEG-3 Distearate',
@@ -12016,7 +12016,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'limonene',
       name: 'ليمونين',
       scientific_name: 'Limonene',
@@ -12029,7 +12029,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري طبيعي (من قشور الحمضيات) يجب الإفصاح عنه كمسبب للحساسية. يتأكسد بسهولة عند تعرضه للهواء، ونواتج الأكسدة هي المسبب الرئيسي للحساسية.' }],
     },
-  {
+{
       id: 'linalool',
       name: 'لينالول',
       scientific_name: 'Linalool',
@@ -12042,7 +12042,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مكون عطري طبيعي (من اللافندر والكزبرة) يجب الإفصاح عنه كمسبب للحساسية. يتأكسد بسهولة عند تعرضه للهواء، مما يجعله أكثر تحسيسا.' }],
     },
-  {
+{
       id: 'citronellol',
       name: 'سيترونيلول',
       scientific_name: 'Citronellol',
@@ -12055,7 +12055,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري طبيعي (من الورد والجيرانيوم) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'hexyl-cinnamal',
       name: 'هكسيل سينامال',
       scientific_name: 'Hexyl Cinnamal',
@@ -12068,7 +12068,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري (غالبا صناعي) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'geraniol',
       name: 'جيرانيول',
       scientific_name: 'Geraniol',
@@ -12081,7 +12081,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري طبيعي (من الورد والجيرانيوم) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'benzyl-salicylate',
       name: 'بنزيل ساليسيلات',
       scientific_name: 'Benzyl Salicylate',
@@ -12094,7 +12094,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري يجب الإفصاح عنه كمسبب للحساسية. يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الأسبرين.' }],
     },
-  {
+{
       id: 'alpha-isomethyl-ionone',
       name: 'ألفا-أيزوميثيل أيونون',
       scientific_name: 'Alpha-Isomethyl Ionone',
@@ -12107,7 +12107,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري صناعي يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'coumarin',
       name: 'كومارين',
       scientific_name: 'Coumarin',
@@ -12120,7 +12120,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري طبيعي (من حبوب التونكا) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'eugenol',
       name: 'يوجينول',
       scientific_name: 'Eugenol',
@@ -12133,7 +12133,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مكون عطري طبيعي (من القرنفل) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'citral',
       name: 'سيترال',
       scientific_name: 'Citral',
@@ -12146,7 +12146,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مكون عطري طبيعي (من الليمون وعشب الليمون) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'cinnamal',
       name: 'سينامال',
       scientific_name: 'Cinnamal',
@@ -12159,7 +12159,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مكون عطري طبيعي (من القرفة) يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'hydroxycitronellal',
       name: 'هيدروكسي سيترونيلال',
       scientific_name: 'Hydroxycitronellal',
@@ -12172,7 +12172,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مكون عطري صناعي يجب الإفصاح عنه كمسبب للحساسية.' }],
     },
-  {
+{
       id: 'disodium-edta',
       name: 'ثنائي الصوديوم EDTA',
       scientific_name: 'Disodium EDTA',
@@ -12188,7 +12188,7 @@ export const combinedOilsDB = {
         { level: 'caution', text: 'غير قابل للتحلل بيولوجيا بسهولة، مما يثير مخاوف بيئية.' }
       ],
     },
-  {
+{
       id: 'tetrasodium-edta',
       name: 'رباعي الصوديوم EDTA',
       scientific_name: 'Tetrasodium EDTA',
@@ -12201,7 +12201,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعمل بشكل أفضل في التركيبات ذات الرقم الهيدروجيني الأعلى من Disodium EDTA.' }],
     },
-  {
+{
       id: 'tetrasodium-etidronate',
       name: 'رباعي الصوديوم إيتيدرونات',
       scientific_name: 'Tetrasodium Etidronate',
@@ -12214,7 +12214,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'aminomethyl-propanol',
       name: 'أمينوميثيل بروبانول',
       scientific_name: 'Aminomethyl Propanol',
@@ -12227,7 +12227,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'triethanolamine',
       name: 'ثلاثي إيثانولامين (TEA)',
       scientific_name: 'Triethanolamine',
@@ -12240,7 +12240,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'risk', text: 'مقيد الاستخدام. قد يتفاعل مع عوامل النترتة لتكوين النتروزامينات المسرطنة. لا ينبغي استخدامه في المنتجات التي تحتوي على هذه العوامل.' }],
     },
-  {
+{
       id: 'tromethamine',
       name: 'تروميثامين',
       scientific_name: 'Tromethamine',
@@ -12253,7 +12253,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-sulfite',
       name: 'كبريتيت الصوديوم',
       scientific_name: 'Sodium Sulfite',
@@ -12266,7 +12266,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-metabisulfite',
       name: 'ميتابيسلفيت الصوديوم',
       scientific_name: 'Sodium Metabisulfite',
@@ -12279,7 +12279,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'dehydroacetic-acid',
       name: 'حمض ديهيدروأسيتيك',
       scientific_name: 'Dehydroacetic Acid',
@@ -12292,7 +12292,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'غالبا ما يستخدم مع كحول البنزيل في أنظمة الحفظ المعتمدة من Ecocert.' }],
     },
-  {
+{
       id: 'peg-7m',
       name: 'PEG-7M',
       scientific_name: 'PEG-7M',
@@ -12305,7 +12305,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-90m',
       name: 'PEG-90M',
       scientific_name: 'PEG-90M',
@@ -12318,7 +12318,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-180m',
       name: 'PEG-180M',
       scientific_name: 'PEG-180M',
@@ -12331,7 +12331,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-80-sorbitan-laurate',
       name: 'لورات سوربيتان PEG-80',
       scientific_name: 'PEG-80 Sorbitan Laurate',
@@ -12344,7 +12344,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مكون أساسي في تركيبات الشامبو "No More Tears" للأطفال.' }],
     },
-  {
+{
       id: 'ppg-2-hydroxyethyl-coco-isostearamide',
       name: 'PPG-2 هيدروكسي إيثيل كوكو/أيزوستيراميد',
       scientific_name: 'PPG-2-Hydroxyethyl Coco/Isostearamide',
@@ -12357,7 +12357,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-c12-13-pareth-sulfate',
       name: 'صوديوم C12-13 باريث سلفات',
       scientific_name: 'Sodium C12-13 Pareth Sulfate',
@@ -12370,7 +12370,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مشابه لـ SLES، قد يكون مجففا.' }],
     },
-  {
+{
       id: 'potassium-chloride',
       name: 'كلوريد البوتاسيوم',
       scientific_name: 'Potassium Chloride',
@@ -12383,7 +12383,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'ملح يستخدم لزيادة لزوجة الشامبو.' }],
     },
-  {
+{
       id: 'zinc-sulfate',
       name: 'كبريتات الزنك',
       scientific_name: 'Zinc Sulfate',
@@ -12396,7 +12396,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ppg-12',
       name: 'PPG-12',
       scientific_name: 'PPG-12',
@@ -12409,7 +12409,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'oleth-20',
       name: 'أوليث-20',
       scientific_name: 'Oleth-20',
@@ -12422,7 +12422,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-14m',
       name: 'PEG-14M',
       scientific_name: 'PEG-14M',
@@ -12435,7 +12435,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-23m',
       name: 'PEG-23M',
       scientific_name: 'PEG-23M',
@@ -12448,7 +12448,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-45m',
       name: 'PEG-45M',
       scientific_name: 'PEG-45M',
@@ -12461,7 +12461,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-8-dimethicone',
       name: 'PEG-8 دايميثيكون',
       scientific_name: 'PEG-8 Dimethicone',
@@ -12474,7 +12474,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'laureth-9',
       name: 'لوريث-9',
       scientific_name: 'Laureth-9',
@@ -12487,7 +12487,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يستخدم كمخدر موضعي خفيف لتهدئة الحكة في فروة الرأس.' }],
     },
-  {
+{
       id: 'trideceth-6',
       name: 'ترايديسيث-6',
       scientific_name: 'Trideceth-6',
@@ -12500,7 +12500,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'trideceth-3',
       name: 'ترايديسيث-3',
       scientific_name: 'Trideceth-3',
@@ -12513,7 +12513,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polysorbate-21',
       name: 'بوليسوربات 21',
       scientific_name: 'Polysorbate 21',
@@ -12526,7 +12526,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'poloxamer-338',
       name: 'بولوكسامير 338',
       scientific_name: 'Poloxamer 338',
@@ -12539,7 +12539,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-xylenesulfonate',
       name: 'صوديوم زيلين سلفونات',
       scientific_name: 'Sodium Xylenesulfonate',
@@ -12552,7 +12552,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يساعد على منع انفصال التركيبة والحفاظ على شفافيتها.' }],
     },
-  {
+{
       id: 'dipalmitoylethyl-hydroxyethylmonium-methosulfate',
       name: 'ميثوسلفات ثنائي بالميتويل إيثيل هيدروكسي إيثيل مونيوم',
       scientific_name: 'Dipalmitoylethyl Hydroxyethylmonium Methosulfate',
@@ -12565,7 +12565,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'بديل صديق للبيئة للمكيفات الرباعية التقليدية.' }],
     },
-  {
+{
       id: 'hydroxypropyltrimonium-hydrolyzed-wheat-protein',
       name: 'بروتين القمح المهدرج هيدروكسي بروبيل تريمونيوم',
       scientific_name: 'Hydroxypropyltrimonium Hydrolyzed Wheat Protein',
@@ -12578,7 +12578,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'palmitamidopropyltrimonium-chloride',
       name: 'كلوريد بالميتاميدوبروبيل تريمونيوم',
       scientific_name: 'Palmitamidopropyltrimonium Chloride',
@@ -12591,7 +12591,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'distearoylethyl-dimonium-chloride',
       name: 'كلوريد ثنائي ستيرويل إيثيل دايمونيوم',
       scientific_name: 'Distearoylethyl Dimonium Chloride',
@@ -12604,7 +12604,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ppg-1-peg-9-lauryl-glycol-ether',
       name: 'PPG-1-PEG-9 لوريل جلايكول إيثر',
       scientific_name: 'PPG-1-PEG-9 Lauryl Glycol Ether',
@@ -12617,7 +12617,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-formate',
       name: 'فورمات الصوديوم',
       scientific_name: 'Sodium Formate',
@@ -12630,7 +12630,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-ppg-120-10-trimethylolpropane-trioleate',
       name: 'PEG/PPG-120/10 ثلاثي ميثيل بروبان ثلاثي الأوليات',
       scientific_name: 'PEG/PPG-120/10 Trimethylolpropane Trioleate',
@@ -12643,7 +12643,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'laureth-10',
       name: 'لوريث-10',
       scientific_name: 'Laureth-10',
@@ -12656,7 +12656,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'glyceryl-oleate',
       name: 'أوليات الجليسريل',
       scientific_name: 'Glyceryl Oleate',
@@ -12669,7 +12669,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'غالبا ما يستخدم مع Coco-Glucoside لتكوين Lamesoft PO 65، وهو عامل إعادة ترطيب حيوي مطابق للدهون الطبيعية في البشرة.' }],
     },
-  {
+{
       id: 'hydrogenated-palm-glycerides-citrate',
       name: 'سيترات جليسريدات النخيل المهدرجة',
       scientific_name: 'Hydrogenated Palm Glycerides Citrate',
@@ -12682,7 +12682,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'قد يثير مخاوف بشأن الاستدامة البيئية لزيت النخيل.' }],
     },
-  {
+{
       id: 'peg-18-glyceryl-oleate-cocoate',
       name: 'PEG-18 أوليات/كوكوات الجليسريل',
       scientific_name: 'PEG-18 Glyceryl Oleate/Cocoate',
@@ -12695,7 +12695,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-200-hydrogenated-glyceryl-palmate',
       name: 'بالميت الجليسريل المهدرج PEG-200',
       scientific_name: 'PEG-200 Hydrogenated Glyceryl Palmate',
@@ -12708,7 +12708,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sorbic-acid',
       name: 'حمض السوربيك',
       scientific_name: 'Sorbic Acid',
@@ -12721,7 +12721,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polysilicone-29',
       name: 'بولي سيليكون-29',
       scientific_name: 'Polysilicone-29',
@@ -12734,7 +12734,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'سيليكون يتم تنشيطه بالحرارة لتكوين طبقة واقية على الشعر.' }],
     },
-  {
+{
       id: 'basic-brown-17',
       name: 'بني أساسي 17',
       scientific_name: 'Basic Brown 17',
@@ -12747,7 +12747,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'basic-yellow-57',
       name: 'أصفر أساسي 57',
       scientific_name: 'Basic Yellow 57',
@@ -12760,7 +12760,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'acid-violet-43',
       name: 'بنفسجي حمضي 43',
       scientific_name: 'Acid Violet 43',
@@ -12773,7 +12773,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'الصبغة البنفسجية الأساسية المستخدمة في "الشامبو البنفسجي" لمعادلة درجات اللون الأصفر والنحاسي في الشعر الأشقر أو الرمادي.' }],
     },
-  {
+{
       id: 'basic-blue-99',
       name: 'أزرق أساسي 99',
       scientific_name: 'Basic Blue 99',
@@ -12786,7 +12786,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'basic-red-51',
       name: 'أحمر أساسي 51',
       scientific_name: 'Basic Red 51',
@@ -12799,7 +12799,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hc-blue-no-2',
       name: 'HC Blue No. 2',
       scientific_name: 'HC Blue No. 2',
@@ -12812,7 +12812,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-20-glyceryl-laurate',
       name: 'لورات الجليسريل PEG-20',
       scientific_name: 'PEG-20 Glyceryl Laurate',
@@ -12825,7 +12825,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'linoleamidopropyl-pg-dimonium-chloride-phosphate',
       name: 'فوسفات كلوريد لينولياميدوبروبيل PG-ديمونيوم',
       scientific_name: 'Linoleamidopropyl PG-Dimonium Chloride Phosphate',
@@ -12838,7 +12838,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-c12-18-alkyl-sulfate',
       name: 'صوديوم C12-18 ألكيل سلفات',
       scientific_name: 'Sodium C12-18 Alkyl Sulfate',
@@ -12851,7 +12851,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'مشابه لـ SLS، وهو منظف قوي.' }],
     },
-  {
+{
       id: 'persea-gratissima-fruit-extract',
       name: 'مستخلص فاكهة الأفوكادو',
       scientific_name: 'Persea Gratissima (Avocado) Fruit Extract',
@@ -12864,7 +12864,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'mangifera-indica-fruit-extract',
       name: 'مستخلص فاكهة المانجو',
       scientific_name: 'Mangifera Indica (Mango) Fruit Extract',
@@ -12877,7 +12877,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'passiflora-incarnata-extract',
       name: 'مستخلص زهرة الآلام',
       scientific_name: 'Passiflora Incarnata Extract',
@@ -12890,7 +12890,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'actinidia-chinensis-fruit-extract',
       name: 'مستخلص فاكهة الكيوي',
       scientific_name: 'Actinidia Chinensis (Kiwi) Fruit Extract',
@@ -12903,7 +12903,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'aloe-barbadensis-flower-extract',
       name: 'مستخلص زهرة الألوفيرا',
       scientific_name: 'Aloe Barbadensis Flower Extract',
@@ -12916,7 +12916,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'coccinia-indica-fruit-extract',
       name: 'مستخلص فاكهة الكوسينيا الهندية',
       scientific_name: 'Coccinia Indica Fruit Extract',
@@ -12929,7 +12929,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'solanum-melongena-fruit-extract',
       name: 'مستخلص فاكهة الباذنجان',
       scientific_name: 'Solanum Melongena (Eggplant) Fruit Extract',
@@ -12942,7 +12942,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ocimum-sanctum-leaf-extract',
       name: 'مستخلص أوراق الريحان المقدس',
       scientific_name: 'Ocimum Sanctum Leaf Extract',
@@ -12955,7 +12955,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'melia-azadirachta-leaf-extract',
       name: 'مستخلص أوراق النيم',
       scientific_name: 'Melia Azadirachta Leaf Extract',
@@ -12968,7 +12968,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'corallina-officinalis-extract',
       name: 'مستخلص الطحالب المرجانية',
       scientific_name: 'Corallina Officinalis Extract',
@@ -12981,7 +12981,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-c10-16-alkyl-glucoside-crosspolymer',
       name: 'صوديوم C10-16 ألكيل جلوكوسايد كروسبوليمر',
       scientific_name: 'Sodium C10-16 Alkyl Glucoside Crosspolymer',
@@ -12994,7 +12994,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-lauroyl-lactylate',
       name: 'صوديوم لورويل لاكتيلات',
       scientific_name: 'Sodium Lauroyl Lactylate',
@@ -13007,7 +13007,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-cocoyl-hydrolyzed-amaranth-protein',
       name: 'بروتين القطيفة المهدرج صوديوم كوكويل',
       scientific_name: 'Sodium Cocoyl Hydrolyzed Amaranth Protein',
@@ -13020,7 +13020,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'glyceryl-caprylate-caprate',
       name: 'كابريلات/كبرات الجليسريل',
       scientific_name: 'Glyceryl Caprylate/Caprate',
@@ -13033,7 +13033,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-10-laurate',
       name: 'بولي جليسريل-10 لوريت',
       scientific_name: 'Polyglyceryl-10 Laurate',
@@ -13046,7 +13046,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'sodium-methyl-2-sulfolaurate',
       name: 'صوديوم ميثيل 2-سلفولورات',
       scientific_name: 'Sodium Methyl 2-Sulfolaurate',
@@ -13059,7 +13059,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'disodium-2-sulfolaurate',
       name: 'ثنائي الصوديوم 2-سلفولورات',
       scientific_name: 'Disodium 2-Sulfolaurate',
@@ -13072,7 +13072,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'menthol',
       name: 'منثول',
       scientific_name: 'Menthol',
@@ -13085,7 +13085,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'قد يكون مهيجا للبشرة الحساسة.' }],
     },
-  {
+{
       id: 'mentha-arvensis-leaf-oil',
       name: 'زيت النعناع الحقلي',
       scientific_name: 'Mentha Arvensis Leaf Oil',
@@ -13098,7 +13098,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'vanillyl-butyl-ether',
       name: 'فانيليل بوتيل إيثر',
       scientific_name: 'Vanillyl Butyl Ether',
@@ -13111,7 +13111,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يستخدم في الشامبوهات المنشطة لإعطاء إحساس بالحرارة اللطيفة.' }],
     },
-  {
+{
       id: 'hydrolyzed-corn-starch',
       name: 'نشا الذرة المهدرج',
       scientific_name: 'Hydrolyzed Corn Starch',
@@ -13124,7 +13124,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'tilia-tomentosa-bud-extract',
       name: 'مستخلص براعم الزيزفون',
       scientific_name: 'Tilia Tomentosa Bud Extract',
@@ -13137,7 +13137,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'olea-europaea-leaf-extract',
       name: 'مستخلص أوراق الزيتون',
       scientific_name: 'Olea Europaea (Olive) Leaf Extract',
@@ -13150,7 +13150,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'apium-graveolens-seed-extract',
       name: 'مستخلص بذور الكرفس',
       scientific_name: 'Apium Graveolens (Celery) Seed Extract',
@@ -13163,7 +13163,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'pisum-sativum-sprout-extract',
       name: 'مستخلص براعم البازلاء',
       scientific_name: 'Pisum Sativum (Pea) Sprout Extract',
@@ -13176,7 +13176,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم AnaGain™، يعمل على تحفيز جزيئات معينة في بصيلات الشعر لإعادة تنشيط نمو الشعر.' }],
     },
-  {
+{
       id: 'larix-europaea-wood-extract',
       name: 'مستخلص خشب الأرز الأوروبي',
       scientific_name: 'Larix Europaea Wood Extract',
@@ -13189,7 +13189,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'أحد المكونات الرئيسية في مركب Redensyl® الحائز على جوائز.' }],
     },
-  {
+{
       id: 'zinc-chloride',
       name: 'كلوريد الزنك',
       scientific_name: 'Zinc Chloride',
@@ -13202,7 +13202,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-3-diisostearate',
       name: 'بولي جليسريل-3 ثنائي الأيزوستيرات',
       scientific_name: 'Polyglyceryl-3 Diisostearate',
@@ -13215,7 +13215,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-4-caprate',
       name: 'بولي جليسريل-4 كابرات',
       scientific_name: 'Polyglyceryl-4 Caprate',
@@ -13228,7 +13228,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-6-caprylate',
       name: 'بولي جليسريل-6 كابريلات',
       scientific_name: 'Polyglyceryl-6 Caprylate',
@@ -13241,7 +13241,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-3-cocoate',
       name: 'بولي جليسريل-3 كوكوات',
       scientific_name: 'Polyglyceryl-3 Cocoate',
@@ -13254,7 +13254,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'hydroxypropyl-oxidized-starch-pg-trimonium-chloride',
       name: 'كلوريد النشا المؤكسد هيدروكسي بروبيل PG-تريمونيوم',
       scientific_name: 'Hydroxypropyl Oxidized Starch PG-Trimonium Chloride',
@@ -13267,7 +13267,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'starch-hydroxypropyltrimonium-chloride',
       name: 'كلوريد النشا هيدروكسي بروبيل تريمونيوم',
       scientific_name: 'Starch Hydroxypropyltrimonium Chloride',
@@ -13280,7 +13280,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مكيف طبيعي مشتق من النشا، بديل جيد للكواتس الصناعية.' }],
     },
-  {
+{
       id: 'peg-15-cocopolyamine',
       name: 'PEG-15 كوكوبوليامين',
       scientific_name: 'PEG-15 Cocopolyamine',
@@ -13293,7 +13293,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'peg-ppg-20-6-dimethicone',
       name: 'PEG/PPG-20/6 دايميثيكون',
       scientific_name: 'PEG/PPG-20/6 Dimethicone',
@@ -13306,7 +13306,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'olea-europaea-fruit-extract',
       name: 'مستخلص فاكهة الزيتون',
       scientific_name: 'Olea Europaea (Olive) Fruit Extract',
@@ -13319,7 +13319,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-47005-yellow-10',
       name: 'CI 47005 / أصفر 10',
       scientific_name: 'CI 47005',
@@ -13332,7 +13332,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-17200-red-33',
       name: 'CI 17200 / أحمر 33',
       scientific_name: 'CI 17200',
@@ -13345,7 +13345,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-42053-green-3',
       name: 'CI 42053 / أخضر 3',
       scientific_name: 'CI 42053',
@@ -13358,7 +13358,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-14700-red-4',
       name: 'CI 14700 / أحمر 4',
       scientific_name: 'CI 14700',
@@ -13371,7 +13371,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'phenylethyl-resorcinol',
       name: 'فينيل إيثيل ريزورسينول',
       scientific_name: 'Phenylethyl Resorcinol',
@@ -13386,7 +13386,7 @@ export const combinedOilsDB = {
         { level: 'info', text: 'يعرف تجاريا باسم SymWhite 377®. أحد أقوى مثبطات إنتاج الميلانين، مستوحى من جزيئات طبيعية في لحاء الصنوبر.' },
       ],
     },
-  {
+{
       id: 'n-acetyl-glucosamine',
       name: 'إن-أسيتيل جلوكوزامين (NAG)',
       scientific_name: 'Acetyl Glucosamine',
@@ -13399,7 +13399,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعمل بشكل تآزري ممتاز مع النياسيناميد لتفتيح التصبغات.' }],
     },
-  {
+{
       id: 'kojic-acid-dipalmitate',
       name: 'ثنائي بالميتات حمض الكوجيك',
       scientific_name: 'Kojic Dipalmitate',
@@ -13412,7 +13412,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'شكل استر ومستقر من حمض الكوجيك، قابل للذوبان في الزيت وأقل تهيجا.' }],
     },
-  {
+{
       id: 'dimethylmethoxy-chromanyl-palmitate',
       name: 'بالميتات ثنائي ميثيل ميثوكسي كرومانيل',
       scientific_name: 'Dimethylmethoxy Chromanyl Palmitate',
@@ -13425,7 +13425,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Chromabright™. جزيء تفتيح لا يسبب حساسية للضوء.' }],
     },
-  {
+{
       id: 'dipeptide-diaminobutyroyl-benzylamide-diacetate',
       name: 'ثنائي الببتيد ديامينوبوتيرويل بنزيلاميد ثنائي الأسيتات',
       scientific_name: 'Dipeptide Diaminobutyroyl Benzylamide Diacetate',
@@ -13438,7 +13438,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم SYN®-AKE. ببتيد صغير يحاكي تأثير Waglerin-1، وهو ببتيد موجود في سم أفعى المعبد، لإرخاء العضلات السطحية.' }],
     },
-  {
+{
       id: 'palmitoyl-tripeptide-5',
       name: 'بالميتويل ثلاثي الببتيد-5',
       scientific_name: 'Palmitoyl Tripeptide-5',
@@ -13451,7 +13451,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم SYN®-COLL. ببتيد صغير يحاكي آلية الجسم لإنتاج الكولاجين عبر TGF-β.' }],
     },
-  {
+{
       id: 'trifluoroacetyl-tripeptide-2',
       name: 'ثلاثي فلورو أسيتيل ثلاثي الببتيد-2',
       scientific_name: 'Trifluoroacetyl Tripeptide-2',
@@ -13464,7 +13464,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Progeline™. يقلل من إنتاج البروجيرين، وهو بروتين سام يساهم في شيخوخة الخلايا.' }],
     },
-  {
+{
       id: 'acetyl-tetrapeptide-5',
       name: 'أسيتيل رباعي الببتيد-5',
       scientific_name: 'Acetyl Tetrapeptide-5',
@@ -13477,7 +13477,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Eyeseryl®. ببتيد مصمم خصيصا لمنطقة حول العين.' }],
     },
-  {
+{
       id: 'palmitoyl-pentapeptide-4',
       name: 'بالميتويل خماسي الببتيد-4',
       scientific_name: 'Palmitoyl Pentapeptide-4',
@@ -13490,7 +13490,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Matrixyl®. أحد أشهر الببتيدات وأكثرها دراسة في مجال مكافحة الشيخوخة.' }],
     },
-  {
+{
       id: 'bidens-pilosa-extract',
       name: 'مستخلص عشبة البيدنس بيلوسا',
       scientific_name: 'Bidens Pilosa Extract',
@@ -13503,7 +13503,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف بـ "Bio-Retinol". مستخلص نباتي يتفاعل مع مستقبلات الريتينويد في الجلد دون أن يكون ريتينويدا حقيقيا.' }],
     },
-  {
+{
       id: 'moth-bean-extract',
       name: 'مستخلص حبوب الموث',
       scientific_name: 'Vigna Aconitifolia Seed Extract',
@@ -13516,7 +13516,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مستخلص نباتي غني بالفيتوستيرولات التي تظهر نشاطا شبيها بالريتينول.' }],
     },
-  {
+{
       id: 'euk-134',
       name: 'EUK-134',
       scientific_name: 'Ethylbisiminomethylguaiacol Manganese Chloride',
@@ -13529,7 +13529,7 @@ export const combinedOilsDB = {
       negativeSynergy: { 'glycolic-acid': { reason: 'الأحماض القوية والمباشرة يمكن أن تفكك المركب المعدني.' }, 'vitamin-c': { reason: 'الأحماض القوية والمباشرة يمكن أن تفكك المركب المعدني.' } },
       warnings: [{ level: 'info', text: 'جزيء رائع يحاكي إنزيمي Superoxide Dismutase و Catalase، مما يسمح له بتحييد الجذور الحرة بشكل مستمر دون أن يُستهلك.' }],
     },
-  {
+{
       id: 'bifida-ferment-lysate',
       name: 'خميرة بيفيدا',
       scientific_name: 'Bifida Ferment Lysate',
@@ -13542,7 +13542,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'مكون بروبيوتيك شهير (المكون الرئيسي في Estée Lauder Advanced Night Repair)، يساعد على حماية البشرة من الأضرار البيئية وتعزيز إصلاحها الذاتي.' }],
     },
-  {
+{
       id: 'galactomyces-ferment-filtrate',
       name: 'مرشح خميرة الجلاكتوميسيس',
       scientific_name: 'Galactomyces Ferment Filtrate',
@@ -13555,7 +13555,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Pitera™ (SK-II). سائل غني بالفيتامينات والأحماض الأمينية والمعادن، ناتج عن تخمير الخميرة.' }],
     },
-  {
+{
       id: 'rice-ferment-filtrate',
       name: 'مرشح خميرة الأرز (ساكي)',
       scientific_name: 'Sake / Rice Ferment Filtrate',
@@ -13568,7 +13568,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'lactobacillus-ferment-lysate',
       name: 'خميرة اللاكتوباسيلس',
       scientific_name: 'Lactobacillus Ferment Lysate',
@@ -13581,12 +13581,12 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  { id: 'oleuropein', name: 'أوروبيين', scientific_name: 'Oleuropein', searchKeywords: ['oleuropein', 'olive leaf active'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مركب نباتي', benefits: { 'مضاد أكسدة': 0.9, 'مضاد للالتهابات': 0.88 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'magnolol-honokiol', name: 'ماغنولول/هونوكيول', scientific_name: 'Magnolol, Honokiol', searchKeywords: ['magnolia bark extract actives'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مركب نباتي', benefits: { 'مضاد للميكروبات (حب الشباب)': 0.88, 'مضاد للالتهابات': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'ellagic-acid', name: 'حمض الإيلاجيك', scientific_name: 'Ellagic Acid', searchKeywords: ['ellagic acid', 'pomegranate active'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مركب نباتي', benefits: { 'مضاد أكسدة': 0.9, 'تفتيح وتوحيد اللون': 0.8 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'carnitine', name: 'كارنيتين', scientific_name: 'Carnitine', searchKeywords: ['carnitine', 'l-carnitine'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض أميني', benefits: { 'تنظيم الإفرازات الدهنية': 0.8, 'تقشير لطيف': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  { id: 'betaine-salicylate', name: 'ساليسيلات البيتين', scientific_name: 'Betaine Salicylate', searchKeywords: ['betaine salicylate'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض بيتا هيدروكسي (BHA)', benefits: { 'تقشير لطيف': 0.9, 'مكافحة حب الشباب': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [] },
-  {
+{ id: 'oleuropein', name: 'أوروبيين', scientific_name: 'Oleuropein', searchKeywords: ['oleuropein', 'olive leaf active'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مركب نباتي', benefits: { 'مضاد أكسدة': 0.9, 'مضاد للالتهابات': 0.88 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'magnolol-honokiol', name: 'ماغنولول/هونوكيول', scientific_name: 'Magnolol, Honokiol', searchKeywords: ['magnolia bark extract actives'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'مركب نباتي', benefits: { 'مضاد للميكروبات (حب الشباب)': 0.88, 'مضاد للالتهابات': 0.9 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'ellagic-acid', name: 'حمض الإيلاجيك', scientific_name: 'Ellagic Acid', searchKeywords: ['ellagic acid', 'pomegranate active'], usageScope: ['skin'], functionalCategory: 'مضاد أكسدة', chemicalType: 'مركب نباتي', benefits: { 'مضاد أكسدة': 0.9, 'تفتيح وتوحيد اللون': 0.8 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'carnitine', name: 'كارنيتين', scientific_name: 'Carnitine', searchKeywords: ['carnitine', 'l-carnitine'], usageScope: ['skin'], functionalCategory: 'مكون فعال', chemicalType: 'حمض أميني', benefits: { 'تنظيم الإفرازات الدهنية': 0.8, 'تقشير لطيف': 0.75 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{ id: 'betaine-salicylate', name: 'ساليسيلات البيتين', scientific_name: 'Betaine Salicylate', searchKeywords: ['betaine salicylate'], usageScope: ['skin'], functionalCategory: 'مقشر', chemicalType: 'حمض بيتا هيدروكسي (BHA)', benefits: { 'تقشير لطيف': 0.9, 'مكافحة حب الشباب': 0.85 }, synergy: {}, negativeSynergy: {}, warnings: [] },
+{
     id: 'tocopherol',
     name: 'توكوفيرول (فيتامين E النقي)',
     scientific_name: 'Tocopherol',
@@ -13599,7 +13599,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'الشكل النقي والأكثر فعالية بيولوجيا لفيتامين E. مضاد أكسدة قوي قابل للذوبان في الزيت.' }],
   },
-  {
+{
     id: 'urea',
     name: 'اليوريا',
     scientific_name: 'Urea',
@@ -13612,7 +13612,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'جزء من عامل الترطيب الطبيعي للبشرة (NMF). بتركيزات منخفضة (<10%) يعمل كمرطب، وبتركيزات عالية (>10%) يعمل كمقشر فعال.' }],
   },
-  {
+{
     id: 'propanediol',
     name: 'بروبانيديول',
     scientific_name: 'Propanediol',
@@ -13625,7 +13625,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'غالبا ما يكون مشتقا من الذرة، ويعتبر بديلا أكثر استدامة ولطفا للبروبيلين جلايكول.' }],
   },
-  {
+{
     id: 'propylene-glycol',
     name: 'بروبيلين جلايكول',
     scientific_name: 'Propylene Glycol',
@@ -13638,7 +13638,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'على الرغم من أنه آمن، إلا أن بعض الأشخاص قد يجدونه مهيجا بشكل طفيف.' }],
   },
-  {
+{
     id: 'betaine',
     name: 'البيتين',
     scientific_name: 'Betaine',
@@ -13651,7 +13651,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'حمض أميني مشتق من بنجر السكر، يعمل كمرطب ومهدئ ممتاز للبشرة.' }],
   },
-  {
+{
     id: 'saccharide-isomerate',
     name: 'سكاريد أيزوميرات',
     scientific_name: 'Saccharide Isomerate',
@@ -13664,7 +13664,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Pentavitin®. مرطب فريد يرتبط بالكيراتين في الجلد مثل المغناطيس، مما يوفر ترطيبا لا يمكن غسله بسهولة.' }],
   },
-  {
+{
     id: 'caffeine',
     name: 'الكافيين',
     scientific_name: 'Caffeine',
@@ -13677,7 +13677,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-15-alkyl-benzoate',
     name: 'بنزوات ألكيل C12-15',
     scientific_name: 'C12-15 Alkyl Benzoate',
@@ -13690,7 +13690,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'مطري شائع جدا في واقيات الشمس لقدرته على إذابة فلاتر الشمس الصعبة وإعطاء ملمس نهائي جميل.' }],
   },
-  {
+{
     id: 'dicaprylyl-carbonate',
     name: 'كربونات ثنائي الكابريليل',
     scientific_name: 'Dicaprylyl Carbonate',
@@ -13703,7 +13703,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dicaprylyl-ether',
     name: 'إيثر ثنائي الكابريليل',
     scientific_name: 'Dicaprylyl Ether',
@@ -13716,7 +13716,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'neopentyl-glycol-diheptanoate',
     name: 'ثنائي هيبتانوات نيوبنتيل جلايكول',
     scientific_name: 'Neopentyl Glycol Diheptanoate',
@@ -13729,7 +13729,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'octyldodecanol',
     name: 'أوكتيل دوديكانول',
     scientific_name: 'Octyldodecanol',
@@ -13742,7 +13742,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'propylheptyl-caprylate',
     name: 'كابريلات بروبيل هبتيل',
     scientific_name: 'Propylheptyl Caprylate',
@@ -13755,7 +13755,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrogenated-polyisobutene',
     name: 'بولي أيزوبيوتين مهدرج',
     scientific_name: 'Hydrogenated Polyisobutene',
@@ -13768,7 +13768,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c13-15-alkane',
     name: 'ألكان C13-15',
     scientific_name: 'C13-15 Alkane',
@@ -13781,7 +13781,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعرف تجاريا باسم "Himisqualane". مطري متطاير وخفيف جدا مشتق من قصب السكر.' }],
   },
-  {
+{
     id: 'undecane',
     name: 'أونديكان',
     scientific_name: 'Undecane',
@@ -13794,7 +13794,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tridecane',
     name: 'ترايدكان',
     scientific_name: 'Tridecane',
@@ -13807,7 +13807,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'boron-nitride',
     name: 'نتريد البورون',
     scientific_name: 'Boron Nitride',
@@ -13820,7 +13820,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polymethylsilsesquioxane',
     name: 'بولي ميثيل سيلسسكويكسان',
     scientific_name: 'Polymethylsilsesquioxane',
@@ -13833,7 +13833,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'vinyl-dimethicone-methicone-silsesquioxane-crosspolymer',
     name: 'فينيل دايميثيكون/ميثيكون سيلسسكويكسان كروسبوليمر',
     scientific_name: 'Vinyl Dimethicone/Methicone Silsesquioxane Crosspolymer',
@@ -13846,7 +13846,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-chloride',
     name: 'كلوريد الصوديوم',
     scientific_name: 'Sodium Chloride',
@@ -13862,7 +13862,7 @@ export const combinedOilsDB = {
       { level: 'caution', text: 'قد يكون مجففا للشعر والجلد بتركيزات عالية.' }
     ],
   },
-  {
+{
     id: 'citric-acid',
     name: 'حمض السيتريك',
     scientific_name: 'Citric Acid',
@@ -13875,7 +13875,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يستخدم بشكل أساسي بكميات صغيرة جدا لخفض درجة حموضة المنتج.' }],
   },
-  {
+{
     id: 'sodium-hydroxide',
     name: 'هيدروكسيد الصوديوم',
     scientific_name: 'Sodium Hydroxide',
@@ -13888,7 +13888,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يستخدم بكميات صغيرة جدا لرفع درجة حموضة المنتج. وهو أساسي في صناعة الصابون التقليدي.' }],
   },
-  {
+{
     id: 'carbomer',
     name: 'كاربومير',
     scientific_name: 'Carbomer',
@@ -13901,7 +13901,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'بوليمر شائع جدا يستخدم لتكوين قوام الجل في العديد من المنتجات.' }],
   },
-  {
+{
     id: 'kaolin',
     name: 'طين الكاولين',
     scientific_name: 'Kaolin',
@@ -13914,7 +13914,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'أحد ألطف أنواع الطين، مناسب للبشرة العادية إلى الدهنية والحساسة.' }],
   },
-  {
+{
     id: 'bentonite',
     name: 'طين البنتونيت',
     scientific_name: 'Bentonite',
@@ -13927,7 +13927,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'طين قوي جدا، قد يكون مجففا للبشرة الجافة أو الحساسة.' }],
   },
-  {
+{
     id: 'charcoal-powder',
     name: 'مسحوق الفحم',
     scientific_name: 'Charcoal Powder',
@@ -13940,7 +13940,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يكون مجففا جدا إذا استخدم بشكل مفرط.' }],
   },
-  {
+{
     id: 'disteardimonium-hectorite',
     name: 'داي ستير دايمونيوم هيكتوريت',
     scientific_name: 'Disteardimonium Hectorite',
@@ -13953,7 +13953,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'snail-secretion-filtrate',
     name: 'مرشح إفراز الحلزون',
     scientific_name: 'Snail Secretion Filtrate',
@@ -13966,7 +13966,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'propolis-extract',
     name: 'مستخلص البروبوليس (العكبر)',
     scientific_name: 'Propolis Extract',
@@ -13979,7 +13979,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'artemisia-princeps-leaf-extract',
     name: 'مستخلص الشيح (Mugwort)',
     scientific_name: 'Artemisia Princeps Leaf Extract',
@@ -13992,7 +13992,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'houttuynia-cordata-extract',
     name: 'مستخلص هوتينيا كورداتا',
     scientific_name: 'Houttuynia Cordata Extract',
@@ -14005,7 +14005,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'centella-asiatica-extract',
     name: 'مستخلص السينتيلا أسياتيكا (Cica)',
     scientific_name: 'Centella Asiatica Extract',
@@ -14018,7 +14018,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glycyrrhiza-glabra-root-extract',
     name: 'مستخلص جذور عرق السوس',
     scientific_name: 'Glycyrrhiza Glabra (Licorice) Root Extract',
@@ -14031,7 +14031,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tremella-fuciformis-extract',
     name: 'مستخلص فطر الثلج',
     scientific_name: 'Tremella Fuciformis (Mushroom) Extract',
@@ -14044,7 +14044,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dimethicone-vinyl-dimethicone-crosspolymer',
     name: 'دايميثيكون/فينيل دايميثيكون كروسبوليمر',
     scientific_name: 'Dimethicone/Vinyl Dimethicone Crosspolymer',
@@ -14057,7 +14057,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cyclohexasiloxane',
     name: 'سيكلوهكساسيلوكسان (D6)',
     scientific_name: 'Cyclohexasiloxane',
@@ -14070,7 +14070,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauroyl-glutamate',
     name: 'صوديوم لورويل جلوتامات',
     scientific_name: 'Sodium Lauroyl Glutamate',
@@ -14083,7 +14083,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cocoamphoacetate',
     name: 'صوديوم كوكو أمفو أسيتات',
     scientific_name: 'Sodium Cocoamphoacetate',
@@ -14096,7 +14096,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-cocoyl-hydrolyzed-oat-protein',
     name: 'بروتين الشوفان المهدرج بوتاسيوم كوكويل',
     scientific_name: 'Potassium Cocoyl Hydrolyzed Oat Protein',
@@ -14109,7 +14109,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cellulose',
     name: 'سليلوز',
     scientific_name: 'Cellulose',
@@ -14122,7 +14122,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pectin',
     name: 'بكتين',
     scientific_name: 'Pectin',
@@ -14135,7 +14135,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pullulan',
     name: 'بولولان',
     scientific_name: 'Pullulan',
@@ -14148,7 +14148,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbitol',
     name: 'سوربيتول',
     scientific_name: 'Sorbitol',
@@ -14161,7 +14161,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'papain',
     name: 'باباين',
     scientific_name: 'Papain',
@@ -14174,7 +14174,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'bromelain',
     name: 'بروميلين',
     scientific_name: 'Bromelain',
@@ -14187,7 +14187,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'menadione',
     name: 'ميناديون (فيتامين K3)',
     scientific_name: 'Menadione',
@@ -14200,7 +14200,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'الشكل الصناعي لفيتامين K، استخدامه مثير للجدل ومقيد في بعض المناطق.' }],
   },
-  {
+{
     id: 'phytonadione',
     name: 'فيتوناديون (فيتامين K1)',
     scientific_name: 'Phytonadione',
@@ -14213,7 +14213,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'retinyl-acetate',
     name: 'أسيتات الريتينيل',
     scientific_name: 'Retinyl Acetate',
@@ -14226,7 +14226,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'retinyl-linoleate',
     name: 'لينوليات الريتينيل',
     scientific_name: 'Retinyl Linoleate',
@@ -14239,7 +14239,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'astaxanthin',
     name: 'أستازانتين',
     scientific_name: 'Astaxanthin',
@@ -14252,7 +14252,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'له لون أحمر/برتقالي قوي جدا وقد يصبغ البشرة والمنتجات.' }],
   },
-  {
+{
     id: 'cyanocobalamin',
     name: 'سيانوكوبالامين (فيتامين B12)',
     scientific_name: 'Cyanocobalamin',
@@ -14265,7 +14265,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pyridoxine-hcl',
     name: 'بيريدوكسين هيدروكلورايد (فيتامين B6)',
     scientific_name: 'Pyridoxine HCl',
@@ -14278,7 +14278,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'folic-acid',
     name: 'حمض الفوليك (فيتامين B9)',
     scientific_name: 'Folic Acid',
@@ -14291,7 +14291,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dipalmitoyl-hydroxyproline',
     name: 'ثنائي بالميتويل هيدروكسي برولين',
     scientific_name: 'Dipalmitoyl Hydroxyproline',
@@ -14304,7 +14304,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-ascorbate',
     name: 'أسكوربات الصوديوم',
     scientific_name: 'Sodium Ascorbate',
@@ -14317,7 +14317,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'شكل ملح من فيتامين C، أقل تهييجا ولكنه أقل استقرارا من المشتقات الأخرى.' }],
   },
-  {
+{
     id: 'calcium-ascorbate',
     name: 'أسكوربات الكالسيوم',
     scientific_name: 'Calcium Ascorbate',
@@ -14330,7 +14330,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxyacetophenone',
     name: 'هيدروكسي أسيتوفينون',
     scientific_name: 'Hydroxyacetophenone',
@@ -14343,7 +14343,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'inositol',
     name: 'إينوزيتول',
     scientific_name: 'Inositol',
@@ -14356,7 +14356,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'phytosterols',
     name: 'فيتوستيرولات',
     scientific_name: 'Phytosterols',
@@ -14369,7 +14369,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ginkgo-biloba-leaf-extract',
     name: 'مستخلص أوراق الجنكة بيلوبا',
     scientific_name: 'Ginkgo Biloba Leaf Extract',
@@ -14382,7 +14382,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hamamelis-virginiana-water',
     name: 'ماء بندق الساحرة',
     scientific_name: 'Hamamelis Virginiana (Witch Hazel) Water',
@@ -14395,7 +14395,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'المنتجات المقطرة بالكحول يمكن أن تكون مجففة ومهيجة. ابحث عن الإصدارات الخالية من الكحول.' }],
   },
-  {
+{
     id: 'aesculus-hippocastanum-extract',
     name: 'مستخلص كستناء الحصان',
     scientific_name: 'Aesculus Hippocastanum (Horse Chestnut) Extract',
@@ -14408,7 +14408,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-collagen',
     name: 'الكولاجين المهدرج',
     scientific_name: 'Hydrolyzed Collagen',
@@ -14421,7 +14421,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'جزيئاته كبيرة جدا لاختراق الجلد وتحفيز إنتاج الكولاجين، ولكنه يعمل كمرطب جيد على السطح.' }],
   },
-  {
+{
     id: 'hydrolyzed-silk',
     name: 'الحرير المهدرج',
     scientific_name: 'Hydrolyzed Silk',
@@ -14434,7 +14434,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pantolactone',
     name: 'بانتولاكتون',
     scientific_name: 'Pantolactone',
@@ -14447,7 +14447,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'phospholipids',
     name: 'الفوسفوليبيدات',
     scientific_name: 'Phospholipids',
@@ -14460,7 +14460,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'مكون أساسي في بنية أغشية خلايا الجلد، وغالبا ما يستخدم في أنظمة توصيل الجسيمات الشحمية (liposomes).' }],
   },
-  {
+{
     id: 'sarcosine',
     name: 'ساركوزين',
     scientific_name: 'Sarcosine',
@@ -14473,7 +14473,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tribehenin',
     name: 'تراي بيهينين',
     scientific_name: 'Tribehenin',
@@ -14486,7 +14486,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-behenate',
     name: 'بيهينات الجليسريل',
     scientific_name: 'Glyceryl Behenate',
@@ -14499,7 +14499,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrogenated-poly-c6-14-olefin',
     name: 'بولي أوليفين C6-14 مهدرج',
     scientific_name: 'Hydrogenated Poly(C6-14 Olefin)',
@@ -14512,7 +14512,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'behenyl-alcohol',
     name: 'كحول البيهينيل',
     scientific_name: 'Behenyl Alcohol',
@@ -14525,7 +14525,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'arachidyl-alcohol',
     name: 'كحول الأراكيديل',
     scientific_name: 'Arachidyl Alcohol',
@@ -14538,7 +14538,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'arachidyl-glucoside',
     name: 'أراكيديل جلوكوزيد',
     scientific_name: 'Arachidyl Glucoside',
@@ -14551,7 +14551,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-stearoyl-glutamate',
     name: 'صوديوم ستيرويل جلوتامات',
     scientific_name: 'Sodium Stearoyl Glutamate',
@@ -14564,7 +14564,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-stearoyl-lactylate',
     name: 'صوديوم ستيرويل لاكتيلات',
     scientific_name: 'Sodium Stearoyl Lactylate',
@@ -14577,7 +14577,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-oleate-citrate',
     name: 'سيترات أوليات الجليسريل',
     scientific_name: 'Glyceryl Oleate Citrate',
@@ -14590,7 +14590,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-2-dipolyhydroxystearate',
     name: 'بولي جليسريل-2 ثنائي بولي هيدروكسي ستيرات',
     scientific_name: 'Polyglyceryl-2 Dipolyhydroxystearate',
@@ -14603,7 +14603,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-laureth-phosphate',
     name: 'فوسفات لوريث البوتاسيوم',
     scientific_name: 'Potassium Laureth Phosphate',
@@ -14616,7 +14616,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tea-cocoyl-glutamate',
     name: 'TEA-كوكويل جلوتامات',
     scientific_name: 'TEA-Cocoyl Glutamate',
@@ -14629,7 +14629,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polysorbate-40',
     name: 'بوليسوربات 40',
     scientific_name: 'Polysorbate 40',
@@ -14642,7 +14642,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-21',
     name: 'ستيريث-21',
     scientific_name: 'Steareth-21',
@@ -14655,7 +14655,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'aminomethyl-propanediol',
     name: 'أمينوميثيل بروبانيديول',
     scientific_name: 'Aminomethyl Propanediol',
@@ -14668,7 +14668,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oleth-10',
     name: 'أوليث-10',
     scientific_name: 'Oleth-10',
@@ -14681,7 +14681,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isopentyldiol',
     name: 'إيزوبنتيلديول',
     scientific_name: 'Isopentyldiol',
@@ -14694,7 +14694,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-polyitaconate',
     name: 'بولي إيتاكونات الصوديوم',
     scientific_name: 'Sodium Polyitaconate',
@@ -14707,7 +14707,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ammonium-acryloyldimethyltaurate-vp-copolymer',
     name: 'أمونيوم أكريلويل دايميثيل تورات/VP كوبوليمر',
     scientific_name: 'Ammonium Acryloyldimethyltaurate/VP Copolymer',
@@ -14720,7 +14720,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-acrylates-crosspolymer-2',
     name: 'صوديوم أكريلات كروسبوليمر-2',
     scientific_name: 'Sodium Acrylates Crosspolymer-2',
@@ -14733,7 +14733,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'acrylates-steareth-20-methacrylate-crosspolymer',
     name: 'أكريلات/ستيريث-20 ميثاكريليت كروسبوليمر',
     scientific_name: 'Acrylates/Steareth-20 Methacrylate Crosspolymer',
@@ -14746,7 +14746,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cocoyl-amino-acids',
     name: 'صوديوم كوكويل الأحماض الأمينية',
     scientific_name: 'Sodium Cocoyl Amino Acids',
@@ -14759,7 +14759,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-aspartate',
     name: 'أسبارتات البوتاسيوم',
     scientific_name: 'Potassium Aspartate',
@@ -14772,7 +14772,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'magnesium-aspartate',
     name: 'أسبارتات المغنيسيوم',
     scientific_name: 'Magnesium Aspartate',
@@ -14785,7 +14785,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'zinc-gluconate',
     name: 'جلوكونات الزنك',
     scientific_name: 'Zinc Gluconate',
@@ -14798,7 +14798,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'copper-gluconate',
     name: 'جلوكونات النحاس',
     scientific_name: 'Copper Gluconate',
@@ -14811,7 +14811,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oleth-3-phosphate',
     name: 'فوسفات أوليث-3',
     scientific_name: 'Oleth-3 Phosphate',
@@ -14824,7 +14824,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isosteareth-20',
     name: 'أيزوستيريث-20',
     scientific_name: 'Isosteareth-20',
@@ -14837,7 +14837,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-7-olivate',
     name: 'أوليفات PEG-7',
     scientific_name: 'PEG-7 Olivate',
@@ -14850,7 +14850,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbeth-30-tetraoleate',
     name: 'سوربيث-30 تترا أوليات',
     scientific_name: 'Sorbeth-30 Tetraoleate',
@@ -14863,7 +14863,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c10-18-triglycerides',
     name: 'ثلاثي جليسريد C10-18',
     scientific_name: 'C10-18 Triglycerides',
@@ -14876,7 +14876,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-corn-protein',
     name: 'بروتين الذرة المهدرج',
     scientific_name: 'Hydrolyzed Corn Protein',
@@ -14889,7 +14889,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laurdimonium-hydroxypropyl-hydrolyzed-soy-protein',
     name: 'بروتين الصويا المهدرج لورديمونيوم هيدروكسي بروبيل',
     scientific_name: 'Laurdimonium Hydroxypropyl Hydrolyzed Soy Protein',
@@ -14902,7 +14902,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cocodimonium-hydroxypropyl-hydrolyzed-rice-protein',
     name: 'بروتين الأرز المهدرج كوكوديمونيوم هيدروكسي بروبيل',
     scientific_name: 'Cocodimonium Hydroxypropyl Hydrolyzed Rice Protein',
@@ -14915,7 +14915,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ppg-26-buteth-26',
     name: 'PPG-26-بوتيث-26',
     scientific_name: 'PPG-26-Buteth-26',
@@ -14928,7 +14928,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'غالبا ما يستخدم مع PEG-40 Hydrogenated Castor Oil لإذابة المكونات.' }],
   },
-  {
+{
     id: 'acrylates-vinyl-neodecanoate-crosspolymer',
     name: 'أكريلات/فينيل نيوديكانوات كروسبوليمر',
     scientific_name: 'Acrylates/Vinyl Neodecanoate Crosspolymer',
@@ -14941,7 +14941,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'acrylates-c12-22-alkyl-methacrylate-copolymer',
     name: 'أكريلات/C12-22 ألكيل ميثاكريليت كوبوليمر',
     scientific_name: 'Acrylates/C12-22 Alkyl Methacrylate Copolymer',
@@ -14954,7 +14954,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c20-22-alkyl-phosphate',
     name: 'فوسفات ألكيل C20-22',
     scientific_name: 'C20-22 Alkyl Phosphate',
@@ -14967,7 +14967,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c20-22-alcohols',
     name: 'كحولات C20-22',
     scientific_name: 'C20-22 Alcohols',
@@ -14980,7 +14980,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-6-distearate',
     name: 'بولي جليسريل-6 ثنائي الستيارات',
     scientific_name: 'Polyglyceryl-6 Distearate',
@@ -14993,7 +14993,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'jojoba-esters',
     name: 'استرات الجوجوبا',
     scientific_name: 'Jojoba Esters',
@@ -15006,7 +15006,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-3-beeswax',
     name: 'بولي جليسريل-3 شمع النحل',
     scientific_name: 'Polyglyceryl-3 Beeswax',
@@ -15019,7 +15019,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isobutylparaben',
     name: 'أيزوبوتيل بارابين',
     scientific_name: 'Isobutylparaben',
@@ -15032,7 +15032,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'أحد أكثر أنواع البارابين إثارة للجدل، ومحظور في الاتحاد الأوروبي بسبب مخاوف بشأن اضطراب الغدد الصماء.' }],
   },
-  {
+{
     id: 'sodium-dehydroacetate',
     name: 'ديهيدروأسيتات الصوديوم',
     scientific_name: 'Sodium Dehydroacetate',
@@ -15045,7 +15045,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'caprylhydroxamic-acid',
     name: 'حمض كابريل هيدروكساميك',
     scientific_name: 'Caprylhydroxamic Acid',
@@ -15058,7 +15058,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-ppg-17-6-copolymer',
     name: 'PEG/PPG-17/6 كوبوليمر',
     scientific_name: 'PEG/PPG-17/6 Copolymer',
@@ -15071,7 +15071,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'arginine-pca',
     name: 'أرجينين PCA',
     scientific_name: 'Arginine PCA',
@@ -15084,7 +15084,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbitan-sesquioleate',
     name: 'سيسكوي أوليات السوربيتان',
     scientific_name: 'Sorbitan Sesquioleate',
@@ -15097,7 +15097,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'acacia-decurrens-flower-wax',
     name: 'شمع زهرة الأكاسيا',
     scientific_name: 'Acacia Decurrens Flower Wax',
@@ -15110,7 +15110,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'helianthus-annuus-seed-wax',
     name: 'شمع بذور دوار الشمس',
     scientific_name: 'Helianthus Annuus (Sunflower) Seed Wax',
@@ -15123,7 +15123,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglycerin-3',
     name: 'بولي جليسرين-3',
     scientific_name: 'Polyglycerin-3',
@@ -15136,7 +15136,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose-stearate',
     name: 'ستيرات السكروز',
     scientific_name: 'Sucrose Stearate',
@@ -15149,7 +15149,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose-distearate',
     name: 'ثنائي ستيرات السكروز',
     scientific_name: 'Sucrose Distearate',
@@ -15162,7 +15162,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'eryngium-maritimum-callus-culture-filtrate',
     name: 'مرشح مزرعة الكالس من شوك الجمل البحري',
     scientific_name: 'Eryngium Maritimum Callus Culture Filtrate',
@@ -15175,7 +15175,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'crithmum-maritimum-extract',
     name: 'مستخلص شمر البحر',
     scientific_name: 'Crithmum Maritimum Extract',
@@ -15188,7 +15188,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'limonium-vulgare-flower-leaf-stem-extract',
     name: 'مستخلص خزامى البحر',
     scientific_name: 'Limonium Vulgare Flower/Leaf/Stem Extract',
@@ -15201,7 +15201,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ethyl-linoleate',
     name: 'لينوليات الإيثيل',
     scientific_name: 'Ethyl Linoleate',
@@ -15214,7 +15214,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'brassica-campestris-sterols',
     name: 'ستيرولات بذور اللفت',
     scientific_name: 'Brassica Campestris (Rapeseed) Sterols',
@@ -15227,7 +15227,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isostearyl-alcohol',
     name: 'كحول الأيزوستيريل',
     scientific_name: 'Isostearyl Alcohol',
@@ -15240,7 +15240,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'butylene-glycol-dicaprylate-dicaprate',
     name: 'ثنائي الكابريلات/الكبرات بيوتيلين جلايكول',
     scientific_name: 'Butylene Glycol Dicaprylate/Dicaprate',
@@ -15253,7 +15253,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-2-stearate',
     name: 'بولي جليسريل-2 ستيرات',
     scientific_name: 'Polyglyceryl-2 Stearate',
@@ -15266,7 +15266,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-6-stearate',
     name: 'بولي جليسريل-6 ستيرات',
     scientific_name: 'Polyglyceryl-6 Stearate',
@@ -15279,7 +15279,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-stearoyl-caseinate',
     name: 'ستيرويل كازينات الصوديوم',
     scientific_name: 'Sodium Stearoyl Caseinate',
@@ -15292,7 +15292,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauroyl-hydrolyzed-silk',
     name: 'صوديوم لورويل الحرير المهدرج',
     scientific_name: 'Sodium Lauroyl Hydrolyzed Silk',
@@ -15305,7 +15305,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-casein',
     name: 'الكازين المهدرج',
     scientific_name: 'Hydrolyzed Casein',
@@ -15318,7 +15318,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-milk-protein',
     name: 'بروتين الحليب المهدرج',
     scientific_name: 'Hydrolyzed Milk Protein',
@@ -15331,7 +15331,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'triticum-vulgare-protein',
     name: 'بروتين القمح',
     scientific_name: 'Triticum Vulgare (Wheat) Protein',
@@ -15344,7 +15344,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية القمح أو الغلوتين.' }],
   },
-  {
+{
     id: 'keratin-amino-acids',
     name: 'أحماض الكيراتين الأمينية',
     scientific_name: 'Keratin Amino Acids',
@@ -15357,7 +15357,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'collagen-amino-acids',
     name: 'أحماض الكولاجين الأمينية',
     scientific_name: 'Collagen Amino Acids',
@@ -15370,7 +15370,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-hyaluronate-dimethylsilanol',
     name: 'صوديوم هيالورونات ثنائي ميثيل سيلانول',
     scientific_name: 'Sodium Hyaluronate Dimethylsilanol',
@@ -15383,7 +15383,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dimethyl-silanol-hyaluronate',
     name: 'هيالورونات ثنائي ميثيل سيلانول',
     scientific_name: 'Dimethyl Silanol Hyaluronate',
@@ -15396,7 +15396,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'silanetriol',
     name: 'سيلانتريول',
     scientific_name: 'Silanetriol',
@@ -15409,7 +15409,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-glycosaminoglycans',
     name: 'جليكوزامينوجليكان مهدرج',
     scientific_name: 'Hydrolyzed Glycosaminoglycans',
@@ -15422,7 +15422,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'palmitoyl-oligopeptide',
     name: 'بالميتويل أوليجوببتيد',
     scientific_name: 'Palmitoyl Oligopeptide',
@@ -15435,7 +15435,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'اسم قديم لـ Palmitoyl Tripeptide-1.' }],
   },
-  {
+{
     id: 'acetyl-tetrapeptide-3',
     name: 'أسيتيل رباعي الببتيد-3',
     scientific_name: 'Acetyl Tetrapeptide-3',
@@ -15448,7 +15448,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'المكون الببتيدي في مركب Capixyl®.' }],
   },
-  {
+{
     id: 'hydrolyzed-walnut-extract',
     name: 'مستخلص الجوز المهدرج',
     scientific_name: 'Hydrolyzed Walnut Extract',
@@ -15461,7 +15461,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'salvia-hispanica-seed-extract',
     name: 'مستخلص بذور الشيا',
     scientific_name: 'Salvia Hispanica Seed Extract',
@@ -15474,7 +15474,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'linum-usitatissimum-seed-extract',
     name: 'مستخلص بذور الكتان',
     scientific_name: 'Linum Usitatissimum (Linseed) Seed Extract',
@@ -15487,7 +15487,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-stearate',
     name: 'بولي جليسريل-10 ستيرات',
     scientific_name: 'Polyglyceryl-10 Stearate',
@@ -15500,7 +15500,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose',
     name: 'السكروز (سكر)',
     scientific_name: 'Sucrose',
@@ -15513,7 +15513,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد تكون الحبيبات حادة جدا على بشرة الوجه الحساسة.' }],
   },
-  {
+{
     id: 'hydrated-silica',
     name: 'سيليكا رطبة',
     scientific_name: 'Hydrated Silica',
@@ -15526,7 +15526,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'bambusa-arundinacea-stem-powder',
     name: 'مسحوق سيقان الخيزران',
     scientific_name: 'Bambusa Arundinacea Stem Powder',
@@ -15539,7 +15539,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'prunus-armeniaca-seed-powder',
     name: 'مسحوق بذور المشمش',
     scientific_name: 'Prunus Armeniaca (Apricot) Seed Powder',
@@ -15552,7 +15552,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'يعتبر قاسيا جدا على بشرة الوجه ويمكن أن يسبب تمزقات دقيقة.' }],
   },
-  {
+{
     id: 'juglans-regia-shell-powder',
     name: 'مسحوق قشر الجوز',
     scientific_name: 'Juglans Regia (Walnut) Shell Powder',
@@ -15565,7 +15565,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'قاسٍ جدا وغير منتظم الحواف، لا ينصح به أبدا للوجه.' }],
   },
-  {
+{
     id: 'coffea-arabica-seed-powder',
     name: 'مسحوق بذور القهوة',
     scientific_name: 'Coffea Arabica (Coffee) Seed Powder',
@@ -15578,7 +15578,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pumice',
     name: 'حجر الخفاف',
     scientific_name: 'Pumice',
@@ -15591,7 +15591,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'قاسٍ جدا على الوجه والمناطق الحساسة.' }],
   },
-  {
+{
     id: 'oryza-sativa-powder',
     name: 'مسحوق الأرز',
     scientific_name: 'Oryza Sativa (Rice) Powder',
@@ -15604,7 +15604,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'moroccan-lava-clay',
     name: 'الطين المغربي (غاسول)',
     scientific_name: 'Moroccan Lava Clay',
@@ -15617,7 +15617,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'illite',
     name: 'طين الإيليت (الطين الأخضر الفرنسي)',
     scientific_name: 'Illite',
@@ -15630,7 +15630,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قوي جدا وقد يكون مجففا للبشرة الجافة أو الحساسة.' }],
   },
-  {
+{
     id: 'montmorillonite',
     name: 'طين المونتموريلونيت',
     scientific_name: 'Montmorillonite',
@@ -15643,7 +15643,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'fullers-earth',
     name: 'تراب القصار (طين ملتان ميتي)',
     scientific_name: 'Solum Fullonum / Fuller\'s Earth',
@@ -15656,7 +15656,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مجفف وقوي جدا، غير مناسب للبشرة الجافة.' }],
   },
-  {
+{
     id: 'sea-silt',
     name: 'طمي البحر',
     scientific_name: 'Sea Silt / Maris Limus',
@@ -15669,7 +15669,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'butane',
     name: 'البيوتان',
     scientific_name: 'Butane',
@@ -15682,7 +15682,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'propane',
     name: 'البروبان',
     scientific_name: 'Propane',
@@ -15695,7 +15695,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isobutane',
     name: 'الأيزوبيوتان',
     scientific_name: 'Isobutane',
@@ -15708,7 +15708,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrofluorocarbon-152a',
     name: 'هيدروفلوروكربون 152a',
     scientific_name: 'Hydrofluorocarbon 152a',
@@ -15721,7 +15721,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'له تأثير أقل على طبقة الأوزون من مركبات الكربون الكلورية فلورية القديمة، ولكنه لا يزال من غازات الدفيئة.' }],
   },
-  {
+{
     id: 'dimethyl-ether',
     name: 'ثنائي ميثيل الإيثر',
     scientific_name: 'Dimethyl Ether',
@@ -15734,7 +15734,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-15850-red-7',
     name: 'CI 15850 (Red 7 Lake)',
     scientific_name: 'CI 15850',
@@ -15747,7 +15747,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-77491-red-iron-oxide',
     name: 'CI 77491 (أكسيد الحديد الأحمر)',
     scientific_name: 'Iron Oxides (CI 77491)',
@@ -15760,7 +15760,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-77492-yellow-iron-oxide',
     name: 'CI 77492 (أكسيد الحديد الأصفر)',
     scientific_name: 'Iron Oxides (CI 77492)',
@@ -15773,7 +15773,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-77499-black-iron-oxide',
     name: 'CI 77499 (أكسيد الحديد الأسود)',
     scientific_name: 'Iron Oxides (CI 77499)',
@@ -15786,7 +15786,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-77288-chromium-oxide-green',
     name: 'CI 77288 (أخضر أكسيد الكروم)',
     scientific_name: 'Chromium Oxide Greens (CI 77288)',
@@ -15799,7 +15799,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'غير مسموح به في منتجات الشفاه في الولايات المتحدة.' }],
   },
-  {
+{
     id: 'ci-77742-manganese-violet',
     name: 'CI 77742 (بنفسجي المنغنيز)',
     scientific_name: 'Manganese Violet (CI 77742)',
@@ -15812,7 +15812,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'غير مسموح به في منتجات الشفاه في الولايات المتحدة.' }],
   },
-  {
+{
     id: 'ci-77007-ultramarines',
     name: 'CI 77007 (ألترامارين)',
     scientific_name: 'Ultramarines (CI 77007)',
@@ -15825,7 +15825,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'غير مسموح به في منتجات الشفاه في الولايات المتحدة.' }],
   },
-  {
+{
     id: 'ci-77163-bismuth-oxychloride',
     name: 'CI 77163 (أوكسي كلوريد البزموت)',
     scientific_name: 'Bismuth Oxychloride (CI 77163)',
@@ -15838,7 +15838,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يسبب تهيجا وحكة لدى البعض.' }],
   },
-  {
+{
     id: 'ci-77510-ferric-ferrocyanide',
     name: 'CI 77510 (أزرق بروسي)',
     scientific_name: 'Ferric Ferrocyanide (CI 77510)',
@@ -15851,7 +15851,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'غير مسموح به في منتجات الشفاه في الولايات المتحدة.' }],
   },
-  {
+{
     id: 'ci-16035-red-40',
     name: 'CI 16035 (Red 40 Lake)',
     scientific_name: 'CI 16035',
@@ -15864,7 +15864,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-42090-blue-1',
     name: 'CI 42090 (Blue 1 Lake)',
     scientific_name: 'CI 42090',
@@ -15877,7 +15877,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-45410-red-28',
     name: 'CI 45410 (Red 28 Lake)',
     scientific_name: 'CI 45410',
@@ -15890,7 +15890,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'carmine-ci-75470',
     name: 'كارمين (CI 75470)',
     scientific_name: 'Carmine (CI 75470)',
@@ -15903,7 +15903,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مستخلص من الحشرات (الدودة القرمزية)، لذا فهو ليس نباتيا. قد يسبب ردود فعل تحسسية شديدة لدى البعض.' }],
   },
-  {
+{
     id: 'polyvinyl-alcohol',
     name: 'كحول البوليفينيل (PVA)',
     scientific_name: 'Polyvinyl Alcohol',
@@ -15916,7 +15916,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'المكون الرئيسي في الأقنعة القابلة للنزع (peel-off masks).' }],
   },
-  {
+{
     id: 'nitrocellulose',
     name: 'نيتروسليلوز',
     scientific_name: 'Nitrocellulose',
@@ -15929,7 +15929,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'المكون الرئيسي لتشكيل الطبقة في طلاء الأظافر.' }],
   },
-  {
+{
     id: 'shellac',
     name: 'شيلاك',
     scientific_name: 'Shellac',
@@ -15942,7 +15942,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'راتنج طبيعي من الحشرات، يستخدم في بعض مثبتات الشعر.' }],
   },
-  {
+{
     id: 'tosylamide-formaldehyde-resin',
     name: 'راتنج توسيلاميد/فورمالديهايد',
     scientific_name: 'Tosylamide/Formaldehyde Resin',
@@ -15955,7 +15955,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'قد يسبب حساسية تلامسية. العديد من العلامات التجارية تتجنبه الآن (3-Free).' }],
   },
-  {
+{
     id: 'acrylates-ethylhexyl-acrylate-copolymer',
     name: 'أكريلات/إيثيل هكسيل أكريلات كوبوليمر',
     scientific_name: 'Acrylates/Ethylhexyl Acrylate Copolymer',
@@ -15968,7 +15968,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يستخدم في محدد العيون السائل والماسكارا المقاومة للماء.' }],
   },
-  {
+{
     id: 'copper-peptides',
     name: 'ببتيدات النحاس (GHK-Cu)',
     scientific_name: 'Copper Tripeptide-1',
@@ -15987,7 +15987,7 @@ export const combinedOilsDB = {
       { level: 'info', text: 'مكون قوي لإصلاح البشرة وتجديدها، ويعزز صحة فروة الرأس لتحفيز نمو الشعر.' }
     ],
   },
-  {
+{
     id: 'minoxidil',
     name: 'مينوكسيديل',
     scientific_name: 'Minoxidil',
@@ -16004,7 +16004,7 @@ export const combinedOilsDB = {
       { level: 'risk', text: 'غير آمن للاستخدام أثناء الحمل أو الرضاعة.' }
     ],
   },
-  {
+{
     id: 'polysilicone-11',
     name: 'بولي سيليكون-11',
     scientific_name: 'Polysilicone-11',
@@ -16019,7 +16019,7 @@ export const combinedOilsDB = {
       { level: 'info', text: 'سيليكون إلاستومري يشكل شبكة على الجلد، مما يعطي تأثير "soft-focus" لتمويه الخطوط الدقيقة والمسام ويمنح ملمسا بودريا أنيقا.' }
     ],
   },
-  {
+{
     id: 'sidr-leaf-powder',
     name: 'مسحوق أوراق السدر',
     scientific_name: 'Ziziphus Spina-Christi Leaf Powder',
@@ -16032,7 +16032,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'منظف طبيعي تقليدي غني بالصابونين، يستخدم كبديل للشامبو (غسول للشعر).' }],
   },
-  {
+{
     id: 'myrrh-essential-oil',
     name: 'زيت المر العطري',
     scientific_name: 'Commiphora Myrrha Oil',
@@ -16045,7 +16045,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يستخدم بتركيزات منخفضة في المنتجات النهائية.' }],
   },
-  {
+{
     id: 'liquorice-root-extract',
     name: 'مستخلص جذور عرق السوس',
     scientific_name: 'Glycyrrhiza Glabra (Licorice) Root Extract',
@@ -16058,7 +16058,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sandalwood-essential-oil',
     name: 'زيت خشب الصندل العطري',
     scientific_name: 'Santalum Album Oil',
@@ -16071,7 +16071,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'تأكد من أنه من مصادر مستدامة حيث أن خشب الصندل مهدد بالانقراض.' }],
   },
-  {
+{
     id: 'turmeric-root-extract',
     name: 'مستخلص جذور الكركم',
     scientific_name: 'Curcuma Longa (Turmeric) Root Extract',
@@ -16084,7 +16084,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يصبغ البشرة باللون الأصفر مؤقتا.' }],
   },
-  {
+{
     id: 'saffron-stigma-extract',
     name: 'مستخلص الزعفران',
     scientific_name: 'Crocus Sativus Stigma Extract',
@@ -16097,7 +16097,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'مكون فاخر ومكلف.' }],
   },
-  {
+{
     id: 'damask-rose-flower-water',
     name: 'ماء الورد الدمشقي',
     scientific_name: 'Rosa Damascena Flower Water',
@@ -16110,7 +16110,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'orange-blossom-water',
     name: 'ماء زهر البرتقال',
     scientific_name: 'Citrus Aurantium Amara (Bitter Orange) Flower Water',
@@ -16123,7 +16123,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'alum-powder',
     name: 'مسحوق الشبة',
     scientific_name: 'Potassium Alum',
@@ -16136,7 +16136,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يسبب تهيجا للبشرة الحساسة جدا.' }],
   },
-  {
+{
     id: 'tragacanth-gum',
     name: 'صمغ الكثيراء',
     scientific_name: 'Astragalus Gummifer Gum',
@@ -16149,7 +16149,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'illipe-butter',
     name: 'زبدة الإيليبي',
     scientific_name: 'Shorea Stenoptera Seed Butter',
@@ -16162,7 +16162,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sal-butter',
     name: 'زبدة السال',
     scientific_name: 'Shorea Robusta Seed Butter',
@@ -16175,7 +16175,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pracaxi-oil',
     name: 'زيت البراكاكسي',
     scientific_name: 'Pentaclethra Macroloba Seed Oil',
@@ -16188,7 +16188,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sacha-inchi-oil',
     name: 'زيت ساشا إنشي',
     scientific_name: 'Plukenetia Volubilis Seed Oil',
@@ -16201,7 +16201,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'camelina-oil',
     name: 'زيت الكاميلينا',
     scientific_name: 'Camelina Sativa Seed Oil',
@@ -16214,7 +16214,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tucuma-butter',
     name: 'زبدة التوكوما',
     scientific_name: 'Astrocaryum Tucuma Seed Butter',
@@ -16227,7 +16227,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ucuuba-butter',
     name: 'زبدة الأوكوبا',
     scientific_name: 'Virola Surinamensis Seed Butter',
@@ -16240,7 +16240,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'zinc-ricinoleate',
     name: 'ريسينولات الزنك',
     scientific_name: 'Zinc Ricinoleate',
@@ -16253,7 +16253,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'لا يسد المسام أو يمنع عملية التعرق الطبيعية، بل يحبس جزيئات الرائحة.' }],
   },
-  {
+{
     id: 'saccharomyces-ferment-filtrate',
     name: 'مرشح خميرة السكاروميسيس',
     scientific_name: 'Saccharomyces Ferment Filtrate',
@@ -16266,7 +16266,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'diatomaceous-earth',
     name: 'التراب الدياتومي',
     scientific_name: 'Diatomaceous Earth',
@@ -16279,7 +16279,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'arrowroot-powder',
     name: 'مسحوق الأروروت',
     scientific_name: 'Maranta Arundinacea Root Powder',
@@ -16292,7 +16292,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tapioca-starch',
     name: 'نشا التابيوكا',
     scientific_name: 'Tapioca Starch',
@@ -16305,7 +16305,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'aluminum-chlorohydrate',
     name: 'كلوروهيدرات الألومنيوم',
     scientific_name: 'Aluminum Chlorohydrate',
@@ -16318,7 +16318,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'مكون مثير للجدل بسبب ارتباطه المحتمل بمشاكل صحية، على الرغم من أن الهيئات التنظيمية تعتبره آمنا.' }],
   },
-  {
+{
     id: 'aluminum-zirconium-tetrachlorohydrex-gly',
     name: 'ألومنيوم زركونيوم رباعي كلورو هيدروكسي جلايسين',
     scientific_name: 'Aluminum Zirconium Tetrachlorohydrex Gly',
@@ -16331,7 +16331,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'أحد أقوى مضادات التعرق المتاحة.' }],
   },
-  {
+{
     id: 'magnesium-hydroxide',
     name: 'هيدروكسيد المغنيسيوم',
     scientific_name: 'Magnesium Hydroxide',
@@ -16344,7 +16344,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-bicarbonate',
     name: 'بيكربونات الصوديوم',
     scientific_name: 'Sodium Bicarbonate',
@@ -16357,7 +16357,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قاعدي جدا (pH عالي) وقد يسبب تهيجا واضطرابا لحاجز البشرة مع الاستخدام المتكرر.' }],
   },
-  {
+{
     id: 'lauryl-alcohol',
     name: 'كحول لوريل',
     scientific_name: 'Lauryl Alcohol',
@@ -16370,7 +16370,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'myristyl-alcohol',
     name: 'كحول الميريستيل',
     scientific_name: 'Myristyl Alcohol',
@@ -16383,7 +16383,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isopropyl-lanolate',
     name: 'لانولات الآيزوبروبيل',
     scientific_name: 'Isopropyl Lanolate',
@@ -16396,7 +16396,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'قد يكون كوميدوجينيك ومسببا للحساسية.' }],
   },
-  {
+{
     id: 'lanolin-oil',
     name: 'زيت اللانولين',
     scientific_name: 'Lanolin Oil',
@@ -16409,7 +16409,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'قد يسبب حساسية.' }],
   },
-  {
+{
     id: 'peg-8-beeswax',
     name: 'شمع النحل PEG-8',
     scientific_name: 'PEG-8 Beeswax',
@@ -16422,7 +16422,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-1',
     name: 'لوريث-1',
     scientific_name: 'Laureth-1',
@@ -16435,7 +16435,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-3',
     name: 'لوريث-3',
     scientific_name: 'Laureth-3',
@@ -16448,7 +16448,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isosteareth-2',
     name: 'أيزوستيريث-2',
     scientific_name: 'Isosteareth-2',
@@ -16461,7 +16461,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-2-stearate',
     name: 'ستيرات PEG-2',
     scientific_name: 'PEG-2 Stearate',
@@ -16474,7 +16474,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-isostearate',
     name: 'أيزوستيرات الجليسريل',
     scientific_name: 'Glyceryl Isostearate',
@@ -16487,7 +16487,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-oleate',
     name: 'بولي جليسريل-10 أوليات',
     scientific_name: 'Polyglyceryl-10 Oleate',
@@ -16500,7 +16500,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-borate',
     name: 'بورات الصوديوم (البوراكس)',
     scientific_name: 'Sodium Borate',
@@ -16513,7 +16513,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مكون محظور أو مقيد بشدة في أوروبا وكندا بسبب مخاوف تتعلق بالسمية التناسلية.' }],
   },
-  {
+{
     id: 'benzoic-acid',
     name: 'حمض البنزويك',
     scientific_name: 'Benzoic Acid',
@@ -16526,7 +16526,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'capryloyl-keratin-amino-acids',
     name: 'أحماض أمينية كيراتين كابريلويل',
     scientific_name: 'Capryloyl Keratin Amino Acids',
@@ -16539,7 +16539,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-dna',
     name: 'صوديوم DNA',
     scientific_name: 'Sodium DNA',
@@ -16552,7 +16552,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'rna',
     name: 'RNA',
     scientific_name: 'RNA',
@@ -16565,7 +16565,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glycogen',
     name: 'جليكوجين',
     scientific_name: 'Glycogen',
@@ -16578,7 +16578,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'mannose',
     name: 'مانوز',
     scientific_name: 'Mannose',
@@ -16591,7 +16591,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-algae-extract',
     name: 'مستخلص الطحالب المهدرج',
     scientific_name: 'Hydrolyzed Algae Extract',
@@ -16604,7 +16604,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pinus-pinaster-bark-extract',
     name: 'مستخلص لحاء الصنوبر',
     scientific_name: 'Pinus Pinaster Bark Extract',
@@ -16617,7 +16617,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-conchiolin-protein',
     name: 'بروتين الكونكيولين المهدرج (بروتين اللؤلؤ)',
     scientific_name: 'Hydrolyzed Conchiolin Protein',
@@ -16630,7 +16630,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-roe',
     name: 'بطارخ مهدرجة (كافيار)',
     scientific_name: 'Hydrolyzed Roe',
@@ -16643,7 +16643,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'royal-jelly-extract',
     name: 'مستخلص غذاء ملكات النحل',
     scientific_name: 'Royal Jelly Extract',
@@ -16656,7 +16656,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'bee-venom',
     name: 'سم النحل',
     scientific_name: 'Bee Venom',
@@ -16669,7 +16669,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'لا يستخدم من قبل الأشخاص الذين يعانون من حساسية لسعات النحل.' }],
   },
-  {
+{
     id: 'colloidal-oatmeal',
     name: 'دقيق الشوفان الغروي',
     scientific_name: 'Avena Sativa (Oat) Kernel Flour',
@@ -16682,7 +16682,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'colloidal-sulfur',
     name: 'الكبريت الغروي',
     scientific_name: 'Sulfur',
@@ -16695,7 +16695,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'له رائحة مميزة وقد يكون مجففا للبشرة.' }],
   },
-  {
+{
     id: 'colloidal-silver',
     name: 'الفضة الغروية',
     scientific_name: 'Colloidal Silver',
@@ -16708,7 +16708,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'مكون مثير للجدل، استخدامه على المدى الطويل قد يسبب حالة نادرة تسمى "argyria" (تصبغ الجلد باللون الأزرق الرمادي).' }],
   },
-  {
+{
     id: 'colloidal-gold',
     name: 'الذهب الغروي',
     scientific_name: 'Colloidal Gold',
@@ -16721,7 +16721,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'diamond-powder',
     name: 'مسحوق الألماس',
     scientific_name: 'Diamond Powder',
@@ -16734,7 +16734,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'مكون فاخر يستخدم لإعطاء إشراقة فورية للبشرة.' }],
   },
-  {
+{
     id: 'pearl-powder',
     name: 'مسحوق اللؤلؤ',
     scientific_name: 'Pearl Powder',
@@ -16747,7 +16747,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'conchiolin-powder',
     name: 'مسحوق الكونكيولين',
     scientific_name: 'Conchiolin Powder',
@@ -16760,7 +16760,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'silk-powder',
     name: 'مسحوق الحرير',
     scientific_name: 'Silk Powder / Serica Powder',
@@ -16773,7 +16773,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'amber-powder',
     name: 'مسحوق العنبر',
     scientific_name: 'Amber Powder',
@@ -16786,7 +16786,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'nephrite-powder',
     name: 'مسحوق اليشم',
     scientific_name: 'Nephrite Powder',
@@ -16799,7 +16799,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tourmaline',
     name: 'التورمالين',
     scientific_name: 'Tourmaline',
@@ -16812,7 +16812,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'smithsonite-extract',
     name: 'مستخلص السميثسونايت',
     scientific_name: 'Smithsonite Extract',
@@ -16825,7 +16825,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'malachite-extract',
     name: 'مستخلص الملاكيت',
     scientific_name: 'Malachite Extract',
@@ -16838,7 +16838,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hematite-extract',
     name: 'مستخلص الهيماتيت',
     scientific_name: 'Hematite Extract',
@@ -16851,7 +16851,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'squalane-olivate',
     name: 'أوليفات السكوالان',
     scientific_name: 'Squalane Olivate',
@@ -16864,7 +16864,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-5-glyceryl-stearate',
     name: 'ستيرات الجليسريل PEG-5',
     scientific_name: 'PEG-5 Glyceryl Stearate',
@@ -16877,7 +16877,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-6-isostearate',
     name: 'أيزوستيرات PEG-6',
     scientific_name: 'PEG-6 Isostearate',
@@ -16890,7 +16890,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-8-laurate',
     name: 'لوريت PEG-8',
     scientific_name: 'PEG-8 Laurate',
@@ -16903,7 +16903,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-30-glyceryl-stearate',
     name: 'ستيرات الجليسريل PEG-30',
     scientific_name: 'PEG-30 Glyceryl Stearate',
@@ -16916,7 +16916,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-40-sorbitan-peroleate',
     name: 'بيروليات السوربيتان PEG-40',
     scientific_name: 'PEG-40 Sorbitan Peroleate',
@@ -16929,7 +16929,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-60-glyceryl-isostearate',
     name: 'أيزوستيرات الجليسريل PEG-60',
     scientific_name: 'PEG-60 Glyceryl Isostearate',
@@ -16942,7 +16942,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-trideceth-sulfate',
     name: 'صوديوم ترايديسيث سلفات',
     scientific_name: 'Sodium Trideceth Sulfate',
@@ -16955,7 +16955,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cocoyl-alaninate',
     name: 'صوديوم كوكويل ألانينات',
     scientific_name: 'Sodium Cocoyl Alaninate',
@@ -16968,7 +16968,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tea-cocoyl-alaninate',
     name: 'TEA-كوكويل ألانينات',
     scientific_name: 'TEA-Cocoyl Alaninate',
@@ -16981,7 +16981,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-cocoyl-glutamate',
     name: 'بوتاسيوم كوكويل جلوتامات',
     scientific_name: 'Potassium Cocoyl Glutamate',
@@ -16994,7 +16994,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauroyl-aspartate',
     name: 'صوديوم لورويل أسبارتات',
     scientific_name: 'Sodium Lauroyl Aspartate',
@@ -17007,7 +17007,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-methyl-oleoyl-taurate',
     name: 'صوديوم ميثيل أولييل توريت',
     scientific_name: 'Sodium Methyl Oleoyl Taurate',
@@ -17020,7 +17020,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cocoyl-taurate',
     name: 'صوديوم كوكويل توريت',
     scientific_name: 'Sodium Cocoyl Taurate',
@@ -17033,7 +17033,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'disodium-oleamido-mea-sulfosuccinate',
     name: 'ثنائي الصوديوم أولياميدو MEA-سلفوساكسينات',
     scientific_name: 'Disodium Oleamido MEA-Sulfosuccinate',
@@ -17046,7 +17046,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauryl-sulfoacetate',
     name: 'صوديوم لوريل سلفوأسيتات (SLSA)',
     scientific_name: 'Sodium Lauryl Sulfoacetate',
@@ -17059,7 +17059,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'ليس من السلفات. جزيئاته كبيرة ولا تخترق الجلد، مما يجعله ألطف بكثير من SLS.' }],
   },
-  {
+{
     id: 'hydroxyethylcellulose',
     name: 'هيدروكسي إيثيل السليلوز',
     scientific_name: 'Hydroxyethylcellulose',
@@ -17072,7 +17072,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxypropylcellulose',
     name: 'هيدروكسي بروبيل السليلوز',
     scientific_name: 'Hydroxypropylcellulose',
@@ -17085,7 +17085,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxypropyl-starch-phosphate',
     name: 'فوسفات النشا هيدروكسي بروبيل',
     scientific_name: 'Hydroxypropyl Starch Phosphate',
@@ -17098,7 +17098,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'aluminum-starch-octenylsuccinate',
     name: 'ألومنيوم نشا أوكتنيل سكسينات',
     scientific_name: 'Aluminum Starch Octenylsuccinate',
@@ -17111,7 +17111,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose-laurate',
     name: 'لوريت السكروز',
     scientific_name: 'Sucrose Laurate',
@@ -17124,7 +17124,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose-palmitate',
     name: 'بالميتات السكروز',
     scientific_name: 'Sucrose Palmitate',
@@ -17137,7 +17137,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbitan-isostearate',
     name: 'أيزوستيرات السوربيتان',
     scientific_name: 'Sorbitan Isostearate',
@@ -17150,7 +17150,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-stearate-se',
     name: 'جليسريل ستيرات SE',
     scientific_name: 'Glyceryl Stearate SE',
@@ -17163,7 +17163,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'SE تعني "Self-Emulsifying"، مما يجعله أسهل في الاستخدام.' }],
   },
-  {
+{
     id: 'lysolecithin',
     name: 'ليزوليسيثين',
     scientific_name: 'Lysolecithin',
@@ -17176,7 +17176,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbitan-caprylate',
     name: 'كابريلات السوربيتان',
     scientific_name: 'Sorbitan Caprylate',
@@ -17189,7 +17189,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ppg-10-methyl-glucose-ether',
     name: 'PPG-10 ميثيل جلوكوز إيثر',
     scientific_name: 'PPG-10 Methyl Glucose Ether',
@@ -17202,7 +17202,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ppg-20-methyl-glucose-ether',
     name: 'PPG-20 ميثيل جلوكوز إيثر',
     scientific_name: 'PPG-20 Methyl Glucose Ether',
@@ -17215,7 +17215,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tilia-cordata-flower-extract',
     name: 'مستخلص زهرة الزيزفون',
     scientific_name: 'Tilia Cordata Flower Extract',
@@ -17228,7 +17228,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'verbena-officinalis-extract',
     name: 'مستخلص رعي الحمام',
     scientific_name: 'Verbena Officinalis Extract',
@@ -17241,7 +17241,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'thymus-vulgaris-extract',
     name: 'مستخلص الزعتر',
     scientific_name: 'Thymus Vulgaris (Thyme) Extract',
@@ -17254,7 +17254,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'origanum-vulgare-leaf-extract',
     name: 'مستخلص أوراق الأوريجانو',
     scientific_name: 'Origanum Vulgare Leaf Extract',
@@ -17267,7 +17267,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sambucus-nigra-flower-extract',
     name: 'مستخلص زهرة البلسان الأسود',
     scientific_name: 'Sambucus Nigra Flower Extract',
@@ -17280,7 +17280,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hedera-helix-extract',
     name: 'مستخلص اللبلاب',
     scientific_name: 'Hedera Helix (Ivy) Extract',
@@ -17293,7 +17293,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'arnica-montana-flower-extract',
     name: 'مستخلص زهرة العطاس',
     scientific_name: 'Arnica Montana Flower Extract',
@@ -17306,7 +17306,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'لا يستخدم على الجروح المفتوحة.' }],
   },
-  {
+{
     id: 'cucumis-sativus-fruit-extract',
     name: 'مستخلص فاكهة الخيار',
     scientific_name: 'Cucumis Sativus (Cucumber) Fruit Extract',
@@ -17319,7 +17319,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dipeptide-2',
     name: 'ثنائي الببتيد-2',
     scientific_name: 'Dipeptide-2',
@@ -17332,7 +17332,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'أحد مكونات مركب "Eyeliss" الشهير لعلاج انتفاخ العين.' }],
   },
-  {
+{
     id: 'palmitoyl-tetrapeptide-10',
     name: 'بالميتويل رباعي الببتيد-10',
     scientific_name: 'Palmitoyl Tetrapeptide-10',
@@ -17345,7 +17345,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Crystalide™. يساعد على الحصول على بشرة صافية وعاكسة للضوء.' }],
   },
-  {
+{
     id: 'acetyl-heptapeptide-4',
     name: 'أسيتيل سباعي الببتيد-4',
     scientific_name: 'Acetyl Heptapeptide-4',
@@ -17358,7 +17358,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يحاكي تأثير بروتين "Royalactin" الموجود في غذاء ملكات النحل لتسريع تجدد البشرة.' }],
   },
-  {
+{
     id: 'acetyl-hexapeptide-38',
     name: 'أسيتيل سداسي الببتيد-38',
     scientific_name: 'Acetyl Hexapeptide-38',
@@ -17371,7 +17371,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعرف تجاريا باسم Adifyline™. يزيد من حجم الأنسجة الدهنية في المناطق التي يتم تطبيقه عليها، مما يعطي تأثير "ملء" للخدود أو الشفاه.' }],
   },
-  {
+{
     id: 'palmitoyl-tripeptide-28',
     name: 'بالميتويل ثلاثي الببتيد-28',
     scientific_name: 'Palmitoyl Tripeptide-28',
@@ -17384,7 +17384,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'undecylenoyl-glycine',
     name: 'أنديسيلينويل جلايسين',
     scientific_name: 'Undecylenoyl Glycine',
@@ -17397,7 +17397,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'undecylenic-acid',
     name: 'حمض الأنديسيلينيك',
     scientific_name: 'Undecylenic Acid',
@@ -17410,7 +17410,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-trideceth-carboxylate',
     name: 'صوديوم ترايديسيث كاربوكسيلات',
     scientific_name: 'Sodium Trideceth Carboxylate',
@@ -17423,7 +17423,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'disodium-trideceth-sulfosuccinate',
     name: 'ثنائي الصوديوم ترايديسيث سلفوساكسينات',
     scientific_name: 'Disodium Trideceth Sulfosuccinate',
@@ -17436,7 +17436,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'trideceth-5',
     name: 'ترايديسيث-5',
     scientific_name: 'Trideceth-5',
@@ -17449,7 +17449,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-13-pareth-3',
     name: 'C12-13 باريث-3',
     scientific_name: 'C12-13 Pareth-3',
@@ -17462,7 +17462,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-77266-black-2',
     name: 'CI 77266 (أسود 2)',
     scientific_name: 'CI 77266 [nano]',
@@ -17475,7 +17475,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'الملون الأساسي في معظم محددات العيون السائلة السوداء.' }],
   },
-  {
+{
     id: 'ci-77000-aluminum-powder',
     name: 'CI 77000 (مسحوق الألومنيوم)',
     scientific_name: 'CI 77000',
@@ -17488,7 +17488,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'غير مسموح به في منتجات الشفاه.' }],
   },
-  {
+{
     id: 'ci-77400-copper-powder',
     name: 'CI 77400 (مسحوق النحاس)',
     scientific_name: 'CI 77400',
@@ -17501,7 +17501,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-75120-annatto',
     name: 'CI 75120 (أناتو)',
     scientific_name: 'CI 75120',
@@ -17514,7 +17514,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ci-73360-red-30-lake',
     name: 'CI 73360 (Red 30 Lake)',
     scientific_name: 'CI 73360',
@@ -17527,7 +17527,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'alaria-esculenta-extract',
     name: 'مستخلص طحلب الألاريا',
     scientific_name: 'Alaria Esculenta Extract',
@@ -17540,7 +17540,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-rhodophyceae-extract',
     name: 'مستخلص الطحالب الحمراء المهدرج',
     scientific_name: 'Hydrolyzed Rhodophyceae Extract',
@@ -17553,7 +17553,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'jania-rubens-extract',
     name: 'مستخلص جانيا روبنز',
     scientific_name: 'Jania Rubens Extract',
@@ -17566,7 +17566,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'nasturtium-officinale-extract',
     name: 'مستخلص الجرجير المائي',
     scientific_name: 'Nasturtium Officinale Extract',
@@ -17579,7 +17579,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tropaeolum-majus-extract',
     name: 'مستخلص الكبوسين',
     scientific_name: 'Tropaeolum Majus Flower/Leaf/Stem Extract',
@@ -17592,7 +17592,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'leontopodium-alpinum-callus-culture-extract',
     name: 'مستخلص مزرعة الكالس من زهرة إديلويس',
     scientific_name: 'Leontopodium Alpinum Callus Culture Extract',
@@ -17605,7 +17605,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'crithmum-maritimum-callus-culture-filtrate',
     name: 'مرشح مزرعة الكالس من شمر البحر',
     scientific_name: 'Crithmum Maritimum Callus Culture Filtrate',
@@ -17618,7 +17618,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'silybum-marianum-fruit-extract',
     name: 'مستخلص فاكهة حليب الشوك',
     scientific_name: 'Silybum Marianum Fruit Extract',
@@ -17631,7 +17631,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'palmitoyl-dipeptide-10',
     name: 'بالميتويل ثنائي الببتيد-10',
     scientific_name: 'Palmitoyl Dipeptide-10',
@@ -17644,7 +17644,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tripeptide-29',
     name: 'ثلاثي الببتيد-29',
     scientific_name: 'Tripeptide-29',
@@ -17657,7 +17657,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-aca-catechu-seed-extract',
     name: 'مستخلص بذور الكاتشو المهدرج',
     scientific_name: 'Hydrolyzed Acacia Catechu Seed Extract',
@@ -17670,7 +17670,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'creatine',
     name: 'كرياتين',
     scientific_name: 'Creatine',
@@ -17683,7 +17683,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'calcium-hydroxide',
     name: 'هيدروكسيد الكالسيوم',
     scientific_name: 'Calcium Hydroxide',
@@ -17696,7 +17696,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مادة قلوية قوية جدا تستخدم في كريمات فرد الشعر الكيميائية. مهيجة وحارقة للجلد.' }],
   },
-  {
+{
     id: 'guanidine-carbonate',
     name: 'كربونات الغوانيدين',
     scientific_name: 'Guanidine Carbonate',
@@ -17709,7 +17709,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'يستخدم مع هيدروكسيد الكالسيوم لتكوين هيدروكسيد الغوانيدين، وهو عامل فرد "خالٍ من الصودا الكاوية" ولكنه لا يزال قاسيا جدا.' }],
   },
-  {
+{
     id: 'thioglycolic-acid',
     name: 'حمض الثيوجليكوليك',
     scientific_name: 'Thioglycolic Acid',
@@ -17722,7 +17722,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'المكون النشط في معظم كريمات إزالة الشعر. يكسر روابط ثاني كبريتيد في الكيراتين. مهيج وله رائحة قوية.' }],
   },
-  {
+{
     id: 'p-phenylenediamine',
     name: 'بارا-فينيلين ديامين (PPD)',
     scientific_name: 'p-Phenylenediamine',
@@ -17735,7 +17735,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مسبب قوي جدا للحساسية وقد يسبب ردود فعل جلدية شديدة. محظور في مستحضرات التجميل التي تلامس الجلد في أوروبا.' }],
   },
-  {
+{
     id: 'ammonia',
     name: 'الأمونيا',
     scientific_name: 'Ammonia',
@@ -17748,7 +17748,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'مادة قلوية قاسية تستخدم في صبغات الشعر الدائمة. مهيجة للجهاز التنفسي وتتلف الشعر.' }],
   },
-  {
+{
     id: 'ethanolamine',
     name: 'إيثانولامين (MEA)',
     scientific_name: 'Ethanolamine',
@@ -17761,7 +17761,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'على الرغم من تسويقه كبديل "لطيف"، إلا أنه قد يكون أكثر ضررا للشعر من الأمونيا على المدى الطويل لأنه يسبب تضخما أكبر للشعرة.' }],
   },
-  {
+{
     id: 'hydrogen-peroxide',
     name: 'بيروكسيد الهيدروجين',
     scientific_name: 'Hydrogen Peroxide',
@@ -17774,7 +17774,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'عامل مؤكسد قوي يسبب ضررا للشعر ويجرده من لونه الطبيعي.' }],
   },
-  {
+{
     id: 'persulfates',
     name: 'البيرسلفات',
     scientific_name: 'Potassium Persulfate, Ammonium Persulfate',
@@ -17787,7 +17787,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'المكونات النشطة في بودرة تفتيح الشعر. قاسية جدا وتسبب تلفا شديدا للشعر. مهيجة للجهاز التنفسي.' }],
   },
-  {
+{
     id: 'magnesium-carbonate',
     name: 'كربونات المغنيسيوم',
     scientific_name: 'Magnesium Carbonate',
@@ -17800,7 +17800,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'magnesium-sulfate',
     name: 'كبريتات المغنيسيوم (ملح إبسوم)',
     scientific_name: 'Magnesium Sulfate',
@@ -17813,7 +17813,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'magnesium-silicate',
     name: 'سيليكات المغنيسيوم',
     scientific_name: 'Magnesium Silicate',
@@ -17826,7 +17826,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'شكل من أشكال التلك.' }],
   },
-  {
+{
     id: 'calcium-carbonate',
     name: 'كربونات الكالسيوم',
     scientific_name: 'Calcium Carbonate',
@@ -17839,7 +17839,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'calcium-thioglycolate',
     name: 'ثيوجليكولات الكالسيوم',
     scientific_name: 'Calcium Thioglycolate',
@@ -17852,7 +17852,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'مكون آخر يستخدم في كريمات إزالة الشعر.' }],
   },
-  {
+{
     id: 'sodium-thioglycolate',
     name: 'ثيوجليكولات الصوديوم',
     scientific_name: 'Sodium Thioglycolate',
@@ -17865,7 +17865,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-thioglycolate',
     name: 'ثيوجليكولات البوتاسيوم',
     scientific_name: 'Potassium Thioglycolate',
@@ -17878,7 +17878,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-sulfate-c10-16-alkyl',
     name: 'كبريتات ألكيل الصوديوم C10-16',
     scientific_name: 'Sodium C10-16 Alkyl Sulfate',
@@ -17891,7 +17891,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ppg-5-ceteth-10-phosphate',
     name: 'PPG-5 سيتيث-10 فوسفات',
     scientific_name: 'PPG-5-Ceteth-10 Phosphate',
@@ -17904,7 +17904,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'coceth-7',
     name: 'كوسيث-7',
     scientific_name: 'Coceth-7',
@@ -17917,7 +17917,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hc-yellow-no-2',
     name: 'HC Yellow No. 2',
     scientific_name: 'HC Yellow No. 2',
@@ -17930,7 +17930,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: '2-amino-6-chloro-4-nitrophenol',
     name: '2-أمينو-6-كلورو-4-نيتروفينول',
     scientific_name: '2-Amino-6-Chloro-4-Nitrophenol',
@@ -17943,7 +17943,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxyethyl-2-nitro-p-toluidine',
     name: 'هيدروكسي إيثيل-2-نيترو-ب-تولويدين',
     scientific_name: 'Hydroxyethyl-2-Nitro-p-Toluidine',
@@ -17956,7 +17956,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'toluene-2-5-diamine-sulfate',
     name: 'كبريتات تولوين-2،5-ديامين',
     scientific_name: 'Toluene-2,5-Diamine Sulfate',
@@ -17969,7 +17969,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'بديل لـ PPD ولكنه لا يزال مسببا قويا للحساسية.' }],
   },
-  {
+{
     id: 'm-aminophenol',
     name: 'ميتا-أمينوفينول',
     scientific_name: 'm-Aminophenol',
@@ -17982,7 +17982,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'p-aminophenol',
     name: 'بارا-أمينوفينول',
     scientific_name: 'p-Aminophenol',
@@ -17995,7 +17995,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: '4-amino-2-hydroxytoluene',
     name: '4-أمينو-2-هيدروكسي تولوين',
     scientific_name: '4-Amino-2-Hydroxytoluene',
@@ -18008,7 +18008,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: '2-methylresorcinol',
     name: '2-ميثيل ريزورسينول',
     scientific_name: '2-Methylresorcinol',
@@ -18021,7 +18021,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: '1-naphthol',
     name: '1-نافثول',
     scientific_name: '1-Naphthol',
@@ -18034,7 +18034,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-undecylenate',
     name: 'أنديسيلينات الجليسريل',
     scientific_name: 'Glyceryl Undecylenate',
@@ -18047,7 +18047,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'capryl-capramidopropyl-betaine',
     name: 'كابريل/كابر أميدوبروبيل بيتين',
     scientific_name: 'Capryl/Capramidopropyl Betaine',
@@ -18060,7 +18060,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'lauryl-betaine',
     name: 'لوريل بيتين',
     scientific_name: 'Lauryl Betaine',
@@ -18073,7 +18073,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oleamidopropyl-betaine',
     name: 'أولياميدوبروبيل بيتين',
     scientific_name: 'Oleamidopropyl Betaine',
@@ -18086,7 +18086,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-trideceth-7-carboxylate',
     name: 'صوديوم ترايديسيث-7 كاربوكسيلات',
     scientific_name: 'Sodium Trideceth-7 Carboxylate',
@@ -18099,7 +18099,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'lauramine-oxide',
     name: 'أكسيد لورامين',
     scientific_name: 'Lauramine Oxide',
@@ -18112,7 +18112,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oleamine-oxide',
     name: 'أكسيد أوليامين',
     scientific_name: 'Oleamine Oxide',
@@ -18125,7 +18125,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cocamine-oxide',
     name: 'أكسيد كوكامين',
     scientific_name: 'Cocamine Oxide',
@@ -18138,7 +18138,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cocamidopropylamine-oxide',
     name: 'أكسيد كوكاميدوبروبيل أمين',
     scientific_name: 'Cocamidopropylamine Oxide',
@@ -18151,7 +18151,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'behentrimonium-propyltrimonium-chloride',
     name: 'كلوريد بيهينتريمونيوم بروبيل تريمونيوم',
     scientific_name: 'Behentrimonium Propyltrimonium Chloride',
@@ -18164,7 +18164,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'babassu-oil-polyglyceryl-4-esters',
     name: 'استرات بولي جليسريل-4 لزيت الباباسو',
     scientific_name: 'Babassu Oil Polyglyceryl-4 Esters',
@@ -18177,7 +18177,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ppg-3-caprylyl-ether',
     name: 'PPG-3 كابريليل إيثر',
     scientific_name: 'PPG-3 Caprylyl Ether',
@@ -18190,7 +18190,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pca-glyceryl-oleate',
     name: 'أوليات جليسريل PCA',
     scientific_name: 'PCA Glyceryl Oleate',
@@ -18203,7 +18203,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dioleoylethyl-hydroxyethylmonium-methosulfate',
     name: 'ميثوسلفات ثنائي أوليويل إيثيل هيدروكسي إيثيل مونيوم',
     scientific_name: 'Dioleoylethyl Hydroxyethylmonium Methosulfate',
@@ -18216,7 +18216,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'quaternium-87',
     name: 'كواتيرنيوم-87',
     scientific_name: 'Quaternium-87',
@@ -18229,7 +18229,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'quaternium-91',
     name: 'كواتيرنيوم-91',
     scientific_name: 'Quaternium-91',
@@ -18242,7 +18242,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cetrimonium-methosulfate',
     name: 'ميثوسلفات السيتريمونيوم',
     scientific_name: 'Cetrimonium Methosulfate',
@@ -18255,7 +18255,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxypropyltrimonium-hydrolyzed-corn-starch',
     name: 'نشا الذرة المهدرج هيدروكسي بروبيل تريمونيوم',
     scientific_name: 'Hydroxypropyltrimonium Hydrolyzed Corn Starch',
@@ -18268,7 +18268,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-jojoba-esters',
     name: 'استرات الجوجوبا المهدرجة',
     scientific_name: 'Hydrolyzed Jojoba Esters',
@@ -18281,7 +18281,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'silica-silylate',
     name: 'سيليلات السيليكا',
     scientific_name: 'Silica Silylate',
@@ -18294,7 +18294,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يستخدم في مساحيق الشعر لإعطاء حجم وامتصاص الزيوت.' }],
   },
-  {
+{
     id: 'silica-dimethyl-silylate',
     name: 'سيليلات ثنائي ميثيل السيليكا',
     scientific_name: 'Silica Dimethyl Silylate',
@@ -18307,7 +18307,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'calcium-silicate',
     name: 'سيليكات الكالسيوم',
     scientific_name: 'Calcium Silicate',
@@ -18320,7 +18320,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-silicate',
     name: 'سيليكات الصوديوم',
     scientific_name: 'Sodium Silicate',
@@ -18333,7 +18333,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يشكل طبقة رقيقة على الجلد تتقلص عند جفافها، مما يعطي تأثير شد فوري ومؤقت للتجاعيد.' }],
   },
-  {
+{
     id: 'perlite',
     name: 'البيرلايت',
     scientific_name: 'Perlite',
@@ -18346,7 +18346,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ricinoleamidopropyltrimonium-chloride',
     name: 'كلوريد ريسينولياميدوبروبيل تريمونيوم',
     scientific_name: 'Ricinoleamidopropyltrimonium Chloride',
@@ -18359,7 +18359,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'cocotrimonium-chloride',
     name: 'كلوريد كوكوتريمونيوم',
     scientific_name: 'Cocotrimonium Chloride',
@@ -18372,7 +18372,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laurtrimonium-chloride',
     name: 'كلوريد لوريتريمونيوم',
     scientific_name: 'Laurtrimonium Chloride',
@@ -18385,7 +18385,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dicocodimonium-chloride',
     name: 'كلوريد دياكوكوديمونيوم',
     scientific_name: 'Dicocodimonium Chloride',
@@ -18398,7 +18398,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'dihydroxypropyltrimonium-chloride',
     name: 'كلوريد داي هيدروكسي بروبيل تريمونيوم',
     scientific_name: 'Dihydroxypropyltrimonium Chloride',
@@ -18411,7 +18411,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxypropyl-guar-hydroxypropyltrimonium-chloride',
     name: 'كلوريد هيدروكسي بروبيل غوار هيدروكسي بروبيل تريمونيوم',
     scientific_name: 'Hydroxypropyl Guar Hydroxypropyltrimonium Chloride',
@@ -18424,7 +18424,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauryl-ether-sulfate',
     name: 'صوديوم لوريل إيثر سلفات',
     scientific_name: 'Sodium Lauryl Ether Sulfate',
@@ -18437,7 +18437,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'اسم آخر شائع لـ Sodium Laureth Sulfate.' }],
   },
-  {
+{
     id: 'tridecyl-stearate',
     name: 'ستيرات الترايديسيل',
     scientific_name: 'Tridecyl Stearate',
@@ -18450,7 +18450,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tridecyl-trimellitate',
     name: 'تريميليتات الترايديسيل',
     scientific_name: 'Tridecyl Trimellitate',
@@ -18463,7 +18463,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'neopentyl-glycol-dicaprylate-dicaprate',
     name: 'ثنائي الكابريلات/الكبرات نيوبنتيل جلايكول',
     scientific_name: 'Neopentyl Glycol Dicaprylate/Dicaprate',
@@ -18476,7 +18476,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-15-pareth-3',
     name: 'C12-15 باريث-3',
     scientific_name: 'C12-15 Pareth-3',
@@ -18489,7 +18489,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-5-carboxylic-acid',
     name: 'حمض لوريث-5 الكربوكسيلي',
     scientific_name: 'Laureth-5 Carboxylic Acid',
@@ -18502,7 +18502,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-15-glyceryl-isostearate',
     name: 'أيزوستيرات الجليسريل PEG-15',
     scientific_name: 'PEG-15 Glyceryl Isostearate',
@@ -18515,7 +18515,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-25',
     name: 'ستيريث-25',
     scientific_name: 'Steareth-25',
@@ -18528,7 +18528,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ceteareth-12',
     name: 'سيتاريث-12',
     scientific_name: 'Ceteareth-12',
@@ -18541,7 +18541,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ceteareth-30',
     name: 'سيتاريث-30',
     scientific_name: 'Ceteareth-30',
@@ -18554,7 +18554,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-6',
     name: 'PEG-6',
     scientific_name: 'PEG-6',
@@ -18567,7 +18567,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-32',
     name: 'PEG-32',
     scientific_name: 'PEG-32',
@@ -18580,7 +18580,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-100',
     name: 'PEG-100',
     scientific_name: 'PEG-100',
@@ -18593,7 +18593,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-12',
     name: 'لوريث-12',
     scientific_name: 'Laureth-12',
@@ -18606,7 +18606,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-20-acid-peg-8-ester',
     name: 'استر PEG-8 لحمض C12-20',
     scientific_name: 'C12-20 Acid PEG-8 Ester',
@@ -18619,7 +18619,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-8-stearate',
     name: 'ستيرات PEG-8',
     scientific_name: 'PEG-8 Stearate',
@@ -18632,7 +18632,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-10-allyl-ether-acrylates-copolymer',
     name: 'ستيريث-10 أليل إيثر/أكريلات كوبوليمر',
     scientific_name: 'Steareth-10 Allyl Ether/Acrylates Copolymer',
@@ -18645,7 +18645,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ammonium-sulfate',
     name: 'كبريتات الأمونيوم',
     scientific_name: 'Ammonium Sulfate',
@@ -18658,7 +18658,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-polystyrene-sulfonate',
     name: 'صوديوم بوليسترين سلفونات',
     scientific_name: 'Sodium Polystyrene Sulfonate',
@@ -18671,7 +18671,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'poloxamer-188',
     name: 'بولوكسامير 188',
     scientific_name: 'Poloxamer 188',
@@ -18684,7 +18684,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'poloxamer-235',
     name: 'بولوكسامير 235',
     scientific_name: 'Poloxamer 235',
@@ -18697,7 +18697,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-2-oleate',
     name: 'بولي جليسريل-2 أوليات',
     scientific_name: 'Polyglyceryl-2 Oleate',
@@ -18710,7 +18710,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-myristate',
     name: 'بولي جليسريل-10 ميريستات',
     scientific_name: 'Polyglyceryl-10 Myristate',
@@ -18723,7 +18723,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-psyllium-seed',
     name: 'بذور القطوناء المهدرجة',
     scientific_name: 'Hydrolyzed Psyllium Seed',
@@ -18736,7 +18736,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'triticum-vulgare-bran-extract',
     name: 'مستخلص نخالة القمح',
     scientific_name: 'Triticum Vulgare (Wheat) Bran Extract',
@@ -18749,7 +18749,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'risk', text: 'تجنب إذا كان لديك حساسية من القمح.' }],
   },
-  {
+{
     id: 'hydrolyzed-sweet-almond-protein',
     name: 'بروتين اللوز الحلو المهدرج',
     scientific_name: 'Hydrolyzed Sweet Almond Protein',
@@ -18762,7 +18762,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-algin-and-zinc-sulfate',
     name: 'ألجين مهدرج وكبريتات الزنك',
     scientific_name: 'Hydrolyzed Algin & Zinc Sulfate',
@@ -18775,7 +18775,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'perfluorodecalin',
     name: 'بيرفلوروديكالين',
     scientific_name: 'Perfluorodecalin',
@@ -18788,7 +18788,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'pinus-sylvestris-cone-extract',
     name: 'مستخلص مخروط الصنوبر',
     scientific_name: 'Pinus Sylvestris Cone Extract',
@@ -18801,7 +18801,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'avena-strigosa-seed-extract',
     name: 'مستخلص بذور الشوفان الأسود',
     scientific_name: 'Avena Strigosa Seed Extract',
@@ -18814,7 +18814,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-dilauramidoglutamide-lysine',
     name: 'صوديوم ديلوراميدوجلوتاميد ليسين',
     scientific_name: 'Sodium Dilauramidoglutamide Lysine',
@@ -18827,7 +18827,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعمل كـ "سيراميد صناعي" للشعر، يخترق ويصلح التلف الداخلي.' }],
   },
-  {
+{
     id: 'diethyl-sebacate',
     name: 'سيباكات ثنائي الإيثيل',
     scientific_name: 'Diethyl Sebacate',
@@ -18840,7 +18840,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'diethylene-glycol-monoethyl-ether',
     name: 'إيثر أحادي الإيثيل لثنائي إيثيلين جلايكول',
     scientific_name: 'Diethylene Glycol Monoethyl Ether',
@@ -18853,7 +18853,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'اسم آخر لـ Ethoxydiglycol.' }],
   },
-  {
+{
     id: 'ppg-2-myristyl-ether-propionate',
     name: 'بروبيونات إيثر الميريستيل PPG-2',
     scientific_name: 'PPG-2 Myristyl Ether Propionate',
@@ -18866,7 +18866,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-13-pareth-9',
     name: 'C12-13 باريث-9',
     scientific_name: 'C12-13 Pareth-9',
@@ -18879,7 +18879,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ammonium-polyacrylatedimethyl-tauramide',
     name: 'أمونيوم بولي أكريلات دايميثيل توراميد',
     scientific_name: 'Ammonium Polyacrylatedimethyl Tauramide',
@@ -18892,7 +18892,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-polyacrylate-starch',
     name: 'نشا بولي أكريلات الصوديوم',
     scientific_name: 'Sodium Polyacrylate Starch',
@@ -18905,7 +18905,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'acrylates-c10-30-alkyl-acrylate-crosspolymer-1',
     name: 'أكريلات/C10-30 ألكيل أكريليت كروسبوليمر-1',
     scientific_name: 'Acrylates/C10-30 Alkyl Acrylate Crosspolymer',
@@ -18918,7 +18918,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'غالبا ما يستخدم كاسم عام، ولكن هناك أنواع مختلفة منه مثل Pemulen™ TR-1 و TR-2.' }],
   },
-  {
+{
     id: 'ceteth-20',
     name: 'سيتيث-20',
     scientific_name: 'Ceteth-20',
@@ -18931,7 +18931,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-100',
     name: 'ستيريث-100',
     scientific_name: 'Steareth-100',
@@ -18944,7 +18944,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-4-dilaurate',
     name: 'ثنائي لوريت PEG-4',
     scientific_name: 'PEG-4 Dilaurate',
@@ -18957,7 +18957,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'glyceryl-laurate-se',
     name: 'لوريت الجليسريل SE',
     scientific_name: 'Glyceryl Laurate SE',
@@ -18970,7 +18970,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-4-oleate',
     name: 'بولي جليسريل-4 أوليات',
     scientific_name: 'Polyglyceryl-4 Oleate',
@@ -18983,7 +18983,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-isostearate',
     name: 'بولي جليسريل-10 أيزوستيرات',
     scientific_name: 'Polyglyceryl-10 Isostearate',
@@ -18996,7 +18996,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydroxypropyltrimonium-honey',
     name: 'عسل هيدروكسي بروبيل تريمونيوم',
     scientific_name: 'Hydroxypropyltrimonium Honey',
@@ -19009,7 +19009,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-linseed-extract',
     name: 'مستخلص بذور الكتان المهدرج',
     scientific_name: 'Hydrolyzed Linseed Extract',
@@ -19022,7 +19022,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrolyzed-almond-protein',
     name: 'بروتين اللوز المهدرج',
     scientific_name: 'Hydrolyzed Almond Protein',
@@ -19035,7 +19035,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'soy-amino-acids',
     name: 'أحماض الصويا الأمينية',
     scientific_name: 'Soy Amino Acids',
@@ -19048,7 +19048,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'wheat-amino-acids',
     name: 'أحماض القمح الأمينية',
     scientific_name: 'Wheat Amino Acids',
@@ -19061,7 +19061,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'corn-amino-acids',
     name: 'أحماض الذرة الأمينية',
     scientific_name: 'Corn Amino Acids',
@@ -19074,7 +19074,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sh-polypeptide-9',
     name: 'sh-Polypeptide-9 (VEGF)',
     scientific_name: 'sh-Polypeptide-9',
@@ -19087,7 +19087,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sh-polypeptide-1',
     name: 'sh-Polypeptide-1 (bFGF)',
     scientific_name: 'sh-Polypeptide-1',
@@ -19100,7 +19100,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sh-oligopeptide-2',
     name: 'sh-Oligopeptide-2 (IGF-1)',
     scientific_name: 'sh-Oligopeptide-2',
@@ -19113,7 +19113,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyquaternium-51',
     name: 'بولي كواتيرنيوم-51',
     scientific_name: 'Polyquaternium-51',
@@ -19126,7 +19126,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyquaternium-59',
     name: 'بولي كواتيرنيوم-59',
     scientific_name: 'Polyquaternium-59',
@@ -19139,7 +19139,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyquaternium-61',
     name: 'بولي كواتيرنيوم-61',
     scientific_name: 'Polyquaternium-61',
@@ -19152,7 +19152,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'quaternium-18',
     name: 'كواتيرنيوم-18',
     scientific_name: 'Quaternium-18',
@@ -19165,7 +19165,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'quaternium-22',
     name: 'كواتيرنيوم-22',
     scientific_name: 'Quaternium-22',
@@ -19178,7 +19178,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-caprylate-caprate',
     name: 'بولي جليسريل-10 كابريلات/كبرات',
     scientific_name: 'Polyglyceryl-10 Caprylate/Caprate',
@@ -19191,7 +19191,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-6-oleate',
     name: 'بولي جليسريل-6 أوليات',
     scientific_name: 'Polyglyceryl-6 Oleate',
@@ -19204,7 +19204,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-dipalmitate',
     name: 'بولي جليسريل-10 ثنائي البالميتات',
     scientific_name: 'Polyglyceryl-10 Dipalmitate',
@@ -19217,7 +19217,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-7-glyceryl-laurate',
     name: 'لوريت الجليسريل PEG-7',
     scientific_name: 'PEG-7 Glyceryl Laurate',
@@ -19230,7 +19230,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-20-methyl-glucose-sesquistearate',
     name: 'سيسكوي ستيرات ميثيل جلوكوز PEG-20',
     scientific_name: 'PEG-20 Methyl Glucose Sesquistearate',
@@ -19243,7 +19243,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'methyl-glucose-sesquistearate',
     name: 'سيسكوي ستيرات ميثيل جلوكوز',
     scientific_name: 'Methyl Glucose Sesquistearate',
@@ -19256,7 +19256,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-4-polyglyceryl-2-stearate',
     name: 'ستيرات بولي جليسريل-2 PEG-4',
     scientific_name: 'PEG-4 Polyglyceryl-2 Stearate',
@@ -19269,7 +19269,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ceteareth-25',
     name: 'سيتاريث-25',
     scientific_name: 'Ceteareth-25',
@@ -19282,7 +19282,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'ceteareth-60-myristyl-glycol',
     name: 'سيتاريث-60 ميريستيل جلايكول',
     scientific_name: 'Ceteareth-60 Myristyl Glycol',
@@ -19295,7 +19295,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isoparaffin-c13-16',
     name: 'إيزوبرافين C13-16',
     scientific_name: 'C13-16 Isoparaffin',
@@ -19308,7 +19308,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-21',
     name: 'لوريث-21',
     scientific_name: 'Laureth-21',
@@ -19321,7 +19321,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-40-glyceryl-cocoate',
     name: 'كوكوات الجليسريل PEG-40',
     scientific_name: 'PEG-40 Glyceryl Cocoate',
@@ -19334,7 +19334,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-coceth-sulfate',
     name: 'صوديوم كوسيث سلفات',
     scientific_name: 'Sodium Coceth Sulfate',
@@ -19347,7 +19347,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'ألطف قليلا من SLES ولكنه لا يزال من السلفات.' }],
   },
-  {
+{
     id: 'magnesium-laureth-sulfate',
     name: 'كبريتات لوريث المغنيسيوم',
     scientific_name: 'Magnesium Laureth Sulfate',
@@ -19360,7 +19360,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'يعتبر ألطف من نظائره الصوديوم والأمونيوم بسبب حجم جزيئاته الأكبر.' }],
   },
-  {
+{
     id: 'disodium-lauryl-sulfosuccinate',
     name: 'ثنائي الصوديوم لوريل سلفوساكسينات',
     scientific_name: 'Disodium Lauryl Sulfosuccinate',
@@ -19373,7 +19373,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-lauryl-sarcosinate',
     name: 'صوديوم لوريل ساركوسينات',
     scientific_name: 'Sodium Lauryl Sarcosinate',
@@ -19386,7 +19386,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c14-22-alcohols',
     name: 'كحولات C14-22',
     scientific_name: 'C14-22 Alcohols',
@@ -19399,7 +19399,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'c12-20-alkyl-glucoside',
     name: 'ألكيل جلوكوزيد C12-20',
     scientific_name: 'C12-20 Alkyl Glucoside',
@@ -19412,7 +19412,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isostearyl-palmitate',
     name: 'بالميتات الأيزوستيريل',
     scientific_name: 'Isostearyl Palmitate',
@@ -19425,7 +19425,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'myristyl-propionate',
     name: 'بروبيونات الميريستيل',
     scientific_name: 'Myristyl Propionate',
@@ -19438,7 +19438,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك.' }],
   },
-  {
+{
     id: 'peg-10-rapeseed-sterol',
     name: 'ستيرول بذور اللفت PEG-10',
     scientific_name: 'PEG-10 Rapeseed Sterol',
@@ -19451,7 +19451,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-caseinate',
     name: 'كازينات البوتاسيوم',
     scientific_name: 'Potassium Caseinate',
@@ -19464,7 +19464,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sesamum-indicum-unsaponifiables',
     name: 'غير قابل للتصبن من زيت السمسم',
     scientific_name: 'Sesamum Indicum (Sesame) Oil Unsaponifiables',
@@ -19477,7 +19477,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'soya-sterol',
     name: 'ستيرول الصويا',
     scientific_name: 'Glycine Soja (Soybean) Sterols',
@@ -19490,7 +19490,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cetearyl-sulfate',
     name: 'كبريتات سيتريل الصوديوم',
     scientific_name: 'Sodium Cetearyl Sulfate',
@@ -19503,7 +19503,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-stearate',
     name: 'ستيرات الصوديوم',
     scientific_name: 'Sodium Stearate',
@@ -19516,7 +19516,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'أحد المكونات الرئيسية في الصابون الصلب.' }],
   },
-  {
+{
     id: 'sodium-palmitate',
     name: 'بالميتات الصوديوم',
     scientific_name: 'Sodium Palmitate',
@@ -19529,7 +19529,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cocoate',
     name: 'كوكوات الصوديوم',
     scientific_name: 'Sodium Cocoate',
@@ -19542,7 +19542,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-tallowate',
     name: 'تالوات الصوديوم',
     scientific_name: 'Sodium Tallowate',
@@ -19555,7 +19555,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'صابون مشتق من دهون حيوانية.' }],
   },
-  {
+{
     id: 'sodium-stearoyl-hydrolyzed-protein',
     name: 'بروتين مهدرج ستيرويل الصوديوم',
     scientific_name: 'Sodium Stearoyl Hydrolyzed Protein',
@@ -19568,7 +19568,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-laneth-40-maleate-styrene-sulfonate-copolymer',
     name: 'صوديوم لانيث-40 ماليات/ستيرين سلفونات كوبوليمر',
     scientific_name: 'Sodium Laneth-40 Maleate/Styrene Sulfonate Copolymer',
@@ -19581,7 +19581,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-200',
     name: 'ستيريث-200',
     scientific_name: 'Steareth-200',
@@ -19594,7 +19594,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'stearyl-citrate',
     name: 'سيترات الستيريل',
     scientific_name: 'Stearyl Citrate',
@@ -19607,7 +19607,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sucrose-polystearate',
     name: 'بولي ستيرات السكروز',
     scientific_name: 'Sucrose Polystearate',
@@ -19620,7 +19620,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tridecyl-salicylate',
     name: 'ساليسيلات الترايديسيل',
     scientific_name: 'Tridecyl Salicylate',
@@ -19633,7 +19633,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-8',
     name: 'لوريث-8',
     scientific_name: 'Laureth-8',
@@ -19646,7 +19646,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'trilaureth-4-phosphate',
     name: 'فوسفات ثلاثي لوريث-4',
     scientific_name: 'Trilaureth-4 Phosphate',
@@ -19659,7 +19659,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tri-c12-13-alkyl-citrate',
     name: 'سيترات ثلاثي ألكيل C12-13',
     scientific_name: 'Tri-C12-13 Alkyl Citrate',
@@ -19672,7 +19672,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tricaprylin',
     name: 'تريكابريلين',
     scientific_name: 'Tricaprylin',
@@ -19685,7 +19685,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'triheptanoin',
     name: 'تريهيبتانوين',
     scientific_name: 'Triheptanoin',
@@ -19698,7 +19698,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'triolein',
     name: 'تريولين',
     scientific_name: 'Triolein',
@@ -19711,7 +19711,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'zea-mays-germ-oil',
     name: 'زيت جنين الذرة',
     scientific_name: 'Zea Mays (Corn) Germ Oil',
@@ -19724,7 +19724,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك.' }],
   },
-  {
+{
     id: 'ethyl-oleate',
     name: 'أوليات الإيثيل',
     scientific_name: 'Ethyl Oleate',
@@ -19737,7 +19737,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'isopropyl-isostearate',
     name: 'أيزوستيرات الآيزوبروبيل',
     scientific_name: 'Isopropyl Isostearate',
@@ -19750,7 +19750,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'lauryl-pca',
     name: 'لوريل PCA',
     scientific_name: 'Lauryl PCA',
@@ -19763,7 +19763,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'myristyl-3-glyceryl-ascorbate',
     name: 'أسكوربات ميريستيل-3-جليسريل',
     scientific_name: 'Myristyl 3-Glyceryl Ascorbate',
@@ -19776,7 +19776,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'disodium-laureth-5-carboxylate',
     name: 'ثنائي الصوديوم لوريث-5 كاربوكسيلات',
     scientific_name: 'Disodium Laureth-5 Carboxylate',
@@ -19789,7 +19789,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-c14-18-olefin-sulfonate',
     name: 'صوديوم C14-18 أوليفين سلفونات',
     scientific_name: 'Sodium C14-18 Olefin Sulfonate',
@@ -19802,7 +19802,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-methyl-stearoyl-taurate',
     name: 'صوديوم ميثيل ستيرويل توريت',
     scientific_name: 'Sodium Methyl Stearoyl Taurate',
@@ -19815,7 +19815,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-stearoyl-glutamate-1',
     name: 'صوديوم ستيرويل جلوتامات',
     scientific_name: 'Sodium Stearoyl Glutamate',
@@ -19828,7 +19828,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-10-allyl-ether-acrylates-copolymer-1',
     name: 'ستيريث-10 أليل إيثر/أكريلات كوبوليمر',
     scientific_name: 'Steareth-10 Allyl Ether/Acrylates Copolymer',
@@ -19841,7 +19841,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polysilicone-13',
     name: 'بولي سيليكون-13',
     scientific_name: 'Polysilicone-13',
@@ -19854,7 +19854,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-4-laurate',
     name: 'لوريت PEG-4',
     scientific_name: 'PEG-4 Laurate',
@@ -19867,7 +19867,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-20-stearate',
     name: 'ستيرات PEG-20',
     scientific_name: 'PEG-20 Stearate',
@@ -19880,7 +19880,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-30-stearate',
     name: 'ستيرات PEG-30',
     scientific_name: 'PEG-30 Stearate',
@@ -19893,7 +19893,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-40-laurate',
     name: 'لوريت PEG-40',
     scientific_name: 'PEG-40 Laurate',
@@ -19906,7 +19906,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-70-mango-glycerides',
     name: 'جليسريدات المانجو PEG-70',
     scientific_name: 'PEG-70 Mango Glycerides',
@@ -19919,7 +19919,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-120-jojoba-acid',
     name: 'حمض الجوجوبا PEG-120',
     scientific_name: 'PEG-120 Jojoba Acid',
@@ -19932,7 +19932,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-4-laurate',
     name: 'بولي جليسريل-4 لوريت',
     scientific_name: 'Polyglyceryl-4 Laurate',
@@ -19945,7 +19945,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-5-oleate',
     name: 'بولي جليسريل-5 أوليات',
     scientific_name: 'Polyglyceryl-5 Oleate',
@@ -19958,7 +19958,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-6-isostearate',
     name: 'بولي جليسريل-6 أيزوستيرات',
     scientific_name: 'Polyglyceryl-6 Isostearate',
@@ -19971,7 +19971,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-behenate-eicosadioate',
     name: 'بولي جليسريل-10 بيهينات/إيكوساديويت',
     scientific_name: 'Polyglyceryl-10 Behenate/Eicosadioate',
@@ -19984,7 +19984,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-10-pentastearate',
     name: 'بولي جليسريل-10 خماسي الستيارات',
     scientific_name: 'Polyglyceryl-10 Pentastearate',
@@ -19997,7 +19997,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'quaternium-90-bentonite',
     name: 'كواتيرنيوم-90 بنتونيت',
     scientific_name: 'Quaternium-90 Bentonite',
@@ -20010,7 +20010,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steareth-20-methacrylate-copolymer',
     name: 'ستيريث-20 ميثاكريليت كوبوليمر',
     scientific_name: 'Steareth-20 Methacrylate Copolymer',
@@ -20023,7 +20023,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'steartrimonium-bromide',
     name: 'بروميد ستيرتريمونيوم',
     scientific_name: 'Steartrimonium Bromide',
@@ -20036,7 +20036,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'stearyl-behenate',
     name: 'بيهينات الستيريل',
     scientific_name: 'Stearyl Behenate',
@@ -20049,7 +20049,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sunflower-seed-oil-glyceride',
     name: 'جليسريد زيت بذور دوار الشمس',
     scientific_name: 'Sunflower Seed Oil Glyceride',
@@ -20062,7 +20062,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tall-oil-acid',
     name: 'حمض زيت طويل',
     scientific_name: 'Tall Oil Acid',
@@ -20075,7 +20075,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tetramethyl-acetyloctahydronaphthalenes',
     name: 'رباعي ميثيل أسيتيل أوكتاهيدرونافثالين',
     scientific_name: 'Tetramethyl Acetyloctahydronaphthalenes',
@@ -20088,7 +20088,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'trimethyl-pentanyl-diisobutyrate',
     name: 'ثنائي أيزوبيوتيرات ثلاثي ميثيل البنتانيل',
     scientific_name: 'Trimethyl Pentanyl Diisobutyrate',
@@ -20101,7 +20101,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'tris-bht-mesitylene',
     name: 'تريس(BHT)ميسيتيلين',
     scientific_name: 'Tris(BHT)Mesitylene',
@@ -20114,7 +20114,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'undeceth-11',
     name: 'أونديسيث-11',
     scientific_name: 'Undeceth-11',
@@ -20127,7 +20127,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'undeceth-5',
     name: 'أونديسيث-5',
     scientific_name: 'Undeceth-5',
@@ -20140,7 +20140,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'laureth-11',
     name: 'لوريث-11',
     scientific_name: 'Laureth-11',
@@ -20153,7 +20153,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-2-oleamine',
     name: 'PEG-2 أوليامين',
     scientific_name: 'PEG-2 Oleamine',
@@ -20166,7 +20166,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-9-dimethicone',
     name: 'PEG-9 دايميثيكون',
     scientific_name: 'PEG-9 Dimethicone',
@@ -20179,7 +20179,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-10-dimethicone',
     name: 'PEG-10 دايميثيكون',
     scientific_name: 'PEG-10 Dimethicone',
@@ -20192,7 +20192,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-oleate',
     name: 'أوليات البوتاسيوم',
     scientific_name: 'Potassium Oleate',
@@ -20205,7 +20205,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'potassium-stearate',
     name: 'ستيرات البوتاسيوم',
     scientific_name: 'Potassium Stearate',
@@ -20218,7 +20218,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sodium-cetyl-sulfate',
     name: 'كبريتات سيتيل الصوديوم',
     scientific_name: 'Sodium Cetyl Sulfate',
@@ -20231,7 +20231,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'magnesium-nitrate',
     name: 'نترات المغنيسيوم',
     scientific_name: 'Magnesium Nitrate',
@@ -20244,7 +20244,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'غالبا ما يوجد مع MCI/MIT كمثبت.' }],
   },
-  {
+{
     id: 'magnesium-chloride',
     name: 'كلوريد المغنيسيوم',
     scientific_name: 'Magnesium Chloride',
@@ -20257,7 +20257,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-4-diisostearate-polyhydroxystearate-sebacate',
     name: 'بولي جليسريل-4 ثنائي أيزوستيرات/بولي هيدروكسي ستيرات/سيباكات',
     scientific_name: 'Polyglyceryl-4 Diisostearate/Polyhydroxystearate/Sebacate',
@@ -20270,7 +20270,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'lauryl-peg-9-polydimethylsiloxyethyl-dimethicone',
     name: 'لوريل PEG-9 بولي داي ميثيل سيلوكسي إيثيل دايميثيكون',
     scientific_name: 'Lauryl PEG-9 Polydimethylsiloxyethyl Dimethicone',
@@ -20283,7 +20283,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'sorbitan-sesquiisostearate',
     name: 'سيسكوي أيزوستيرات السوربيتان',
     scientific_name: 'Sorbitan Sesquiisostearate',
@@ -20296,7 +20296,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'peg-ppg-19-19-dimethicone',
     name: 'PEG/PPG-19/19 دايميثيكون',
     scientific_name: 'PEG/PPG-19/19 Dimethicone',
@@ -20309,7 +20309,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'polyglyceryl-3-polydimethylsiloxyethyl-dimethicone',
     name: 'بولي جليسريل-3 بولي داي ميثيل سيلوكسي إيثيل دايميثيكون',
     scientific_name: 'Polyglyceryl-3 Polydimethylsiloxyethyl Dimethicone',
@@ -20322,7 +20322,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'hydrogenated-vegetable-glycerides',
     name: 'جليسريدات نباتية مهدرجة',
     scientific_name: 'Hydrogenated Vegetable Glycerides',
@@ -20335,7 +20335,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oryzanol',
     name: 'أوريزانول',
     scientific_name: 'Oryzanol',
@@ -20348,7 +20348,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'المكون النشط في زيت نخالة الأرز.' }],
   },
-  {
+{
     id: 'oleth-3',
     name: 'أوليث-3',
     scientific_name: 'Oleth-3',
@@ -20361,7 +20361,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'caution', text: 'قد يكون كوميدوجينيك.' }],
   },
-  {
+{
     id: 'oleth-5',
     name: 'أوليث-5',
     scientific_name: 'Oleth-5',
@@ -20374,7 +20374,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'oleth-15',
     name: 'أوليث-15',
     scientific_name: 'Oleth-15',
@@ -20387,7 +20387,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [],
   },
-  {
+{
     id: 'caprylic-capric-triglyceride',
     name: 'ثلاثي جليسريد الكابريليك/الكابريك',
     scientific_name: 'Caprylic/Capric Triglyceride',
@@ -20400,7 +20400,7 @@ export const combinedOilsDB = {
     negativeSynergy: {},
     warnings: [{ level: 'info', text: 'زيت خفيف جدا مشتق من جوز الهند، لا يسد المسام ويعطي ملمسا حريريا.' }],
   },
-  {
+{
         id: 'batana-oil',
         name: 'زيت الباتانا',
         scientific_name: 'Elaeis Oleifera Kernel Oil',
@@ -20413,7 +20413,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'زيت تقليدي من أمريكا الوسطى، معروف بخصائصه المرممة للشعر.' }],
       },
-  {
+{
         id: 'soybean-oil',
         name: 'زيت فول الصويا',
         scientific_name: 'Glycine Soja (Soybean) Oil',
@@ -20426,7 +20426,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الصويا.' }],
       },
-  {
+{
         id: 'onion-seed-oil',
         name: 'زيت بذور البصل',
         scientific_name: 'Allium Cepa Seed Oil',
@@ -20439,7 +20439,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'له رائحة بصل قوية قد تبقى في الشعر.' }],
       },
-  {
+{
         id: 'sweet-orange-flower-oil',
         name: 'زيت زهر البرتقال الحلو',
         scientific_name: 'Citrus Aurantium Dulcis (Orange) Flower Oil',
@@ -20452,7 +20452,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-thiosulfate',
         name: 'ثيوكبريتات الصوديوم',
         scientific_name: 'Sodium Thiosulfate',
@@ -20465,7 +20465,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'palm-kernelamide-dea',
         name: 'بالم كيرنل أميد DEA',
         scientific_name: 'Palm Kernelamide DEA',
@@ -20478,7 +20478,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'مثل Cocamide DEA، قد يكون هناك مخاوف بشأن تكوين النتروزامينات.' }],
       },
-  {
+{
         id: 'bergamot-essential-oil',
         name: 'زيت البرغموت العطري',
         scientific_name: 'Citrus Aurantium Bergamia (Bergamot) Fruit Oil',
@@ -20493,7 +20493,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'يسبب حساسية شديدة للضوء (Phototoxic) ما لم يكن "FCF" (خالٍ من الفورانوكومارين). يجب تجنب التعرض للشمس بعد استخدامه.' }
         ],
       },
-  {
+{
         id: 'jasmine-absolute',
         name: 'زيت الياسمين (مطلق)',
         scientific_name: 'Jasminum Officinale (Jasmine) Oil',
@@ -20506,7 +20506,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'patchouli-essential-oil',
         name: 'زيت الباتشولي العطري',
         scientific_name: 'Pogostemon Cablin Oil',
@@ -20519,7 +20519,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'camphor-essential-oil',
         name: 'زيت الكافور العطري',
         scientific_name: 'Cinnamomum Camphora (Camphor) Bark Oil',
@@ -20532,7 +20532,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'risk', text: 'قوي جدا وقد يكون ساما بتركيزات عالية. يستخدم بحذر شديد.' }],
       },
-  {
+{
         id: 'grapefruit-essential-oil',
         name: 'زيت الجريب فروت العطري',
         scientific_name: 'Citrus Paradisi (Grapefruit) Peel Oil',
@@ -20545,7 +20545,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب حساسية للضوء.' }],
       },
-  {
+{
         id: 'tomato-fruit-extract',
         name: 'مستخلص فاكهة الطماطم',
         scientific_name: 'Solanum Lycopersicum (Tomato) Fruit Extract',
@@ -20558,7 +20558,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carrot-root-extract',
         name: 'مستخلص جذور الجزر',
         scientific_name: 'Daucus Carota Sativa (Carrot) Root Extract',
@@ -20571,7 +20571,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'carrot-seed-oil',
         name: 'زيت بذور الجزر',
         scientific_name: 'Daucus Carota Sativa (Carrot) Seed Oil',
@@ -20584,7 +20584,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'oat-kernel-extract',
         name: 'مستخلص نواة الشوفان',
         scientific_name: 'Avena Sativa (Oat) Kernel Extract',
@@ -20597,7 +20597,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steareth-4',
         name: 'ستيريث-4',
         scientific_name: 'Steareth-4',
@@ -20610,7 +20610,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'decylene-glycol',
         name: 'ديسيلين جلايكول',
         scientific_name: 'Decylene Glycol',
@@ -20623,7 +20623,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'rosemary-leaf-water',
         name: 'ماء إكليل الجبل',
         scientific_name: 'Rosmarinus Officinalis (Rosemary) Leaf Water',
@@ -20636,7 +20636,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peppermint-leaf-water',
         name: 'ماء النعناع الفلفلي',
         scientific_name: 'Mentha Piperita (Peppermint) Leaf Water',
@@ -20649,7 +20649,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dioxybenzone',
         name: 'ديوكسي بنزون',
         scientific_name: 'Benzophenone-8',
@@ -20662,7 +20662,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'فلتر شمسي قديم، لم يعد شائع الاستخدام.' }],
       },
-  {
+{
         id: 'menthyl-anthranilate',
         name: 'أنثرانيلات المنثيل',
         scientific_name: 'Menthyl Anthranilate',
@@ -20675,7 +20675,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'فلتر UVA ضعيف، لم يعد شائع الاستخدام في العديد من المناطق.' }],
       },
-  {
+{
         id: 'sulisobenzone',
         name: 'سوليسوبنزون',
         scientific_name: 'Benzophenone-4',
@@ -20688,7 +20688,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'قابل للذوبان في الماء، يستخدم لحماية المنتج نفسه من التلف الضوئي وكمساعد فلتر شمسي.' }],
       },
-  {
+{
         id: 'trolamine-salicylate',
         name: 'ساليسيلات الترولامين',
         scientific_name: 'Trolamine Salicylate',
@@ -20701,7 +20701,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'فلتر UVB ضعيف، يستخدم بشكل أساسي في منتجات تخفيف آلام العضلات.' }],
       },
-  {
+{
         id: 'indigo-powder',
         name: 'مسحوق النيلة (إنديجو)',
         scientific_name: 'Indigofera Tinctoria Leaf Powder',
@@ -20714,7 +20714,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يستخدم تقليديا في المغرب لتفتيح البشرة وكصبغة طبيعية للشعر.' }],
       },
-  {
+{
         id: 'damask-rose-absolute',
         name: 'زيت الورد الدمشقي (مطلق)',
         scientific_name: 'Rosa Damascena Flower Extract',
@@ -20727,7 +20727,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'frankincense-water',
         name: 'ماء اللبان (هيدروسول)',
         scientific_name: 'Boswellia Carterii Water',
@@ -20740,7 +20740,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'myrrh-water',
         name: 'ماء المر (هيدروسول)',
         scientific_name: 'Commiphora Myrrha Water',
@@ -20753,7 +20753,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cornflower-water',
         name: 'ماء وردة الذرة (القنطريون)',
         scientific_name: 'Centaurea Cyanus Flower Water',
@@ -20766,7 +20766,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'chamomile-water',
         name: 'ماء البابونج (هيدروسول)',
         scientific_name: 'Chamomilla Recutita Flower Water',
@@ -20779,7 +20779,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'witch-hazel-extract',
         name: 'مستخلص بندق الساحرة',
         scientific_name: 'Hamamelis Virginiana (Witch Hazel) Extract',
@@ -20792,7 +20792,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'المستخلص الخالي من الكحول يحتوي على التانينات المفيدة.' }],
       },
-  {
+{
         id: 'konjac-root-powder',
         name: 'مسحوق جذور الكونجاك',
         scientific_name: 'Amorphophallus Konjac Root Powder',
@@ -20805,7 +20805,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'gellan-gum',
         name: 'صمغ الجيلان',
         scientific_name: 'Gellan Gum',
@@ -20818,7 +20818,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'rice-bran-wax',
         name: 'شمع نخالة الأرز',
         scientific_name: 'Oryza Sativa (Rice) Bran Wax',
@@ -20831,7 +20831,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'berry-wax',
         name: 'شمع التوت',
         scientific_name: 'Rhus Verniciflua Peel Cera',
@@ -20844,7 +20844,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'brassicyl-isoleucinate-esylate',
         name: 'براسيسيل أيزوليوسينات إيسيلات',
         scientific_name: 'Brassicyl Isoleucinate Esylate',
@@ -20857,7 +20857,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'brassica-alcohol',
         name: 'كحول البراسيكا',
         scientific_name: 'Brassica Alcohol',
@@ -20870,7 +20870,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pca-ethyl-cocoyl-arginate',
         name: 'PCA إيثيل كوكويل أرجينات',
         scientific_name: 'PCA Ethyl Cocoyl Arginate',
@@ -20883,7 +20883,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-shea-butterate',
         name: 'شيا باتريت الصوديوم',
         scientific_name: 'Sodium Shea Butterate',
@@ -20896,7 +20896,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'زبدة الشيا المتصبنة، مكون في الصابون الطبيعي.' }],
       },
-  {
+{
         id: 'sodium-olivate',
         name: 'أوليفات الصوديوم',
         scientific_name: 'Sodium Olivate',
@@ -20909,7 +20909,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'زيت الزيتون المتصبن، المكون الرئيسي في صابون قشتالة.' }],
       },
-  {
+{
         id: 'sodium-castorate',
         name: 'كاستورات الصوديوم',
         scientific_name: 'Sodium Castorate',
@@ -20922,7 +20922,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-sunflowerseedate',
         name: 'زيت بذور دوار الشمس المتصبن',
         scientific_name: 'Sodium Sunflowerseedate',
@@ -20935,7 +20935,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'potassium-hydroxide-saponified',
         name: 'هيدروكسيد البوتاسيوم (في الصابون السائل)',
         scientific_name: 'Potassium Hydroxide',
@@ -20948,7 +20948,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'لا يبقى هيدروكسيد البوتاسيوم الحر في المنتج النهائي بعد عملية التصبن.' }],
       },
-  {
+{
         id: 'hydrolyzed-gardenia-florida-extract',
         name: 'مستخلص الجاردينيا المهدرج',
         scientific_name: 'Hydrolyzed Gardenia Florida Extract',
@@ -20961,7 +20961,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'maltodextrin',
         name: 'مالتوديكسترين',
         scientific_name: 'Maltodextrin',
@@ -20974,7 +20974,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dextran',
         name: 'ديكستران',
         scientific_name: 'Dextran',
@@ -20987,7 +20987,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'trifolium-pratense-flower-extract',
         name: 'مستخلص زهرة البرسيم الأحمر',
         scientific_name: 'Trifolium Pratense (Clover) Flower Extract',
@@ -21000,7 +21000,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'أحد المكونات الرئيسية في مركب Capixyl®.' }],
       },
-  {
+{
         id: 'citrus-aurantium-flower-extract',
         name: 'مستخلص زهرة البرتقال المر',
         scientific_name: 'Citrus Aurantium Amara (Bitter Orange) Flower Extract',
@@ -21013,7 +21013,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'aloe-barbadensis-leaf-polysaccharides',
         name: 'سكريات أوراق الألوفيرا',
         scientific_name: 'Aloe Barbadensis Leaf Polysaccharides',
@@ -21026,7 +21026,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'leuconostoc-radish-root-ferment-filtrate',
         name: 'مرشح خميرة جذور الفجل',
         scientific_name: 'Leuconostoc/Radish Root Ferment Filtrate',
@@ -21039,7 +21039,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'aspen-bark-extract',
         name: 'مستخلص لحاء الحور',
         scientific_name: 'Populus Tremuloides Bark Extract',
@@ -21052,7 +21052,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'caprylyl-capryl-wheat-bran-straw-glycosides',
         name: 'جليكوسيدات قش/نخالة القمح كابريليل/كابريل',
         scientific_name: 'Caprylyl/Capryl Wheat Bran/Straw Glycosides',
@@ -21065,7 +21065,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fusel-wheat-bran-straw-glycosides',
         name: 'جليكوسيدات قش/نخالة القمح فيوزل',
         scientific_name: 'Fusel Wheat Bran/Straw Glycosides',
@@ -21078,7 +21078,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'polyglyceryl-5-oleate-1',
         name: 'بولي جليسريل-5 أوليات',
         scientific_name: 'Polyglyceryl-5 Oleate',
@@ -21091,7 +21091,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-olivoyl-glutamate',
         name: 'صوديوم أوليفويل جلوتامات',
         scientific_name: 'Sodium Olivoyl Glutamate',
@@ -21104,7 +21104,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glyceryl-caprate',
         name: 'كبرات الجليسريل',
         scientific_name: 'Glyceryl Caprate',
@@ -21117,7 +21117,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hectorite-clay',
         name: 'طين الهيكتوريت',
         scientific_name: 'Hectorite',
@@ -21130,7 +21130,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'olea-europaea-unsaponifiables',
         name: 'غير قابل للتصبن من زيت الزيتون',
         scientific_name: 'Olea Europaea (Olive) Oil Unsaponifiables',
@@ -21143,7 +21143,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glycine-soja-unsaponifiables',
         name: 'غير قابل للتصبن من زيت الصويا',
         scientific_name: 'Glycine Soja (Soybean) Oil Unsaponifiables',
@@ -21156,7 +21156,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'triticum-vulgare-germ-unsaponifiables',
         name: 'غير قابل للتصبن من زيت جنين القمح',
         scientific_name: 'Triticum Vulgare (Wheat) Germ Oil Unsaponifiables',
@@ -21169,7 +21169,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pollulan-serine-algin-trehalose-urea-complex',
         name: 'مركب (بولولان، سيرين، ألجين، تريهالوز، يوريا)',
         scientific_name: 'Pullulan, Serine, Algin, Trehalose, Urea',
@@ -21182,7 +21182,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مركب ترطيب متقدم يشكل شبكة جزيئية تطلق المرطبات ببطء مع مرور الوقت.' }],
       },
-  {
+{
         id: 'hydrolyzed-caesalpinia-spinosa-gum',
         name: 'صمغ تارا المهدرج',
         scientific_name: 'Hydrolyzed Caesalpinia Spinosa Gum',
@@ -21195,7 +21195,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glyceryl-polyacrylate',
         name: 'بولي أكريلات الجليسريل',
         scientific_name: 'Glyceryl Polyacrylate',
@@ -21208,7 +21208,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'cichorium-intybus-root-oligosaccharides',
         name: 'أوليجوسكاريدات جذور الهندباء',
         scientific_name: 'Cichorium Intybus (Chicory) Root Oligosaccharides',
@@ -21221,7 +21221,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pyrus-communis-fruit-extract',
         name: 'مستخلص فاكهة الكمثرى',
         scientific_name: 'Pyrus Communis (Pear) Fruit Extract',
@@ -21234,7 +21234,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'prunus-persica-fruit-extract',
         name: 'مستخلص فاكهة الخوخ',
         scientific_name: 'Prunus Persica (Peach) Fruit Extract',
@@ -21247,7 +21247,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'vanilla-planifolia-fruit-extract',
         name: 'مستخلص فاكهة الفانيليا',
         scientific_name: 'Vanilla Planifolia Fruit Extract',
@@ -21260,7 +21260,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'zingiber-officinale-root-extract',
         name: 'مستخلص جذور الزنجبيل',
         scientific_name: 'Zingiber Officinale (Ginger) Root Extract',
@@ -21273,7 +21273,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'citrus-grandis-peel-extract',
         name: 'مستخلص قشر البوميلو',
         scientific_name: 'Citrus Grandis (Grapefruit) Peel Extract',
@@ -21286,7 +21286,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ribose',
         name: 'ريبوز',
         scientific_name: 'Ribose',
@@ -21299,7 +21299,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-dna-1',
         name: 'صوديوم DNA',
         scientific_name: 'Sodium DNA',
@@ -21312,7 +21312,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'disodium-acetyl-glucosamine-phosphate',
         name: 'فوسفات أسيتيل الجلوكوزامين ثنائي الصوديوم',
         scientific_name: 'Disodium Acetyl Glucosamine Phosphate',
@@ -21325,7 +21325,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'algae-oligosaccharides',
         name: 'أوليجوسكاريدات الطحالب',
         scientific_name: 'Algae Oligosaccharides',
@@ -21338,7 +21338,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'fucus-serratus-extract',
         name: 'مستخلص الفوقس المسنن',
         scientific_name: 'Fucus Serratus Extract',
@@ -21351,7 +21351,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ascophyllum-nodosum-extract',
         name: 'مستخلص أسكوفيلوم نودوسوم',
         scientific_name: 'Ascophyllum Nodosum Extract',
@@ -21364,7 +21364,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'pelvetia-canaliculata-extract',
         name: 'مستخلص بيلفيتيا كاناليكولاتا',
         scientific_name: 'Pelvetia Canaliculata Extract',
@@ -21377,7 +21377,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'laminaria-hyperborea-extract',
         name: 'مستخلص لاميناريا هايبربوريا',
         scientific_name: 'Laminaria Hyperborea Extract',
@@ -21390,7 +21390,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-corallina-officinalis-extract',
         name: 'مستخلص الطحالب المرجانية المهدرج',
         scientific_name: 'Hydrolyzed Corallina Officinalis Extract',
@@ -21403,7 +21403,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'palmaria-palmata-extract',
         name: 'مستخلص بالميارا بالماتا',
         scientific_name: 'Palmaria Palmata Extract',
@@ -21416,7 +21416,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ulva-lactuca-extract',
         name: 'مستخلص خس البحر',
         scientific_name: 'Ulva Lactuca Extract',
@@ -21429,7 +21429,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'enteromorpha-compressa-extract',
         name: 'مستخلص إنتيرومورفا كومبريسا',
         scientific_name: 'Enteromorpha Compressa Extract',
@@ -21442,7 +21442,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'himanthalia-elongata-extract',
         name: 'مستخلص هيمانثاليا إيلونجاتا',
         scientific_name: 'Himanthalia Elongata Extract',
@@ -21455,7 +21455,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'padina-pavonica-thallus-extract',
         name: 'مستخلص بادينا بافونيكا',
         scientific_name: 'Padina Pavonica Thallus Extract',
@@ -21468,7 +21468,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sargassum-muticum-extract',
         name: 'مستخلص سرجسوم',
         scientific_name: 'Sargassum Muticum Extract',
@@ -21481,7 +21481,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'porphyra-umbilicalis-extract',
         name: 'مستخلص بورفيرا أومبيليكاليس',
         scientific_name: 'Porphyra Umbilicalis Extract',
@@ -21494,7 +21494,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'plankton-extract',
         name: 'مستخلص البلانكتون',
         scientific_name: 'Plankton Extract',
@@ -21507,7 +21507,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'marine-collagen',
         name: 'الكولاجين البحري',
         scientific_name: 'Soluble Collagen',
@@ -21520,7 +21520,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-actin',
         name: 'الأكتين المهدرج',
         scientific_name: 'Hydrolyzed Actin',
@@ -21533,7 +21533,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'hydrolyzed-fibronectin',
         name: 'الفيبرونكتين المهدرج',
         scientific_name: 'Hydrolyzed Fibronectin',
@@ -21546,7 +21546,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'laurdimonium-hydroxypropyl-hydrolyzed-keratin',
         name: 'كيراتين مهدرج لورديمونيوم هيدروكسي بروبيل',
         scientific_name: 'Laurdimonium Hydroxypropyl Hydrolyzed Keratin',
@@ -21559,7 +21559,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-35-castor-oil',
         name: 'زيت الخروع PEG-35',
         scientific_name: 'PEG-35 Castor Oil',
@@ -21572,7 +21572,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-5-cocamide',
         name: 'كوكاميد PEG-5',
         scientific_name: 'PEG-5 Cocamide',
@@ -21585,7 +21585,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'peg-60-almond-glycerides',
         name: 'جليسريدات اللوز PEG-60',
         scientific_name: 'PEG-60 Almond Glycerides',
@@ -21598,7 +21598,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ceteth-10',
         name: 'سيتيث-10',
         scientific_name: 'Ceteth-10',
@@ -21611,7 +21611,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'steareth-30',
         name: 'ستيريث-30',
         scientific_name: 'Steareth-30',
@@ -21624,7 +21624,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glycol',
         name: 'جلايكول',
         scientific_name: 'Glycol',
@@ -21637,7 +21637,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'dipotassium-glycyrrhizate',
         name: 'ثنائي بوتاسيوم غليسيريزات',
         scientific_name: 'Dipotassium Glycyrrhizate',
@@ -21650,7 +21650,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مكون نشط رئيسي آخر من جذر عرق السوس، معروف بخصائصه المهدئة القوية.' }],
       },
-  {
+{
         id: 'hydrolyzed-hyaluronic-acid-sodium-salt',
         name: 'ملح الصوديوم لحمض الهيالورونيك المهدرج',
         scientific_name: 'Hydrolyzed Sodium Hyaluronate',
@@ -21663,7 +21663,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'sodium-polyglutamate-crosspolymer',
         name: 'بولي جلوتامات الصوديوم كروسبوليمر',
         scientific_name: 'Sodium Polyglutamate Crosspolymer',
@@ -21676,7 +21676,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ethyl-linolenate',
         name: 'لينولينات الإيثيل',
         scientific_name: 'Ethyl Linolenate',
@@ -21689,7 +21689,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ethyl-oleate-1',
         name: 'أوليات الإيثيل',
         scientific_name: 'Ethyl Oleate',
@@ -21702,7 +21702,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glyceryl-linoleate',
         name: 'لينوليات الجليسريل',
         scientific_name: 'Glyceryl Linoleate',
@@ -21715,7 +21715,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'glyceryl-linolenate',
         name: 'لينولينات الجليسريل',
         scientific_name: 'Glyceryl Linolenate',
@@ -21728,7 +21728,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharomyces-silicon-ferment',
         name: 'خميرة سيليكون السكاروميسيس',
         scientific_name: 'Saccharomyces/Silicon Ferment',
@@ -21741,7 +21741,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharomyces-magnesium-ferment',
         name: 'خميرة مغنيسيوم السكاروميسيس',
         scientific_name: 'Saccharomyces/Magnesium Ferment',
@@ -21754,7 +21754,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharomyces-copper-ferment',
         name: 'خميرة نحاس السكاروميسيس',
         scientific_name: 'Saccharomyces/Copper Ferment',
@@ -21767,7 +21767,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharomyces-iron-ferment',
         name: 'خميرة حديد السكاروميسيس',
         scientific_name: 'Saccharomyces/Iron Ferment',
@@ -21780,7 +21780,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'saccharomyces-zinc-ferment',
         name: 'خميرة زنك السكاروميسيس',
         scientific_name: 'Saccharomyces/Zinc Ferment',
@@ -21793,7 +21793,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'banana-fruit-juice',
         name: 'عصير فاكهة الموز',
         scientific_name: 'Musa Paradisiaca (Banana) Fruit Juice',
@@ -21806,7 +21806,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'butylphenyl-methylpropional',
         name: 'بوتيل فينيل ميثيل بروبيونال (ليليال)',
         scientific_name: 'Butylphenyl Methylpropional',
@@ -21822,7 +21822,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'مسبب شائع للحساسية.' }
         ],
       },
-  {
+{
         id: 'vegetable-collagen',
         name: 'كولاجين نباتي',
         scientific_name: 'Hydrolyzed Soy Protein, Rice Amino Acids, Hydrolyzed Adansonia Digitata Seed Extract, etc.',
@@ -21835,7 +21835,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'مزيج من البروتينات والسكريات النباتية التي تحاكي وظيفة الكولاجين الحيواني في الترطيب.' }],
       },
-  {
+{
         id: 'rose-essential-oil',
         name: 'زيت الورد العطري (الدمشقي)',
         scientific_name: 'Rosa Damascena Flower Oil',
@@ -21848,7 +21848,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'يتم استخراجه بالتقطير بالبخار وهو مختلف عن "مستخلص الورد المطلق".' }],
       },
-  {
+{
         id: 'sodium-hydrolyzed-potato-starch-dodecenylsuccinate',
         name: 'دوديسينيل سكسينات نشا البطاطس المهدرج',
         scientific_name: 'Sodium Hydrolyzed Potato Starch Dodecenylsuccinate',
@@ -21861,7 +21861,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'potassium-acrylates-copolymer',
         name: 'كوبوليمر أكريلات البوتاسيوم',
         scientific_name: 'Potassium Acrylates Copolymer',
@@ -21874,7 +21874,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'disodium-tetrapropenyl-succinate',
         name: 'ثنائي الصوديوم تترابروبينيل سكسينات',
         scientific_name: 'Disodium Tetrapropenyl Succinate',
@@ -21887,7 +21887,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ci-15985-yellow-6',
         name: 'CI 15985 / أصفر 6',
         scientific_name: 'CI 15985',
@@ -21900,7 +21900,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'capryloyl-caproyl-methyl-glucamide',
         name: 'كابريلويل/كابرويل ميثيل جلوكاميد',
         scientific_name: 'Capryloyl/Caproyl Methyl Glucamide',
@@ -21913,7 +21913,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'منظف حديث مشتق من السكر، فعال ولطيف.' }],
       },
-  {
+{
         id: 'lauroyl-myristoyl-methyl-glucamide',
         name: 'لورويل/ميريستويل ميثيل جلوكاميد',
         scientific_name: 'Lauroyl/Myristoyl Methyl Glucamide',
@@ -21926,7 +21926,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'arbutin',
         name: 'أربوتين',
         scientific_name: 'Arbutin',
@@ -21939,7 +21939,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'الشكل الطبيعي (بيتا-أربوتين) أقل استقرارا وفعالية من ألفا-أربوتين.' }],
       },
-  {
+{
         id: 'phenethyl-alcohol',
         name: 'كحول فينيثيل',
         scientific_name: 'Phenethyl Alcohol',
@@ -21952,7 +21952,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'mandarin-essential-oil',
         name: 'زيت المندرين العطري',
         scientific_name: 'Citrus Nobilis (Mandarin Orange) Peel Oil',
@@ -21965,7 +21965,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'caution', text: 'قد يسبب حساسية للضوء.' }],
       },
-  {
+{
         id: 'kumkumadi-oil',
         name: 'زيت كومكومادي',
         scientific_name: 'Kumkumadi Tailam',
@@ -21978,7 +21978,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'زيت عشبي أيورفيدي تقليدي يتكون من مزيج من الزعفران، خشب الصندل، وعرق السوس والعديد من الأعشاب الأخرى.' }],
       },
-  {
+{
         id: 'yeast-extract',
         name: 'مستخلص الخميرة',
         scientific_name: 'Yeast Extract / Faex Extract',
@@ -21991,7 +21991,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'lactobacillus',
         name: 'لاكتوباسيلس (بروبيوتيك)',
         scientific_name: 'Lactobacillus',
@@ -22004,7 +22004,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'rose-hydrosol',
         name: 'ماء الورد المقطر (هيدروسول)',
         scientific_name: 'Rosa Damascena Flower Water',
@@ -22017,7 +22017,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [{ level: 'info', text: 'الناتج المائي العطري لعملية تقطير زيت الورد بالبخار.' }],
       },
-  {
+{
         id: 'bearberry-extract',
         name: 'مستخلص عنب الدب',
         scientific_name: 'Arctostaphylos Uva-Ursi Leaf Extract',
@@ -22030,7 +22030,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: 'ci-15985',
         name: 'CI 15985',
         scientific_name: 'CI 15985 / Yellow 6',
@@ -22043,7 +22043,7 @@ export const combinedOilsDB = {
         negativeSynergy: {},
         warnings: [],
       },
-  {
+{
         id: "yemen-honey-mask",
         name: "ماسك العسل اليمني للوجه",
         searchKeywords: ["yemeni honey mask", "sidr honey mask", "honey face mask", "ماسك العسل اليمني", "ماسك عسل السدر"],
@@ -22058,7 +22058,7 @@ export const combinedOilsDB = {
           { level: 'info', text: "يستخدم العسل اليمني، وخصوصا عسل السدر، لخصائصه العلاجية والمضادة للبكتيريا القوية." }
         ]
       },
-  {
+{
         id: "ghassoul-clay-mask",
         name: "ماسك الغاسول المغربي",
         searchKeywords: ["ghassoul clay mask", "rhassoul clay", "moroccan clay mask", "ماسك الغاسول", "ماسك الطين المغربي"],
@@ -22073,7 +22073,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "قد يكون مجففا للبشرة الجافة إذا ترك ليجف تماما. ينصح بشطفه وهو لا يزال رطبا." }
         ]
       },
-  {
+{
         id: "egyptian-yogurt-mask",
         name: "ماسك الزبادي المصري (ماسك كليوباترا)",
         scientific_name: "Yogurt & Mel",
@@ -22090,7 +22090,7 @@ export const combinedOilsDB = {
           { level: 'info', text: "يعرف بـ 'ماسك كليوباترا'، حيث يقال إنها كانت تستخدم الزبادي (أو الحليب الحامض) للحفاظ على نضارة بشرتها." }
         ]
       },
-  {
+{
         id: "saudi-sidr-hair-mask",
         name: "ماسك السدر السعودي للشعر",
         scientific_name: "Ziziphus Spina-Christi & Yogurt",
@@ -22108,7 +22108,7 @@ export const combinedOilsDB = {
           { level: "info", text: "قد يسبب جفافا طفيفا للشعر، لذا يفضل إضافة مكونات مرطبة للخلطة مثل الزبادي أو الزيوت." }
         ]
       },
-  {
+{
         id: "gulf-hammam-zeit",
         name: "حمام الزيت الخليجي",
         scientific_name: "مزيج من الزيوت النباتية",
@@ -22125,7 +22125,7 @@ export const combinedOilsDB = {
           { level: 'info', text: "علاج تقليدي يعتمد على تدفئة مزيج من الزيوت وتدليكها في فروة الرأس والشعر لترطيبه بعمق." }
         ]
       },
-  {
+{
         id: "maghrebi-henna-mask",
         name: "ماسك الحناء المغربي للشعر",
         scientific_name: "Lawsonia Inermis & additives",
@@ -22142,7 +22142,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "قد يضفي لونا نحاسيا على الشعر. لا ينصح باستخدامه على الشعر المصبوغ كيميائيا." }
         ]
       },
-  {
+{
         id: "algerian-ghassoul-rose-mask",
         name: "ماسك الغاسول وماء الورد الجزائري",
         scientific_name: "Moroccan Lava Clay & Rosa Damascena Water",
@@ -22159,7 +22159,7 @@ export const combinedOilsDB = {
           { level: 'info', text: "الغاسول، المستخرج من جبال الأطلس، هو جزء أساسي من طقوس الحمام في الجزائر لتنقية البشرة." }
         ]
       },
-  {
+{
         id: "algerian-coffee-honey-mask",
         name: "ماسك القهوة والعسل الجزائري",
         scientific_name: "Coffea Arabica & Mel",
@@ -22177,7 +22177,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "الفرك القوي قد يكون قاسيا على البشرة الحساسة." }
         ]
       },
-  {
+{
         id: "algerian-lentisk-oil-mask",
         name: "ماسك زيت الضرو للشعر",
         scientific_name: "Pistacia Lentiscus & Olea Europaea Oil",
@@ -22194,7 +22194,7 @@ export const combinedOilsDB = {
           { level: 'info', text: "زيت الضرو (المستكة) هو زيت ثمين في الجزائر، ويستخدم تقليديا لخصائصه العلاجية القوية للحروق، الأكزيما، ومشاكل فروة الرأس." }
         ]
       },
-  {
+{
         id: "mena-turmeric-yogurt-mask",
         name: "ماسك الكركم والزبادي",
         scientific_name: "Curcuma Longa & Yogurt",
@@ -22211,7 +22211,7 @@ export const combinedOilsDB = {
           { level: "info", text: "قد يترك الكركم لونا أصفر مؤقتا على البشرة، خاصة الفاتحة منها. يمكن إزالته باستخدام زيت منظف." }
         ]
       },
-  {
+{
         id: "mena-olive-oil-lemon-hair-mask",
         name: "ماسك زيت الزيتون والليمون للشعر",
         scientific_name: "Olea Europaea Oil & Citrus Limon Juice",
@@ -22228,7 +22228,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "قد يسبب الليمون جفافا للشعر إذا استخدم بكميات كبيرة أو بشكل متكرر. قد يفتح لون الشعر قليلا مع التعرض للشمس." }
         ]
       },
-  {
+{
         id: "mena-egg-olive-oil-hair-mask",
         name: "ماسك البيض وزيت الزيتون للشعر",
         scientific_name: "Egg & Olea Europaea Oil",
@@ -22245,7 +22245,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "يجب شطف الماسك بالماء البارد أو الفاتر لتجنب 'طبخ' البيض في الشعر." }
         ]
       },
-  {
+{
         id: "mena-starch-rosewater-mask",
         name: "ماسك النشا وماء الورد",
         scientific_name: "Corn Starch & Rosa Damascena Water",
@@ -22262,7 +22262,7 @@ export const combinedOilsDB = {
           { level: "info", text: "ماسك بسيط جدا يستخدم لتهدئة البشرة المتهيجة وتقليل الاحمرار بشكل فوري." }
         ]
       },
-  {
+{
         id: "mena-cucumber-yogurt-mask",
         name: "ماسك الخيار والزبادي",
         scientific_name: "Cucumis Sativus & Yogurt",
@@ -22279,7 +22279,7 @@ export const combinedOilsDB = {
           { level: "info", text: "ماسك منعش ومثالي لتهدئة البشرة بعد التعرض للشمس أو لتخفيف مظهر العيون المتعبة." }
         ]
       },
-  {
+{
         id: "mena-tomato-honey-mask",
         name: "ماسك الطماطم والعسل",
         scientific_name: "Solanum Lycopersicum & Mel",
@@ -22296,7 +22296,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "حموضة الطماطم قد تسبب وخزا خفيفا أو تهيجا للبشرة شديدة الحساسية." }
         ]
       },
-  {
+{
         id: "mena-avocado-olive-oil-mask",
         name: "ماسك الأفوكادو وزيت الزيتون للشعر",
         scientific_name: "Persea Gratissima & Olea Europaea Oil",
@@ -22313,7 +22313,7 @@ export const combinedOilsDB = {
           { level: "info", text: "علاج غني ومغذي مثالي للشعر الجاف، المتقصف، أو التالف كيميائيا." }
         ]
       },
-  {
+{
         id: "mena-potato-lemon-mask",
         name: "ماسك البطاطس والليمون",
         scientific_name: "Solanum Tuberosum & Citrus Limon Juice",
@@ -22331,7 +22331,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "استخدم الليمون بحذر شديد وبكميات قليلة جدا لأنه قد يكون مهيجا ويزيد من حساسية البشرة للضوء." }
         ]
       },
-  {
+{
         id: "mena-black-seed-honey-mask",
         name: "ماسك حبة البركة والعسل",
         scientific_name: "Nigella Sativa & Mel",
@@ -22348,7 +22348,7 @@ export const combinedOilsDB = {
           { level: "info", text: "حبة البركة (الحبة السوداء) لها مكانة مرموقة في الطب التقليدي في المنطقة لخصائصها العلاجية القوية." }
         ]
       },
-  {
+{
         id: "mena-fenugreek-yogurt-mask",
         name: "ماسك الحلبة والزبادي",
         scientific_name: "Trigonella Foenum-Graecum & Yogurt",
@@ -22365,7 +22365,7 @@ export const combinedOilsDB = {
           { level: "info", text: "للحلبة رائحة قوية ونفاذة قد لا تكون مقبولة للجميع." }
         ]
       },
-  {
+{
         id: "mena-lupine-rosewater-mask",
         name: "ماسك الترمس وماء الورد",
         scientific_name: "Lupinus Albus & Rosa Damascena Water",
@@ -22383,7 +22383,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الترمس أو البقوليات." }
         ]
       },
-  {
+{
         id: "mena-garlic-olive-oil-mask",
         name: "ماسك الثوم وزيت الزيتون للشعر",
         scientific_name: "Allium Sativum & Olea Europaea Oil",
@@ -22401,7 +22401,7 @@ export const combinedOilsDB = {
           { level: "caution", text: "قد يسبب تهيجا للفروة الحساسة. يجب إجراء اختبار حساسية أولا." }
         ]
       },
-  {
+{
         id: "gulf-arugula-hair-mask",
         name: "ماسك الجرجير للشعر",
         scientific_name: "Eruca Sativa",
@@ -22418,7 +22418,7 @@ export const combinedOilsDB = {
           { level: "info", text: "يستخدم الجرجير الطازج المهروس أو زيته بكثرة في منطقة الخليج كوصفة شعبية لتعزيز كثافة الشعر ونموه." }
         ]
       },
-  {
+{
         id: 'yogurt',
         name: 'الزبادي',
         scientific_name: 'Yogurt',
@@ -22433,7 +22433,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'غني بحمض اللاكتيك الذي يقشر البشرة بلطف ويرطبها.' }
         ],
       },
-  {
+{
         id: 'egg-yolk',
         name: 'صفار البيض',
         scientific_name: 'Egg Yolk',
@@ -22448,7 +22448,7 @@ export const combinedOilsDB = {
           { level: 'caution', text: 'عند استخدامه للشعر، يجب شطفه بالماء البارد أو الفاتر لتجنب "طبخه".' }
         ]
       },
-  {
+{
         id: 'potato-juice',
         name: 'عصير البطاطس',
         scientific_name: 'Solanum Tuberosum Juice',
@@ -22463,7 +22463,7 @@ export const combinedOilsDB = {
           { level: 'info', text: 'يستخدم تقليديا للمساعدة في تفتيح التصبغات والهالات السوداء بفضل احتوائه على إنزيم الكاتيكولاز.' }
         ]
       },
-  {
+{
         id: 'clove-essential-oil',
         name: 'زيت القرنفل العطري',
         scientific_name: 'Eugenia Caryophyllus Bud Oil',
@@ -22479,7 +22479,7 @@ export const combinedOilsDB = {
           { level: 'risk', text: 'لا ينصح باستخدامه أثناء الحمل.' }
         ]
       },
-  {
+{
         id: "hydrolyzed-keratin",
         name: "كيراتين مهدرج",
         scientific_name: "Hydrolyzed Keratin",
@@ -22495,7 +22495,7 @@ export const combinedOilsDB = {
             { level: 'caution', text: "الاستخدام المفرط لمنتجات البروتين قد يؤدي إلى تصلب الشعر وجعله أكثر عرضة للتكسر." }
         ]
     },
-  {
+{
         id: "keratin",
         name: "كيراتين",
         scientific_name: "Keratin",
@@ -22510,7 +22510,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "بروتين ليفي يشكل البنية الأساسية للشعر. في مستحضرات التجميل، يعمل على تكوين طبقة واقية على سطح الشعرة لتنعيمها وحمايتها." }
         ]
     },
-  {
+{
         id: "hydrolyzed-pearl",
         name: "بروتين اللؤلؤ المهدرج",
         scientific_name: "Hydrolyzed Pearl",
@@ -22525,7 +22525,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "مشتق من اللؤلؤ الطبيعي، غني بالأحماض الأمينية والمعادن التي تغذي الشعر والبشرة، تعزز اللمعان وتحفز تكوين الكيراتين." }
         ]
     },
-  {
+{
         id: "laminaria-saccharina-extract",
         name: "مستخلص لاميناريا ساكارينا",
         scientific_name: "Laminaria Saccharina Extract",
@@ -22540,7 +22540,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "نوع من الطحالب البنية (عشب البحر) يساعد على التحكم في إفراز الدهون، وهو مثالي لفروة الرأس الدهنية، كما يوفر الترطيب والحماية." }
         ]
     },
-  {
+{
         id: "amodimethicone-morpholinomethyl-silsesquioxane-copolymer",
         name: "أمodimethicone/Morpholinomethyl Silsesquioxane Copolymer",
         scientific_name: "Amodimethicone/Morpholinomethyl Silsesquioxane Copolymer",
@@ -22555,7 +22555,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "سيليكون أميني متقدم يوفر تكييفا مستهدفا للمناطق الأكثر تلفا في الشعر دون أن يسبب تراكمات ثقيلة." }
         ]
     },
-  {
+{
         id: "lysine-hcl",
         name: "ليسين هيدروكلورايد",
         scientific_name: "Lysine HCl",
@@ -22570,7 +22570,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "ملح الحمض الأميني \"ليسين\"، يعمل كعامل تكييف للشعر والبشرة ويساهم في تقوية بنية البروتينات مثل الكيراتين." }
         ]
     },
-  {
+{
         id: "guar-gum",
         name: "صمغ الغوار",
         scientific_name: "Cyamopsis Tetragonoloba (Guar) Gum",
@@ -22585,7 +22585,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "مكثف طبيعي مشتق من حبوب الغوار، يستخدم لزيادة لزوجة الشامبو والبلسم." }
         ]
     },
-  {
+{
         id: "ci-14720",
         name: "CI 14720",
         scientific_name: "CI 14720",
@@ -22601,7 +22601,7 @@ export const combinedOilsDB = {
             { level: 'risk', text: "غير معتمد للاستخدام في مستحضرات التجميل في الولايات المتحدة." }
         ]
     },
-  {
+{
         id: "ci-28440",
         name: "CI 28440",
         scientific_name: "CI 28440",
@@ -22616,7 +22616,7 @@ export const combinedOilsDB = {
             { level: 'risk', text: "ملون أسود صناعي، استخدامه مقيد في بعض البلدان وغير مسموح به في الولايات المتحدة وكندا." }
         ]
     },
-  {
+{
         id: "trideceth-7",
         name: "ترايديسيث-7",
         scientific_name: "Trideceth-7",
@@ -22631,7 +22631,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "مكون متعدد الوظائف يعمل كمستحلب لخلط الزيت والماء، وكعامل منظف ثانوي." }
         ]
     },
-  {
+{
         id: "hydrolyzed-wheat-protein",
         name: "بروتين القمح المهدرج",
         scientific_name: "Hydrolyzed Wheat Protein",
@@ -22647,7 +22647,7 @@ export const combinedOilsDB = {
             { level: 'risk', text: "يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية القمح أو الغلوتين." }
         ]
     },
-  {
+{
         id: "distearyl-ether",
         name: "داي ستيريل إيثر",
         scientific_name: "Distearyl Ether",
@@ -22662,7 +22662,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "مطري يعمل على تنعيم الشعر والبشرة ويترك ملمسا خفيفا." }
         ]
     },
-  {
+{
         id: "peg-4-distearyl-ether",
         name: "داي ستيريل إيثر PEG-4",
         scientific_name: "PEG-4 Distearyl Ether",
@@ -22677,7 +22677,7 @@ export const combinedOilsDB = {
             { level: 'info', text: "يعمل كعامل تكييف ومطري للشعر والبشرة." }
         ]
     },
-  {
+{
         id: "acrylamide-sodium-acryloyldimethyltaurate-copolymer",
         name: "أكريلاميد/صوديوم أكريلويل دايميثيل توريت كوبوليمر",
         scientific_name: "Acrylamide/Sodium Acryloyldimethyltaurate Copolymer",
@@ -22693,7 +22693,7 @@ export const combinedOilsDB = {
             { level: 'caution', text: "هناك مخاوف تنظيمية بشأن احتمال وجود بقايا من مونومر الأكريلاميد، وهي مادة سامة. ومع ذلك، فإن مستوياتها في المنتجات النهائية تخضع لرقابة صارمة لتكون آمنة." }
         ]
     },
-  {
+{
           id: "c12-15-pareth-2",
           name: "C12-15 باريث-2",
           scientific_name: "C12-15 Pareth-2",
@@ -22706,7 +22706,7 @@ export const combinedOilsDB = {
           negativeSynergy: {},
           warnings: []
     },
-  {
+{
           id: "4-aminobutanoic-acid",
           name: "حمض 4-أمينوبيوتانويك (GABA)",
           scientific_name: "4-Aminobutanoic Acid",
@@ -22721,7 +22721,7 @@ export const combinedOilsDB = {
             {"level": "info", "text": "يعرف أيضا باسم GABA، وهو ناقل عصبي. عند تطبيقه موضعيا، يعتقد أنه يساعد على استرخاء العضلات الدقيقة في الجلد وتقوية حاجز البشرة."}
           ]
     },
-  {
+{
           id: "hydrolyzed-pea",
           name: "بازلاء مهدرجة",
           scientific_name: "Hydrolyzed Pea",
@@ -22734,7 +22734,7 @@ export const combinedOilsDB = {
           negativeSynergy: {},
           warnings: []
     },
-  {
+{
       id: 'bht',
       name: 'بيوتيل هيدروكسي تولوين (BHT)',
       scientific_name: 'Butylated Hydroxytoluene',
@@ -22751,7 +22751,7 @@ export const combinedOilsDB = {
         { level: 'risk', text: 'استخدامه مقيد بتركيزات منخفضة في العديد من البلدان. تعتبره الهيئات التنظيمية آمناً بالتركيزات المستخدمة في مستحضرات التجميل.]' }
       ],
     },
-  {
+{
       id: 'vitamin-b-complex',
       name: 'مركب فيتامين ب',
       scientific_name: 'Vitamin B Complex (e.g., Niacinamide, Panthenol, Biotin)',
@@ -22771,7 +22771,7 @@ export const combinedOilsDB = {
         { level: 'info', text: 'مصطلح عام يشير إلى مزيج من عدة فيتامينات B. تختلف مكوناته الدقيقة وفوائده باختلاف المنتج.' }
       ],
     },
-  {
+{
       id: 'ci-77891',
       name: 'CI 77891 (ثاني أكسيد التيتانيوم)',
       scientific_name: 'CI 77891 / Titanium Dioxide',
@@ -22786,7 +22786,7 @@ export const combinedOilsDB = {
         { level: 'info', text: 'عندما يدرج كـ CI 77891، فإنه يستخدم كملون. عندما يدرج كـ Titanium Dioxide، يستخدم عادة كفلتر شمسي.' }
       ],
     },
-  {
+{
       id: 'ci-42053',
       name: 'CI 42053',
       scientific_name: 'CI 42053 / Green 3',
@@ -22799,7 +22799,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-47005',
       name: 'CI 47005',
       scientific_name: 'CI 47005 / Yellow 10',
@@ -22812,7 +22812,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'polyglyceryl-6-behenate',
       name: 'بولي جليسريل-6 بيهينات',
       scientific_name: 'Polyglyceryl-6 Behenate',
@@ -22825,7 +22825,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [],
     },
-  {
+{
       id: 'ci-19140',
       name: 'CI 19140',
       scientific_name: 'CI 19140 / Yellow 5',
@@ -22838,7 +22838,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'caution', text: 'ارتبط بحساسية نادرة لدى بعض الأشخاص، خاصة الذين يعانون من حساسية الأسبرين.' }],
     },
-  {
+{
       id: 'ci-15510',
       name: 'CI 15510',
       scientific_name: 'CI 15510 / Orange 4',
@@ -22851,7 +22851,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: [{ level: 'info', text: 'قد يسبب حساسية لدى بعض الأفراد.' }],
     },
-  {
+{
       id: 'polysorbate-85',
       name: 'بوليسوربات 85',
       scientific_name: 'Polysorbate 85',
@@ -22864,7 +22864,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: []
     },
-  {
+{
       id: 'peg-75-lanolin',
       name: 'لانولين PEG-75',
       scientific_name: 'PEG-75 Lanolin',
@@ -22880,7 +22880,7 @@ export const combinedOilsDB = {
         { level: 'risk', text: 'يجب تجنبه من قبل الأشخاص الذين يعانون من حساسية الصوف.' }
       ]
     },
-  {
+{
       id: 'triticum-vulgare-gluten',
       name: 'جلوتين القمح',
       scientific_name: 'Triticum Vulgare (Wheat) Gluten',
@@ -22895,7 +22895,7 @@ export const combinedOilsDB = {
         { level: 'risk', text: 'يجب تجنبه تمامًا من قبل الأشخاص الذين يعانون من حساسية الغلوتين أو مرض الاضطرابات الهضمية.' }
       ]
     },
-  {
+{
       id: 'peg-12-oleate',
       name: 'أوليات PEG-12',
       scientific_name: 'PEG-12 Oleate',
@@ -22908,7 +22908,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: []
     },
-  {
+{
       id: 'peg-75-stearate',
       name: 'ستيرات PEG-75',
       scientific_name: 'PEG-75 Stearate',
@@ -22921,7 +22921,7 @@ export const combinedOilsDB = {
       negativeSynergy: {},
       warnings: []
     },
-    {
+{
       id: 'silicone-general',
       name: 'السيليكون (فئة عامة)',
       scientific_name: 'silicones',
@@ -22938,20 +22938,135 @@ export const combinedOilsDB = {
         { level: 'info', text: 'السيليكونات المتطايرة (مثل Cyclopentasiloxane) تتبخر بعد التطبيق ولا تتراكم. السيليكونات القابلة للذوبان في الماء (مثل PEG-12 Dimethicone) تُغسل بسهولة.' }
       ],
     },
-    {
-      id: 'menthyl-anthranilate',
-      name: 'أنثرانيلات المنثيل',
-      scientific_name: 'Menthyl Anthranilate',
-      searchKeywords: ['menthyl anthranilate', 'meradimate', 'أنثرانيلات المنثيل', 'مينثيل أنثرانيلات'],
-      usageScope: ['skin'],
-      functionalCategory: 'حماية من الشمس',
-      chemicalType: 'فلتر كيميائي (UVA)',
-      benefits: { 'حماية من UVA2': 0.75 },
+{
+      id: 'water',
+      name: 'ماء',
+      scientific_name: 'Water (Aqua)',
+      searchKeywords: ['water', 'aqua', 'ماء'],
+      usageScope: ['hair', 'face', 'body'],
+      functionalCategory: 'مذيب',
+      chemicalType: 'مذيب أساسي',
+      benefits: { 'ترطيب': 0.5, 'إذابة المكونات': 1.0 },
       synergy: {},
       negativeSynergy: {},
-      warnings: [
-        { level: 'caution', text: 'فلتر شمسي قديم يوفر حماية ضعيفة ضد أشعة UVA2 فقط. لم يعد شائع الاستخدام في واقيات الشمس الحديثة في العديد من المناطق.' }
-      ],
+      warnings: [{ level: 'info', text: 'يشكل القاعدة الأساسية للمنتج وهو آمن تماماً.' }],
     },
-    ]
-  };
+{
+      id: 'coco-glycerin-propyl',
+      name: 'كوكو غليسيرين بروبيل',
+      scientific_name: 'Coco-Glycerin Propyl (Likely PEG-7 Glyceryl Cocoate)',
+      searchKeywords: ['coco glycerin', 'peg-7', 'كوكو غليسيرين'],
+      usageScope: ['hair', 'body'],
+      functionalCategory: 'مطرّي (Emollient)',
+      chemicalType: 'إستر دهني',
+      benefits: { 'إعادة الدهون للشعر': 0.8, 'تنعيم': 0.75 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'يعمل كعامل "إعادة تشحيم" لتعويض الزيوت التي يزيلها الشامبو.' }],
+    },
+{
+      id: 'glycosyl-oleate',
+      name: 'غليكوسيل أوليات',
+      scientific_name: 'Glycosyl Oleate (Likely Glyceryl Oleate)',
+      searchKeywords: ['glyceryl oleate', 'glycosyl', 'أوليات'],
+      usageScope: ['hair'],
+      functionalCategory: 'مطرّي ومحسّن للدهون',
+      chemicalType: 'دهون',
+      benefits: { 'حماية الطبقة الدهنية': 0.85, 'نعومة': 0.8 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'مكون حيوي مشابه لدهون الجلد الطبيعية، يحمي الفروة من الجفاف.' }],
+    },
+{
+      id: 'gum',
+      name: 'صمغ',
+      scientific_name: 'Gum (Generic, likely Xanthan or Cellulose)',
+      searchKeywords: ['gum', 'xanthan', 'صمغ'],
+      usageScope: ['hair', 'face'],
+      functionalCategory: 'مغلظ للقوام',
+      chemicalType: 'سكريات متعددة',
+      benefits: { 'تحسين القوام': 0.8, 'تثبيت المستحلب': 0.7 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'مصطلح عام، عادة ما يكون من أصل طبيعي وآمن للاستخدام.' }],
+    },
+{
+      id: 'carotene',
+      name: 'كاروتين',
+      scientific_name: 'Beta-Carotene',
+      searchKeywords: ['carotene', 'vitamin a', 'كرروتان'],
+      usageScope: ['hair', 'skin'],
+      functionalCategory: 'مضاد أكسدة / ملون',
+      chemicalType: 'فيتامين/صبغة',
+      benefits: { 'مضاد أكسدة': 0.85, 'لون برتقالي طبيعي': 0.9 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'مصدر لفيتامين A، مفيد لصحة الشعر ويعطي لوناً للمنتج.' }],
+    },
+{
+      id: 'fig-extract',
+      name: 'مستخلص التين',
+      scientific_name: 'Ficus Carica (Fig) Fruit Extract',
+      searchKeywords: ['fig extract', 'ficus carica', 'تين'],
+      usageScope: ['hair'],
+      functionalCategory: 'مكون طبيعي فعال',
+      chemicalType: 'مستخلص نباتي',
+      benefits: { 'ترطيب': 0.6, 'مضاد أكسدة': 0.6 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'يحتوي على فيتامينات وسكريات طبيعية تفيد الشعر.' }],
+    },
+{
+      id: 'cmit',
+      name: 'كلورو ميثيل ايزوثيازولينون',
+      scientific_name: 'Methylchloroisothiazolinone (CMIT)',
+      searchKeywords: ['cmit', 'kathon', 'كلورو ميثيل'],
+      usageScope: ['hair (rinse-off only)'],
+      functionalCategory: 'مادة حافظة',
+      chemicalType: 'Isothiazolinone',
+      benefits: { 'حماية من البكتيريا': 0.99 },
+      synergy: { 'methylisothiazolinone': 'يستخدمان معاً دائماً لفعالية قصوى (Kathon CG)' },
+      negativeSynergy: {},
+      warnings: [{ level: 'risk', text: 'مسبب قوي للحساسية (Allergen). يمنع استخدامه في المنتجات التي تترك على الجلد (Leave-on). آمن فقط في المنتجات التي تشطف (Rinse-off) بتركيزات محددة.' }],
+    },
+{
+      id: 'mit',
+      name: 'ميثيل ايزوثيازولينون',
+      scientific_name: 'Methylisothiazolinone (MIT)',
+      searchKeywords: ['mit', 'ميثيل ايزوثيازولينون'],
+      usageScope: ['hair (rinse-off only)'],
+      functionalCategory: 'مادة حافظة',
+      chemicalType: 'Isothiazolinone',
+      benefits: { 'حماية من البكتيريا': 0.95 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'risk', text: 'مخاطر عالية للتحسس والاكزيما التلامسية. محظور في أوروبا في الكريمات التي لا تغسل.' }],
+    },
+{
+      id: 'melon-extract',
+      name: 'مستخلص البطيخ (مالون)',
+      scientific_name: 'Cucumis Melo (Melon) Fruit Extract',
+      searchKeywords: ['melon', 'malon', 'بطيخ'],
+      usageScope: ['hair'],
+      functionalCategory: 'مكون طبيعي',
+      chemicalType: 'مستخلص نباتي',
+      benefits: { 'انتعاش': 0.7, 'ترطيب': 0.6 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'info', text: 'الاسم "Malon" في القائمة يرجح أنه خطأ مطبعي لـ Melon (بطيخ/شمام)، وهو مصدر للفيتامينات.' }],
+    },
+{
+      id: 'parfum',
+      name: 'عطر',
+      scientific_name: 'Parfum (Fragrance)',
+      searchKeywords: ['parfum', 'fragrance', 'عطر'],
+      usageScope: ['hair', 'body'],
+      functionalCategory: 'رائحة',
+      chemicalType: 'مزيج عطري',
+      benefits: { 'رائحة زكية': 1.0 },
+      synergy: {},
+      negativeSynergy: {},
+      warnings: [{ level: 'caution', text: 'المصطلح "عطر" قد يخفي تحته عشرات المواد الكيميائية التي قد تسبب الحساسية للبعض دون الإفصاح عنها.' }],
+    }
+  ]
+};

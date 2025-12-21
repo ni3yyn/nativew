@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { 
-  StyleSheet, View, Text, TouchableOpacity, Dimensions, 
+  View, Text, TouchableOpacity, Dimensions, 
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
   RefreshControl, Easing, SafeAreaView, FlatList, Slider, PanResponder, Vibration
@@ -13,7 +13,6 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
 import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask } from 'react-native-svg';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
@@ -21,7 +20,8 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
-// --- DATA IMPORTS from Web Version ---
+
+// --- DATA IMPORTS ---
 import { combinedOilsDB } from '../../src/data/alloilsdb';
 import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
 import { 
@@ -31,47 +31,19 @@ import {
   basicScalpTypes
 } from '../../src/data/allergiesandconditions';
 
+// --- STYLE & CONSTANT IMPORTS ---
+import { 
+  styles, COLORS, width, height, 
+  ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
+  DOT_SIZE, PAGINATION_DOTS, DOT_SPACING 
+} from './oilguard.styles';
+
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const { width, height } = Dimensions.get('window');
-
-// --- CONFIG & THEME ---
-const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
-
-const CARD_WIDTH = width * 0.85;
-const SEPARATOR_WIDTH = 15;
-const ITEM_WIDTH = CARD_WIDTH + SEPARATOR_WIDTH;
-const DOT_SIZE = 8;
-const PAGINATION_DOTS = 4; // How many static dots to show
-const DOT_SPACING = 8; 
-
-const COLORS = {
-  // --- Deep Green Thematic Base ---
-  background: '#1A2D27', // A rich, very dark forest green. This is the foundation of the theme.
-  card: '#253D34',      // A slightly lighter shade of the forest green for cards, creating a subtle, layered effect.
-  border: 'rgba(90, 156, 132, 0.25)', // A border derived from the accent color, tying the theme together.
-
-  // --- Elegant Emerald Accent ---
-  accentGreen: '#5A9C84', // The primary accent: a confident, muted emerald/seafoam green. It's visible and elegant, but not neon.
-  accentGlow: 'rgba(90, 156, 132, 0.4)', // A soft glow for the emerald accent.
-  
-  // --- High-Contrast Text Colors ---
-  textPrimary: '#F1F3F2',   // A soft, very light gray (near-white) for excellent readability on the dark green background.
-  textSecondary: '#A3B1AC', // A muted, light green-gray for subtitles and secondary information.
-  textOnAccent: '#1A2D27',  // The deep background color used for text on accent buttons, ensuring perfect contrast and cohesion.
-  
-  // --- System & Feedback Colors (Standard) ---
-  danger: '#ef4444', 
-  warning: '#f59e0b', 
-  info: '#3b82f6', 
-  success: '#22c55e',
-  gold: '#fbbf24'
-};
 
 const PRODUCT_TYPES = [
     { id: 'shampoo', label: 'شامبو / بلسم', icon: 'spa' },
@@ -86,16 +58,14 @@ const PRODUCT_TYPES = [
     { id: 'other', label: 'آخر', icon: 'shopping-bag' },
 ];
 
-// --- ▼▼▼ START OF PORTED LOGIC ▼▼▼ ---
-
-// --- UTILITY & ANALYSIS FUNCTIONS (Directly Ported from Web) ---
+// --- LOGIC FUNCTIONS ---
 const normalizeForMatching = (name) => {
   if (!name) return '';
   return name.toString().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Handle accents
-    .replace(/[.,،؛()/]/g, ' ') // Replace separators with spaces
-    .replace(/[^\p{L}\p{N}\s-]/gu, '') // Remove invalid symbols
-    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+    .replace(/[.,،؛:()|[\]/%!@#$^&*_+={}<>?~`"'\\]/g, ' ') 
+    .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ' ') 
+    .replace(/\s+/g, ' ') 
     .trim();
 };
 const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -404,8 +374,6 @@ const calculateReliabilityScore_V13 = (ingredients, allIngredients, conflicts, u
     return { oilGuardScore: Math.round(weightedScore), finalVerdict, efficacy: { score: Math.round(currentEfficacy) }, safety: { score: Math.round(currentSafety) }, scoreBreakdown, personalMatch: { status: hasAllergyDanger ? 'danger' : (hasMismatch ? 'warning' : 'good'), reasons: activeUserAlerts.map(a => a.text) } };
 };
 
-// --- ▲▲▲ END OF PORTED LOGIC ▲▲▲ ---
-
 
 // ============================================================================
 //                       ANIMATION & UI COMPONENTS
@@ -445,7 +413,6 @@ const PressableScale = ({ onPress, children, style, disabled }) => {
 const ContentCard = ({ children, style, delay = 0 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  // No more BlurView, just an Animated.View with the new card style
   return (
     <Animated.View style={[styles.cardBase, { opacity }, style]}>
       {children}
@@ -488,8 +455,6 @@ const ScoreRing = ({ score = 0, size = 160 }) => {
     );
 };
 
-// --- Add this new component for the confidence meter ---
-
 const ConfidenceRing = ({ confidence }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -511,7 +476,7 @@ const ConfidenceRing = ({ confidence }) => {
       Animated.timing(animatedValue, {
           toValue: value,
           duration: 800,
-          delay: 400, // Stagger animation slightly
+          delay: 400,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
       }).start();
@@ -590,7 +555,7 @@ const EnhancedTruthCard = ({ result, index }) => {
   const rotation = useRef(new Animated.Value(0)).current;
 
   const toggle = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring); // Use spring animation
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring); 
       setIsOpen(!isOpen);
       Animated.timing(rotation, {
           toValue: isOpen ? 0 : 1,
@@ -646,20 +611,19 @@ const SwipeHint = () => {
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-      // This creates a looping animation: fade in -> swipe left -> fade out -> reset
       const animation = Animated.loop(
           Animated.sequence([
               Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
               Animated.timing(translateX, {
-                  toValue: -35, // Moves 35 pixels to the left
+                  toValue: -35,
                   duration: 1000,
                   delay: 100,
                   easing: Easing.inOut(Easing.ease),
                   useNativeDriver: true,
               }),
               Animated.timing(opacity, { toValue: 0, duration: 400, delay: 200, useNativeDriver: true }),
-              Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }), // Reset position instantly
-              Animated.delay(1000), // Wait 1 second before looping
+              Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }), 
+              Animated.delay(1000), 
           ])
       );
       animation.start();
@@ -674,8 +638,6 @@ const SwipeHint = () => {
 };
 
 const Pagination = ({ data, scrollX }) => {
-  // If there are 4 or fewer items, we don't need the complex scrolling.
-  // We just show a simple, static dot for each item.
   if (data.length <= PAGINATION_DOTS) {
       return (
           <View style={styles.paginationSimpleContainer}>
@@ -702,44 +664,36 @@ const Pagination = ({ data, scrollX }) => {
       );
   }
 
-  // --- This is the advanced logic for more than 4 items ---
-
-  // 1. Animate the INDICATOR dot's position across the FULL track width
   const indicatorTranslateX = scrollX.interpolate({
       inputRange: [0, (data.length - 1) * ITEM_WIDTH],
       outputRange: [0, (data.length - 1) * (DOT_SIZE + DOT_SPACING)],
       extrapolate: 'clamp',
   });
 
-  // 2. Animate the CONTAINER's position to keep the indicator centered
   const containerWidth = PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING;
-  const centerPoint = (containerWidth / 2) - (DOT_SIZE / 2); // Center of the visible container
+  const centerPoint = (containerWidth / 2) - (DOT_SIZE / 2); 
 
   const containerTranslateX = scrollX.interpolate({
       inputRange: [
           0,
-          (data.length - 1) * ITEM_WIDTH // Full scroll range
+          (data.length - 1) * ITEM_WIDTH 
       ],
       outputRange: [
           0,
-          -((data.length - 1) * (DOT_SIZE + DOT_SPACING) - centerPoint) + centerPoint // Full dot track range
+          -((data.length - 1) * (DOT_SIZE + DOT_SPACING) - centerPoint) + centerPoint 
       ],
       extrapolate: 'clamp'
   });
 
   return (
-      // This is the "mask" that shows only 4 dots' worth of width
       <View style={styles.paginationContainer}>
-          {/* This is the movable group that contains ALL dots and slides inside the mask */}
           <Animated.View style={[ { transform: [{ translateX: containerTranslateX }] }]}>
-              {/* The background track of ALL dim dots */}
               <View style={styles.paginationTrack}>
                   {data.map((_, idx) => (
                       <View key={`track-dot-${idx}`} style={styles.paginationDot} />
                   ))}
               </View>
 
-              {/* The single, bright indicator dot that slides on top */}
               <Animated.View
                   style={[
                       styles.paginationIndicator,
@@ -752,14 +706,13 @@ const Pagination = ({ data, scrollX }) => {
 };
 
 const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
-  // Helper to map warning levels to colors and icons
   const getWarningStyle = (level) => {
     switch (level) {
       case 'risk':
         return { color: COLORS.danger, icon: 'exclamation-circle' };
       case 'caution':
         return { color: COLORS.warning, icon: 'exclamation-triangle' };
-      default: // 'info'
+      default: 
         return { color: COLORS.info, icon: 'info-circle' };
     }
   };
@@ -769,19 +722,18 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   const inputRange = [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH];
   const scale = scrollX.interpolate({
       inputRange,
-      outputRange: [0.9, 1, 0.9], // Inactive cards are smaller
+      outputRange: [0.9, 1, 0.9],
       extrapolate: 'clamp',
   });
   const opacity = scrollX.interpolate({
       inputRange,
-      outputRange: [0.6, 1, 0.6], // Inactive cards are faded
+      outputRange: [0.6, 1, 0.6],
       extrapolate: 'clamp',
   });
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
             <View  intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
-        {/* Header */}
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
           <View style={styles.ingTagsContainer}>
@@ -798,7 +750,6 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
           </View>
         </View>
 
-        {/* Benefits */}
         {benefits.length > 0 && (
           <View style={styles.ingBenefitsContainer}>
             {benefits.map(benefit => (
@@ -809,7 +760,6 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
           </View>
         )}
 
-        {/* Warnings */}
         {ingredient.warnings && ingredient.warnings.length > 0 && (
           <>
             <View style={styles.ingDivider} />
@@ -834,43 +784,37 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraViewRef = useRef(null);
   
-  // --- Constants ---
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
   const VIEWPORT_WIDTH = SCREEN_WIDTH * 0.85;
-  const VIEWPORT_HEIGHT = SCREEN_HEIGHT * 0.50; // 50% of screen height
+  const VIEWPORT_HEIGHT = SCREEN_HEIGHT * 0.50; 
   const VIEWPORT_X = (SCREEN_WIDTH - VIEWPORT_WIDTH) / 2;
-  const VIEWPORT_Y = (SCREEN_HEIGHT - VIEWPORT_HEIGHT) / 2 - 50; // Shifted up to make room for bottom controls
+  const VIEWPORT_Y = (SCREEN_HEIGHT - VIEWPORT_HEIGHT) / 2 - 50; 
   
-  // Zoom Constants
-  const SLIDER_WIDTH = SCREEN_WIDTH * 0.8; // 80% of screen width
+  const SLIDER_WIDTH = SCREEN_WIDTH * 0.8; 
   const SLIDER_START_X = (SCREEN_WIDTH - SLIDER_WIDTH) / 2;
-  const MAX_ZOOM_FACTOR = 0.15; // Cap at 15% digital zoom for clarity
+  const MAX_ZOOM_FACTOR = 0.15; 
 
-  // --- State ---
   const [isCapturing, setIsCapturing] = useState(false);
   const [isCameraReady, setCameraReady] = useState(false);
   const [flashMode, setFlashMode] = useState('off');
-  const [zoomLevel, setZoomLevel] = useState(0); // 0.0 -> 1.0 (Hardware)
-  const [displayZoom, setDisplayZoom] = useState(1.0); // 1.0 -> 4.0 (UI)
+  const [zoomLevel, setZoomLevel] = useState(0); 
+  const [displayZoom, setDisplayZoom] = useState(1.0); 
 
-  // --- Animations ---
-  const uiAnim = useRef(new Animated.Value(0)).current; // Slides controls up
-  const scanAnim = useRef(new Animated.Value(0)).current; // Laser
-  const shutterFlashAnim = useRef(new Animated.Value(0)).current; // White flash
-  const knobScale = useRef(new Animated.Value(1)).current; // Knob press effect
-  const tooltipOpacity = useRef(new Animated.Value(0)).current; // Bubble fade
+  const uiAnim = useRef(new Animated.Value(0)).current; 
+  const scanAnim = useRef(new Animated.Value(0)).current; 
+  const shutterFlashAnim = useRef(new Animated.Value(0)).current; 
+  const knobScale = useRef(new Animated.Value(1)).current; 
+  const tooltipOpacity = useRef(new Animated.Value(0)).current; 
 
-  // --- Zoom Logic (Deterministic Math) ---
   const updateZoom = (gestureX) => {
     let relativeX = gestureX - SLIDER_START_X;
-    // Clamp values
     if (relativeX < 0) relativeX = 0;
     if (relativeX > SLIDER_WIDTH) relativeX = SLIDER_WIDTH;
 
     const percentage = relativeX / SLIDER_WIDTH;
     
     setZoomLevel(percentage * MAX_ZOOM_FACTOR);
-    setDisplayZoom(1 + (percentage * 3)); // Map 0-1 to 1x-4x
+    setDisplayZoom(1 + (percentage * 3)); 
   };
 
   const panResponder = useRef(
@@ -897,7 +841,6 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
     })
   ).current;
 
-  // --- Lifecycle ---
   useEffect(() => {
     if (Platform.OS === 'android' && isVisible) NavigationBar.setBackgroundColorAsync('#00000000');
   }, [isVisible]);
@@ -907,10 +850,8 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
     if (isVisible) {
       if (!permission?.granted) requestPermission();
       
-      // Animate UI Entry
       Animated.spring(uiAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true, delay: 100 }).start();
 
-      // Start Laser Loop
       scanLoop = Animated.loop(
         Animated.sequence([
             Animated.timing(scanAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -929,7 +870,6 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
     setIsCapturing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Screen Flash
     Animated.sequence([
         Animated.timing(shutterFlashAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
         Animated.timing(shutterFlashAnim, { toValue: 0, duration: 200, useNativeDriver: true })
@@ -951,11 +891,9 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
 
   if (!permission || !permission.granted) return null;
 
-  // Interpolations
   const laserY = scanAnim.interpolate({ inputRange: [0, 1], outputRange: [VIEWPORT_Y, VIEWPORT_Y + VIEWPORT_HEIGHT] });
   const controlsY = uiAnim.interpolate({ inputRange: [0, 1], outputRange: [150, 0] });
   
-  // Knob Calculation
   const knobPosition = (zoomLevel / MAX_ZOOM_FACTOR) * SLIDER_WIDTH;
 
   return (
@@ -970,7 +908,6 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
           onCameraReady={() => setCameraReady(true)}
           mode="picture"
         >
-          {/* --- 1. THE MASK (Darkens everything except viewport) --- */}
           <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
             <Defs>
               <Mask id="mask" x="0" y="0" height="100%" width="100%">
@@ -981,19 +918,16 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
             <Rect height="100%" width="100%" fill="rgba(0,0,0,0.8)" mask="url(#mask)" />
             <Rect x={VIEWPORT_X} y={VIEWPORT_Y} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} rx="30" stroke="rgba(255,255,255,0.15)" strokeWidth="1" fill="transparent"/>
             
-            {/* Tech Corners (Visual Flair) */}
             <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
             <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
             <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
             <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
           </Svg>
 
-          {/* --- 2. THE LASER --- */}
           <Animated.View style={[styles.laserLine, { width: VIEWPORT_WIDTH, left: VIEWPORT_X, transform: [{ translateY: laserY }] }]}>
             <LinearGradient colors={['transparent', COLORS.accentGreen, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, opacity: 0.8 }} />
           </Animated.View>
 
-          {/* --- 3. TOP STATUS (Only Information, No Controls) --- */}
           <SafeAreaView style={styles.topStatusContainer}>
              <View style={styles.statusBadge}>
                 <View style={styles.statusDot} />
@@ -1002,34 +936,27 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
              <Text style={styles.hintText}>التقط صورة واضحة للمكونات</Text>
           </SafeAreaView>
 
-          {/* --- 4. BOTTOM CONTROL DECK (Thumb Zone) --- */}
           <Animated.View style={[styles.bottomControlDeck, { transform: [{translateY: controlsY}], opacity: uiAnim }]}>
             
-            {/* --- A. ZOOM SLIDER --- */}
             <View style={{ width: SLIDER_WIDTH, marginBottom: 25 }}>
                 
-                {/* Floating Tooltip */}
                 <Animated.View style={[
                     styles.zoomTooltip, 
                     { 
                         opacity: tooltipOpacity,
-                        left: knobPosition - 20, // Center bubble over knob
+                        left: knobPosition - 20, 
                     }
                 ]}>
                     <Text style={styles.zoomTooltipText}>{displayZoom.toFixed(1)}x</Text>
                     <View style={styles.zoomTooltipArrow} />
                 </Animated.View>
 
-                {/* Touch Track */}
                 <View 
                     style={styles.sliderContainer}
                     {...panResponder.panHandlers}
                 >
-                    {/* Gray Background */}
                     <View style={styles.sliderTrackBg} />
-                    {/* Active Green Fill */}
                     <View style={[styles.sliderTrackFill, { width: knobPosition }]} />
-                    {/* The Knob */}
                     <Animated.View style={[styles.sliderKnob, { left: knobPosition, transform: [{ scale: knobScale }, { translateX: -14 }] }]}>
                          <View style={styles.sliderKnobDot} />
                     </Animated.View>
@@ -1041,22 +968,18 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
                 </View>
             </View>
 
-            {/* --- B. MAIN BUTTONS ROW --- */}
             <View style={styles.mainControlsRow}>
                 
-                {/* 1. Flash Toggle (Left Thumb) */}
                 <PressableScale onPress={toggleFlash} style={[styles.sideControlBtn, flashMode === 'on' && styles.sideControlBtnActive]}>
                     <Ionicons name={flashMode === 'on' ? "flash" : "flash-off"} size={24} color={flashMode === 'on' ? "#000" : "#FFF"} />
                 </PressableScale>
 
-                {/* 2. Shutter (Center) */}
                 <Pressable onPress={handleCapture} disabled={isCapturing}>
                     <View style={styles.shutterOuter}>
                         {isCapturing ? <ActivityIndicator size="large" color={COLORS.accentGreen} /> : <View style={styles.shutterInner} />}
                     </View>
                 </Pressable>
 
-                {/* 3. Close / Exit (Right Thumb) */}
                 <PressableScale onPress={onClose} style={[styles.sideControlBtn, { backgroundColor: 'rgba(255, 50, 50, 0.2)', borderColor: 'rgba(255, 50, 50, 0.4)' }]}>
                     <Ionicons name="close" size={28} color="#FFF" />
                 </PressableScale>
@@ -1065,7 +988,6 @@ const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
 
           </Animated.View>
 
-          {/* --- 5. FLASH OVERLAY --- */}
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: shutterFlashAnim, pointerEvents: 'none' }]} />
         </CameraView>
       </View>
@@ -1078,18 +1000,16 @@ const AnimatedCheckbox = ({ isSelected }) => {
   const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
 
   useEffect(() => {
-      // Spring animation for the background fill
       Animated.spring(scale, {
           toValue: isSelected ? 1 : 0,
           friction: 5,
           tension: 80,
           useNativeDriver: true,
       }).start();
-      // Timing animation for the checkmark icon
       Animated.timing(checkScale, {
           toValue: isSelected ? 1 : 0,
           duration: 200,
-          delay: isSelected ? 100 : 0, // Delay checkmark appearance on select
+          delay: isSelected ? 100 : 0, 
           useNativeDriver: true,
       }).start();
   }, [isSelected]);
@@ -1124,7 +1044,7 @@ const Wave = ({ isFilling }) => {
 
   const translateX = waveAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, -width * 0.8], // Moves one full wave width
+      outputRange: [0, -width * 0.8], 
   });
 
   return (
@@ -1136,41 +1056,38 @@ const Wave = ({ isFilling }) => {
   );
 };
 
-// --- ▼▼▼ ADD THIS NEW BUBBLE COMPONENT ▼▼▼ ---
 const Bubble = ({ size, x, duration, delay }) => {
   const animY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Use a delay before starting the loop to stagger the bubbles
     const timer = setTimeout(() => {
         const animation = Animated.loop(
             Animated.timing(animY, {
                 toValue: 1,
                 duration,
-                useNativeDriver: true,
+                useNativeDriver: true, 
                 easing: Easing.linear,
             })
         );
         animation.start();
-        // Cleanup function for the animation itself
         return () => animation.stop();
     }, delay);
-
-    // Cleanup for the timeout in case the component unmounts before the delay finishes
     return () => clearTimeout(timer);
   }, []);
 
-  const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [0, -75] });
 
-  return <AnimatedCircle
-      cx={x}
-      cy={90} // Start at the bottom of the flask's bulb
-      r={size}
-      fill={COLORS.primaryGlow}
-      opacity={0.7}
-      transform={[{ translateY }]}
-  />;
+  const animatedCy = animY.interpolate({ 
+    inputRange: [0, 1], 
+    outputRange: [90, 15] 
+});
+
+return <AnimatedCircle
+cx={x}
+cy={animatedCy} 
+r={size}
+fill={COLORS.primaryGlow}
+opacity={0.7}
+/>;
 };
 
 const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1500, style }) => {
@@ -1179,9 +1096,7 @@ const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration
   const [isDeleting, setIsDeleting] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
 
-  // Effect for the main typing/deleting logic
   useEffect(() => {
-      // Blinking cursor interval
       const cursorInterval = setInterval(() => {
           setShowCursor(prev => !prev);
       }, 500);
@@ -1189,30 +1104,24 @@ const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration
       const handleTyping = () => {
           const currentText = texts[textIndex];
           
-          // --- DELETING PHASE ---
           if (isDeleting) {
               if (displayedText.length > 0) {
-                  // If text remains, schedule the next deletion
                   const timeout = setTimeout(() => {
                       setDisplayedText(currentText.substring(0, displayedText.length - 1));
                   }, deletingSpeed);
                   return () => clearTimeout(timeout);
               } else {
-                  // If deletion is complete, move to the next text and switch to typing phase
                   setIsDeleting(false);
                   setTextIndex((prevIndex) => (prevIndex + 1) % texts.length);
               }
           } 
-          // --- TYPING PHASE ---
           else {
               if (displayedText.length < currentText.length) {
-                  // If not finished typing, schedule the next character
                   const timeout = setTimeout(() => {
                       setDisplayedText(currentText.substring(0, displayedText.length + 1));
                   }, typingSpeed);
                   return () => clearTimeout(timeout);
               } else {
-                  // If typing is complete, pause and then start deleting
                   const timeout = setTimeout(() => {
                       setIsDeleting(true);
                   }, pauseDuration);
@@ -1223,7 +1132,6 @@ const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration
 
       const typingTimeout = handleTyping();
 
-      // Cleanup function for all timeouts and intervals
       return () => {
           if(typingTimeout) typingTimeout();
           clearInterval(cursorInterval);
@@ -1241,55 +1149,6 @@ const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration
   );
 };
 
-const FloatingButton = ({ icon, label, color, glowColor, onPress, index }) => {
-  const floatAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-      const float = Animated.loop(Animated.sequence([
-          Animated.timing(floatAnim, { toValue: 1, duration: 2500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-          Animated.timing(floatAnim, { toValue: 0, duration: 2500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      ]));
-
-      const glow = Animated.loop(Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-          Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      ]));
-      
-      // Stagger the start of the animations based on the index
-      const timeout = setTimeout(() => {
-          float.start();
-          glow.start();
-      }, index * 300);
-
-      return () => {
-          clearTimeout(timeout);
-          float.stop();
-          glow.stop();
-      }
-  }, []);
-
-  const pressIn = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 20 }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
-  
-  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -15] });
-  const glowScale = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] });
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
-
-  return (
-      <Pressable onPress={() => { if(onPress) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut}>
-          <Animated.View style={{ alignItems: 'center', transform: [{ translateY }, { scale }] }}>
-              <Animated.View style={[styles.glowEffect, { backgroundColor: glowColor, transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
-              <View style={styles.floatingBtnCore}>
-                  <FontAwesome5 name={icon} size={28} color={color} />
-              </View>
-              <Text style={styles.floatingBtnLabel}>{label}</Text>
-          </Animated.View>
-      </Pressable>
-  );
-};
-
 const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
   const anim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
 
@@ -1298,21 +1157,21 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
       toValue: isSelected ? 1 : 0,
       friction: 7,
       tension: 50,
-      useNativeDriver: false, // Required for color animations
+      useNativeDriver: false, 
     }).start();
   }, [isSelected]);
 
   const backgroundColor = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [String(COLORS.cardBg), String(COLORS.primary)], // Explicitly cast to string
+    outputRange: [COLORS.card, COLORS.accentGreen], 
   });
 
   const textColor = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [String(COLORS.textDim), String(COLORS.darkGreen)], // Explicitly cast to string
+    outputRange: [COLORS.textSecondary, COLORS.textOnAccent], 
   });
 
-  const iconColor = isSelected ? COLORS.darkGreen : COLORS.textDim;
+  const iconColor = isSelected ? COLORS.textOnAccent : COLORS.textSecondary;
 
   return (
     <StaggeredItem index={index}>
@@ -1329,38 +1188,32 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
 };
 
 const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
-  // --- Constants ---
   const SCREEN_WIDTH = width;
   const SCREEN_HEIGHT = height;
-  const MASK_WIDTH = width * 0.85; // The "Window" width
-  const MASK_HEIGHT = height * 0.5; // The "Window" height
+  const MASK_WIDTH = width * 0.85; 
+  const MASK_HEIGHT = height * 0.5; 
   const MASK_X = (SCREEN_WIDTH - MASK_WIDTH) / 2;
   const MASK_Y = (SCREEN_HEIGHT - MASK_HEIGHT) / 2 - 40;
 
-  // --- State ---
-  const [imageLayout, setImageLayout] = useState(null); // { width, height } (original)
-  const [viewSize, setViewSize] = useState(null); // { width, height } (rendered onscreen)
+  const [imageLayout, setImageLayout] = useState(null); 
+  const [viewSize, setViewSize] = useState(null); 
   
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
+  const [rotation, setRotation] = useState(0); 
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- Animation Refs ---
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  // --- Load Image Size ---
   useEffect(() => {
     if (imageUri) {
       RNImage.getSize(imageUri, (w, h) => {
         setImageLayout({ width: w, height: h });
-        // Calculate initial 'contain' fit
         const ratio = Math.min(SCREEN_WIDTH / w, SCREEN_HEIGHT / h);
         setViewSize({ width: w * ratio, height: h * ratio, ratio });
       });
-      // Reset Transforms
       setScale(1);
       setPan({ x: 0, y: 0 });
       setRotation(0);
@@ -1370,7 +1223,6 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     }
   }, [imageUri]);
 
-  // --- Pan Responder (Drag Image) ---
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -1390,10 +1242,8 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     })
   ).current;
 
-  // --- Zoom Logic (Slider) ---
   const handleZoom = (val) => {
-    // val is 0 to 1
-    const newScale = 1 + val * 2; // Zoom from 1x to 3x
+    const newScale = 1 + val * 2; 
     setScale(newScale);
     scaleAnim.setValue(newScale);
   };
@@ -1404,13 +1254,11 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     Animated.spring(rotateAnim, { toValue: nextRot, useNativeDriver: true }).start();
   };
 
-  // --- The Heavy Lifting: CROP CALCULATION ---
   const performCrop = async () => {
     if (!imageLayout || !viewSize) return;
     setIsProcessing(true);
 
     try {
-        // 1. If rotated, we need to manipulate first to get a "straight" image to crop from
         let processingUri = imageUri;
         if (rotation !== 0) {
             const rotResult = await ImageManipulator.manipulateAsync(
@@ -1419,56 +1267,41 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
                 { format: ImageManipulator.SaveFormat.JPEG }
             );
             processingUri = rotResult.uri;
-            // Swap dimensions if 90/270
             if (rotation % 180 !== 0) {
                  setImageLayout({ width: imageLayout.height, height: imageLayout.width });
             }
         }
 
-        // 2. Calculate Math
-        // The image is centered. 
-        // Current Rendered Width = viewSize.width * scale
-        // Pan.x moves the image. 
-        
-        // We need the offset of the Image's Top-Left relative to the Mask's Top-Left
         const centerX = SCREEN_WIDTH / 2;
         const centerY = SCREEN_HEIGHT / 2;
         
-        // Image Center position including Pan
         const imgCenterX = centerX + pan.x;
         const imgCenterY = centerY + pan.y;
 
-        // Image TopLeft position (Screen Coords)
         const currentWidth = viewSize.width * scale;
         const currentHeight = viewSize.height * scale;
         
         const imgTopLeftX = imgCenterX - (currentWidth / 2);
         const imgTopLeftY = imgCenterY - (currentHeight / 2);
 
-        // Mask TopLeft position (Screen Coords)
         const maskTopLeftX = MASK_X;
         const maskTopLeftY = MASK_Y;
 
-        // Delta (How far into the image is the mask starting?)
         const cropStartScreenX = maskTopLeftX - imgTopLeftX;
         const cropStartScreenY = maskTopLeftY - imgTopLeftY;
 
-        // Convert Screen Delta to Original Image Pixels
-        // Ratio = Original Image Width / Current Rendered Width
-        const resolutionRatio = imageLayout.width / currentWidth; // Use original width (or rotated width)
+        const resolutionRatio = imageLayout.width / currentWidth; 
 
         let cropX = cropStartScreenX * resolutionRatio;
         let cropY = cropStartScreenY * resolutionRatio;
         let cropW = MASK_WIDTH * resolutionRatio;
         let cropH = MASK_HEIGHT * resolutionRatio;
 
-        // Safety Clamping
         cropX = Math.max(0, cropX);
         cropY = Math.max(0, cropY);
         if (cropX + cropW > imageLayout.width) cropW = imageLayout.width - cropX;
         if (cropY + cropH > imageLayout.height) cropH = imageLayout.height - cropY;
 
-        // 3. Perform Crop
         const cropResult = await ImageManipulator.manipulateAsync(
             processingUri,
             [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
@@ -1490,7 +1323,6 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.cropperContainer}>
         
-        {/* --- Header --- */}
         <View style={styles.cropperHeader}>
             <PressableScale onPress={onClose} style={styles.iconButtonBlur}>
                 <Ionicons name="close" size={24} color="#FFF" />
@@ -1501,9 +1333,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
             </PressableScale>
         </View>
 
-        {/* --- Main Workspace --- */}
         <View style={styles.cropperWorkspace} {...panResponder.panHandlers}>
-            {/* The Movable Image */}
             {viewSize && (
                 <Animated.Image
                     source={{ uri: imageUri }}
@@ -1521,43 +1351,34 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
                 />
             )}
 
-            {/* The Overlay (Darkness + Clear Window) */}
             <View style={styles.cropperOverlay} pointerEvents="none">
-                {/* Top Dark */}
                 <View style={{ width: '100%', height: MASK_Y, backgroundColor: 'rgba(0,0,0,0.8)' }} />
                 <View style={{ flexDirection: 'row', height: MASK_HEIGHT }}>
-                    {/* Left Dark */}
                     <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
-                    {/* Clear Window (Border) */}
                     <View style={styles.cropperWindow}>
                          <View style={[styles.cornerBracket, styles.topLeft]} />
                          <View style={[styles.cornerBracket, styles.topRight]} />
                          <View style={[styles.cornerBracket, styles.bottomLeft]} />
                          <View style={[styles.cornerBracket, styles.bottomRight]} />
                     </View>
-                    {/* Right Dark */}
                     <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
                 </View>
-                {/* Bottom Dark */}
                 <View style={{ width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)' }} />
             </View>
         </View>
 
-        {/* --- Footer Controls --- */}
         <View style={styles.cropperFooter}>
             <View style={styles.cropperHint}>
                 <Ionicons name="scan-outline" size={16} color={COLORS.accentGreen} />
                 <Text style={styles.cropperHintText}>حرك الصورة لتكون المكونات داخل الإطار</Text>
             </View>
 
-            {/* Slider (Reused Logic Logic from Camera) */}
             <View style={{ width: '80%', height: 40, justifyContent: 'center', marginVertical: 20 }}>
                 <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 }} />
                 <View style={{ 
                     position: 'absolute', height: 4, backgroundColor: COLORS.accentGreen, borderRadius: 2,
                     width: `${((scale-1)/2)*100}%` 
                 }} />
-                {/* Simple Slider Implementation for brevity */}
                 <Slider
                     style={{ width: '100%', height: 40, position: 'absolute' }}
                     minimumValue={0}
@@ -1594,7 +1415,6 @@ export default function OilGuardEngine() {
   const { user, userProfile } = useAppContext();
   const insets = useSafeAreaInsets();
 
-  // --- STATE MANAGEMENT ---
   const [step, setStep] = useState(0); 
   const [loading, setLoading] = useState(false);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
@@ -1616,32 +1436,29 @@ export default function OilGuardEngine() {
   const [activeTab, setActiveTab] = useState('claims');
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
-const [cropperVisible, setCropperVisible] = useState(false);
-const [tempImageUri, setTempImageUri] = useState(null);
+  const [cropperVisible, setCropperVisible] = useState(false);
+  const [tempImageUri, setTempImageUri] = useState(null);
 
-  // --- ANIMATION REFS ---
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
-  // Step 0 (Intro)
   const introIconScale = useRef(new Animated.Value(1)).current;
   const introShineAnim = useRef(new Animated.Value(0)).current;
-  // Step 2 (Claims)
   const fabAnim = useRef(new Animated.Value(0)).current;
   const fabPulseAnim = useRef(new Animated.Value(1)).current;
   const heroTransitionAnim = useRef(new Animated.Value(0)).current; 
   const fabIconRef = useRef(null);
   const fabRef = useRef(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
-  // Step 3 (Loading)
   const loadingFillAnim = useRef(new Animated.Value(0)).current;
   const loadingDropAnim = useRef(new Animated.Value(0)).current;
   const loadingTextOpacityAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
-  // --- MEMOIZED DATA ---
+  
   const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
   const allIngredients = useMemo(() => combinedOilsDB.ingredients, []);
+  
   const allSearchableTerms = useMemo(() => {
     const terms = new Map();
     allIngredients.forEach(ing => {
@@ -1651,6 +1468,7 @@ const [tempImageUri, setTempImageUri] = useState(null);
     });
     return Array.from(terms.entries()).map(([term, ingredient]) => ({ term, ingredient })).sort((a, b) => b.term.length - a.term.length);
   }, [allIngredients]);
+  
   const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
   const fuse = useMemo(() => new Fuse(claimsForType, {
       includeScore: false,
@@ -1664,11 +1482,7 @@ const [tempImageUri, setTempImageUri] = useState(null);
       delay: Math.random() * 2000,
   })), []);
 
-  // --- ANIMATION CONTROLLERS ---
-
-  // Central Controller for Step-Based Animations
   useEffect(() => {
-    // 1. Define all step-specific animations
     const breathAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(introIconScale, { toValue: 1.05, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
@@ -1697,17 +1511,14 @@ const [tempImageUri, setTempImageUri] = useState(null);
         Animated.timing(loadingTextOpacityAnim, { toValue: 0.6, duration: 1000, useNativeDriver: true })
     ]));
 
-    // 2. Conditionally start animations based on the current step
     if (step === 0) {
       breathAnimation.start();
       shineAnimation.start();
     } else if (step === 3) {
       if (isGeminiLoading) {
-        // Start animations for the NEW Gemini loading screen
-        loadingTextOpacityAnim.setValue(0.6); // Start text visible
+        loadingTextOpacityAnim.setValue(0.6); 
         textPulse.start();
       } else {
-        // Start animations for the FINAL analysis loading screen (original logic)
         loadingDropAnim.setValue(0);
         loadingFillAnim.setValue(0);
         loadingTextOpacityAnim.setValue(0);
@@ -1717,7 +1528,6 @@ const [tempImageUri, setTempImageUri] = useState(null);
       }
     }
 
-    // 3. The cleanup function stops everything when dependencies change
     return () => {
         breathAnimation.stop();
         shineAnimation.stop();
@@ -1727,7 +1537,6 @@ const [tempImageUri, setTempImageUri] = useState(null);
     };
   }, [step, isGeminiLoading]);
 
-  // Separate Controller for FAB Animation (based on different dependency)
   useEffect(() => {
     const pulseAnimation = Animated.loop(
         Animated.sequence([
@@ -1766,7 +1575,6 @@ const [tempImageUri, setTempImageUri] = useState(null);
     };
   }, [isAnimatingTransition]);
 
-  // --- CORE FUNCTIONS ---
   const changeStep = (next) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -1781,15 +1589,11 @@ const [tempImageUri, setTempImageUri] = useState(null);
     try {
         Haptics.selectionAsync();
 
-        // --- NEW CAMERA LOGIC ---
-        // If the user selects 'camera', we just open our custom modal view and stop.
         if (mode === 'camera') {
             setCameraViewVisible(true);
-            return; // Exit the function here.
+            return; 
         }
 
-        // --- EXISTING GALLERY LOGIC (Unchanged) ---
-        // If the mode is not 'camera', we proceed with the image picker for the gallery.
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
             Alert.alert('Permission needed', 'Media library access is required.');
@@ -1803,7 +1607,6 @@ const [tempImageUri, setTempImageUri] = useState(null);
         });
 
         if (!result.canceled && result.assets[0].uri) {
-            // Process the image selected from the gallery
             processImageWithGemini(result.assets[0].uri);
         }
     } catch (error) {
@@ -1813,11 +1616,7 @@ const [tempImageUri, setTempImageUri] = useState(null);
 };
 
 const handlePictureTaken = (photo) => {
-  // First, close the camera modal
   setCameraViewVisible(false);
-
-  // Now, we have the photo object which contains the URI.
-  // We can send this URI to the same processing function that the gallery uses.
   if (photo && photo.uri) {
       processImageWithGemini(photo.uri);
   }
@@ -1833,7 +1632,6 @@ const processImageWithGemini = async (uri) => {
   try {
     const base64Data = await uriToBase64(uri);
 
-    // Call your new Vercel backend
     const response = await fetch(VERCEL_BACKEND_URL, {
       method: 'POST',
       headers: {
@@ -1843,9 +1641,11 @@ const processImageWithGemini = async (uri) => {
     });
 
     const responseData = await response.json();
+    
+    // LOG ADDED HERE
+    console.log("Backend Response Data:", JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
-      // If the server responded with an error, throw it
       throw new Error(responseData.error || "An error occurred in the backend.");
     }
 
@@ -1874,52 +1674,60 @@ const processImageWithGemini = async (uri) => {
   }
 };
   
-  const extractIngredientsFromAIText = async (text) => {
-      const foundIngredients = new Map();
-      if (!text) return { ingredients: [] };
-      const lines = text.split('\n').filter(line => line.trim() !== '');
+// --- UPDATED EXTRACTION FUNCTION ---
+const extractIngredientsFromAIText = async (text) => {
+  const foundIngredients = new Map();
+  if (!text) return { ingredients: [] };
 
-      lines.forEach(line => {
-          const match = line.match(/^\s*\d+\s*-\s*([^|]+)/);
-          if (!match || !match[1]) return;
-          const detectedName = match[1].trim();
-          const normalizedDetectedName = normalizeForMatching(detectedName);
+  // SAFETY CHECK: Ensure text is a string
+  let textToProcess = text;
+  if (Array.isArray(text)) {
+      textToProcess = text.join('\n');
+  } else if (typeof text === 'object') {
+      textToProcess = JSON.stringify(text);
+  } else {
+      textToProcess = String(text);
+  }
 
-          for (const { term, ingredient } of allSearchableTerms) {
-              const regex = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
-              if (regex.test(normalizedDetectedName)) {
-                  if (!foundIngredients.has(ingredient.id)) foundIngredients.set(ingredient.id, ingredient);
-                  return; 
-              }
+  const lines = textToProcess.split('\n').filter(line => line.trim() !== '');
+
+  lines.forEach(line => {
+      // Regex updated to be more forgiving if numbers are missing
+      const match = line.match(/^\s*(?:\d+[\.\-\)\s]*)?([^|]+)/);
+      if (!match || !match[1]) return;
+      const detectedName = match[1].trim();
+      const normalizedDetectedName = normalizeForMatching(detectedName);
+
+      for (const { term, ingredient } of allSearchableTerms) {
+          const regex = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
+          if (regex.test(normalizedDetectedName)) {
+              if (!foundIngredients.has(ingredient.id)) foundIngredients.set(ingredient.id, ingredient);
+              return; 
           }
-      });
-      return { ingredients: Array.from(foundIngredients.values()) };
-  };
-
+      }
+  });
+  return { ingredients: Array.from(foundIngredients.values()) };
+};
   
 
   const executeAnalysis = () => {
     if (!fabRef.current) return;
 
-    // 1. Measure the starting position of the FAB
     fabRef.current.measure((fx, fy, width, height, px, py) => {
       setFabMetrics({ x: px, y: py, width, height });
       
       const destX = (Dimensions.get('window').width / 2) - (width / 2);
       const destY = (Dimensions.get('window').height / 2) - (height / 2);
 
-      // 2. Start the transition
       setIsAnimatingTransition(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // 3. Animate the hero FAB from the FAB's position to the center of the screen
       Animated.timing(heroTransitionAnim, {
         toValue: 1,
         duration: 600,
         easing: Easing.bezier(0.42, 0, 0.58, 1),
         useNativeDriver: true,
       }).start(() => {
-        // 5. When the animation finishes, start the analysis
         const detectedIngredients = preProcessedIngredients || [];
         const marketingResults = evaluateMarketingClaims(detectedIngredients, selectedClaims, productType);
         
@@ -1946,63 +1754,15 @@ const processImageWithGemini = async (uri) => {
 
         setFinalAnalysis(fullAnalysisData);
         
-        // Hide the hero element, reset animations, and transition to the final page
         setIsAnimatingTransition(false);
         heroTransitionAnim.setValue(0);
         changeStep(4);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       });
 
-      // 4. In the middle of the hero animation, switch the background to the loading step
       setTimeout(() => {
         changeStep(3);
       }, 200);
-    });
-  };
-
-  const runBackendAnalysis = async () => {
-    // This timeout gives the user a moment to see the loading animation
-    // before the (potentially instant) analysis completes.
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Perform all the data analysis
-    const detectedIngredients = preProcessedIngredients || [];
-    const marketingResults = evaluateMarketingClaims(detectedIngredients, selectedClaims, productType);
-    const { conflicts, user_specific_alerts } = analyzeIngredientInteractions(
-        detectedIngredients, allIngredients,
-        userProfile?.settings?.allergies || [], userProfile?.settings?.conditions || [],
-        userProfile?.settings?.skinType, userProfile?.settings?.scalpType
-    );
-    const resultData = calculateReliabilityScore_V13(
-        detectedIngredients, allIngredients, conflicts,
-        user_specific_alerts, marketingResults, productType
-    );
-    const fullAnalysisData = {
-      ...resultData,
-      detected_ingredients: detectedIngredients,
-      conflicts,
-      marketing_results: marketingResults,
-      product_type: productType,
-      user_specific_alerts,
-      sunscreen_analysis: productType === 'sunscreen' ? analyzeSunscreen(detectedIngredients) : null
-    };
-
-    // Set the final state so the result page can render
-    setFinalAnalysis(fullAnalysisData);
-
-    // Trigger the final reveal animation
-    Animated.timing(revealAnim, {
-      toValue: 1,
-      duration: 500, // Speed of the reveal
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      // Once the reveal is complete, finalize the state
-      setStep(4);
-      setIsAnimatingTransition(false);
-      heroTransitionAnim.setValue(0);
-      pulseAnim.setValue(0);
-      revealAnim.setValue(0);
     });
   };
   
@@ -2037,7 +1797,6 @@ const processImageWithGemini = async (uri) => {
   };
 
   const renderGeminiLoading = () => {
-    // Reuse the pulsing text opacity animation from the parent component
     const textOpacity = loadingTextOpacityAnim;
 
     return (
@@ -2045,15 +1804,13 @@ const processImageWithGemini = async (uri) => {
             <StaggeredItem index={0}>
                 <View style={styles.flaskAnimationContainer}>
                     <Svg width={180} height={180} viewBox="0 0 100 100">
-                        {/* Bubbles are rendered first to appear behind the flask outline */}
                         {loadingBubbles.map(bubble => <Bubble key={bubble.id} {...bubble} />)}
                         
-                        {/* Flask Outline SVG Path */}
                         <Path
                             d="M 50 95 L 40 95 A 10 10 0 0 1 30 85 L 30 60 A 20 20 0 0 1 50 40 A 20 20 0 0 1 70 60 L 70 85 A 10 10 0 0 1 60 95 L 50 95 M 50 40 L 50 5"
                             stroke={COLORS.primary}
                             strokeWidth="3"
-                            fill="rgba(178, 216, 180, 0.05)" // A very faint, glowing fill
+                            fill="rgba(178, 216, 180, 0.05)" 
                             strokeLinecap="round"
                         />
                     </Svg>
@@ -2069,74 +1826,115 @@ const processImageWithGemini = async (uri) => {
     );
   };
 
-  // --- RENDER FUNCTIONS ---
-  const renderInputStep = () => {
+  const InputStepView = ({ onImageSelect }) => {
+    const scanBarAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(scanBarAnim, {
+                    toValue: 1,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: Platform.OS !== 'web'
+                }),
+                Animated.timing(scanBarAnim, {
+                    toValue: 0,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: Platform.OS !== 'web'
+                })
+            ])
+        );
+        animation.start();
+        return () => animation.stop();
+    }, []);
+
+    const scanTranslateY = scanBarAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 140]
+    });
+
     return (
-        <View style={styles.contentContainer}>
-            <StaggeredItem index={0} style={styles.heroSection}>
-                <Animated.View style={{ transform: [{ scale: introIconScale }] }}>
-                    <View style={styles.heroIcon}>
-                        <FontAwesome5 name="search" size={40} color={COLORS.primary} />
-                    </View>
-                </Animated.View>
-            </StaggeredItem>
-
-            <StaggeredItem index={1}>
-                <Text style={styles.heroTitle}>حلل مكونات منتجك الآن</Text>
-            </StaggeredItem>
-
-            {/* --- MODIFIED TYPEWRITER USAGE --- */}
-            <Typewriter
-                texts={[
-                    "هل هذا المنتج آمن وفعال حقاً؟",
-                    "دع وثيق يرشدك.",
-                    "تحليل كيميائي بلمسة واحدة.",
-                    "اكتشف أسرار منتجات العناية الخاصة بك.",
-                    "مدعوم بالذكاء الاصطناعي لفهم أعمق.",
-                  
-                ]}
-                typingSpeed={80}
-                deletingSpeed={40}
-                pauseDuration={2000} // Increased pause time
-                style={{
-                    container: styles.heroSubContainer, // Pass a container style
-                    text: styles.heroSub, // Pass the text style
-                }}
-            />
-
-            {/* --- Floating Buttons (No changes here) --- */}
-            <View style={styles.floatingBtnContainer}>
-                <FloatingButton
-                    index={0}
-                    icon="camera"
-                    label="كاميرا"
-                    color={COLORS.primary}
-                    glowColor={COLORS.primaryGlow}
-                    onPress={() => handleImageSelection('camera')}
-                />
-                <FloatingButton
-                    index={1}
-                    icon="images"
-                    label="معرض الصور"
-                    color={COLORS.info}
-                    glowColor={`${COLORS.info}90`}
-                    onPress={() => handleImageSelection('gallery')}
-                />
+        <View style={styles.inputStepContainer}>
+            <View style={styles.heroVisualContainer}>
+                <View style={styles.scanFrame}>
+                    <FontAwesome5 name="wine-bottle" size={80} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
+                    <Animated.View style={[
+                        styles.scanLaser,
+                        { transform: [{ translateY: scanTranslateY }] }
+                    ]}>
+                        <LinearGradient
+                            colors={['transparent', COLORS.accentGreen, 'transparent']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={{ flex: 1 }}
+                        />
+                    </Animated.View>
+                    <View style={[styles.scanCorner, styles.scanCornerTL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerTR]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                </View>
             </View>
-            
-            <StaggeredItem index={4} style={{ marginTop: 30 }}>
-                 <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.backLinkText}>العودة للرئيسية</Text>
-                 </TouchableOpacity>
+
+            <StaggeredItem index={0} style={styles.bottomDeck}>
+                <LinearGradient
+                    colors={[COLORS.card, '#152520']}
+                    style={styles.bottomDeckGradient}
+                >
+                    <View style={styles.deckHeader}>
+                        <Text style={styles.deckTitle}>فحص المكونات</Text>
+                        <Typewriter
+                            texts={[
+                                "كشف الخبايا الكيميائية...",
+                                "تحليل مدى الأمان...",
+                                "هل يناسب بشرتك؟",
+                            ]}
+                            typingSpeed={60}
+                            style={{
+                                container: { height: 24, justifyContent: 'center' },
+                                text: { fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }
+                            }}
+                        />
+                    </View>
+
+                    <PressableScale onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
+                        <LinearGradient
+                            colors={[COLORS.accentGreen, '#4a8570']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            style={styles.primaryActionGradient}
+                        >
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="camera" size={28} color={COLORS.background} />
+                            </View>
+                            <View>
+                                <Text style={styles.primaryActionTitle}>تصوير المنتج</Text>
+                                <Text style={styles.primaryActionSub}>التقط صورة واضحة للمكونات الخلفية</Text>
+                            </View>
+                            <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
+                        </LinearGradient>
+                    </PressableScale>
+
+                    <View style={styles.secondaryActionsRow}>
+                        <PressableScale onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
+                            <Ionicons name="images" size={22} color={COLORS.textSecondary} />
+                            <Text style={styles.secondaryBtnText}>المعرض</Text>
+                        </PressableScale>
+                        <View style={styles.verticalDivider} />
+                        <PressableScale onPress={() => {  }} style={styles.secondaryBtn}>
+                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
+                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
+                        </PressableScale>
+                    </View>
+                </LinearGradient>
             </StaggeredItem>
         </View>
     );
-  };
+};
 
   const renderReviewStep = () => (
     <ContentCard>
       <View style={styles.contentContainer}>
-        {/* Section 1: AI Prediction with enhanced styling */}
         <StaggeredItem index={0}>
             <Text style={styles.sectionTitle}><FontAwesome5 name="robot" /> ما الذي يعتقده الذكاء الاصطناعي؟</Text>
             <View style={styles.aiPredictionCard}>
@@ -2148,11 +1946,9 @@ const processImageWithGemini = async (uri) => {
                     <Text style={styles.aiPredictionValue}>{PRODUCT_TYPES.find(t => t.id === productType)?.label || 'غير معروف'}</Text>
                 </View>
             </View>
-            {/* This button triggers the animation and then disappears */}
             {!showManualTypeGrid && (
               <PressableScale 
                 onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
                   setShowManualTypeGrid(true);
                 }} 
                 style={styles.changeTypeButton}
@@ -2162,10 +1958,11 @@ const processImageWithGemini = async (uri) => {
             )}
         </StaggeredItem>
 
-        {/* Section 2: Manual Type Selection - Animates into view */}
         {showManualTypeGrid && (
             <View style={{width: '100%'}}>
-              <Text style={[styles.sectionTitle, {marginTop: 25, marginBottom: 20}]}>اختر النوع الصحيح:</Text>
+              <StaggeredItem index={1}>
+                 <Text style={[styles.sectionTitle, {marginTop: 25, marginBottom: 20}]}>اختر النوع الصحيح:</Text>
+              </StaggeredItem>
               <View style={styles.typeGrid}>
                   {PRODUCT_TYPES.map((t, index) => ( 
                       <AnimatedTypeChip
@@ -2180,7 +1977,6 @@ const processImageWithGemini = async (uri) => {
             </View>
         )}
         
-        {/* Section 3: Confirmation Button */}
         <StaggeredItem index={showManualTypeGrid ? 2 : 1} style={{width: '100%', marginTop: 30}}>
             <PressableScale onPress={() => changeStep(2)} style={styles.mainBtn}>
                 <Text style={styles.mainBtnText}>تأكيد والمتابعة للادعاءات</Text>
@@ -2192,16 +1988,13 @@ const processImageWithGemini = async (uri) => {
   );
   
   const renderClaimsStep = () => {
-    // --- Fuzzy Search Logic (no changes here) ---
     const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
     
-    // --- ANIMATION & LAYOUT CONSTANTS ---
     const EXPANDED_HEADER_HEIGHT = 160;
     const COLLAPSED_HEADER_HEIGHT = Platform.OS === 'android' ? 60 : 90;
     const SEARCH_BAR_HEIGHT = 70;
     const HEADER_ANIMATION_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
-    // --- ANIMATION INTERPOLATIONS ---
     const headerTranslateY = scrollY.interpolate({
       inputRange: [0, HEADER_ANIMATION_DISTANCE],
       outputRange: [0, -HEADER_ANIMATION_DISTANCE],
@@ -2229,7 +2022,6 @@ const processImageWithGemini = async (uri) => {
       outputRange: [1, 1.1]
     });
 
-    // --- RENDER HELPER ---
     const renderClaimItem = ({ item, index }) => {
       const isSelected = selectedClaims.includes(item);
       return (
@@ -2249,7 +2041,6 @@ const processImageWithGemini = async (uri) => {
 
     return (
       <View style={{ flex: 1, width: '100%' }}>
-        {/* The list is the base layer and scrolls underneath the fixed header */}
         <Animated.FlatList
           data={displayedClaims}
           renderItem={renderClaimItem}
@@ -2266,26 +2057,22 @@ const processImageWithGemini = async (uri) => {
           scrollEventThrottle={16}
         />
         
-        {/* --- MAIN FIXED HEADER BLOCK (Sits on top of the list) --- */}
         <Animated.View style={[styles.fixedHeaderBlock, { 
             height: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
             transform: [{ translateY: headerTranslateY }],
         }]}>
-            {/* The Unified Background: Hides the list scrolling behind it */}
             <View style={styles.headerBackdrop} />
 
-            {/* Large Header Content (Fades out) */}
             <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
                 <Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text>
                 <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
             </Animated.View>
 
-            {/* Collapsed Header Bar (Fades in) */}
             <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
                 <SafeAreaView>
                   <View style={styles.headerContent}>
                     <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+                        <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                     </PressableScale>
                     <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
                     <View style={{width: 40}} />
@@ -2293,7 +2080,6 @@ const processImageWithGemini = async (uri) => {
                 </SafeAreaView>
             </Animated.View>
 
-            {/* Search Bar (Sits statically at the bottom of the header block) */}
             <View style={styles.claimsSearchContainer}>
                 <View style={styles.searchInputWrapper}>
                     <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
@@ -2308,21 +2094,18 @@ const processImageWithGemini = async (uri) => {
             </View>
         </Animated.View>
 
-        {/* --- Animated Small, Round FAB --- */}
         <View 
             style={styles.fabContainer}
         >
-            {/* ▼▼▼ THE FIX IS HERE ▼▼▼ */}
             <Animated.View
-                ref={fabRef} // <-- MODIFICATION: ref is now on the measurable Animated.View
+                ref={fabRef} 
                 style={{
                     transform: [{ translateY: fabTranslateY }],
-                    opacity: isAnimatingTransition ? 0 : 1 // <-- MODIFICATION: Opacity is also here now
+                    opacity: isAnimatingTransition ? 0 : 1 
                 }}
             >
                 <Animated.View style={{ transform: [{ scale: fabScale }] }}>
                     <PressableScale
-                        // <-- MODIFICATION: ref and opacity are removed from here
                         onPress={executeAnalysis} 
                         style={styles.fab}
                     >
@@ -2330,19 +2113,17 @@ const processImageWithGemini = async (uri) => {
                     </PressableScale>
                 </Animated.View>
             </Animated.View>
-            {/* ▲▲▲ END OF FIX ▲▲▲ */}
         </View>
       </View>
     );
   };
   
-  // --- ▼▼▼ FULLY REVISED renderLoading FUNCTION ▼▼▼ ---
   const renderLoading = () => {
     return ( 
       <View style={styles.loadingContainer}>
           <Animated.Text style={[styles.loadingText, { 
               opacity: heroTransitionAnim.interpolate({
-                inputRange: [0.5, 1], // Fade in text during the second half of the transition
+                inputRange: [0.5, 1], 
                 outputRange: [0, 1],
                 extrapolate: 'clamp',
               })
@@ -2352,7 +2133,6 @@ const processImageWithGemini = async (uri) => {
       </View>
     );
   };
-
 
   const renderResultStep = () => {
       if(!finalAnalysis) return null;
@@ -2378,7 +2158,6 @@ const processImageWithGemini = async (uri) => {
             {`🌿 المكونات المكتشفة (${finalAnalysis.detected_ingredients.length})`}
         </Text>
         
-        {/* 1. MOVE Pagination component HERE, above the carousel */}
         <Pagination data={finalAnalysis.detected_ingredients} scrollX={scrollX} />
 
         <View style={{ marginHorizontal: -20 }}>
@@ -2426,8 +2205,8 @@ const processImageWithGemini = async (uri) => {
                     <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                   </PressableScale>
                 )}
-                <Text style={styles.headerTitle}>محرك V13</Text>
-                {step > 0 ? <View style={{width: 40}}/> : <View/>}
+                
+                {step > 0 && <View style={{width: 40}}/>}
               </View>
             )}
 
@@ -2435,37 +2214,48 @@ const processImageWithGemini = async (uri) => {
                 <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
                     {renderClaimsStep()}
                 </Animated.View>
+            ) : step === 0 ? (
+                <View style={{ flex: 1 }}>
+                     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+                        <InputStepView onImageSelect={handleImageSelection} />
+                     </Animated.View>
+                </View>
             ) : (
-              <ScrollView 
-                ref={scrollRef} 
-                contentContainerStyle={[
-                  styles.scrollContent, 
-                  // Extra padding at bottom for nav bar
-                  { paddingBottom: 100 + insets.bottom }
-                ]} 
-                keyboardShouldPersistTaps="handled"
-              >
-                  <Animated.View style={{ opacity: contentOpacity, width: '100%'}}>
-                      {step === 0 && renderInputStep()}
-                      {step === 1 && renderReviewStep()}
-                      {step === 3 && (isGeminiLoading ? renderGeminiLoading() : renderLoading())}
-                      {step === 4 && renderResultStep()}
-                  </Animated.View>
-              </ScrollView>
+                <ScrollView 
+                    ref={scrollRef} 
+                    contentContainerStyle={[
+                      styles.scrollContent, 
+                      { paddingBottom: 100 + insets.bottom }
+                    ]} 
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <Animated.View style={{ opacity: contentOpacity, width: '100%'}}>
+                        {step === 1 && renderReviewStep()}
+                        {step === 3 && (isGeminiLoading ? renderGeminiLoading() : renderLoading())}
+                        {step === 4 && renderResultStep()}
+                    </Animated.View>
+                </ScrollView>
             )}
         </View>
 
-        {/* Modals and Overlays */}
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            {/* ... keep modal content ... */}
             <View style={styles.modalOverlay}>
                <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
                   <Animated.View style={styles.modalContent}>
                       <Text style={styles.modalTitle}>حفظ المنتج</Text>
-                      {/* ... inputs ... */}
-                      <TextInput style={styles.modalInput} placeholder="مثال: سيروم فيتامين سي XYZ" placeholderTextColor={COLORS.textSecondary} value={productName} onChangeText={setProductName} />
+                      <TextInput 
+                          style={styles.modalInput} 
+                          placeholder="مثال: سيروم فيتامين سي XYZ" 
+                          placeholderTextColor={COLORS.textSecondary} 
+                          value={productName} 
+                          onChangeText={setProductName} 
+                      />
                       <PressableScale onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
-                          {isSaving ? <ActivityIndicator color={COLORS.background} /> : <Text style={styles.modalSaveButtonText}>حفظ في رفّي</Text>}
+                          {isSaving ? (
+                              <ActivityIndicator color={COLORS.background} />
+                          ) : (
+                              <Text style={styles.modalSaveButtonText}>حفظ في رفّي</Text>
+                          )}
                       </PressableScale>
                   </Animated.View>
             </View>
@@ -2477,18 +2267,26 @@ const processImageWithGemini = async (uri) => {
           onPictureTaken={handlePictureTaken}
         />
 
+        <ImageCropperModal
+            isVisible={cropperVisible}
+            imageUri={tempImageUri}
+            onClose={() => setCropperVisible(false)}
+            onCropComplete={(cropped) => {
+                setCropperVisible(false);
+                processImageWithGemini(cropped.uri);
+            }}
+        />
+
         {isAnimatingTransition && (
           <Animated.View
             style={[
               styles.heroFab,
               {
-                // ... animation styles ...
                 top: fabMetrics.y,
                 left: fabMetrics.x,
                 width: fabMetrics.width,
                 height: fabMetrics.height,
                 transform: [
-                   // ... transforms ...
                    { translateX: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, (width / 2) - fabMetrics.x - (fabMetrics.width / 2)] }) },
                    { translateY: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, (height / 2) - fabMetrics.y - (fabMetrics.height / 2)] }) },
                    { scale: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 3] }) },
@@ -2496,785 +2294,9 @@ const processImageWithGemini = async (uri) => {
               },
             ]}
           >
-             {/* ... pulsing rings ... */}
             <FontAwesome5 name="flask" color={COLORS.background} size={22} />
           </Animated.View>
         )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // --- Core Layout & Background ---
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background, 
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 50,
-    paddingBottom: 10,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-  },
-  headerTitle: { 
-    fontFamily: 'Tajawal-ExtraBold', 
-    fontSize: 22, 
-    color: COLORS.textPrimary 
-  },
-  backBtn: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    backgroundColor: 'rgba(255,255,255,0.1)', 
-    justifyContent: 'center', 
-    alignItems: 'center'
-  },
-  scrollContent: { 
-    flexGrow: 1, 
-    paddingHorizontal: 20, 
-    paddingBottom: 40,
-    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
-    justifyContent: 'center'
-  },
-  contentContainer: { 
-    width: '100%', 
-    alignItems: 'center', 
-    paddingVertical: 20 
-  },
-  cardBase: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    width: '100%',
-  },
-
-  // --- Step 0: Input Step ---
-  heroSection: { 
-    alignItems: 'center', 
-    marginBottom: 30, 
-    paddingHorizontal: 20 
-  },
-  heroIcon: { 
-    width: 100, 
-    height: 100, 
-    borderRadius: 50, 
-    backgroundColor: COLORS.card, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  heroTitle: { 
-    fontFamily: 'Tajawal-ExtraBold', 
-    fontSize: 28, 
-    color: COLORS.textPrimary, 
-    textAlign: 'center', 
-    marginBottom: 8 
-  },
-  heroSubContainer: {
-      minHeight: 44,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-  },
-  heroSub: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 15, 
-    color: COLORS.textSecondary, 
-    textAlign: 'center', 
-    lineHeight: 22,
-    minHeight: 22,
-  },
-  floatingBtnContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginTop: 60,
-    marginBottom: 20,
-  },
-  glowEffect: {
-      position: 'absolute',
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-  },
-  floatingBtnCore: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.card,
-  },
-  floatingBtnLabel: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textPrimary,
-      marginTop: 15,
-  },
-  backLinkText: { 
-    color: COLORS.textSecondary, 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14 
-  },
-
-  // --- Step 1: Review Step ---
-  sectionTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 18, 
-    color: COLORS.textPrimary, 
-    textAlign: 'right', 
-    marginBottom: 15,
-    width: '100%',
-    paddingHorizontal: 10,
-  },
-  aiPredictionCard: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    gap: 20,
-    backgroundColor: COLORS.card, 
-    padding: 20,
-    borderRadius: 18,
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  aiPredictionIconContainer: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: 'rgba(96, 165, 140, 0.1)',
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  aiPredictionLabel: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 12, 
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-  },
-  aiPredictionValue: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 16, 
-    color: COLORS.accentGreen,
-    textAlign: 'right',
-  },
-  changeTypeButton: { 
-    marginTop: 15, 
-    alignSelf: 'center', 
-    padding: 10,
-  },
-  changeTypeText: { 
-    color: COLORS.accentGreen, 
-    fontSize: 14,
-    fontFamily: 'Tajawal-Bold',
-  },
-  typeGrid: { 
-    flexDirection: 'row-reverse', 
-    flexWrap: 'wrap', 
-    gap: 12, 
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  typeChip: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 12, 
-    borderRadius: 25, 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    gap: 10,
-    backgroundColor: COLORS.card,
-  },
-  typeText: { 
-    fontSize: 13, 
-    fontFamily: 'Tajawal-Bold' 
-  },
-
-  // --- Step 2: Claims Step ---
-  fixedHeaderBlock: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.background,
-  },
-  expandedHeader: {
-      height: 160,
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  collapsedHeader: {
-      position: 'absolute',
-      top: 40,
-      left: 0,
-      right: 0,
-      height: Platform.OS === 'android' ? 20 : 90,
-      justifyContent: 'flex-end',
-  },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingBottom: 4,
-  },
-  collapsedHeaderText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
-      color: COLORS.textPrimary,
-  },
-  claimsSearchContainer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 70,
-      paddingHorizontal: 15,
-      justifyContent: 'center',
-  },
-  searchInputWrapper: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      backgroundColor: COLORS.card,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      paddingHorizontal: 15,
-  },
-  searchIcon: {
-      marginLeft: 10,
-  },
-  claimsSearchInput: {
-      flex: 1,
-      height: 50,
-      color: COLORS.textPrimary,
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 15,
-      textAlign: 'right',
-  },
-  claimItem: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      padding: 20,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.card,
-      gap: 15,
-  },
-  claimItemActive: {
-      borderColor: COLORS.accentGreen,
-      backgroundColor: 'rgba(96, 165, 140, 0.1)',
-  },
-  claimItemText: {
-      fontFamily: 'Tajawal-Bold', 
-      fontSize: 16, 
-      color: COLORS.textPrimary,
-      flex: 1,
-      textAlign: 'right',
-  },
-  checkboxBase: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      borderWidth: 2,
-      borderColor: COLORS.accentGreen,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(13, 27, 30, 0.5)',
-  },
-  checkboxFill: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: COLORS.accentGreen,
-      borderRadius: 14,
-  },
-  fabContainer: {
-      position: 'absolute',
-      bottom: Platform.OS === 'android' ? 70 : 90,
-      alignSelf: 'center',
-      zIndex: 20,
-  },
-  fab: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      backgroundColor: COLORS.accentGreen,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 8,
-      shadowColor: COLORS.accentGlow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.6,
-      shadowRadius: 8,
-  },
-  heroFab: {
-    position: 'absolute',
-    zIndex: 1000,
-    backgroundColor: COLORS.accentGreen,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pulsingRing: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 32,
-    borderWidth: 3,
-  },
-
-  // --- Step 3: Loading ---
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 30,
-  },
-  flaskAnimationContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 200,
-  },
-  loadingText: {
-    color: COLORS.textPrimary,
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 20,
-    textAlign: 'center',
-  },
-
-  // --- Step 4: Results ---
-  resultsSectionTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 20,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 15,
-    paddingHorizontal: 5,
-  },
-  personalMatchCard: { 
-    padding: 15, 
-    borderWidth: 1,
-    borderRadius: 20,
-    backgroundColor: COLORS.card,
-  },
-  personalMatch_good: { borderColor: COLORS.success },
-  personalMatch_warning: { borderColor: COLORS.warning },
-  personalMatch_danger: { borderColor: COLORS.danger },
-  personalMatchTitle: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 16, 
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-  },
-  personalMatchReason: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 13, 
-    color: COLORS.textSecondary, 
-    marginTop: 8,
-    textAlign: 'right',
-  },
-  vScoreCard: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  verdictText: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 22, 
-    color: COLORS.textPrimary, 
-    textAlign: 'center', 
-    marginBottom: 10 
-  },
-  pillarsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    width: '100%', 
-    marginTop: 15, 
-    paddingTop: 15, 
-    borderTopWidth: 1, 
-    borderTopColor: COLORS.border, 
-  },
-  pillar: { 
-    alignItems: 'center', 
-    gap: 5 
-  },
-  pillarTitle: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14, 
-    color: COLORS.textSecondary, 
-    flexDirection: 'row', 
-    alignItems: 'center',
-    gap: 5,
-  },
-  pillarScore: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 20 
-  },
-  groupHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-    paddingHorizontal: 5,
-  },
-  groupTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-  },
-  truthCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  truthTrigger: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    padding: 15,
-    gap: 15,
-  },
-  truthTitleContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  truthTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-  },
-  truthStatus: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-  },
-  truthDetails: {
-    paddingHorizontal: 15,
-    paddingBottom: 15,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    marginTop: 10,
-  },
-  truthExplanation: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-    textAlign: 'right',
-    marginBottom: 15,
-  },
-  evidenceContainer: {},
-  evidenceTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 10,
-  },
-  evidencePillsContainer: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  evidencePill: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  evidencePillText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-  },
-  pillProven: { backgroundColor: `${COLORS.success}40` },
-  pillTraditional: { backgroundColor: `${COLORS.gold}40` },
-  pillDoubtful: { backgroundColor: `${COLORS.warning}40` },
-  pillIneffective: { backgroundColor: `${COLORS.danger}40` },
-  ingCardBase: {
-    width: width * 0.85,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
-    padding: 15,
-  },
-  ingHeader: { alignItems: 'flex-end' },
-  ingName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, textAlign: 'right' },
-  ingTagsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  ingTag: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  ingFuncTag: { backgroundColor: 'rgba(96, 165, 140, 0.2)' },
-  ingChemTag: { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
-  ingTagText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary },
-  ingBenefitsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 15 },
-  ingBenefitChip: { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  ingBenefitText: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary },
-  ingDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
-  ingWarningBox: { borderRadius: 12, padding: 12, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 },
-  ingWarningIcon: { marginTop: 2 },
-  ingWarningText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textPrimary, lineHeight: 20, textAlign: 'right' },
-
-  // --- Shared Components ---
-  mainBtn: { flexDirection: 'row-reverse', backgroundColor: COLORS.accentGreen, borderRadius: 50, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' },
-  mainBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
-  actionRow: { flexDirection: 'row', gap: 15, marginTop: 20, width: '100%' },
-  secBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.textSecondary, borderRadius: 15 },
-  secBtnText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 15 },
-  priBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accentGreen, borderRadius: 15 },
-  priBtnText: { color: COLORS.background, fontFamily: 'Tajawal-Bold', fontSize: 15 },
-
-  // --- Save Modal ---
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 25,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  modalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, marginBottom: 10 },
-  modalSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
-  modalInput: {
-    width: '100%',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    padding: 15,
-    color: COLORS.textPrimary,
-    fontFamily: 'Tajawal-Regular',
-    textAlign: 'right',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
-  },
-  modalSaveButton: { width: '100%', padding: 15, backgroundColor: COLORS.accentGreen, borderRadius: 12, alignItems: 'center' },
-  modalSaveButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
-  
-  // --- Pagination & Swipe Hint ---
-  swipeHintContainer: { position: 'absolute', right: '40%', top: '45%', transform: [{ translateY: -30 }], zIndex: 10, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
-  paginationSimpleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  paginationContainer: { height: DOT_SIZE, width: PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING, justifyContent: 'center', alignSelf: 'center', marginBottom: 20, overflow: 'hidden' },
-  paginationTrack: { flexDirection: 'row', alignItems: 'center' },
-  paginationDot: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: 'rgba(255, 255, 255, 0.25)', marginRight: DOT_SPACING },
-  paginationIndicator: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: COLORS.accentGreen, position: 'absolute', left: 0 },
-  
-// ==========================================
-  //         ULTIMATE CAMERA STYLES
-  // ==========================================
-  
-  // --- TOP AREA ---
-  topStatusContainer: {
-      position: 'absolute',
-      top: Platform.OS === 'android' ? 50 : 60,
-      width: '100%',
-      alignItems: 'center',
-      zIndex: 1,
-  },
-  statusBadge: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      gap: 8,
-      borderWidth: 1,
-      borderColor: COLORS.accentGreen,
-      marginBottom: 15,
-  },
-  statusDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: '#ef4444',
-  },
-  statusText: {
-      color: '#FFF',
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 13,
-  },
-  hintText: {
-      color: 'rgba(255,255,255,0.8)',
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 15,
-      textShadowColor: 'rgba(0,0,0,0.5)',
-      textShadowOffset: {width: 0, height: 1},
-      textShadowRadius: 4,
-  },
-  
-  // --- LASER ---
-  laserLine: {
-    position: 'absolute',
-    height: 2,
-    shadowColor: COLORS.accentGreen,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    elevation: 10,
-    zIndex: 0,
-  },
-
-  // --- BOTTOM CONTROL DECK ---
-  bottomControlDeck: {
-      position: 'absolute',
-      bottom: 0,
-      width: '100%',
-      paddingBottom: Platform.OS === 'android' ? 40 : 60,
-      paddingTop: 30,
-      alignItems: 'center',
-      backgroundColor: 'transparent', // Gradient could go here if desired
-  },
-
-  // --- ZOOM SLIDER ---
-  sliderContainer: {
-      height: 40,
-      justifyContent: 'center',
-  },
-  sliderTrackBg: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  sliderTrackFill: {
-      position: 'absolute',
-      left: 0,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.accentGreen,
-  },
-  sliderKnob: {
-      position: 'absolute',
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: '#FFF',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: COLORS.accentGreen,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 10,
-      top: 6, // (40 - 28) / 2
-  },
-  sliderKnobDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.accentGreen,
-  },
-  sliderLabels: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginTop: 4,
-  },
-  sliderLabelText: {
-      color: 'rgba(255,255,255,0.5)',
-      fontSize: 12,
-      fontFamily: 'Tajawal-Bold',
-  },
-
-  // --- ZOOM TOOLTIP ---
-  zoomTooltip: {
-      position: 'absolute',
-      top: -45,
-      backgroundColor: COLORS.accentGreen,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 12,
-      minWidth: 50,
-      alignItems: 'center',
-  },
-  zoomTooltipText: {
-      color: '#000',
-      fontFamily: 'Tajawal-ExtraBold',
-      fontSize: 14,
-  },
-  zoomTooltipArrow: {
-      position: 'absolute',
-      bottom: -5,
-      left: '50%',
-      marginLeft: -5,
-      width: 0,
-      height: 0,
-      borderLeftWidth: 5,
-      borderRightWidth: 5,
-      borderTopWidth: 5,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent',
-      borderTopColor: COLORS.accentGreen,
-  },
-
-  // --- MAIN CONTROLS ROW ---
-  mainControlsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '80%', // Keeps buttons reachable
-  },
-  
-  // --- SIDE BUTTONS (Flash / Close) ---
-  sideControlBtn: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-  },
-  sideControlBtnActive: {
-      backgroundColor: COLORS.accentGreen,
-      borderColor: COLORS.accentGreen,
-  },
-
-  // --- SHUTTER BUTTON ---
-  shutterOuter: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      borderWidth: 4,
-      borderColor: 'rgba(255, 255, 255, 0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  shutterInner: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      backgroundColor: '#FFF',
-      shadowColor: '#FFF',
-      shadowOpacity: 0.6,
-      shadowRadius: 10,
-  },
-});
