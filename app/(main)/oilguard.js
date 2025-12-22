@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Dimensions, 
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, SafeAreaView, FlatList, Slider, PanResponder, Vibration
+  RefreshControl, Easing, SafeAreaView, FlatList, Slider, PanResponder, Vibration, StyleSheet
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,7 +35,7 @@ import {
 import { 
   styles, COLORS, width, height, 
   ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
-  DOT_SIZE, PAGINATION_DOTS, DOT_SPACING 
+  DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
 } from './oilguard.styles';
 
 // --- SYSTEM CONFIG ---

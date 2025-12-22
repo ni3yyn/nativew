@@ -949,6 +949,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
             )}
             keyExtractor={item => item.id}
             ItemSeparatorComponent={() => <View style={{height: 8}}/>}
+            scrollEnabled={false} 
             contentContainerStyle={{ paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -1093,8 +1094,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
   
     return (
         <View style={{flex: 1}}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
-                
+            <View style={{ paddingBottom: 150 }}> 
                 {/* 1. Hero Section (Critical Warnings) */}
                 {focusInsight ? (
                     <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
@@ -1196,7 +1196,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                         </ContentCard>
                     </View>
                 </View>
-            </ScrollView>
+                </View>
   
             {selectedInsight && (
                 <InsightDetailsModal 
@@ -1859,6 +1859,7 @@ const handleDeleteStep = (stepId) => {
     )}
             keyExtractor={item => item.id}
             contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
+            scrollEnabled={false}
             ListEmptyComponent={() => (
                 <View style={styles.routineEmptyState}><MaterialCommunityIcons name="playlist-edit" size={60} color={COLORS.textDim} style={{opacity: 0.5}}/><Text style={styles.routineEmptyTitle}>الروتين فارغ</Text><Text style={styles.routineEmptySub}>استخدم زر "+" في الأسفل لبناء روتينك المخصص.</Text></View>
             )}
@@ -2048,6 +2049,7 @@ const IngredientsSection = ({ products }) => {
                 keyExtractor={(item) => item.id || item.displayName}
                 contentContainerStyle={{paddingBottom: 150}}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <FontAwesome5 name="flask" size={40} color={COLORS.textDim} style={{opacity:0.5}} />
@@ -2170,6 +2172,7 @@ const MigrationSection = ({ products }) => {
             keyExtractor={item => item.id}
             contentContainerStyle={{ paddingBottom: 150 }}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
         />
     );
 };
@@ -2295,7 +2298,7 @@ const SettingsSection = ({ profile, onLogout }) => {
     };
   
     return (
-        <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+        <View style={{ paddingBottom: 150 }}>
             {/* Traits */}
             <StaggeredItem index={0}>
                 <Accordion 
@@ -2382,7 +2385,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                     </PressableScale>
                  </Accordion>
             </StaggeredItem>
-        </ScrollView>
+        </View>
     );
   };
 
@@ -2717,10 +2720,28 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                             </View>
                         )}
 
-                        {/* Close Button */}
-                        <PressableScale style={[styles.closeButton, { backgroundColor: severityColor }]} onPress={handleClose}>
+                        {/* 
+                            THE FIX: Replaced PressableScale with standard Pressable + Physics Props
+                        */}
+                        <Pressable
+                            onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                            onPress={handleClose}
+                            style={({ pressed }) => [
+                                styles.closeButton, 
+                                { 
+                                    backgroundColor: severityColor,
+                                    opacity: pressed ? 0.9 : 1, // Visual feedback
+                                    transform: [{ scale: pressed ? 0.98 : 1 }] 
+                                }
+                            ]}
+                            // Large hit area to catch sloppy taps
+                            hitSlop={20}
+                            // ALLOWS CLICK EVEN IF MODAL IS BOUNCING
+                            pressRetentionOffset={{ top: 50, bottom: 50, left: 50, right: 50 }}
+                        >
                             <Text style={styles.closeButtonText}>فهمت</Text>
-                        </PressableScale>
+                        </Pressable>
+                        
                     </ScrollView>
                 </View>
             </Animated.View>
@@ -2734,20 +2755,9 @@ const ShelfActionGroup = ({ router }) => {
 
     const toggleMenu = () => {
         const toValue = isOpen ? 0 : 1;
-        // Haptics only when toggling the main FAB, not when clicking actions
-        // (Actions have their own haptics in PressableScale)
-        if (isOpen) {
-             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        } else {
-             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
-
-        animateMenu(toValue);
+        if (!isOpen) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setIsOpen(!isOpen);
-    };
-
-    // Extract animation logic to reuse it without triggering haptics/state toggles unnecessarily
-    const animateMenu = (toValue) => {
+        
         Animated.spring(anim, {
             toValue,
             friction: 5,
@@ -2756,72 +2766,106 @@ const ShelfActionGroup = ({ router }) => {
         }).start();
     };
 
-    const handlePressAction = (route) => {
-        // 1. Close menu visually immediately
-        animateMenu(0);
-        setIsOpen(false);
-
-        // 2. Navigate immediately using requestAnimationFrame
-        // This ensures the touch event clears before pushing, removing the latency
-        // without the need for an arbitrary setTimeout.
-        requestAnimationFrame(() => {
-            router.push(route);
-        });
+    const handlePressIn = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     };
 
-    // --- Animations ---
-    const rotate = anim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '45deg']
-    });
+    const handlePress = (route) => {
+        router.push(route);
+        // Clean up UI silently after navigation
+        setTimeout(() => {
+            setIsOpen(false);
+            anim.setValue(0);
+        }, 400);
+    };
 
-    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -140] });
-    const action1Opacity = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
-
-    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -75] });
-    const action2Opacity = anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0, 1] });
-
+    const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
+    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -130] });
+    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });
+    
+    // Buttons appear instantly (0 -> 1 quickly)
+    const buttonOpacity = anim.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 1] });
+    
+    // Overlay fades smoothly (0 -> 1 linear)
     const backdropOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
-    const Label = ({ text }) => (
-        <View style={styles.actionLabelContainer}>
-            <Text style={styles.actionLabel}>{text}</Text>
-        </View>
-    );
-
     return (
-        <View style={styles.fabContainer}>
-            {/* Backdrop */}
-            {isOpen && (
-                <Pressable onPress={toggleMenu}>
-                    <Animated.View style={[styles.fabBackdrop, { opacity: backdropOpacity }]} />
-                </Pressable>
-            )}
+        <View style={styles.fabContainer} pointerEvents="box-none">
+            
+            {/* 
+                1. INDEPENDENT OVERLAY 
+                - No transforms (prevents flickering)
+                - Massive size to cover any screen
+                - pointerEvents controls interactivity (Pass-through when closed, Blocking when open)
+            */}
+            <Animated.View 
+                style={{
+                    position: 'absolute',
+                    // Position relative to the FAB to cover the whole screen
+                    top: -height * 1.5, 
+                    left: -width * 1.5, 
+                    width: width * 3, 
+                    height: height * 3,
+                    backgroundColor: 'rgba(26, 45, 39, 0.9)',
+                    zIndex: 0, // Bottom Layer
+                    opacity: backdropOpacity,
+                    elevation: 0 // Ensure Android doesn't mess up transparency
+                }} 
+                pointerEvents={isOpen ? 'auto' : 'none'}
+            >
+                <Pressable style={{flex: 1}} onPress={toggleMenu} />
+            </Animated.View>
 
-            {/* --- BUTTON 1: COMPARISON --- */}
-            <Animated.View style={[styles.actionBtnWrap, { opacity: action1Opacity, transform: [{ translateY: action1Y }] }]}>
-                <Label text="مقارنة منتجات" />
-                <PressableScale 
-                    onPress={() => handlePressAction('/comparison')} 
-                    style={[styles.actionBtn, { backgroundColor: '#4a8a73' }]}
+            {/* 2. BUTTON 1: Comparison (Layer 10) */}
+            <Animated.View 
+                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action1Y }], zIndex: 10 }]}
+            >
+                <View style={styles.actionLabelContainer}>
+                    <Text style={styles.actionLabel}>مقارنة منتجات</Text>
+                </View>
+                
+                <Pressable
+                    onPressIn={handlePressIn}
+                    onPress={() => handlePress('/comparison')}
+                    style={({ pressed }) => [
+                        styles.actionBtn, 
+                        { backgroundColor: '#4a8a73', opacity: pressed ? 0.8 : 1 }
+                    ]}
+                    // Large hit area + Retention offset for instant moving clicks
+                    hitSlop={20} 
+                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
                 >
                     <FontAwesome5 name="balance-scale" size={16} color={COLORS.textOnAccent} />
-                </PressableScale>
+                </Pressable>
             </Animated.View>
 
-            {/* --- BUTTON 2: SCAN/ADD --- */}
-            <Animated.View style={[styles.actionBtnWrap, { opacity: action2Opacity, transform: [{ translateY: action2Y }] }]}>
-                <Label text="فحص منتج" />
-                <PressableScale 
-                    onPress={() => handlePressAction('/oilguard')} 
-                    style={[styles.actionBtn, { backgroundColor: COLORS.accentGreen }]}
+            {/* 3. BUTTON 2: Scan (Layer 10) */}
+            <Animated.View 
+                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action2Y }], zIndex: 10 }]}
+            >
+                <View style={styles.actionLabelContainer}>
+                    <Text style={styles.actionLabel}>فحص منتج</Text>
+                </View>
+
+                <Pressable
+                    onPressIn={handlePressIn}
+                    onPress={() => handlePress('/oilguard')}
+                    style={({ pressed }) => [
+                        styles.actionBtn, 
+                        { backgroundColor: COLORS.accentGreen, opacity: pressed ? 0.8 : 1 }
+                    ]}
+                    hitSlop={20}
+                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
                 >
                     <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
-                </PressableScale>
+                </Pressable>
             </Animated.View>
 
-            {/* --- MAIN TRIGGER --- */}
-            <PressableScale style={styles.mainFab} onPress={toggleMenu}>
+            {/* 4. MAIN FAB (Layer 20) */}
+            <PressableScale 
+                style={[styles.mainFab, { zIndex: 20 }]} 
+                onPress={toggleMenu}
+            >
                 <LinearGradient 
                     colors={isOpen ? [COLORS.danger, '#991b1b'] : [COLORS.accentGreen, '#4a8a73']} 
                     style={styles.fabGradient}
@@ -2831,6 +2875,7 @@ const ShelfActionGroup = ({ router }) => {
                     </Animated.View>
                 </LinearGradient>
             </PressableScale>
+            
         </View>
     );
 };
@@ -2884,37 +2929,13 @@ export default function ProfileScreen() {
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslate = useRef(new Animated.Value(0)).current;
   const switchTab = (tab) => {
-      if(tab === activeTab) return;
-      Haptics.selectionAsync();
-      
-      Animated.parallel([
-          Animated.timing(contentOpacity, { 
-            toValue: 0, 
-            duration: 150, 
-            useNativeDriver: true 
-          }),
-          Animated.timing(contentTranslate, { 
-            toValue: 20, 
-            duration: 150, 
-            useNativeDriver: true 
-          })
-      ]).start(() => {
-          setActiveTab(tab);
-          contentTranslate.setValue(-20);
-          Animated.parallel([
-            Animated.timing(contentOpacity, { 
-              toValue: 1, 
-              duration: 250, 
-              useNativeDriver: true 
-            }),
-            Animated.spring(contentTranslate, { 
-              toValue: 0, 
-              friction: 7, 
-              useNativeDriver: true 
-            })
-          ]).start();
-      });
-  };
+    if(tab === activeTab) return;
+    Haptics.selectionAsync();
+    
+    // We removed LayoutAnimation here to prevent UI blocking.
+    // The NatureDock component handles the pill animation separately.
+    setActiveTab(tab);
+};
 
   // Particles
   const particles = useMemo(() => [...Array(15)].map((_, i) => ({ 
@@ -3496,6 +3517,7 @@ export default function ProfileScreen() {
             </Animated.View>
 
             {/* --- MAIN SCROLL --- */}
+            {/* --- MAIN SCROLL --- */}
             <Animated.ScrollView
                 contentContainerStyle={{ 
                     paddingHorizontal: 15, 
@@ -3512,17 +3534,18 @@ export default function ProfileScreen() {
                     <RefreshControl
                         refreshing={loading}
                         onRefresh={handleRefresh}
-                        tintColor={COLORS.primary}
-                        colors={[COLORS.primary]}
+                        tintColor={COLORS.textPrimary}
+                        colors={[COLORS.textPrimary]}
                         progressBackgroundColor="rgba(255,255,255,0.1)"
                     />
                 }
             >
                 <Animated.View style={{ 
                     opacity: contentOpacity, 
-                    transform: [{ translateX: contentTranslate }] 
+                    transform: [{ translateY: contentTranslate }],
+                    minHeight: 400 // Prevents scroll jump during switch
                 }}>
-                    {/* ... (ShelfSection, AnalysisSection, etc.) */}
+                    
                     {activeTab === 'shelf' && (
                         <ShelfSection 
                             products={savedProducts} 
@@ -3532,6 +3555,7 @@ export default function ProfileScreen() {
                             router={router}
                         />
                     )}
+
                     {activeTab === 'routine' && (
                         <RoutineSection 
                             savedProducts={savedProducts} 
@@ -3539,22 +3563,25 @@ export default function ProfileScreen() {
                             onOpenAddStepModal={openAddStepModal}
                         />
                     )}
-                     {activeTab === 'analysis' && (
+
+                    {activeTab === 'analysis' && (
                         <AnalysisSection 
-                        savedProducts={savedProducts} 
-                        loading={loading}
-                        analysisResults={analysisResults}
-                        
-                        dismissedInsightIds={dismissedInsightIds}
-                        handleDismissPraise={handleDismissPraise}
-                    />
+                            savedProducts={savedProducts} 
+                            loading={loading}
+                            analysisResults={analysisResults}
+                            dismissedInsightIds={dismissedInsightIds}
+                            handleDismissPraise={handleDismissPraise}
+                        />
                     )}
+
                     {activeTab === 'ingredients' && (
                         <IngredientsSection products={savedProducts} />
                     )}
+
                     {activeTab === 'migration' && (
                         <MigrationSection products={savedProducts} />
                     )}
+
                     {activeTab === 'settings' && (
                         <SettingsSection 
                             profile={userProfile} 
