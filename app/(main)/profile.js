@@ -32,12 +32,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Force LTR logic for code, visuals are RTL
-I18nManager.allowRTL(false);
-
 const { width, height } = Dimensions.get('window');
-
-const BG_IMAGE = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=1527&auto=format&fit=crop";
 
 // --- 2. THEME & ASSETS ---
 const COLORS = {
@@ -1092,26 +1087,60 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
     const visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
     const focusInsight = visibleInsights.find(i => i.severity === 'critical' || i.severity === 'warning') || null;
     const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
+    
+    // Safe fallback for barrier data
+    const barrier = analysisResults.barrierHealth || { score: 0, status: '...', color: COLORS.textSecondary, desc: '' };
   
     return (
         <View style={{flex: 1}}>
             <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
                 
-                {/* 1. Hero Section */}
+                {/* 1. Hero Section (Critical Warnings) */}
                 {focusInsight ? (
                     <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
                 ) : (
                     <AllClearState />
                 )}
   
-                {/* 2. Carousel */}
+                {/* 2. Insight Carousel */}
                 {carouselInsights.length > 0 && (
                      <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />
                 )}
   
-                {/* 3. Overview Dashboard */}
+                {/* 3. BARRIER HEALTH METER */}
+                <ContentCard style={{ marginBottom: 15, padding: 20 }}>
+                    <View style={styles.analysisCardHeader}>
+                        <FontAwesome5 name="layer-group" size={14} color={barrier.color} />
+                        <Text style={styles.analysisCardTitle}>صحة الحاجز الجلدي (Barrier Load)</Text>
+                    </View>
+                    
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
+                        <Text style={[styles.statValue, {color: barrier.color, fontSize: 32}]}>{barrier.score}</Text>
+                        <Text style={[styles.statLabel, {color: barrier.color, marginBottom: 8}]}>/ 10</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontFamily: 'Tajawal-Bold', color: barrier.color, textAlign: 'left', fontSize: 16 }}>
+                                {barrier.status}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.barrierTrack}>
+                        <View style={[
+                            styles.barrierFill, 
+                            { 
+                                width: `${Math.min(barrier.score * 10, 100)}%`, 
+                                backgroundColor: barrier.color 
+                            }
+                        ]} />
+                    </View>
+                    
+                    <Text style={styles.barrierDesc}>{barrier.desc}</Text>
+                </ContentCard>
+
+                {/* 4. Overview Dashboard */}
                 <View style={styles.overviewContainer}>
-                    {/* ... (Your existing overview cards code remains exactly the same) ... */}
+                    {/* Routine Overview */}
                     <View style={styles.overviewCard}>
                         <ContentCard style={{flex: 1}}>
                             <View style={styles.analysisCardHeader}>
@@ -1143,6 +1172,8 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                            </View>
                         </ContentCard>
                     </View>
+
+                    {/* Sun Protection */}
                     <View style={styles.overviewCard}>
                          <ContentCard style={{flex: 1}}>
                             <View style={styles.analysisCardHeader}>
@@ -1156,7 +1187,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                                    radius={35}
                                    strokeWidth={6}
                                />
-                               <View style={{flex: 1, marginRight: 15}}>
+                               <View style={{flex: 1, marginRight: 15, justifyContent: 'center'}}>
                                    {(analysisResults?.sunProtectionGrade?.notes || []).map((note, i) => (
                                         <Text key={i} style={styles.sunProtectionNote}>{note}</Text>
                                    ))}
@@ -1167,7 +1198,6 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 </View>
             </ScrollView>
   
-            {/* NEW MODAL IMPLEMENTATION */}
             {selectedInsight && (
                 <InsightDetailsModal 
                     visible={!!selectedInsight}
@@ -1177,7 +1207,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
             )}
         </View>
     );
-  };
+};
 
 
 // --- HELPER 1: The Custom Prompt Modal as a Bottom Sheet ---
@@ -2819,7 +2849,6 @@ export default function ProfileScreen() {
   const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
   const scrollDistance = headerMaxHeight - headerMinHeight;
   const [activeTab, setActiveTab] = useState('shelf');
-  const [productPrice, setProductPrice] = useState('');
   const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
   const [addStepHandler, setAddStepHandler] = useState(null);
   const openAddStepModal = (onAddCallback) => {
@@ -2905,203 +2934,485 @@ export default function ProfileScreen() {
     }
   };
 
-  // --- In your `ProfileScreen.js`, REPLACE the entire `analysisResults` useMemo hook with this ---
+  // ========================================================================
+  // --- HELPER FUNCTIONS (Ensure these are defined before the hook) ---
+  // ========================================================================
+  
+  const normalizeForMatching = (name) => {
+    if (!name) return '';
+    return name.toString().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+      .replace(/[.,،؛()/]/g, ' ') 
+      .replace(/[^\p{L}\p{N}\s-]/gu, '') 
+      .replace(/\s+/g, ' ') 
+      .trim();
+  };
 
+  // ========================================================================
+  // --- THE PERSONALIZED DERMATOLOGY ENGINE (Updated) ---
+  // ========================================================================
   const analysisResults = useMemo(() => {
-    // 1. DATA PREPARATION
-    const allShelfProducts = savedProducts.filter(p => p?.analysisData?.detected_ingredients);
     
+    // --- 0. INITIAL SETUP & DATA PREP ---
+    const allIngredientsDB = new Map();
+    combinedOilsDB.ingredients.forEach(ing => { if (ing && ing.id) allIngredientsDB.set(ing.id, ing); });
+
     const results = {
         aiCoachInsights: [],
         amRoutine: { products: [], conflicts: 0, synergies: 0 },
         pmRoutine: { products: [], conflicts: 0, synergies: 0 },
         sunProtectionGrade: { score: 0, notes: [] },
+        barrierHealth: { score: 0, status: 'Optimal', color: COLORS.success, desc: '' },
+        formulationBreakdown: { actives: 0, hydrators: 0, antioxidants: 0 }
     };
 
-    // If no profile or products, stop here
-    if (!userProfile || allShelfProducts.length === 0) {
-        return results;
-    }
+    const validProducts = savedProducts.filter(p => p && p.analysisData);
+    if (!userProfile || validProducts.length === 0) return results;
 
     const settings = userProfile.settings || {};
-    const { conditions = [], allergies = [] } = settings;
+    const { skinType, scalpType, conditions = [], allergies = [], goals = [], blacklistedIngredients = [] } = settings;
     
-    // Map to prevent duplicate insights
     const insightsMap = new Map();
-    const addInsight = (insight) => { 
-        if (!insightsMap.has(insight.id)) insightsMap.set(insight.id, insight); 
+    const addInsight = (id, title, summary, details, severity, related_products = []) => {
+        if (!insightsMap.has(id)) {
+            insightsMap.set(id, { id, title, short_summary: summary, details, severity, related_products });
+        }
     };
 
-    // 2. CONNECT ROUTINE TABS TO SHELF PRODUCTS
-    // This maps the IDs stored in the Routine tab back to the actual Product objects on the Shelf
-    const mapRoutineToProducts = (period) => {
-        return (userProfile.routines?.[period] || [])
-            .flatMap(step => step.productIds) // Get all IDs in this period
-            .map(id => allShelfProducts.find(p => p.id === id)) // Find actual product
-            .filter(Boolean); // Remove nulls if product was deleted
+    // --- 1. DEFINE CONSTANTS & HELPERS ---
+    const NIACINAMIDE_ID = 'niacinamide';
+    const PURE_VITAMIN_C_ID = 'vitamin-c';
+    const STRONG_ACTIVES = new Set(['Retinoid', 'AHA', 'BHA']);
+    const BARRIER_SUPPORT_INGREDIENTS = new Set(['ceramide', 'panthenol', 'cholesterol', 'squalane', NIACINAMIDE_ID]);
+
+    const getIngredientFunction = (dbIng) => {
+        if (!dbIng) return new Set();
+        const funcs = new Set();
+        const chemType = dbIng.chemicalType?.toLowerCase() || '';
+        const funcCategory = dbIng.functionalCategory?.toLowerCase() || '';
+        
+        if (chemType.includes('ريتينويد') || chemType.includes('retinoid')) funcs.add('Retinoid');
+        if (chemType.includes('aha') || dbIng.id === 'glycolic-acid') funcs.add('AHA');
+        if (chemType.includes('bha') || dbIng.id === 'salicylic-acid') funcs.add('BHA');
+        if (chemType.includes('pha')) funcs.add('PHA');
+        if (dbIng.id === 'vitamin-c') funcs.add('Pure Vitamin C');
+        if (dbIng.id === 'copper-peptides') funcs.add('Copper Peptides');
+        if (funcCategory.includes('مضاد أكسدة')) funcs.add('Antioxidant');
+        if (funcCategory.includes('مقشر')) funcs.add('Exfoliant');
+        if (dbIng.id === 'benzoyl-peroxide') funcs.add('Benzoyl Peroxide');
+        return funcs;
     };
 
-    const amProducts = mapRoutineToProducts('am');
-    const pmProducts = mapRoutineToProducts('pm');
-    const routineIsPopulated = amProducts.length > 0 || pmProducts.length > 0;
+    const getProductsWithFunction = (products, func) => 
+        products.filter(p => p.analysisData.detected_ingredients.some(i => {
+             const dbIng = allIngredientsDB.get(i.id) || allIngredientsDB.get(i.name.toLowerCase());
+             return getIngredientFunction(dbIng).has(func);
+        }));
 
-    // ========================================================================
-    // --- TIER 1: DEEP SHELF ANALYSIS (Runs even if Routine is Empty) ---
-    // ========================================================================
+    // --- 2. PERSONALIZATION CHECKS (Allergies, Conditions, Bio) ---
     
-    // A. Check for "Missing Essentials" on the Shelf
-    const productTypes = allShelfProducts.map(p => p.analysisData?.product_type);
+    // A. Build Exclusion Maps
+    const userAllergenIngredients = new Set(
+        allergies.flatMap(id => commonAllergies.find(a => a.id === id)?.ingredients || []).map(normalizeForMatching)
+    );
+
+    const userConditionAvoidMap = new Map();
     
-    if (!productTypes.includes('sunscreen')) {
-        addInsight({
-            id: 'shelf-no-sunscreen', 
-            title: 'ناقص أساسي: واقي الشمس',
-            short_summary: 'رفك لا يحتوي على أي واقي شمسي.',
-            details: 'مهما كانت منتجاتك باهظة الثمن، فهي لن تفيد بدون حماية من الشمس. ابحث عن منتج بمعامل حماية SPF 30+.',
-            severity: 'critical'
-        });
+    // Map Conditions to Avoided Ingredients
+    conditions.forEach(id => {
+        const condition = commonConditions.find(c => c.id === id);
+        if (condition && condition.avoidIngredients) {
+            condition.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), condition.name));
+        }
+    });
+
+    // Map Skin Type Rules
+    if (skinType) {
+        const skinData = basicSkinTypes.find(t => t.id === skinType);
+        if (skinData && skinData.avoidIngredients) {
+            skinData.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), `بشرة ${skinData.label}`));
+        }
+    }
+    // Map Scalp Type Rules
+    if (scalpType) {
+        const scalpData = basicScalpTypes.find(t => t.id === scalpType);
+        if (scalpData && scalpData.avoidIngredients) {
+            scalpData.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), `فروة رأس ${scalpData.label}`));
+        }
     }
 
-    if (!productTypes.includes('cleanser') && !productTypes.includes('oil_blend')) {
-         addInsight({
-            id: 'shelf-no-cleanser', 
-            title: 'ناقص أساسي: التنظيف',
-            short_summary: 'لم نكتشف غسول أو منظف على رفك.',
-            details: 'التنظيف هو الخطوة الأولى لأي روتين صحي لإزالة التراكمات والسماح للمنتجات الأخرى بالعمل.',
-            severity: 'warning'
-        });
-    }
+    // B. Execute Checks on Shelf
+    validProducts.forEach(product => {
+        product.analysisData.detected_ingredients.forEach(ing => {
+            const normalizedIngName = normalizeForMatching(ing.name);
+            
+            // Check Allergies
+            if (userAllergenIngredients.has(normalizedIngName)) {
+                const allergy = commonAllergies.find(a => allergies.includes(a.id) && a.ingredients.map(normalizeForMatching).includes(normalizedIngName));
+                addInsight(
+                    `allergy-${product.id}-${ing.id || ing.name}`,
+                    'خطر: مكون مسبب للحساسية',
+                    `يحتوي "${product.productName}" على "${ing.name}".`,
+                    `لقد أشرت في ملفك الشخصي إلى إصابتك بحساسية "${allergy?.label || 'معروفة'}". هذا المنتج يحتوي على "${ing.name}" الذي يثير هذه الحساسية مباشرة. يرجى تجنبه تماماً.`,
+                    'critical',
+                    [product.productName]
+                );
+            }
 
-    // B. Ingredient "Clash" Detection (Shelf Level)
-    // We check if you own dangerous combinations, even if you haven't put them in a routine yet.
-    const allIngredients = allShelfProducts.flatMap(p => p.analysisData?.detected_ingredients.map(i => ({...i, product: p.productName})));
-    const hasRetinol = allIngredients.find(i => i.name.toLowerCase().includes('retinol'));
-    const hasAcids = allIngredients.filter(i => ['glycolic acid', 'salicylic acid', 'lactic acid'].some(acid => i.name.toLowerCase().includes(acid)));
-    const hasVitaminC = allIngredients.find(i => i.name.toLowerCase().includes('ascorbic') || i.name.toLowerCase().includes('vitamin c'));
-
-    if (hasRetinol && hasAcids.length > 0) {
-        addInsight({
-            id: 'conflict-shelf-retinol-acids',
-            title: 'تحذير: تعارض محتمل',
-            short_summary: 'تمتلك منتجات ريتينول ومقشرات أحماض.',
-            details: `لديك "${hasRetinol.product}" (ريتينول) و منتجات أحماض مثل "${hasAcids[0].product}". استخدامهم معاً في نفس الوقت يسبب تهيج شديد. افصل بينهم (أحدهما صباحاً والآخر مساءً، أو في أيام مختلفة).`,
-            severity: 'warning',
-            related_products: [hasRetinol.product, hasAcids[0].product]
-        });
-    }
-
-    if (hasRetinol && hasVitaminC) {
-        addInsight({
-            id: 'conflict-shelf-retinol-vitc',
-            title: 'نصيحة ترتيب',
-            short_summary: 'فيتامين C والريتينول.',
-            details: 'يفضل استخدام فيتامين C في الصباح (للحماية من الأكسدة) والريتينول في المساء (للعلاج). لا تخلطهم في نفس الوقت.',
-            severity: 'good', // Informational
-            related_products: [hasRetinol.product, hasVitaminC.product]
-        });
-    }
-
-    // C. Profile Matching (Allergies & Conditions)
-    // ... (This stays the same as your previous code, ensuring we catch bad matches)
-    allergies.forEach(id => {
-        const allergyData = commonAllergies.find(a => a.id === id);
-        if (!allergyData) return;
-        allShelfProducts.forEach(p => {
-            const problematicIng = p.analysisData?.detected_ingredients.find(i => allergyData.ingredients.includes(i.name));
-            if (problematicIng) {
-                addInsight({
-                    id: `allergy_${id}_${p.id}`, title: 'تحذير حاسم: حساسية',
-                    short_summary: `منتج "${p.productName}" يحتوي على مسبب حساسية لك (${problematicIng.name}).`,
-                    details: `بناءً على إعداداتك، يجب التوقف عن استخدام هذا المنتج فوراً.`,
-                    severity: 'critical', related_products: [p.productName]
-                });
+            // Check Bio-Compatibility / Conditions
+            if (userConditionAvoidMap.has(normalizedIngName)) {
+                const reason = userConditionAvoidMap.get(normalizedIngName);
+                addInsight(
+                    `condition-${product.id}-${ing.id || ing.name}`,
+                    `تنبيه: لا يناسب ${reason}`,
+                    `يحتوي "${product.productName}" على "${ing.name}".`,
+                    `بما أنك تعاني من "${reason}"، فإن المكون "${ing.name}" قد يؤدي إلى تفاقم المشكلة (مثل زيادة الجفاف أو التهيج). يفضل البحث عن بديل ألطف.`,
+                    'warning',
+                    [product.productName]
+                );
             }
         });
     });
 
-    // ========================================================================
-    // --- TIER 2: ROUTINE SPECIFIC ANALYSIS (Timing & Layering) ---
-    // ========================================================================
-    if (routineIsPopulated) {
-        
-        // 1. Timing Checks
-        const retinolInAM = amProducts.find(p => p.analysisData?.detected_ingredients.some(i => i.name.toLowerCase().includes('retinol')));
-        if (retinolInAM) {
-            addInsight({
-                id: 'timing-retinol-am', 
-                title: 'توقيت خاطئ: ريتينول',
-                short_summary: 'لا تستخدم الريتينول في الصباح.',
-                details: `المنتج "${retinolInAM.productName}" يحتوي على ريتينول. ضوء الشمس يفكك الريتينول ويجعل بشرتك حساسة. انقله لروتين المساء.`,
-                severity: 'critical', 
-                related_products: [retinolInAM.productName]
+    // C. Blacklist Check
+    if (blacklistedIngredients.length > 0) {
+        validProducts.forEach(product => {
+            product.analysisData.detected_ingredients.forEach(ing => {
+                if (blacklistedIngredients.some(b => normalizeForMatching(b) === normalizeForMatching(ing.name))) {
+                    addInsight(
+                        `blacklist-${product.id}-${ing.name}`,
+                        'مكون محظور شخصياً',
+                        `وجدت المكون "${ing.name}" في منتجك.`,
+                        `أنت قمت بإضافة "${ing.name}" يدوياً إلى قائمتك السوداء. هذا المكون موجود في منتج "${product.productName}".`,
+                        'critical',
+                        [product.productName]
+                    );
+                }
             });
-        }
+        });
+    }
 
-        const sunscreenInPM = pmProducts.find(p => p.analysisData?.product_type === 'sunscreen');
-        if (sunscreenInPM) {
-            addInsight({
-                id: 'timing-sunscreen-pm', 
-                title: 'تنبيه: واقي شمس ليلاً؟',
-                short_summary: 'لا حاجة لواقي الشمس في المساء.',
-                details: `لقد وضعت "${sunscreenInPM.productName}" في روتين المساء. هذا قد يسد المسام دون فائدة.`,
-                severity: 'good'
-            });
-        }
-
-        // 2. Missing Routine Steps (Specific to periods)
-        if (amProducts.length > 0 && !amProducts.some(p => p.analysisData?.product_type === 'sunscreen')) {
-             addInsight({
-                id: 'routine-missing-spf', 
-                title: 'روتين الصباح ناقص',
-                short_summary: 'أضفت منتجات للصباح، لكن نسيت واقي الشمس!',
-                details: 'أكمل روتينك الصباحي بإضافة واقي الشمس الموجود على رفّك كآخر خطوة.',
-                severity: 'critical'
-            });
-        }
-
-    } else {
-        // Only show the guide if NO other critical/warning insights were generated from Tier 1
-        const hasImportantInsights = Array.from(insightsMap.values()).some(i => i.severity === 'critical' || i.severity === 'warning');
-        
-        if (!hasImportantInsights) {
-             addInsight({
-                id: 'guide-build-routine',
-                title: 'مستعدة للخطوة التالية؟',
-                short_summary: 'منتجاتك تبدو جيدة! لنرتبها الآن.',
-                details: 'لقد قمنا بتحليل مكونات رفّك. للحصول على تحليل "الترتيب الصحيح" و"تعارض التوقيت"، اذهبي لتبويب "روتيني" واسحبي المنتجات إلى الصباح أو المساء.',
-                severity: 'good',
+    // D. Pregnancy Specific Check (Retinoids)
+    if (conditions.includes('pregnancy')) {
+        const retinoidProducts = getProductsWithFunction(validProducts, 'Retinoid');
+        if (retinoidProducts.length > 0) {
+            retinoidProducts.forEach(p => {
+                const retinoidIng = p.analysisData.detected_ingredients.find(i => getIngredientFunction(allIngredientsDB.get(i.id)).has('Retinoid'));
+                addInsight(
+                    `preg-unsafe-${p.id}`,
+                    'تحذير حمل: ريتينويد',
+                    `منتج "${p.productName}" غير آمن حالياً.`,
+                    `هذا المنتج يحتوي على "${retinoidIng?.name || 'مشتقات فيتامين A'}"، والتي يحذر الأطباء من استخدامها أثناء الحمل لأنها قد تؤثر على الجنين.`,
+                    'critical',
+                    [p.productName]
+                );
             });
         }
     }
 
-    // ========================================================================
-    // --- SCORING & FINALIZATION ---
-    // ========================================================================
-    
-    // Calculate Sun Protection Score based on Routine AND Shelf
-    const hasSunscreenOnShelf = productTypes.includes('sunscreen');
-    const hasSunscreenInAM = amProducts.some(p => p.analysisData?.product_type === 'sunscreen');
+    // --- 3. GOAL ALIGNMENT ---
+    const goalChecks = {
+        brightening: { benefit: 'تفتيح', details: "لتحقيق النضارة، أنتِ بحاجة لمكونات مثل فيتامين C، النياسيناميد، أو أحماض ألفا هيدروكسي." },
+        acne: { benefit: 'مكافحة حب الشباب', details: "لعلاج الحبوب بفعالية، ابحثي عن حمض الساليسيليك، زيت شجرة الشاي، أو الريتينول." },
+        anti_aging: { benefit: 'مكافحة الشيخوخة', details: "لمحاربة التجاعيد، روتينك يحتاج إلى محفزات للكولاجين مثل الببتيدات أو الريتينويدات." },
+        hydration: { benefit: 'ترطيب', details: "لترطيب عميق، تأكدي من وجود حمض الهيالورونيك والسيراميد في منتجاتك." }
+    };
 
-    if (hasSunscreenInAM) {
-        results.sunProtectionGrade.score = 100;
-        results.sunProtectionGrade.notes.push("✓ واقي الشمس موجود في روتين الصباح.");
-    } else if (hasSunscreenOnShelf) {
-        results.sunProtectionGrade.score = 50;
-        results.sunProtectionGrade.notes.push("✓ لديكِ واقي شمسي على الرف.");
-        results.sunProtectionGrade.notes.push("⚠ يجب إضافته لخطوات الصباح.");
+    goals.forEach(goalId => {
+        const check = goalChecks[goalId];
+        if (check) {
+            const satisfyingProducts = validProducts.filter(p => 
+                p.analysisData.detected_ingredients.some(ing => {
+                    const dbIng = allIngredientsDB.get(ing.id);
+                    return dbIng?.benefits && Object.keys(dbIng.benefits).some(k => k.includes(check.benefit));
+                })
+            );
+
+            if (satisfyingProducts.length === 0) {
+                const goalLabel = GOALS_LIST.find(g=>g.id===goalId)?.label || goalId;
+                addInsight(
+                    `goal-gap-${goalId}`, 
+                    `فجوة في الهدف: ${goalLabel}`, 
+                    `روتينك الحالي لا يخدم هدف ${goalLabel}.`, 
+                    `لقد اخترتِ "${goalLabel}" كهدف رئيسي، لكن رفّك لا يحتوي على مكونات فعالة لذلك. ${check.details}`, 
+                    'warning'
+                );
+            }
+        }
+    });
+
+    // --- 4. ROUTINE INTEGRITY & BARRIER HEALTH ---
+    
+    // Map Routine IDs to Product Objects
+    const mapRoutine = (period) => (userProfile.routines?.[period] || [])
+        .flatMap(s => s.productIds).map(id => validProducts.find(p => p.id === id)).filter(Boolean);
+    
+    const amProducts = mapRoutine('am');
+    const pmProducts = mapRoutine('pm');
+
+    // ** Barrier Load Calculation **
+    const calculateBarrierLoad = (products) => {
+        let score = 0;
+        products.forEach(p => {
+            const ings = p.analysisData.detected_ingredients;
+            const funcs = new Set();
+            ings.forEach(i => {
+                const dbIng = allIngredientsDB.get(i.id);
+                getIngredientFunction(dbIng).forEach(f => funcs.add(f));
+            });
+            
+            if (funcs.has('Retinoid')) score += 3;
+            if (funcs.has('Benzoyl Peroxide')) score += 2.5;
+            if (funcs.has('Exfoliant') || funcs.has('AHA') || funcs.has('BHA')) score += 2;
+            if (funcs.has('Pure Vitamin C')) score += 1.5;
+            
+            if (p.analysisData.product_type === 'cleanser' && (funcs.has('BHA') || funcs.has('Benzoyl Peroxide'))) {
+                score += 1;
+            }
+        });
+        return score;
+    };
+
+    const amScore = calculateBarrierLoad(amProducts);
+    const pmScore = calculateBarrierLoad(pmProducts);
+    const totalLoad = amScore + pmScore;
+
+    // Set Barrier Health Object
+    results.barrierHealth.score = totalLoad;
+    if (totalLoad === 0 && (amProducts.length > 0 || pmProducts.length > 0)) {
+        results.barrierHealth.status = 'لطيف / مرطب';
+        results.barrierHealth.color = COLORS.info;
+        results.barrierHealth.desc = "روتينك يركز على الترطيب والترميم. لا توجد مواد فعالة قوية.";
+    } else if (totalLoad <= 4.5) {
+        results.barrierHealth.status = 'متوازن (صحّي)';
+        results.barrierHealth.color = COLORS.success;
+        results.barrierHealth.desc = "توازن ممتاز بين المواد الفعالة والترطيب. استمري هكذا.";
+    } else if (totalLoad <= 7.5) {
+        results.barrierHealth.status = 'مرتفع (تحذير)';
+        results.barrierHealth.color = COLORS.warning;
+        results.barrierHealth.desc = "أنت تقترب من حد التهيج. تأكد من ترطيب البشرة جيداً.";
+        addInsight('barrier-warning', 'حمل كيميائي مرتفع', 'انتبه من الجفاف.', 'تستخدم عدة مواد فعالة قوية في روتينك اليومي، مما قد يرهق حاجز البشرة.', 'warning');
     } else {
-        results.sunProtectionGrade.score = 0;
-        results.sunProtectionGrade.notes.push("✗ لا يوجد واقي شمسي.");
+        results.barrierHealth.status = 'خطر احتراق 🚨';
+        results.barrierHealth.color = COLORS.danger;
+        results.barrierHealth.desc = "خطر تدمير الحاجز الجلدي! هذا الحمل الكيميائي مرتفع جداً.";
+        addInsight('barrier-danger', 'خطر: احتراق كيميائي', 'توقف فوراً!', 'مجموع نقاط التهيج في روتينك مرتفع جداً. قلل استخدام الأحماض والريتينول فوراً.', 'critical');
     }
 
-    results.amRoutine.products = amProducts;
-    results.pmRoutine.products = pmProducts;
+    // --- 5. DETAILED ROUTINE ANALYSIS (AM/PM) ---
     
-    // Sort: Critical -> Warning -> Good
+    // Global Routine Checks
+    if (pmProducts.length > 0 && !pmProducts.some(p => p.analysisData.product_type === 'cleanser' || p.productName.includes('غسول'))) {
+        addInsight(
+            'missing-pm-cleanser', 
+            'خطوة أساسية مفقودة', 
+            'لا يوجد غسول في روتين المساء.', 
+            'النوم ببقايا واقي الشمس والأوساخ يسبب انسداد المسام فوراً. أضيفي غسولاً لروتين المساء.', 
+            'critical'
+        );
+    }
+
+    const hasActives = validProducts.some(p => {
+        const ings = p.analysisData.detected_ingredients;
+        return ings.some(i => STRONG_ACTIVES.has(Array.from(getIngredientFunction(allIngredientsDB.get(i.id)))[0]));
+    });
+
+    if ((hasActives || goals.includes('hydration')) && !validProducts.some(p => p.analysisData.product_type === 'lotion_cream')) {
+        addInsight(
+            'missing-moisturizer', 
+            'أساسيات ناقصة', 
+            'تحتاجين لمرطب لدعم بشرتك.', 
+            'عند استخدام مكونات نشطة قوية، يصبح المرطب ضرورياً لحماية الحاجز الجلدي من التلف.', 
+            'warning'
+        );
+    }
+
+    // Routine-Specific Logic Function
+    const analyzeRoutine = (products, routineName) => {
+        if (products.length === 0) return { conflicts: 0, synergies: 0 };
+        let conflicts = 0, synergies = 0;
+
+        // A. Layering Check (Oil before Water)
+        const productBases = products.map(p => ({ 
+            name: p.productName, 
+            base: (p.analysisData.product_type === 'oil_blend' || p.productName.includes('oil')) ? 'oil' : 'water'
+        }));
+        const firstOil = productBases.findIndex(p => p.base === 'oil');
+        const lastWater = productBases.map(p => p.base).lastIndexOf('water');
+        
+        if (firstOil !== -1 && lastWater !== -1 && firstOil < lastWater) {
+            addInsight(
+                `layering-${routineName}`,
+                `ترتيب خاطئ: ${routineName}`,
+                `الزيوت تمنع امتصاص السيرومات.`,
+                `أنتِ تضعين "${productBases[firstOil].name}" (زيت) قبل "${productBases[lastWater].name}" (مائي). الزيت يشكل حاجزاً يمنع امتصاص الماء، لذا ضعي المائي أولاً.`,
+                'warning',
+                [productBases[firstOil].name, productBases[lastWater].name]
+            );
+        }
+
+        // B. Barrier Neglect (Active w/o Support)
+        const ingredientsInRoutine = new Map(products.flatMap(p => p.analysisData.detected_ingredients.map(i => [i.id, { ...i, product: p }])));
+        const productFunctions = new Map(products.map(p => [
+            p.id, 
+            new Set(p.analysisData.detected_ingredients.flatMap(i => Array.from(getIngredientFunction(allIngredientsDB.get(i.id)))))
+        ]));
+
+        const activeProducts = products.filter(p => Array.from(productFunctions.get(p.id) || []).some(f => STRONG_ACTIVES.has(f)));
+        const hasBarrierSupport = products.some(p => p.analysisData.detected_ingredients.some(i => BARRIER_SUPPORT_INGREDIENTS.has(i.id)));
+        
+        if (activeProducts.length > 0 && !hasBarrierSupport) {
+            conflicts++;
+            const activeNames = activeProducts.map(p => p.productName).join(' و ');
+            const isDry = skinType === 'dry' || skinType === 'sensitive';
+            addInsight(
+                `barrier-neglect-${routineName}`,
+                'خطر على الحاجز الجلدي',
+                'تستخدمين مقشرات قوية بدون ترميم.',
+                `أنت تستخدمين "${activeNames}" في روتين ${routineName}، لكن لا يوجد مرطب يحتوي على سيراميد أو بانثينول لتهدئة البشرة.`,
+                isDry ? 'critical' : 'warning',
+                activeProducts.map(p => p.productName)
+            );
+        }
+
+        // C. Over-exfoliation
+        const exfoliantProducts = products.filter(p => Array.from(productFunctions.get(p.id) || []).some(f => ['AHA', 'BHA', 'PHA', 'Retinoid'].includes(f)));
+        if (exfoliantProducts.length > 1) {
+            conflicts++;
+            const names = exfoliantProducts.map(p => p.productName).join('\n• ');
+            addInsight(
+                `over-exfoliation-${routineName}`,
+                'إفراط في التقشير!',
+                'تستخدمين أكثر من مقشر في وقت واحد.',
+                `لقد جمعت بين المنتجات التالية في روتين واحد:\n• ${names}\nهذا كثير جداً وقد يحرق بشرتك. وزعيهم على ليالٍ مختلفة.`,
+                'critical',
+                exfoliantProducts.map(p => p.productName)
+            );
+        }
+
+        // D. Redundant Vitamin C
+        const vitCProducts = getProductsWithFunction(products, 'Pure Vitamin C');
+        if (vitCProducts.length > 1) {
+            addInsight(
+                `redundant-vitc-${routineName}`, 
+                'تكرار غير مفيد', 
+                'لديك أكثر من سيروم فيتامين C.', 
+                `أنت تستخدمين "${vitCProducts[0].productName}" و "${vitCProducts[1].productName}". منتج واحد بتركيز جيد يكفي؛ الزيادة لن تمنحك نتيجة أفضل بل قد تهيج البشرة.`, 
+                'good'
+            );
+        }
+
+        // E. Timing (Exfoliants in AM)
+        if (routineName === 'الصباح' && exfoliantProducts.length > 0) {
+            conflicts++;
+            const names = exfoliantProducts.map(p => p.productName).join(' و ');
+            addInsight(
+                'timing-exfoliant-am', 
+                'توقيت غير مناسب', 
+                'المقشرات تجعل بشرتك حساسة للشمس.', 
+                `أنت تستخدمين "${names}" في الصباح. الأحماض والريتينول يفضل استخدامها مساءً لتجنب التصبغات وحروق الشمس.`, 
+                'warning', 
+                exfoliantProducts.map(p=>p.productName)
+            );
+        }
+
+        // F. pH Conflict (Vit C + Niacinamide)
+        const hasNia = ingredientsInRoutine.has(NIACINAMIDE_ID);
+        const hasPureVitC = ingredientsInRoutine.has(PURE_VITAMIN_C_ID);
+        
+        if (hasNia && hasPureVitC) {
+            conflicts++;
+            const vitCName = ingredientsInRoutine.get(PURE_VITAMIN_C_ID).product.productName;
+            const niaName = ingredientsInRoutine.get(NIACINAMIDE_ID).product.productName;
+            addInsight(
+                `conflict-vitc-nia-${routineName}`,
+                'تعارض كيميائي (pH)',
+                'فيتامين C النقي + نياسيناميد.',
+                `أنت تخلطين "${vitCName}" (حامضي) مع "${niaName}" (قلوي). هذا يسبب احمراراً (Flushing) ويقلل فعالية المنتجين. استخدمي الفيتامين C صباحاً والنياسيناميد مساءً.`,
+                'warning',
+                [vitCName, niaName]
+            );
+        }
+
+        // G. Synergy (Retinoid + Niacinamide)
+        const hasRetinoid = products.some(p => Array.from(productFunctions.get(p.id) || []).includes('Retinoid'));
+        if (routineName === 'المساء' && hasRetinoid && hasNia) {
+            synergies++;
+            const retName = products.find(p => Array.from(productFunctions.get(p.id)).includes('Retinoid')).productName;
+            const niaName = ingredientsInRoutine.get(NIACINAMIDE_ID).product.productName;
+            addInsight(
+                'synergy-ret-nia', 
+                'ثنائي ذهبي ✨', 
+                'ريتينويد + نياسيناميد.', 
+                `دمجك لـ "${retName}" مع "${niaName}" ممتاز! النياسيناميد يقوي حاجز البشرة ويجعلها تتحمل الريتينول بشكل أفضل.`, 
+                'good',
+                [retName, niaName]
+            );
+        }
+
+        return { conflicts, synergies };
+    };
+
+    const amAnalysis = analyzeRoutine(amProducts, 'الصباح');
+    const pmAnalysis = analyzeRoutine(pmProducts, 'المساء');
+
+    results.amRoutine = { products: amProducts, ...amAnalysis };
+    results.pmRoutine = { products: pmProducts, ...pmAnalysis };
+
+    // --- 6. SUN PROTECTION ---
+    const usesSunscreen = amProducts.some(p => p.analysisData.product_type === 'sunscreen');
+    if (amProducts.length > 0) {
+        if (usesSunscreen) {
+            results.sunProtectionGrade.score += 70;
+            results.sunProtectionGrade.notes.push("✓ واقي شمس موجود صباحاً.");
+            
+            // Synergy: SPF + Antioxidant
+            const hasAntioxidant = getProductsWithFunction(amProducts, 'Antioxidant').length > 0 || getProductsWithFunction(amProducts, 'Pure Vitamin C').length > 0;
+            if (hasAntioxidant) {
+                results.sunProtectionGrade.score += 30;
+                results.sunProtectionGrade.notes.push("✓ معزز بمضادات الأكسدة (+30%).");
+                addInsight(
+                    'synergy-spf-antioxidant', 
+                    'حماية مضاعفة', 
+                    'واقي شمس + مضاد أكسدة.', 
+                    'استخدامك لسيروم مضاد للأكسدة (مثل فيتامين C) تحت الواقي الشمسي يقضي على الجذور الحرة التي تتسرب عبر الواقي.', 
+                    'good'
+                );
+            }
+        } else {
+            results.sunProtectionGrade.notes.push("✗ لا يوجد واقي شمس!");
+            const isAntiAging = goals.includes('anti_aging');
+            const isBrightening = goals.includes('brightening');
+            let impactMsg = 'الشمس هي المسبب الأول لتلف البشرة.';
+            if (isAntiAging) impactMsg = 'بما أن هدفك "مكافحة الشيخوخة"، فإن غياب واقي الشمس يلغي مفعول كل منتجاتك العلاجية.';
+            if (isBrightening) impactMsg = 'بما أن هدفك "التفتيح"، فلن تري أي نتيجة بدون واقي شمس، بل قد تزيد التصبغات.';
+            
+            addInsight(
+                'missing-sunscreen', 
+                'خطر: لا يوجد واقي شمس', 
+                'روتين الصباح يفتقر لأهم خطوة.', 
+                `${impactMsg} يجب إضافة واقي شمس كخطوة أخيرة كل صباح.`, 
+                'critical'
+            );
+        }
+    }
+
+    // --- 7. STATS BREAKDOWN ---
+    const uniqueIngs = new Set(validProducts.flatMap(p => p.analysisData.detected_ingredients.map(i => i.id)));
+    uniqueIngs.forEach(id => {
+        const dbIng = allIngredientsDB.get(id);
+        const funcs = getIngredientFunction(dbIng);
+        if (funcs.has('Retinoid') || funcs.has('AHA') || funcs.has('BHA')) results.formulationBreakdown.actives++;
+        if (dbIng?.functionalCategory?.includes('مرطب')) results.formulationBreakdown.hydrators++;
+        if (funcs.has('Antioxidant')) results.formulationBreakdown.antioxidants++;
+    });
+
+    // Final Sort by Severity
     const severityOrder = { 'critical': 1, 'warning': 2, 'good': 3 };
     results.aiCoachInsights = Array.from(insightsMap.values()).sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
     return results;
+
   }, [savedProducts, userProfile]);
   
   const avatarOpacity = scrollY.interpolate({ 
@@ -4972,5 +5283,24 @@ editIndicator: {
     bottom: 6,
     left: 12, // Since it's RTL, left is the "end"
     opacity: 0.5
+},
+barrierTrack: {
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 4,
+    width: '100%',
+    marginBottom: 10,
+    overflow: 'hidden',
+},
+barrierFill: {
+    height: '100%',
+    borderRadius: 4,
+},
+barrierDesc: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    lineHeight: 18,
 },
 });

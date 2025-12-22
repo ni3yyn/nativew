@@ -23084,6 +23084,23 @@ export const combinedOilsDB = {
     { level: 'caution', text: 'له قوام دهني غني، وقد يسبب انسداد المسام (Comedogenic) لأصحاب البشرة الدهنية جداً أو المعرضة لحب الشباب عند استخدامه على الوجه.' }
   ],
 },
+{
+  id: 'benzoyl-peroxide',
+  name: 'بنزويل بيروكسايد',
+  scientific_name: 'Benzoyl Peroxide',
+  searchKeywords: ['benzoyl peroxide', 'bpo', 'بنزويل', 'علاج حب الشباب'],
+  usageScope: ['face', 'body'],
+  functionalCategory: 'مضاد لحب الشباب / مضاد بكتيري',
+  chemicalType: 'بيروكسيد عضوي',
+  benefits: { 'مكافحة حب الشباب': 0.98, 'تنظيف المسام': 0.9 },
+  synergy: { 'adapalene': 1.1 },
+  negativeSynergy: { 'vitamin-c': 0.7, 'retinol': 0.8 },
+  warnings: [
+    { level: 'caution', text: 'يملك خاصية "تبييض" (Bleaching) قوية جداً؛ قد يتلف ألوان المناشف، الملابس، وأغطية الوسائد، ويمكن أن يفتح لون الشعر عند التلامس.' },
+    { level: 'caution', text: 'يسبب جفافاً، تقشراً، وتهيجاً في الجلد، خاصة في الأسابيع الأولى من الاستخدام، ويزيد الحساسية تجاه الشمس.' },
+    { level: 'info', text: 'يعمل عن طريق إطلاق الأكسجين داخل المسام، مما يقتل البكتيريا المسببة لحب الشباب (C. acnes) لأنها بكتيريا لا هوائية.' }
+  ],
+}
 
   ]
 };
