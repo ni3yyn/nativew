@@ -361,7 +361,7 @@ export default function WelcomeScreen() {
             </View>
 
             <View style={styles.cardContainer}>
-              <BlurView intensity={70} tint="extralight" style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
+              <BlurView intensity={70} tint="dark" style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
                 
                 <View style={styles.cardHeader}>
                   <Text style={styles.title}>{STEPS[currentStep].title}</Text>
