@@ -23,6 +23,7 @@
     "android": {
       "package": "com.wathiq.app",
       "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A2D27"
@@ -43,8 +44,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Wathiq to access your photos to scan ingredients.",
-          "cameraPermission": "Allow Wathiq to access your camera to scan ingredients."
+          "photosPermission": "افتح المعرض اودي",
+          "cameraPermission": "افتح الكاميرا اودي"
         }
       ]
     ],
