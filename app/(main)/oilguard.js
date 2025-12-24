@@ -1650,13 +1650,14 @@ const processImageWithGemini = async (uri) => {
     }
 
     let text = responseData.result.replace(/```json|```/g, '').trim();
-
     const jsonResponse = JSON.parse(text);
-    const { ingredients } = await extractIngredientsFromAIText(jsonResponse.ingredients_text);
-
+    const rawList = jsonResponse.ingredients_list || [];
+    
+    // We send the array directly to the extraction function
+    const { ingredients } = await extractIngredientsFromAIText(rawList);
     if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
 
-    setOcrText(jsonResponse.ingredients_text);
+    setOcrText(rawList.join('\n')); 
     setPreProcessedIngredients(ingredients);
     setProductType(jsonResponse.detected_type || 'other');
 
@@ -1675,37 +1676,41 @@ const processImageWithGemini = async (uri) => {
 };
   
 // --- UPDATED EXTRACTION FUNCTION ---
-const extractIngredientsFromAIText = async (text) => {
+const extractIngredientsFromAIText = async (inputData) => {
   const foundIngredients = new Map();
-  if (!text) return { ingredients: [] };
-
-  // SAFETY CHECK: Ensure text is a string
-  let textToProcess = text;
-  if (Array.isArray(text)) {
-      textToProcess = text.join('\n');
-  } else if (typeof text === 'object') {
-      textToProcess = JSON.stringify(text);
-  } else {
-      textToProcess = String(text);
+  
+  // Ensure input is an array
+  let candidates = [];
+  if (Array.isArray(inputData)) {
+    candidates = inputData;
+  } else if (typeof inputData === 'string') {
+    // Fallback if backend reverts to string, split by newlines
+    candidates = inputData.split('\n');
   }
 
-  const lines = textToProcess.split('\n').filter(line => line.trim() !== '');
+  // Iterate through the clean array from the AI
+  candidates.forEach(rawTerm => {
+      // Clean up stray punctuation just in case
+      const cleanTerm = rawTerm.replace(/^\d+[\.\-\)]\s*/, '').trim(); 
+      const normalizedCandidate = normalizeForMatching(cleanTerm);
 
-  lines.forEach(line => {
-      // Regex updated to be more forgiving if numbers are missing
-      const match = line.match(/^\s*(?:\d+[\.\-\)\s]*)?([^|]+)/);
-      if (!match || !match[1]) return;
-      const detectedName = match[1].trim();
-      const normalizedDetectedName = normalizeForMatching(detectedName);
+      if (!normalizedCandidate || normalizedCandidate.length < 2) return;
 
+      // Check against database
       for (const { term, ingredient } of allSearchableTerms) {
+          // Exact word match check
           const regex = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
-          if (regex.test(normalizedDetectedName)) {
-              if (!foundIngredients.has(ingredient.id)) foundIngredients.set(ingredient.id, ingredient);
-              return; 
+          
+          if (regex.test(normalizedCandidate)) {
+              if (!foundIngredients.has(ingredient.id)) {
+                  foundIngredients.set(ingredient.id, ingredient);
+              }
+              // We found a match for this term, move to next term
+              break; 
           }
       }
   });
+
   return { ingredients: Array.from(foundIngredients.values()) };
 };
   
