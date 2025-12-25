@@ -9917,7 +9917,7 @@ export const combinedOilsDB = {
         warnings: [{ level: 'info', text: 'قد يسبب احمرارا أو حكة خفيفة في بداية الاستخدام، خاصة بتركيزات عالية (أعلى من 5%).' }],
       },
 {
-        id: 'retinoid-serum',
+        id: 'retinoid',
         name: 'الريتينويدات (ريتينول، ريتينال)',
         scientific_name: 'Retinol, Retinal, etc.',
         searchKeywords: ['retinoid', 'retinol', 'retinal', 'retinaldehyde', 'ريتينويد', 'ريتينول', 'ريتينال'],

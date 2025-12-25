@@ -81,13 +81,6 @@ const HEALTH_OPTS = [
     { id: 'pregnancy', label: 'حمل/رضاعة' }
 ];
 
-const ALLERGY_OPTS = [
-    { id: 'nuts', label: 'مكسرات' },
-    { id: 'fragrance', label: 'عطور' },
-    { id: 'latex', label: 'لاتكس' },
-    { id: 'gluten', label: 'غلوتين' }
-];
-
 const BASIC_HAIR_TYPES = [
     { id: 'straight', label: 'ناعم / مستقيم', icon: 'stream' },
     { id: 'wavy', label: 'مموج', icon: 'water' },
@@ -103,11 +96,11 @@ const BASIC_SKIN_TYPES = [
 ];
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح', icon: 'sun' },
-    { id: 'acne', label: 'حب الشباب', icon: 'shield-alt' },
-    { id: 'anti_aging', label: 'شيخوخة', icon: 'hourglass-half' },
-    { id: 'hydration', label: 'ترطيب', icon: 'blurType' },
-    { id: 'hair_growth', label: 'كثافة', icon: 'seedling' }
+    { id: 'brightening', label: 'تفتيح البشرة', icon: 'sun' },
+    { id: 'acne', label: 'مكافحة حب الشباب', icon: 'shield-alt' },
+    { id: 'anti_aging', label: 'مكافحة الشيخوخة', icon: 'hourglass-half' },
+    { id: 'hydration', label: 'ترطيب البشرة', icon: 'blurType' },
+    { id: 'hair_growth', label: 'تكثيف الشعر', icon: 'seedling' }
 ];
 
 const INGREDIENT_FILTERS = [
@@ -1195,10 +1188,128 @@ const InsightCarousel = ({ insights, onSelect }) => (
     </View>
   );
 
+  // --- NEW COMPONENT: BARRIER HEALTH LEDGER ---
+  const BarrierDetailsModal = ({ visible, onClose, data }) => {
+    const animController = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
+    }, [visible]);
+
+    const handleClose = () => {
+        Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
+    };
+
+    if (!visible || !data) return null;
+
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+
+    const irritation = data.totalIrritation || 0;
+    const soothing = data.totalSoothing || 0;
+    const totalVolume = (irritation + soothing) || 1;
+    const irritationPct = (irritation / totalVolume) * 100;
+    const soothingPct = (soothing / totalVolume) * 100;
+
+    return (
+        <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
+            <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+            </Animated.View>
+
+            <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
+                <View style={styles.sheetContent}>
+                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle}/></View>
+
+                    <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+                        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                            <View style={[styles.barrierScoreBadge, { backgroundColor: (data.color || COLORS.success) + '20', borderColor: data.color || COLORS.success }]}>
+                                <FontAwesome5 name="shield-alt" size={24} color={data.color || COLORS.success} />
+                            </View>
+                            <Text style={[styles.modalTitle, { marginTop: 15 }]}>تقرير الحاجز الجلدي</Text>
+                            <Text style={[styles.modalDescription, { textAlign: 'center', color: data.color, fontFamily: 'Tajawal-Bold' }]}>{data.status} ({data.score}%)</Text>
+                        </View>
+
+                        <View style={styles.educationBox}>
+                            <View style={{flexDirection: 'row-reverse', gap: 10, marginBottom: 8}}>
+                                <FontAwesome5 name="book-open" size={14} color={COLORS.textPrimary} />
+                                <Text style={styles.educationTitle}>كيف يعمل الحاجز؟</Text>
+                            </View>
+                            <Text style={styles.educationText}>
+                                تخيلي بشرتك كجدار من الطوب (الخلايا) والإسمنت (الدهون). 
+                                {"\n"}• <Text style={{color: COLORS.danger, fontFamily: 'Tajawal-Bold'}}>المواد الفعالة</Text> تزيل طبقة من الجدار.
+                                {"\n"}• <Text style={{color: COLORS.success, fontFamily: 'Tajawal-Bold'}}>المرممات</Text> تعيد بناء الإسمنت.
+                            </Text>
+                        </View>
+
+                        <View style={styles.ingSection}>
+                            <Text style={styles.ingSectionTitle}>ميزان الروتين اليومي</Text>
+                            <View style={styles.balanceBarTrack}>
+                                <View style={[styles.balanceBarSegment, { width: `${soothingPct}%`, backgroundColor: COLORS.success, borderTopRightRadius: 10, borderBottomRightRadius: 10 }]} />
+                                <View style={[styles.balanceBarSegment, { width: `${irritationPct}%`, backgroundColor: COLORS.danger, borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }]} />
+                            </View>
+                            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 8 }}>
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.success }}>{soothing.toFixed(1)} نقاط بناء 🛡️</Text>
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.danger }}>{irritation.toFixed(1)} نقاط إجهاد ⚡</Text>
+                            </View>
+                        </View>
+
+                        <View style={{ flexDirection: 'row-reverse', gap: 15 }}>
+                            {/* OFFENDERS */}
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.colHeader, { color: COLORS.danger }]}>المجهدات</Text>
+                                {(data.offenders || []).length > 0 ? (
+                                    data.offenders.map((p, i) => (
+                                        <View key={i} style={styles.miniProductRow}>
+                                            <View style={{flex: 1}}>
+                                                <Text style={styles.miniProductText} numberOfLines={1}>{p.name}</Text>
+                                                {/* INGREDIENTS SHOWN HERE */}
+                                                <Text style={styles.miniProductIngs}>
+                                                    {p.ingredients.join(' + ')}
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.miniProductScore, { color: COLORS.danger }]}>-{p.score.toFixed(1)}</Text>
+                                        </View>
+                                    ))
+                                ) : <Text style={styles.noDataText}>لا يوجد</Text>}
+                            </View>
+
+                            <View style={{ width: 1, backgroundColor: COLORS.border }} />
+
+                            {/* DEFENDERS */}
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.colHeader, { color: COLORS.success }]}>البناة</Text>
+                                {(data.defenders || []).length > 0 ? (
+                                    data.defenders.map((p, i) => (
+                                        <View key={i} style={styles.miniProductRow}>
+                                            <View style={{flex: 1}}>
+                                                <Text style={styles.miniProductText} numberOfLines={1}>{p.name}</Text>
+                                                {/* INGREDIENTS SHOWN HERE */}
+                                                <Text style={styles.miniProductIngs}>
+                                                    {p.ingredients.join(' + ')}
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.miniProductScore, { color: COLORS.success }]}>+{p.score.toFixed(1)}</Text>
+                                        </View>
+                                    ))
+                                ) : <Text style={styles.noDataText}>لا يوجد</Text>}
+                            </View>
+                        </View>
+
+                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, marginTop: 30 }]}>
+                            <Text style={[styles.closeButtonText, { color: COLORS.textPrimary }]}>فهمت</Text>
+                        </Pressable>
+                    </ScrollView>
+                </View>
+            </Animated.View>
+        </Modal>
+    );
+};
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
 const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
+    const [showBarrierDetails, setShowBarrierDetails] = useState(false); // New State
   
     const handleSelectInsight = useCallback((insight) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1223,53 +1334,64 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
     const focusInsight = visibleInsights.find(i => i.severity === 'critical' || i.severity === 'warning') || null;
     const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
     
-    // Safe fallback for barrier data
-    const barrier = analysisResults.barrierHealth || { score: 0, status: '...', color: COLORS.textSecondary, desc: '' };
+    // SAFE FALLBACK: Initialize barrier with all fields to prevent "undefined" errors
+    const barrier = analysisResults.barrierHealth || { 
+        score: 0, 
+        status: '...', 
+        color: COLORS.textSecondary, 
+        desc: '', 
+        totalIrritation: 0, 
+        totalSoothing: 0,
+        offenders: [],
+        defenders: []
+    };
   
     return (
         <View style={{flex: 1}}>
             <View style={{ paddingBottom: 150 }}> 
-                {/* 1. Hero Section (Critical Warnings) */}
-                {focusInsight ? (
-                    <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
-                ) : (
-                    <AllClearState />
-                )}
+                {/* 1. Hero Section */}
+                {focusInsight ? <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} /> : <AllClearState />}
   
                 {/* 2. Insight Carousel */}
-                {carouselInsights.length > 0 && (
-                     <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />
-                )}
+                {carouselInsights.length > 0 && <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />}
   
-                {/* 3. BARRIER HEALTH METER */}
-                <ContentCard style={{ marginBottom: 15, padding: 20 }}>
-                    <View style={styles.analysisCardHeader}>
-                        <FontAwesome5 name="layer-group" size={14} color={barrier.color} />
-                        <Text style={styles.analysisCardTitle}>صحة الحاجز الجلدي (Barrier Load)</Text>
-                    </View>
-                    
-                    <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
-                        <Text style={[styles.statValue, {color: barrier.color, fontSize: 32}]}>{barrier.score}</Text>
-                        <Text style={[styles.statLabel, {color: barrier.color, marginBottom: 8}]}>/ 10</Text>
-                        <View style={{ flex: 1 }}>
-                            <Text style={{ fontFamily: 'Tajawal-Bold', color: barrier.color, textAlign: 'left', fontSize: 16 }}>
-                                {barrier.status}
-                            </Text>
-                        </View>
-                    </View>
+                {/* 3. ENHANCED BARRIER HEALTH CARD */}
+                <PressableScale onPress={() => setShowBarrierDetails(true)}>
+                    <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }}>
+                        <View style={{ padding: 20, paddingBottom: 10 }}>
+                            <View style={styles.analysisCardHeader}>
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                                    <FontAwesome5 name="shield-alt" size={16} color={barrier.color} />
+                                    <Text style={[styles.analysisCardTitle, { color: barrier.color }]}>صحة الحاجز (Barrier Integrity)</Text>
+                                </View>
+                                <View style={{ backgroundColor: barrier.color + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: barrier.color }}>اضغط للتفاصيل</Text>
+                                </View>
+                            </View>
 
-                    {/* Liquid Progress Bar */}
-                    <LiquidProgressBar 
-    score={barrier.score} 
-    color={barrier.color} 
-/>
-                    
-                    <Text style={styles.barrierDesc}>{barrier.desc}</Text>
-                </ContentCard>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
+                                <Text style={[styles.statValue, {color: barrier.color, fontSize: 36}]}>{barrier.score}%</Text>
+                                <View style={{ flex: 1, paddingBottom: 6 }}>
+                                    <Text style={{ fontFamily: 'Tajawal-Bold', color: barrier.color, textAlign: 'left', fontSize: 16 }}>{barrier.status}</Text>
+                                </View>
+                            </View>
+
+                            <LiquidProgressBar score={barrier.score} max={100} color={barrier.color} />
+                            <Text style={styles.barrierDesc} numberOfLines={2}>{barrier.desc}</Text>
+                        </View>
+                        
+                        {/* Footer Hint */}
+                        <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                             <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
+                                 {(barrier.totalIrritation || 0) > 0 ? `حمل كيميائي: ${(barrier.totalIrritation || 0).toFixed(1)}` : 'لا يوجد إجهاد كيميائي'}
+                             </Text>
+                             <FontAwesome5 name="chevron-left" size={12} color={COLORS.textDim} />
+                        </View>
+                    </ContentCard>
+                </PressableScale>
 
                 {/* 4. Overview Dashboard */}
                 <View style={styles.overviewContainer}>
-                    {/* Routine Overview */}
                     <View style={styles.overviewCard}>
                         <ContentCard style={{flex: 1}}>
                             <View style={styles.analysisCardHeader}>
@@ -1302,7 +1424,6 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                         </ContentCard>
                     </View>
 
-                    {/* Sun Protection */}
                     <View style={styles.overviewCard}>
                          <ContentCard style={{flex: 1}}>
                             <View style={styles.analysisCardHeader}>
@@ -1325,15 +1446,14 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                         </ContentCard>
                     </View>
                 </View>
-                </View>
+            </View>
   
             {selectedInsight && (
-                <InsightDetailsModal 
-                    visible={!!selectedInsight}
-                    insight={selectedInsight}
-                    onClose={() => setSelectedInsight(null)}
-                />
+                <InsightDetailsModal visible={!!selectedInsight} insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
             )}
+
+            {/* NEW MODAL RENDERED HERE */}
+            <BarrierDetailsModal visible={showBarrierDetails} onClose={() => setShowBarrierDetails(false)} data={barrier} />
         </View>
     );
 };
@@ -2939,136 +3059,147 @@ const SettingsSection = ({ profile, onLogout }) => {
 };
 
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
-    // 1. Animation Controller (0 = closed, 1 = open)
     const animController = useRef(new Animated.Value(0)).current;
 
-    // 2. Open Animation
     useEffect(() => {
-        if (visible) {
-            Animated.spring(animController, {
-                toValue: 1,
-                damping: 15,
-                stiffness: 100,
-                useNativeDriver: true,
-            }).start();
-        }
+        if (visible) Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
     }, [visible]);
 
-    // 3. Close Animation
     const handleClose = () => {
-        Animated.timing(animController, {
-            toValue: 0,
-            duration: 250,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-        }).start(({ finished }) => {
-            if (finished) onClose();
-        });
+        Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
     };
-
-    // 4. Gestures
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 5,
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) {
-                    animController.setValue(1 - (gestureState.dy / height));
-                }
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (gestureState.dy > height * 0.2 || gestureState.vy > 0.8) {
-                    handleClose();
-                } else {
-                    Animated.spring(animController, { toValue: 1, useNativeDriver: true }).start();
-                }
-            },
-        })
-    ).current;
 
     if (!insight) return null;
 
-    // 5. Interpolations
-    const translateY = animController.interpolate({
-        inputRange: [0, 1],
-        outputRange: [height, 0],
-    });
-    const backdropOpacity = animController.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 0.6],
-    });
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
-    // Helper for colors
-    const getSeverityColor = (s) => {
-        if (s === 'critical') return COLORS.danger;
-        if (s === 'warning') return COLORS.warning;
-        return COLORS.success;
-    };
-    const severityColor = getSeverityColor(insight.severity);
-    const iconName = insight.severity === 'critical' ? 'shield-alt' : insight.severity === 'warning' ? 'exclamation-triangle' : 'check-circle';
+    // Helper Colors
+    const getSeverityColor = (s) => (s === 'critical' ? COLORS.danger : s === 'warning' ? COLORS.warning : COLORS.success);
+    const mainColor = getSeverityColor(insight.severity);
+
+    // --- RENDERER: RICH GOAL DASHBOARD ---
+    const renderGoalDashboard = (data) => (
+        <View>
+            {/* 1. Large Score Circle */}
+            <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                <ChartRing 
+                    percentage={data.score} 
+                    color={mainColor} 
+                    radius={60} 
+                    strokeWidth={10} 
+                />
+                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, marginTop: 10 }}>مؤشر التطابق</Text>
+            </View>
+
+            {/* 2. Sunscreen Alert (If Penalty) */}
+            {data.sunscreenPenalty && (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: COLORS.danger }]}>
+                    <FontAwesome5 name="sun" size={18} color={COLORS.danger} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.alertBoxText, { color: COLORS.danger, fontFamily: 'Tajawal-Bold' }]}>تنبيه حماية</Text>
+                        <Text style={[styles.alertBoxText, { color: COLORS.danger }]}>تم إيقاف تقدم الهدف عند 35% لأنك لا تستخدمين واقي شمس. المكونات العلاجية لن تعمل بفعالية بدونه.</Text>
+                    </View>
+                </View>
+            )}
+
+            {/* 3. Hero Ingredients Found (Green) */}
+            <View style={styles.ingSection}>
+                <Text style={styles.ingSectionTitle}>✅ مكونات نشطة لديكِ</Text>
+                <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                    {data.foundHeroes.length > 0 ? (
+                        data.foundHeroes.map((h, i) => (
+                            <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', borderWidth: 1 }]}>
+                                <Text style={[styles.ingredientChipText, { color: COLORS.success }]}>{h}</Text>
+                            </View>
+                        ))
+                    ) : (
+                        <Text style={styles.noDataText}>لا توجد مكونات قوية لهذا الهدف حتى الآن.</Text>
+                    )}
+                </View>
+            </View>
+
+            {/* 4. Missing Suggestions (Yellow/Red) */}
+            {data.score < 100 && (
+                <View style={styles.ingSection}>
+                    <Text style={styles.ingSectionTitle}>🧪 مقترحات لرفع النتيجة</Text>
+                    <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginBottom: 10, textAlign: 'right' }}>
+                        ابحثي عن منتجات (سيروم أو كريم) تحتوي على:
+                    </Text>
+                    <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                        {data.missingHeroes.map((h, i) => (
+                            <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: COLORS.warning, borderWidth: 1, borderStyle: 'dashed' }]}>
+                                <Text style={[styles.ingredientChipText, { color: COLORS.warning }]}>
+                                    {h.replace(/-/g, ' ')}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+            )}
+
+            {/* 5. Contributing Products List */}
+            {insight.related_products.length > 0 && (
+                <View style={styles.ingSection}>
+                    <Text style={styles.ingSectionTitle}>المنتجات المساهمة</Text>
+                    {insight.related_products.map((p, i) => (
+                        <View key={i} style={styles.productChip}>
+                            <FontAwesome5 name="check" size={12} color={COLORS.accentGreen} />
+                            <Text style={styles.productChipText}>{p}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-            {/* Backdrop */}
             <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
                 <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
             </Animated.View>
 
-            {/* Sheet */}
             <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                 <View style={styles.sheetContent}>
-                    {/* Draggable Header */}
-                    <View {...panResponder.panHandlers} style={styles.sheetHandleBar}>
-                        <View style={styles.sheetHandle} />
-                    </View>
+                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-                        {/* Icon & Title */}
+                        {/* Header */}
                         <View style={styles.modalHeader}>
-                            <View style={[styles.modalIconContainer, { backgroundColor: severityColor + '20' }]}>
-                                <FontAwesome5 name={iconName} size={24} color={severityColor} />
+                            <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
+                                <FontAwesome5 
+                                    name={insight.type === 'goal_analysis' ? 'bullseye' : (insight.severity === 'critical' ? 'shield-alt' : 'info-circle')} 
+                                    size={24} 
+                                    color={mainColor} 
+                                />
                             </View>
                             <Text style={styles.modalTitle}>{insight.title}</Text>
                         </View>
 
-                        {/* Description */}
-                        <Text style={styles.modalDescription}>{insight.details}</Text>
-
-                        {/* Related Products List */}
-                        {insight.related_products && insight.related_products.length > 0 && (
-                            <View style={{ marginTop: 20 }}>
-                                <Text style={styles.relatedProductsTitle}>المنتجات المعنية:</Text>
-                                {insight.related_products.map((p, i) => (
-                                    <View key={i} style={styles.productChip}>
-                                        <FontAwesome5 name="bottle-droplet" size={12} color={COLORS.textSecondary} />
-                                        <Text style={styles.productChipText}>{p}</Text>
+                        {/* CONDITIONAL RENDERING: Standard Text vs. Rich Dashboard */}
+                        {insight.type === 'goal_analysis' && insight.customData ? (
+                            renderGoalDashboard(insight.customData)
+                        ) : (
+                            // Fallback for standard insights
+                            <>
+                                <Text style={styles.modalDescription}>{insight.details}</Text>
+                                {insight.related_products?.length > 0 && (
+                                    <View style={{ marginTop: 20 }}>
+                                        <Text style={styles.relatedProductsTitle}>المنتجات المعنية:</Text>
+                                        {insight.related_products.map((p, i) => (
+                                            <View key={i} style={styles.productChip}>
+                                                <FontAwesome5 name="bottle-droplet" size={12} color={COLORS.textSecondary} />
+                                                <Text style={styles.productChipText}>{p}</Text>
+                                            </View>
+                                        ))}
                                     </View>
-                                ))}
-                            </View>
+                                )}
+                            </>
                         )}
 
-                        {/* 
-                            THE FIX: Replaced PressableScale with standard Pressable + Physics Props
-                        */}
-                        <Pressable
-                            onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                            onPress={handleClose}
-                            style={({ pressed }) => [
-                                styles.closeButton, 
-                                { 
-                                    backgroundColor: severityColor,
-                                    opacity: pressed ? 0.9 : 1, // Visual feedback
-                                    transform: [{ scale: pressed ? 0.98 : 1 }] 
-                                }
-                            ]}
-                            // Large hit area to catch sloppy taps
-                            hitSlop={20}
-                            // ALLOWS CLICK EVEN IF MODAL IS BOUNCING
-                            pressRetentionOffset={{ top: 50, bottom: 50, left: 50, right: 50 }}
-                        >
-                            <Text style={styles.closeButtonText}>فهمت</Text>
+                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: mainColor, marginTop: 30 }]}>
+                            <Text style={styles.closeButtonText}>إغلاق</Text>
                         </Pressable>
-                        
                     </ScrollView>
                 </View>
             </Animated.View>
@@ -3298,6 +3429,48 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
     );
 });
 
+const buildIngredientIndex = (db) => {
+    const index = new Map();
+    const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+
+    db.ingredients.forEach(ing => {
+        const entry = { ...ing, _normId: normalize(ing.id) };
+        
+        // Index by everything possible
+        index.set(normalize(ing.id), entry);
+        if (ing.name) index.set(normalize(ing.name), entry);
+        if (ing.scientific_name) index.set(normalize(ing.scientific_name), entry);
+        
+        if (ing.searchKeywords && Array.isArray(ing.searchKeywords)) {
+            ing.searchKeywords.forEach(k => index.set(normalize(k), entry));
+        }
+    });
+    return { index, normalize };
+};
+
+// Initialize once
+const { index: ingredientIndex, normalize } = buildIngredientIndex(combinedOilsDB);
+
+const resolveIngredient = (detectedName) => {
+    if (!detectedName) return null;
+    return ingredientIndex.get(normalize(detectedName));
+};
+
+// --- HELPER 2: MECHANISM CLASSIFIER ---
+// Maps specific ingredients to their dermatological function
+const getMechanism = (ingId) => {
+    const id = ingId.toLowerCase();
+    if (['salicylic-acid', 'betaine-salicylate', 'willow-bark'].includes(id)) return 'exfoliation_bha';
+    if (['benzoyl-peroxide', 'tea-tree-oil', 'sulfur'].includes(id)) return 'anti_bacterial';
+    if (['niacinamide', 'zinc-pca', 'green-tea'].includes(id)) return 'sebum_control';
+    if (['retinol', 'tretinoin', 'adapalene', 'retinal'].includes(id)) return 'cell_turnover';
+    if (['vitamin-c', 'ascorbic-acid', 'resveratrol', 'ferulic-acid'].includes(id)) return 'antioxidant';
+    if (['hyaluronic-acid', 'glycerin', 'panthenol'].includes(id)) return 'humectant';
+    if (['ceramides', 'cholesterol', 'fatty-acids', 'squalane'].includes(id)) return 'barrier_repair';
+    if (['hydroquinone', 'kojic-acid', 'alpha-arbutin', 'tranexamic-acid'].includes(id)) return 'tyrosinase_inhibitor';
+    return 'general';
+};
+
 // ============================================================================
 //                       MAIN PROFILE CONTROLLER
 // ============================================================================
@@ -3398,9 +3571,18 @@ export default function ProfileScreen() {
     const { skinType, scalpType, conditions = [], allergies = [], goals = [], blacklistedIngredients = [] } = settings;
     
     const insightsMap = new Map();
-    const addInsight = (id, title, summary, details, severity, related_products = []) => {
+    const addInsight = (id, title, summary, details, severity, related_products = [], customData = null) => {
         if (!insightsMap.has(id)) {
-            insightsMap.set(id, { id, title, short_summary: summary, details, severity, related_products });
+            insightsMap.set(id, { 
+                id, 
+                title, 
+                short_summary: summary, 
+                details, 
+                severity, 
+                related_products,
+                customData, // <--- NEW FIELD
+                type: customData ? 'goal_analysis' : 'standard' // Flag for UI
+            });
         }
     };
 
@@ -3436,10 +3618,22 @@ export default function ProfileScreen() {
 
     // --- 2. PERSONALIZATION CHECKS (Allergies, Conditions, Bio) ---
     
-    // A. Build Exclusion Maps
-    const userAllergenIngredients = new Set(
-        allergies.flatMap(id => commonAllergies.find(a => a.id === id)?.ingredients || []).map(normalizeForMatching)
-    );
+   // A. Build Exclusion Maps
+    
+    // FIX 1: Create a Map to link Ingredient -> Allergy Name directly
+    const userAllergenMap = new Map(); 
+    
+    allergies.forEach(id => {
+        // Find the allergy definition from your data file
+        const allergyDef = commonAllergies.find(a => a.id === id);
+        if (allergyDef && allergyDef.ingredients) {
+            allergyDef.ingredients.forEach(ing => {
+                // Map the ingredient name to the Allergy Name (e.g. "حساسية المكسرات")
+                // NOTE: Your data uses .name, not .label
+                userAllergenMap.set(normalizeForMatching(ing), allergyDef.name); 
+            });
+        }
+    });
 
     const userConditionAvoidMap = new Map();
     
@@ -3471,14 +3665,16 @@ export default function ProfileScreen() {
         product.analysisData.detected_ingredients.forEach(ing => {
             const normalizedIngName = normalizeForMatching(ing.name);
             
-            // Check Allergies
-            if (userAllergenIngredients.has(normalizedIngName)) {
-                const allergy = commonAllergies.find(a => allergies.includes(a.id) && a.ingredients.map(normalizeForMatching).includes(normalizedIngName));
+            // FIX 2: Check the Map
+            if (userAllergenMap.has(normalizedIngName)) {
+                // Retrieve the specific name immediately (e.g., "حساسية المكسرات")
+                const allergyName = userAllergenMap.get(normalizedIngName);
+                
                 addInsight(
                     `allergy-${product.id}-${ing.id || ing.name}`,
                     'خطر: مكون مسبب للحساسية',
                     `يحتوي "${product.productName}" على "${ing.name}".`,
-                    `لقد أشرت في ملفك الشخصي إلى إصابتك بحساسية "${allergy?.label || 'معروفة'}". هذا المنتج يحتوي على "${ing.name}" الذي يثير هذه الحساسية مباشرة. يرجى تجنبه تماماً.`,
+                    `لقد أشرت في ملفك الشخصي إلى إصابتك بـ "${allergyName}". هذا المنتج يحتوي على "${ing.name}" الذي يثير هذه الحساسية مباشرة. يرجى تجنبه تماماً.`,
                     'critical',
                     [product.productName]
                 );
@@ -3536,34 +3732,217 @@ export default function ProfileScreen() {
     }
 
     // --- 3. GOAL ALIGNMENT ---
-    const goalChecks = {
-        brightening: { benefit: 'تفتيح', details: "لتحقيق النضارة، أنتِ بحاجة لمكونات مثل فيتامين C، النياسيناميد، أو أحماض ألفا هيدروكسي." },
-        acne: { benefit: 'مكافحة حب الشباب', details: "لعلاج الحبوب بفعالية، ابحثي عن حمض الساليسيليك، زيت شجرة الشاي، أو الريتينول." },
-        anti_aging: { benefit: 'مكافحة الشيخوخة', details: "لمحاربة التجاعيد، روتينك يحتاج إلى محفزات للكولاجين مثل الببتيدات أو الريتينويدات." },
-        hydration: { benefit: 'ترطيب', details: "لترطيب عميق، تأكدي من وجود حمض الهيالورونيك والسيراميد في منتجاتك." }
+    const GOAL_DEFINITIONS = {
+        acne: {
+            label: 'مكافحة حب الشباب',
+            // Dermatologists want: 1. Unclog Pores (BHA), 2. Kill Bacteria (BPO), 3. Calm/Regulate (Niacinamide/Retinoid)
+            mechanisms: ['exfoliation_bha', 'anti_bacterial', 'cell_turnover', 'sebum_control'],
+            heroIds: new Set([
+                'salicylic-acid', 'benzoyl-peroxide', 'adapalene', 'tretinoin', 'retinol',
+                'azelaic-acid', 'niacinamide', 'sulfur', 'tea-tree-oil', 'zinc-pca', 'succinic-acid'
+            ]),
+            synergy: { ids: ['salicylic-acid', 'niacinamide'], label: 'تنظيف وتهدئة' },
+            requiresSunscreen: false 
+        },
+        anti_aging: {
+            label: 'مكافحة الشيخوخة',
+            mechanisms: ['cell_turnover', 'antioxidant', 'barrier_repair', 'collagen_stimulation'],
+            heroIds: new Set([
+                // Retinoids
+                'retinol', 'tretinoin', 'retinal', 'bakuchiol', 'hydroxypinacolone-retinoate',
+                // Peptides
+                'peptides', 'copper-peptides', 'matrixyl', 'argireline',
+                // Vitamin C & Antioxidants (Added ethyl-ascorbic-acid here)
+                'vitamin-c', 'ascorbic-acid', 'ethyl-ascorbic-acid', 'resveratrol', 'coenzyme-q10',
+                // Barrier & Structure
+                'ceramides', 'glycolic-acid', 'fatty-acids'
+            ]),
+            synergy: { ids: ['retinol', 'ceramides'], label: 'تجديد وترميم' },
+            requiresSunscreen: true 
+        },
+        brightening: {
+            label: 'تفتيح وتوحيد اللون',
+            // Dermatologists want: 1. Stop Pigment (Tyrosinase Inhibitor), 2. Shed Pigment (Exfoliation/Turnover)
+            mechanisms: ['tyrosinase_inhibitor', 'antioxidant', 'exfoliation_aha', 'cell_turnover'],
+            heroIds: new Set([
+                'vitamin-c', 'ascorbic-acid', 'alpha-arbutin', 'kojic-acid', 'tranexamic-acid',
+                'niacinamide', 'licorice-root', 'azelaic-acid', 'glycolic-acid', 'lactic-acid', 'glutathione'
+            ]),
+            synergy: { ids: ['vitamin-c', 'vitamin-e', 'ferulic-acid'], label: 'مثلث النضارة' },
+            requiresSunscreen: true
+        },
+        hydration: {
+            label: 'ترطيب عميق & حاجز',
+            // Dermatologists want: 1. Water (Humectant), 2. Seal (Occlusive/Barrier)
+            mechanisms: ['humectant', 'barrier_repair', 'occlusive'],
+            heroIds: new Set([
+                'hyaluronic-acid', 'glycerin', 'panthenol', 'urea', 'polyglutamic-acid',
+                'ceramides', 'cholesterol', 'squalane', 'shea-butter', 'allantoin', 'centella-asiatica'
+            ]),
+            synergy: { ids: ['hyaluronic-acid', 'ceramides'], label: 'ترطيب متكامل' },
+            requiresSunscreen: false
+        }
     };
 
     goals.forEach(goalId => {
-        const check = goalChecks[goalId];
-        if (check) {
-            const satisfyingProducts = validProducts.filter(p => 
-                p.analysisData.detected_ingredients.some(ing => {
-                    const dbIng = GLOBAL_INGREDIENTS_MAP.get(ing.id);
-                    return dbIng?.benefits && Object.keys(dbIng.benefits).some(k => k.includes(check.benefit));
-                })
-            );
+        const def = GOAL_DEFINITIONS[goalId];
+        if (!def) return;
 
-            if (satisfyingProducts.length === 0) {
-                const goalLabel = GOALS_LIST.find(g=>g.id===goalId)?.label || goalId;
-                addInsight(
-                    `goal-gap-${goalId}`, 
-                    `فجوة في الهدف: ${goalLabel}`, 
-                    `روتينك الحالي لا يخدم هدف ${goalLabel}.`, 
-                    `لقد اخترتِ "${goalLabel}" كهدف رئيسي، لكن رفّك لا يحتوي على مكونات فعالة لذلك. ${check.details}`, 
-                    'warning'
-                );
+        // TRACKING
+        let foundMechanisms = new Set();
+        let foundHeroes = new Set(); // Localized names
+        let foundHeroIds = new Set();
+        let contributingProducts = new Map(); // Store product name -> potency
+
+        // 1. SCAN SHELF
+        validProducts.forEach(p => {
+            const productType = p.analysisData.product_type;
+            
+            // Define Vehicle Potency (Serum > Cream > Wash)
+            let vehicleScore = 0.5; // Base
+            if (['serum', 'treatment', 'ampoule'].includes(productType)) vehicleScore = 1.0;
+            else if (['lotion_cream', 'oil_blend'].includes(productType)) vehicleScore = 0.8;
+            else if (['toner', 'essence'].includes(productType)) vehicleScore = 0.6;
+            else if (productType === 'sunscreen') vehicleScore = 0.7;
+            else if (productType === 'cleanser') vehicleScore = 0.3; // Wash-off is weak
+
+            p.analysisData.detected_ingredients.forEach(rawIng => {
+                // A. RESOLVE (Fixing the issue using searchKeywords)
+                const resolved = resolveIngredient(rawIng.name);
+                if (!resolved) return;
+
+                const ingId = resolved.id;
+                const ingName = resolved.name;
+
+                // B. CHECK HERO STATUS
+                if (def.heroIds.has(ingId)) {
+                    foundHeroes.add(ingName);
+                    foundHeroIds.add(ingId);
+                    
+                    // C. IDENTIFY MECHANISM
+                    const mech = getMechanism(ingId);
+                    if (def.mechanisms.includes(mech)) {
+                        foundMechanisms.add(mech);
+                    }
+
+                    // Log contribution
+                    const existingPotency = contributingProducts.get(p.productName) || 0;
+                    contributingProducts.set(p.productName, Math.max(existingPotency, vehicleScore));
+                }
+            });
+        });
+
+        // 2. CALCULATE "DERM SCORE"
+        // A. Mechanism Coverage (50% of score)
+        // If the goal requires 3 mechanisms and you have 2, that's good.
+        // We cap it so you don't need 100% of mechanisms for a perfect score, usually 2-3 is excellent.
+        const mechanismCount = foundMechanisms.size;
+        let mechScore = 0;
+        if (mechanismCount >= 1) mechScore += 20;
+        if (mechanismCount >= 2) mechScore += 20;
+        if (mechanismCount >= 3) mechScore += 10; // Bonus
+        
+        // B. Potency/Concentration (30% of score)
+        // Sum of top 2 strongest products
+        const potencies = Array.from(contributingProducts.values()).sort((a,b) => b-a);
+        const top1 = (potencies[0] || 0) * 20; // Max 20
+        const top2 = (potencies[1] || 0) * 10; // Max 10
+        let potencyScore = top1 + top2;
+
+        // C. Synergy Bonus (10% of score)
+        let synergyActive = false;
+        let synergyLabel = null;
+        if (def.synergy) {
+            // Check if ALL synergy IDs are present in the routine
+            const hasSynergy = def.synergy.ids.every(id => foundHeroIds.has(id));
+            if (hasSynergy) {
+                potencyScore += 10;
+                synergyActive = true;
+                synergyLabel = def.synergy.label;
             }
         }
+
+        // D. Sunscreen Veto (20% negative impact or cap)
+        const hasSunscreen = validProducts.some(p => p.analysisData.product_type === 'sunscreen');
+        let sunscreenPenalty = false;
+        
+        let totalScore = mechScore + potencyScore;
+
+        if (def.requiresSunscreen && !hasSunscreen) {
+            // If treating pigmentation/aging without SPF, efficacy is basically zero in real life.
+            // We cap the score harshly.
+            if (totalScore > 35) {
+                totalScore = 35;
+                sunscreenPenalty = true;
+            }
+        } else if (def.requiresSunscreen && hasSunscreen) {
+            totalScore += 20; // Full marks for protection
+        } else {
+            // For goals that don't STRICTLY need it (like hydration), just fill the gap
+            totalScore += 20; 
+        }
+
+        totalScore = Math.min(Math.round(totalScore), 100);
+
+        // 3. GENERATE INTELLIGENT SUGGESTIONS
+        // Instead of random missing ingredients, suggest missing MECHANISMS.
+        const missingMechanisms = def.mechanisms.filter(m => !foundMechanisms.has(m));
+        
+        // Find ingredients that solve the missing mechanisms
+        const missingHeroes = [];
+        missingMechanisms.slice(0, 2).forEach(mech => {
+            // Find a hero ID from the definition that matches this mechanism
+            const suggestionId = Array.from(def.heroIds).find(id => getMechanism(id) === mech);
+            if (suggestionId) {
+                const info = ingredientIndex.get(suggestionId);
+                if(info) missingHeroes.push(info.name);
+            }
+        });
+        
+        // If we still need suggestions, fill with generic missing heroes
+        if (missingHeroes.length < 3) {
+            Array.from(def.heroIds).forEach(id => {
+                if (!foundHeroIds.has(id) && missingHeroes.length < 3) {
+                    const info = ingredientIndex.get(id);
+                    if (info && !missingHeroes.includes(info.name)) missingHeroes.push(info.name);
+                }
+            });
+        }
+
+        // 4. CREATE INSIGHT
+        let severity = 'good';
+        let summary = `روتين متكامل (${totalScore}%)`;
+        
+        if (totalScore < 45) {
+            severity = 'critical';
+            summary = sunscreenPenalty ? "الحماية مفقودة تماماً" : `بداية جيدة (${totalScore}%)`;
+        } else if (totalScore < 80) {
+            severity = 'warning';
+            summary = `فعال، ولكن يمكن تحسينه (${totalScore}%)`;
+        } else {
+            summary = `روتين احترافي (${totalScore}%)`;
+        }
+
+        addInsight(
+            `goal-derm-${goalId}`,
+            `مسار: ${def.label}`,
+            summary,
+            "اضغط لعرض تحليل الطبيب الرقمي",
+            severity,
+            Array.from(contributingProducts.keys()),
+            {
+                score: totalScore,
+                goalLabel: def.label,
+                foundHeroes: Array.from(foundHeroes),
+                missingHeroes,
+                sunscreenPenalty,
+                synergyActive,
+                synergyLabel,
+                // Pass mechanism data for advanced UI if needed
+                mechanismsCovered: Array.from(foundMechanisms).length,
+                totalMechanisms: def.mechanisms.length
+            }
+        );
     });
 
     // --- 4. ROUTINE INTEGRITY & BARRIER HEALTH ---
@@ -3575,54 +3954,168 @@ export default function ProfileScreen() {
     const amProducts = mapRoutine('am');
     const pmProducts = mapRoutine('pm');
 
-    // ** Barrier Load Calculation **
-    const calculateBarrierLoad = (products) => {
-        let score = 0;
-        products.forEach(p => {
-            const ings = p.analysisData.detected_ingredients;
-            const funcs = new Set();
-            ings.forEach(i => {
-                const dbIng = GLOBAL_INGREDIENTS_MAP.get(i.id);
-                getIngredientFunction(dbIng).forEach(f => funcs.add(f));
-            });
-            
-            if (funcs.has('Retinoid')) score += 3;
-            if (funcs.has('Benzoyl Peroxide')) score += 2.5;
-            if (funcs.has('Exfoliant') || funcs.has('AHA') || funcs.has('BHA')) score += 2;
-            if (funcs.has('Pure Vitamin C')) score += 1.5;
-            
-            if (p.analysisData.product_type === 'cleanser' && (funcs.has('BHA') || funcs.has('Benzoyl Peroxide'))) {
-                score += 1;
-            }
-        });
-        return score;
+    const IRRITATION_WEIGHTS = {
+        // Nuclear Option
+        'tretinoin': 5.0, 'isotretinoin': 5.0, 'hydroquinone': 4.5,
+        // Heavy Hitters
+        'adapalene': 3.5, 'tazarotene': 3.5, 'glycolic-acid': 3.0, 'benzoyl-peroxide': 3.0,
+        // Standard Actives
+        'retinol': 2.5, 'retinal': 2.5, 'salicylic-acid': 2.0, 'lactic-acid': 2.0, 'ascorbic-acid': 2.0, // Pure Vit C is acidic
+        // Mild Actives
+        'azelaic-acid': 1.5, 'mandelic-acid': 1.5, 'ethyl-ascorbic-acid': 1.0, 'gluconolactone': 1.0, // PHA
+        'niacinamide': 0.5, // Only irritating at high % or sensitive skin
+        'bakuchiol': 0.5
+    };
+    
+    // 2. DEFENDERS: How much does this soothe/repair?
+    const SOOTHING_WEIGHTS = {
+        // Structural Repair (The Cement)
+        'ceramides': 2.0, 'cholesterol': 2.0, 'fatty-acids': 2.0, 'phytosphingosine': 2.0,
+        // Deep Soothers
+        'panthenol': 1.5, 'madecassoside': 1.5, 'centella-asiatica': 1.5, 'allantoin': 1.5, 'bisabolol': 1.5, 'colloidal-oatmeal': 1.5,
+        // Hydrators (Buffers)
+        'hyaluronic-acid': 0.5, 'glycerin': 0.5, 'polyglutamic-acid': 0.5, 'squalane': 1.0, 'shea-butter': 1.0
+    };
+    
+    // 3. SKIN TOLERANCE: The "Budget" based on profile
+    const SKIN_TOLERANCE_BUDGET = {
+        'sensitive': 4.0,   // Low budget
+        'dry': 5.5,         // Medium-Low
+        'normal': 7.0,      // Standard
+        'combo': 7.5,
+        'oily': 8.5         // High tolerance (oil protects)
     };
 
-    const amScore = calculateBarrierLoad(amProducts);
-    const pmScore = calculateBarrierLoad(pmProducts);
-    const totalLoad = amScore + pmScore;
+    // ** Barrier Load Calculation (Fixed) **
+   // ** Barrier Load Calculation (Enhanced) **
+   const calculateBarrierHealth = (dailyProducts) => {
+    
+    const skinType = settings.skinType || 'normal'; 
+    let baseTolerance = SKIN_TOLERANCE_BUDGET[skinType] || 7.0;
 
-    // Set Barrier Health Object
-    results.barrierHealth.score = totalLoad;
-    if (totalLoad === 0 && (amProducts.length > 0 || pmProducts.length > 0)) {
-        results.barrierHealth.status = 'لطيف / مرطب';
-        results.barrierHealth.color = COLORS.info;
-        results.barrierHealth.desc = "روتينك يركز على الترطيب والترميم. لا توجد مواد فعالة قوية.";
-    } else if (totalLoad <= 4.5) {
-        results.barrierHealth.status = 'متوازن (صحّي)';
-        results.barrierHealth.color = COLORS.success;
-        results.barrierHealth.desc = "توازن ممتاز بين المواد الفعالة والترطيب. استمري هكذا.";
-    } else if (totalLoad <= 7.5) {
-        results.barrierHealth.status = 'مرتفع (تحذير)';
-        results.barrierHealth.color = COLORS.warning;
-        results.barrierHealth.desc = "أنت تقترب من حد التهيج. تأكد من ترطيب البشرة جيداً.";
-        addInsight('barrier-warning', 'حمل كيميائي مرتفع', 'انتبه من الجفاف.', 'تستخدم عدة مواد فعالة قوية في روتينك اليومي، مما قد يرهق حاجز البشرة.', 'warning');
+    if (settings.conditions?.includes('rosacea') || settings.conditions?.includes('eczema')) baseTolerance -= 2.0; 
+    if (settings.conditions?.includes('retinoid_naive')) baseTolerance -= 1.0; 
+
+    const offenders = [];
+    const defenders = [];
+
+    // Helper: Now returns lists of specific ingredient names
+    const getProductImpact = (product) => {
+        let irritation = 0;
+        let soothing = 0;
+        let irritantNames = []; // Store names of bad guys
+        let sootherNames = [];  // Store names of good guys
+
+        const type = product.analysisData.product_type;
+        let factor = 1.0;
+        if (type === 'cleanser' || type === 'mask') factor = 0.3; 
+        if (type === 'toner') factor = 0.8; 
+
+        product.analysisData.detected_ingredients.forEach(rawIng => {
+            const resolved = resolveIngredient(rawIng.name);
+            if (!resolved) return;
+            const id = resolved.id;
+            // Use Arabic name if available, else English
+            const displayName = resolved.name || rawIng.name; 
+
+            if (IRRITATION_WEIGHTS[id]) {
+                irritation += (IRRITATION_WEIGHTS[id] * factor);
+                irritantNames.push(displayName);
+            }
+            
+            if (SOOTHING_WEIGHTS[id]) {
+                soothing += (SOOTHING_WEIGHTS[id] * factor); 
+                sootherNames.push(displayName);
+            }
+        });
+
+        return { irritation, soothing, irritantNames, sootherNames };
+    };
+
+    let totalIrritation = 0;
+    let totalSoothing = 0;
+
+    dailyProducts.forEach(p => {
+        const impact = getProductImpact(p);
+        totalIrritation += impact.irritation;
+        totalSoothing += impact.soothing;
+
+        // Save the product AND the specific ingredients
+        if (impact.irritation > 0.1) {
+            offenders.push({ 
+                name: p.productName, 
+                score: impact.irritation,
+                ingredients: impact.irritantNames 
+            });
+        }
+        if (impact.soothing > 0.1) {
+            defenders.push({ 
+                name: p.productName, 
+                score: impact.soothing,
+                ingredients: impact.sootherNames 
+            });
+        }
+    });
+
+    offenders.sort((a,b) => b.score - a.score);
+    defenders.sort((a,b) => b.score - a.score);
+
+    const maxSoothingBonus = baseTolerance * 0.5; 
+    const effectiveTolerance = baseTolerance + Math.min(totalSoothing, maxSoothingBonus);
+    const loadRatio = totalIrritation > 0 ? (totalIrritation / effectiveTolerance) : 0;
+    
+    let visualScore = Math.min(Math.round((loadRatio / 1.5) * 100), 100);
+    let healthScore = 100 - visualScore;
+    if (totalIrritation === 0) healthScore = 100; 
+
+    let status, color, desc;
+    
+    if (loadRatio > 1.2) {
+        status = 'خطر احتراق 🚨';
+        color = COLORS.danger;
+        desc = `حملك الكيميائي (${totalIrritation.toFixed(1)}) يتجاوز قدرة تحمّل بشرتك (${effectiveTolerance.toFixed(1)}) بشكل كبير.`;
+    } else if (loadRatio > 0.9) {
+        status = 'حاجز مجهد';
+        color = COLORS.warning;
+        desc = `أنت على حافة التحمل. ميزانية بشرتك (${effectiveTolerance.toFixed(1)}) ممتلئة.`;
+    } else if (loadRatio > 0.5) {
+        status = 'نشط ومتوازن';
+        color = COLORS.success;
+        desc = `تستخدمين ${(totalIrritation/effectiveTolerance*100).toFixed(0)}% من طاقة بشرتك. التوازن ممتاز.`;
     } else {
-        results.barrierHealth.status = 'خطر احتراق 🚨';
-        results.barrierHealth.color = COLORS.danger;
-        results.barrierHealth.desc = "خطر تدمير الحاجز الجلدي! هذا الحمل الكيميائي مرتفع جداً.";
+        status = 'سليم وقوي';
+        color = COLORS.success;
+        desc = `حاجز بشرتك في حالة راحة تامة.`;
+    }
+
+    return {
+        score: healthScore, status, color, desc, totalIrritation, totalSoothing, offenders, defenders
+    };
+};
+
+    // Calculate once for the daily total
+    const barrierStats = calculateBarrierHealth([...amProducts, ...pmProducts]);
+
+    // Set Barrier Health Object (UPDATED TO SAVE DETAILS)
+    results.barrierHealth = {
+        ...results.barrierHealth,
+        score: barrierStats.score,
+        status: barrierStats.status,
+        color: barrierStats.color,
+        desc: barrierStats.desc,
+        totalIrritation: barrierStats.totalIrritation,
+        totalSoothing: barrierStats.totalSoothing,
+        offenders: barrierStats.offenders,
+        defenders: barrierStats.defenders
+    };
+
+    // Additional Insights based on calculated stats
+    if (barrierStats.score > 75 && barrierStats.score <= 90) {
+        addInsight('barrier-warning', 'حمل كيميائي مرتفع', 'انتبه من الجفاف.', 'تستخدم عدة مواد فعالة قوية في روتينك اليومي، مما قد يرهق حاجز البشرة.', 'warning');
+    } else if (barrierStats.score > 90) {
         addInsight('barrier-danger', 'خطر: احتراق كيميائي', 'توقف فوراً!', 'مجموع نقاط التهيج في روتينك مرتفع جداً. قلل استخدام الأحماض والريتينول فوراً.', 'critical');
     }
+
 
     // --- 5. DETAILED ROUTINE ANALYSIS (AM/PM) ---
     
@@ -4628,7 +5121,7 @@ ingredientChipText: {
       height: 40,
       borderRadius: 20,
       justifyContent: 'center',
-      alignItems: 'left',
+      alignItems: 'center',
   },
   carouselItemTitle: {
       fontFamily: 'Tajawal-Bold',
@@ -5760,5 +6253,78 @@ barrierDesc: {
     color: COLORS.textSecondary,
     textAlign: 'right',
     lineHeight: 18,
+},
+barrierScoreBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+},
+educationBox: {
+    backgroundColor: COLORS.background,
+    padding: 15,
+    borderRadius: 16,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+},
+educationTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 14,
+    color: COLORS.textPrimary,
+},
+educationText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+    textAlign: 'right',
+},
+balanceBarTrack: {
+    height: 12,
+    flexDirection: 'row', // Left to Right for the bar visuals
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    width: '100%',
+    marginBottom: 5,
+},
+balanceBarSegment: {
+    height: '100%',
+},
+colHeader: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    textAlign: 'right',
+    marginBottom: 10,
+},
+miniProductRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+},
+miniProductText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 10,
+},
+miniProductScore: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+},
+miniProductIngs: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 10,
+    color: COLORS.textDim,
+    textAlign: 'right',
+    marginTop: 2,
+    marginLeft: 10
 },
 });
