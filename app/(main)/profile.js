@@ -1163,30 +1163,37 @@ const AllClearState = () => (
 
 // 3. The horizontal carousel for secondary insights
 const InsightCarousel = ({ insights, onSelect }) => (
-  <View>
-      <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
-      <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.carouselContentContainer}
-      >
-          {insights.map((insight, index) => (
-              <StaggeredItem index={index} key={insight.id}>
-                  <PressableScale onPress={() => onSelect(insight)} style={styles.carouselItem}>
-                       <View style={[styles.carouselIconWrapper, {backgroundColor: `${COLORS[insight.severity]}20`}]}>
-                          <FontAwesome5 
-                              name={insight.severity === 'good' ? 'check-circle' : 'info-circle'} 
-                              size={16} 
-                              color={COLORS[insight.severity]} 
-                          />
-                      </View>
-                      <Text style={styles.carouselItemTitle} numberOfLines={2}>{insight.title}</Text>
-                  </PressableScale>
-              </StaggeredItem>
-          ))}
-      </ScrollView>
-  </View>
-);
+    <View>
+        <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+        <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContentContainer}
+            // specific RTL fix for Android horizontal scrolls if needed
+            style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }} 
+        >
+            {insights.map((insight, index) => (
+                <StaggeredItem 
+                    index={index} 
+                    key={insight.id}
+                    // FIX: Override the default 100% width and add margin here
+                    style={{ width: 'auto', paddingLeft: 12 }} 
+                >
+                    <PressableScale onPress={() => onSelect(insight)} style={styles.carouselItem}>
+                         <View style={[styles.carouselIconWrapper, {backgroundColor: `${COLORS[insight.severity]}20`}]}>
+                            <FontAwesome5 
+                                name={insight.severity === 'good' ? 'check-circle' : 'info-circle'} 
+                                size={16} 
+                                color={COLORS[insight.severity]} 
+                            />
+                        </View>
+                        <Text style={styles.carouselItemTitle} numberOfLines={2}>{insight.title}</Text>
+                    </PressableScale>
+                </StaggeredItem>
+            ))}
+        </ScrollView>
+    </View>
+  );
 
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
@@ -4611,7 +4618,7 @@ ingredientChipText: {
       backgroundColor: COLORS.card,
       borderRadius: 20,
       padding: 15,
-      marginRight: 12,
+      
       borderWidth: 1,
       borderColor: COLORS.border,
       justifyContent: 'space-between',
@@ -4621,7 +4628,7 @@ ingredientChipText: {
       height: 40,
       borderRadius: 20,
       justifyContent: 'center',
-      alignItems: 'center',
+      alignItems: 'left',
   },
   carouselItemTitle: {
       fontFamily: 'Tajawal-Bold',
