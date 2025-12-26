@@ -21,15 +21,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
 
-// --- DATA IMPORTS ---
-import { combinedOilsDB } from '../../src/data/alloilsdb';
-import { marketingClaimsDB } from '../../src/data/marketingclaimsdb';
-import { 
-  commonAllergies, 
-  commonConditions,
-  basicSkinTypes,
-  basicScalpTypes
-} from '../../src/data/allergiesandconditions';
+// --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
 // --- STYLE & CONSTANT IMPORTS ---
 import { 
@@ -45,6 +37,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// ENDPOINTS
+const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
+const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
+
 const PRODUCT_TYPES = [
     { id: 'shampoo', label: 'شامبو / بلسم', icon: 'spa' },
     { id: 'hair_mask', label: 'قناع شعر', icon: 'hand-sparkles' },
@@ -58,7 +54,7 @@ const PRODUCT_TYPES = [
     { id: 'other', label: 'آخر', icon: 'shopping-bag' },
 ];
 
-// --- LOGIC FUNCTIONS ---
+// --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
   if (!name) return '';
   return name.toString().toLowerCase()
@@ -68,7 +64,6 @@ const normalizeForMatching = (name) => {
     .replace(/\s+/g, ' ') 
     .trim();
 };
-const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const uriToBase64 = async (uri) => {
   try {
@@ -83,25 +78,9 @@ const uriToBase64 = async (uri) => {
   } catch (e) { throw new Error("Failed to process image file."); }
 };
 
-const findIngredientMatches = (detectedIngredientNames, targetIngredients) => {
-  if (!detectedIngredientNames?.length || !targetIngredients?.length) return [];
-  const combinedDetectedText = `,${detectedIngredientNames.map(normalizeForMatching).join(',')},`;
-  const matches = [];
-  const sortedTargets = [...targetIngredients].sort((a, b) => b.length - a.length);
-  let processedText = combinedDetectedText;
+// --- LOGIC MOVED TO SERVER: These functions were removed to protect IP ---
 
-  sortedTargets.forEach(targetIngredient => {
-    const normalizedTarget = normalizeForMatching(targetIngredient);
-    if (!normalizedTarget) return;
-    const regex = new RegExp(`,${escapeRegExp(normalizedTarget)},`, 'g');
-    if (regex.test(processedText)) {
-      matches.push(targetIngredient);
-      processedText = processedText.replace(regex, ',');
-    }
-  });
-  return [...new Set(matches)];
-};
-
+// We still need claims list for the UI selection
 const getClaimsByProductType = (productType) => {
     const claimsByProduct = {
         shampoo: [ "تنقية فروة الرأس", "مضاد للقشرة", "مخصص للشعر الدهني", "مخصص للشعر الجاف", "مضاد لتساقط الشعر", "تعزيز النمو", "تكثيف الشعر", "مرطب للشعر", "تغذية الشعر", "إصلاح التلف", "تلميع ولمعان", "مكافحة التجعد", "حماية اللون", "حماية من الحرارة", "مهدئ", "مضاد للالتهابات" ],
@@ -116,262 +95,6 @@ const getClaimsByProductType = (productType) => {
         other: [ "مرطب للشعر", "مرطب للبشرة", "مهدئ", "مضاد للأكسدة", "مضاد للالتهابات", "تفتيح البشرة", "توحيد لون البشرة", "مكافحة التجاعيد", "تنقية المسام", "مضاد لحب الشباب" ]
     };
     return claimsByProduct[productType] || claimsByProduct.other;
-};
-
-const evaluateMarketingClaims = (detectedIngredients, selectedClaims = [], productType) => {
-  const results = [];
-  const ingredientNames = detectedIngredients.filter(ing => ing && ing.name).map(ing => ing.name);
-  const claimsToAnalyze = selectedClaims.length > 0 ? selectedClaims : getClaimsByProductType(productType);
-  
-  claimsToAnalyze.forEach(claim => {
-    const categories = marketingClaimsDB[claim];
-    if (!categories) return;
-    
-    const foundProven = findIngredientMatches(ingredientNames, categories.proven || []);
-    const foundTraditionallyProven = findIngredientMatches(ingredientNames, categories.traditionally_proven || []);
-    const foundDoubtful = findIngredientMatches(ingredientNames, categories.doubtful || []);
-    const foundIneffective = findIngredientMatches(ingredientNames, categories.ineffective || []);
-    
-    let status = '', explanation = '', confidence = '';
-    
-    if (foundProven.length > 0) { status = '✅ مثبت علميا'; confidence = 'عالية'; explanation = `يحتوي المنتج على ${foundProven.join('، ')} المعروفين علميا بدعم ${claim}.`; } 
-    else if (foundTraditionallyProven.length > 0) { status = '🌿 مثبت تقليديا'; confidence = 'متوسطة'; explanation = `يحتوي على ${foundTraditionallyProven.join('، ')} المستخدم تقليديا لـ ${claim}، لكن الأدلة العلمية محدودة.`; } 
-    else if (foundDoubtful.length > 0 && foundIneffective.length === 0) { status = '⚖️ جزئيا صادق'; confidence = 'منخفضة'; explanation = `يحتوي على ${foundDoubtful.join('، ')}، وهناك بعض الأدلة على فاعليته في ${claim} لكنها غير كافية.`; } 
-    else if (foundDoubtful.length > 0 && foundIneffective.length > 0) { status = '⚖️ جزئيا صادق'; confidence = 'منخفضة جدا'; explanation = `يحتوي على ${foundDoubtful.join('، ')} (مشكوك في فاعليته) و${foundIneffective.join('، ')} (غير فعال)، الأدلة غير كافية.`; } 
-    else if (foundIneffective.length > 0) { status = '❌ إدعاء تسويقي بحت'; confidence = 'معدومة'; explanation = `يحتوي على ${foundIneffective.join('، ')} والذي لا يوجد دليل علمي على فاعليته في ${claim}.`; } 
-    else { status = '🚫 لا توجد مكونات مرتبطة'; confidence = 'معدومة'; explanation = `لا توجد في تركيبة المنتج أي مكونات معروفة علميا أو تقليديا بدعم ${claim}.`; }
-    
-    results.push({ claim, status, confidence, explanation, proven: foundProven, traditionallyProven: foundTraditionallyProven, doubtful: foundDoubtful, ineffective: foundIneffective });
-  });
-  return results;
-};
-
-const analyzeIngredientInteractions = (ingredients, allIngredients, selectedAllergies = [], selectedConditions = [], userSkinType, userScalpType) => {
-  const conflicts = [], user_specific_alerts = [], foundConflicts = new Set();
-  const detectedIngredientIds = new Set(ingredients.map(ing => ing.id));
-
-  ingredients.forEach(ingredientInProduct => {
-      const dbEntry = allIngredients.find(db_ing => db_ing.id === ingredientInProduct.id);
-      if (dbEntry && dbEntry.negativeSynergy) {
-          for (const conflictingId in dbEntry.negativeSynergy) {
-              if (detectedIngredientIds.has(conflictingId)) {
-                  const conflictPairKey = [ingredientInProduct.id, conflictingId].sort().join('+');
-                  if (!foundConflicts.has(conflictPairKey)) {
-                      const conflictingIngredient = ingredients.find(ing => ing.id === conflictingId);
-                      if (conflictingIngredient) {
-                          conflicts.push({ pair: [ingredientInProduct.name, conflictingIngredient.name], reason: dbEntry.negativeSynergy[conflictingId].reason });
-                          foundConflicts.add(conflictPairKey);
-                      }
-                  }
-              }
-          }
-      }
-  });
-  
-  const userAllergenIngredients = new Set(selectedAllergies.flatMap(id => commonAllergies.find(a => a.id === id)?.ingredients || []).map(normalizeForMatching));
-  const userConditionAvoidMap = new Map(), userBeneficialMap = new Map();
-  const addToMap = (list, reason, isAvoid) => {
-      if (!list) return;
-      list.forEach(ing => {
-          const norm = normalizeForMatching(ing);
-          if (isAvoid) userConditionAvoidMap.set(norm, reason);
-          else userBeneficialMap.set(norm, reason);
-      });
-  };
-
-  selectedConditions.forEach(id => { const c = commonConditions.find(x => x.id === id); if(c) { addToMap(c.avoidIngredients, c.name, true); addToMap(c.beneficialIngredients, c.name, false); } });
-  if (userSkinType) { const skinData = basicSkinTypes.find(t => t.id === userSkinType); if(skinData) { addToMap(skinData.avoidIngredients, `بشرة ${skinData.label}`, true); addToMap(skinData.beneficialIngredients, `بشرة ${skinData.label}`, false); } }
-  if (userScalpType) { const scalpData = basicScalpTypes.find(t => t.id === userScalpType); if(scalpData) { addToMap(scalpData.avoidIngredients, `فروة رأس ${scalpData.label}`, true); addToMap(scalpData.beneficialIngredients, `فروة رأس ${scalpData.label}`, false); } }
-  
-  ingredients.forEach(ingredientInProduct => {
-      const allNames = [ ingredientInProduct.name, ingredientInProduct.scientific_name, ...(ingredientInProduct.searchKeywords || []) ].filter(Boolean).map(normalizeForMatching);
-      for (const name of allNames) {
-          if (userAllergenIngredients.has(name)) {
-              const allergy = commonAllergies.find(a => selectedAllergies.includes(a.id) && a.ingredients.map(normalizeForMatching).includes(name));
-              user_specific_alerts.push({ type: 'danger', text: `🚨 خطر الحساسية: يحتوي على ${ingredientInProduct.name}، المرتبط بـ "${allergy?.name || 'حساسية محددة'}" لديك.` }); break; 
-          }
-          if (userConditionAvoidMap.has(name)) {
-              const reason = userConditionAvoidMap.get(name);
-              user_specific_alerts.push({ type: 'warning', text: `⚠️ تنبيه لـ (${reason}): ينصح بتجنب ${ingredientInProduct.name}.` }); break;
-          }
-          if (userBeneficialMap.has(name)) {
-              const reason = userBeneficialMap.get(name);
-              user_specific_alerts.push({ type: 'good', text: `✅ مفيد لـ (${reason}): يحتوي على ${ingredientInProduct.name}.` }); break;
-          }
-      }
-  });
-  
-  const uniqueAlerts = Array.from(new Map(user_specific_alerts.map(item => [item.text, item])).values());
-  return { conflicts, user_specific_alerts: uniqueAlerts };
-};
-
-const analyzeSunscreen = (ingredients) => {
-    const uva_strong = ['zinc-oxide', 'tinosorb-s', 'tinosorb-m', 'mexoryl-sx', 'mexoryl-xl', 'uvinul-a-plus', 'mexoryl-400'];
-    const uva_moderate = ['avobenzone'];
-    const uvb_strong = ['zinc-oxide', 'titanium-dioxide', 'tinosorb-s', 'tinosorb-m', 'mexoryl-xl', 'uvinul-t-150'];
-    const uvb_moderate = ['octocrylene', 'octinoxate', 'octisalate', 'homosalate'];
-    const stabilizers = ['octocrylene', 'tinosorb-s', 'tinosorb-m', 'mexoryl-xl'];
-    const controversial = ['oxybenzone', 'octinoxate'];
-    const antioxidants = ['tocopherol', 'ferulic-acid', 'resveratrol-serum', 'vitamin-c'];
-    let found_uva_strong = [], found_uva_moderate = [], found_uvb_strong = [], found_uvb_moderate = [], found_stabilizers = [], found_controversial = [], found_boosters = [], issues = [];
-    ingredients.forEach(ing => {
-      if (uva_strong.includes(ing.id)) found_uva_strong.push(ing.name);
-      if (uva_moderate.includes(ing.id)) found_uva_moderate.push(ing.name);
-      if (uvb_strong.includes(ing.id)) found_uvb_strong.push(ing.name);
-      if (uvb_moderate.includes(ing.id)) found_uvb_moderate.push(ing.name);
-      if (stabilizers.includes(ing.id)) found_stabilizers.push(ing.name);
-      if (controversial.includes(ing.id)) found_controversial.push(ing.name);
-      if (antioxidants.includes(ing.id)) found_boosters.push(ing.name);
-      if (ing.id === 'zinc-oxide' || ing.id === 'titanium-dioxide') issues.push('قد يترك أثرا أبيض على البشرة (white cast).');
-      if (['avobenzone', 'oxybenzone', 'octocrylene'].includes(ing.id)) issues.push('يحتوي على فلاتر كيميائية قد تسبب حساسية أو تهيج للعينين.');
-    });
-    if (found_controversial.length > 0) issues.push(`يحتوي على فلاتر (${found_controversial.join(', ')}) قد تكون ضارة بالشعاب المرجانية.`);
-    let efficacyScore = 0;
-    const hasUVA = found_uva_strong.length > 0 || found_uva_moderate.length > 0;
-    const hasUVB = found_uvb_strong.length > 0 || found_uvb_moderate.length > 0;
-    if (hasUVA && hasUVB) {
-      efficacyScore += 50 + (found_uva_strong.length * 20) + (found_uva_moderate.length * 10) + (found_uvb_strong.length * 10);
-      if (found_uva_strong.length + found_uvb_strong.length > 2) efficacyScore += 10;
-      if (found_uva_moderate.includes('أفوبينزون') && found_stabilizers.length === 0) { efficacyScore -= 40; issues.push("فلتر الأفوبينزون غير مستقر وقد يفقد فعاليته بسرعة تحت الشمس لعدم وجود مثبتات."); }
-    }
-    efficacyScore = Math.max(0, Math.min(100, Math.round(efficacyScore)));
-    let protectionLevel = efficacyScore >= 90 ? 'حماية فائقة' : efficacyScore >= 70 ? 'حماية جيدة' : efficacyScore >= 50 ? 'حماية أساسية' : 'حماية غير كافية';
-    return { efficacyScore, protectionLevel, issues: [...new Set(issues)], boosters: found_boosters.length > 0 ? [`معزز بمضادات أكسدة مثل: ${[...new Set(found_boosters)].join('، ')}.`] : [] };
-};
-
-const calculateReliabilityScore_V13 = (ingredients, allIngredients, conflicts, userAlerts, marketingResults, productType) => {
-    const scoreBreakdown = [
-        { type: 'calculation', text: 'الرصيد الافتتاحي للسلامة', value: '100' },
-        { type: 'calculation', text: 'الرصيد الافتتاحي للفعالية', value: '50' }
-    ];
-    
-    if (!ingredients || ingredients.length === 0) {
-        return { oilGuardScore: 0, finalVerdict: 'غير قابل للتحليل', scoreBreakdown: [] };
-    }
-
-    const isWashOff = ['cleanser', 'shampoo', 'mask', 'scrub'].includes(productType);
-    const isLeaveOn = !isWashOff; 
-    const isHairCare = ['shampoo', 'hair_mask', 'conditioner', 'oil_blend'].includes(productType);
-    const isSunCare = ['sunscreen'].includes(productType);
-    const isTreatment = ['serum', 'treatment', 'toner'].includes(productType);
-
-    const topIngredients = ingredients.slice(0, 7);
-    const hydrators = new Set(['glycerin', 'aqua', 'water', 'panthenol', 'betaine', 'allantoin', 'butylene-glycol', 'dipropylene-glycol', 'sodium-hyaluronate', 'ceramide', 'aloe-barbadensis', 'squalane', 'shea-butter', 'caprylic-capric-triglyceride', 'dimethicone', 'urea', 'bisabolol']);
-    let bufferCount = 0;
-    topIngredients.forEach(ing => {
-        const dbEntry = allIngredients.find(db => db.id === ing.id);
-        if (hydrators.has(ing.id) || dbEntry?.functionalCategory?.includes('مرطب')) {
-            bufferCount++;
-        }
-    });
-    const isBuffered = bufferCount >= (isTreatment ? 3 : 2);
-    if (isBuffered) {
-        scoreBreakdown.push({ type: 'info', text: '🛡️ نظام حماية: تركيبة مدعمة بمرطبات قوية', value: 'ميزة' });
-    }
-
-    let currentSafety = 100;
-    let safetyDeductions = 0;
-
-    ingredients.forEach((ing, index) => {
-        const dbEntry = allIngredients.find(db => db.id === ing.id);
-        let weight = index < 3 ? 2.0 : (index < 10 ? 1.0 : 0.5);
-        
-        if (['alcohol-denat', 'ethanol', 'isopropyl-alcohol'].includes(ing.id)) {
-            if (!isSunCare || !isBuffered) {
-                if (isTreatment && isLeaveOn) {
-                    const penalty = isBuffered ? 5 : 25; 
-                    const weightedPenalty = penalty * weight;
-                    safetyDeductions += weightedPenalty;
-                    if(weightedPenalty > 2) {
-                        scoreBreakdown.push({ type: isBuffered ? 'warning' : 'deduction', text: isBuffered ? `كحول (مخفف التأثير): ${ing.name}` : `كحول مسبب للجفاف: ${ing.name}`, value: `-${Math.round(weightedPenalty)} (أمان)` });
-                    }
-                } else if (isLeaveOn) {
-                     const p = 15 * weight;
-                     safetyDeductions += p;
-                     scoreBreakdown.push({ type: 'deduction', text: `كحول مجفف في مرطب: ${ing.name}`, value: `-${Math.round(p)} (أمان)` });
-                }
-            }
-        }
-        if (['sodium-lauryl-sulfate', 'ammonium-lauryl-sulfate', 'sls', 'als'].includes(ing.id)) {
-            const p = (isLeaveOn ? 40 : 10) * weight;
-            safetyDeductions += p;
-            scoreBreakdown.push({ type: 'deduction', text: isLeaveOn ? `⛔ سلفات في منتج لا يغسل!: ${ing.name}` : `سلفات قوية: ${ing.name}`, value: `-${Math.round(p)} (أمان)` });
-        }
-        if (['fragrance', 'parfum', 'limonene', 'linalool', 'citronellol', 'geraniol'].includes(ing.id) && isLeaveOn && index < 10) {
-            const p = index < 7 ? 15 : 5; 
-            safetyDeductions += p;
-            scoreBreakdown.push({ type: 'deduction', text: `عطر بتركيز عالي: ${ing.name}`, value: `-${p} (أمان)` });
-        }
-        const universalRisks = {
-            'formaldehyde': { id: ['dmdm-hydantoin', 'imidazolidinyl-urea', 'diazolidinyl-urea'], p: 40, msg: 'مطلق للفورمالديهايد' },
-            'parabens': { id: ['propylparaben', 'butylparaben', 'isobutylparaben'], p: 20, msg: 'بارابين (جدلي)' },
-            'bad-preservatives': { id: ['methylisothiazolinone', 'methylchloroisothiazolinone'], p: 25, msg: 'مادة حافظة مهيجة جداً' }
-        };
-        for(const key in universalRisks) {
-            if(universalRisks[key].id.includes(ing.id)) {
-                safetyDeductions += universalRisks[key].p;
-                scoreBreakdown.push({ type: 'deduction', text: `${universalRisks[key].msg}: ${ing.name}`, value: `-${universalRisks[key].p} (أمان)` });
-            }
-        }
-        if ((['dimethicone', 'cyclopentasiloxane', 'amodimethicone'].includes(ing.id) || dbEntry?.chemicalType?.includes('سيليكون')) && (productType === 'shampoo' || (isWashOff && !isHairCare))) {
-            safetyDeductions += 2;
-            if (productType === 'shampoo') scoreBreakdown.push({ type: 'deduction', text: `سيليكون (احتمال تراكم): ${ing.name}`, value: '-2 (أمان)' });
-        }
-    });
-
-    const activeUserAlerts = userAlerts.filter(alert => !(isBuffered && (alert.text.includes('كحول') || alert.text.includes('alcohol'))));
-    if (isBuffered && activeUserAlerts.length < userAlerts.length) {
-         scoreBreakdown.push({ type: 'info', text: '✨ تم تجاهل تحذير الجفاف لأن التركيبة محمية', value: 'استثناء' });
-    }
-
-    const hasAllergyDanger = activeUserAlerts.some(a => a.type === 'danger');
-    const hasMismatch = activeUserAlerts.some(a => a.type === 'warning');
-    if (hasAllergyDanger) { safetyDeductions += 100; scoreBreakdown.push({ type: 'override', text: '⛔ خطر: تعارض مع حساسيتك', value: '-100 (أمان)' }); } 
-    else if (hasMismatch) { safetyDeductions += 30; scoreBreakdown.push({ type: 'deduction', text: '⚠️ لا يناسب نوع بشرتك/شعرك', value: '-30 (أمان)' }); }
-    if (conflicts.length > 0) { const p = conflicts.length * 10; safetyDeductions += p; scoreBreakdown.push({ type: 'deduction', text: `تعارض كيميائي (${conflicts.length})`, value: `-${p} (أمان)` }); }
-    currentSafety = Math.max(0, 100 - safetyDeductions);
-
-    let currentEfficacy = 50; 
-    let efficacyBonus = 0;
-    ingredients.forEach((ing, index) => {
-        const dbEntry = allIngredients.find(db => db.id === ing.id);
-        let weight = index < 3 ? 2.0 : (index < 10 ? 1.5 : 0.8);
-        const heroIngredients = ['niacinamide', 'vitamin-c', 'ascorbic-acid', 'retinol', 'retinal', 'tretinoin', 'adapalene', 'ceramide', 'peptide', 'copper-peptide', 'hyaluronic-acid', 'sodium-hyaluronate', 'azelaic-acid', 'salicylic-acid', 'glycolic-acid', 'lactic-acid', 'centella-asiatica', 'panthenol', 'glycerin', 'zinc-pca', 'snail-mucin', 'allantoin'];
-        if (heroIngredients.includes(ing.id) || dbEntry?.functionalCategory?.includes('مكون فعال')) {
-            let power = (isWashOff && !['salicylic-acid', 'benzoyl-peroxide', 'glycolic-acid', 'lactic-acid'].includes(ing.id)) ? 1 : (['glycerin', 'water', 'aqua'].includes(ing.id) ? 2 : 5);
-            let points = power * weight;
-            efficacyBonus += points;
-            if (points >= 3 && index < 15) {
-                 const contextMsg = isWashOff && power === 1 ? '(تأثير محدود في الغسول)' : '';
-                 scoreBreakdown.push({ type: 'info', text: `🚀 مكون فعال: ${ing.name} ${contextMsg}`, value: `+${Math.round(points)} (فعالية)` });
-            }
-        }
-    });
-
-    let integrityScore = 0;
-    if (marketingResults?.length > 0) {
-        marketingResults.forEach(res => {
-            if (res.status.includes('✅') && ingredients.findIndex(i => res.proven.includes(i.name)) < 10) { integrityScore += 15; scoreBreakdown.push({ type: 'info', text: `مصداقية (علمي): ${res.claim}`, value: '+15 (فعالية)' }); } 
-            else if (res.status.includes('🌿')) { integrityScore += 15; scoreBreakdown.push({ type: 'info', text: `مصداقية (طبيعي): ${res.claim}`, value: '+15 (فعالية)' }); } 
-            else if (res.status.includes('تركيز منخفض') || res.status.includes('Angel Dusting') || res.status.includes('❌')) { integrityScore -= 20; scoreBreakdown.push({ type: 'warning', text: `غش تسويقي: ${res.claim}`, value: '-20 (فعالية)' }); }
-        });
-    }
-    efficacyBonus += integrityScore;
-    currentEfficacy = Math.min(100, Math.max(0, 50 + efficacyBonus));
-
-    let weightedScore = (currentSafety * 0.6) + (currentEfficacy * 0.4);
-    scoreBreakdown.push({ type: 'calculation', text: `الحساب النهائي: (أمان ${Math.round(currentSafety)} × 0.6) + (فعالية ${Math.round(currentEfficacy)} × 0.4)`, value: `${Math.round(weightedScore)}` });
-
-    let finalVerdict = '';
-    if (hasAllergyDanger) { weightedScore = Math.min(weightedScore, 20); finalVerdict = "⛔ خطير: يسبب لك الحساسية"; scoreBreakdown.push({ type: 'override', text: 'تم إغلاق النتيجة لوجود خطر صحي', value: 'سقف 20%' }); } 
-    else if (currentSafety < 40) { weightedScore = Math.min(weightedScore, 45); finalVerdict = "⚠️ غير آمن: يحتوي على مكونات قاسية/ضارة"; scoreBreakdown.push({ type: 'override', text: 'تم تخفيض النتيجة لضعف الأمان', value: 'سقف 45%' }); } 
-    else if (currentSafety > 80 && currentEfficacy < 55) { weightedScore = Math.min(weightedScore, 65); finalVerdict = "💧 آمن لكن غير فعال (Basic)"; scoreBreakdown.push({ type: 'override', text: 'تم تخفيض النتيجة لعدم وجود فعالية حقيقية', value: 'سقف 65%' }); } 
-    else if (weightedScore >= 90) finalVerdict = "تركيبة مثالية (Elite)"; 
-    else if (weightedScore >= 80) finalVerdict = "اختيار ممتاز"; 
-    else if (weightedScore >= 65) finalVerdict = "جيد ومتوازن"; 
-    else finalVerdict = "متوسط (يمكن إيجاد أفضل)";
-
-    return { oilGuardScore: Math.round(weightedScore), finalVerdict, efficacy: { score: Math.round(currentEfficacy) }, safety: { score: Math.round(currentSafety) }, scoreBreakdown, personalMatch: { status: hasAllergyDanger ? 'danger' : (hasMismatch ? 'warning' : 'good'), reasons: activeUserAlerts.map(a => a.text) } };
 };
 
 
@@ -1457,17 +1180,6 @@ export default function OilGuardEngine() {
   const pulseAnim = useRef(new Animated.Value(0)).current;
   
   const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
-  const allIngredients = useMemo(() => combinedOilsDB.ingredients, []);
-  
-  const allSearchableTerms = useMemo(() => {
-    const terms = new Map();
-    allIngredients.forEach(ing => {
-      [ing.id, ing.name, ing.scientific_name, ...(ing.searchKeywords || [])]
-      .filter(Boolean).map(name => normalizeForMatching(String(name)))
-      .forEach(normalized => { if (normalized.length > 2 && !terms.has(normalized)) terms.set(normalized, ing); });
-    });
-    return Array.from(terms.entries()).map(([term, ingredient]) => ({ term, ingredient })).sort((a, b) => b.term.length - a.term.length);
-  }, [allIngredients]);
   
   const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
   const fuse = useMemo(() => new Fuse(claimsForType, {
@@ -1622,8 +1334,6 @@ const handlePictureTaken = (photo) => {
   }
 };
 
-const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
-
 const processImageWithGemini = async (uri) => {
   setLoading(true);
   setIsGeminiLoading(true);
@@ -1632,6 +1342,7 @@ const processImageWithGemini = async (uri) => {
   try {
     const base64Data = await uriToBase64(uri);
 
+    // Call VERCEL OCR Endpoint
     const response = await fetch(VERCEL_BACKEND_URL, {
       method: 'POST',
       headers: {
@@ -1641,9 +1352,7 @@ const processImageWithGemini = async (uri) => {
     });
 
     const responseData = await response.json();
-    
-    // LOG ADDED HERE
-    console.log("Backend Response Data:", JSON.stringify(responseData, null, 2));
+    console.log("OCR Response Data:", JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
       throw new Error(responseData.error || "An error occurred in the backend.");
@@ -1653,10 +1362,9 @@ const processImageWithGemini = async (uri) => {
     const jsonResponse = JSON.parse(text);
     const rawList = jsonResponse.ingredients_list || [];
     
-    // We send the array directly to the extraction function
+    // Updated: Simplified extraction that DOES NOT rely on local DB
     const { ingredients } = await extractIngredientsFromAIText(rawList);
-    if (ingredients.length === 0) throw new Error("No known ingredients were recognized.");
-
+    
     setOcrText(rawList.join('\n')); 
     setPreProcessedIngredients(ingredients);
     setProductType(jsonResponse.detected_type || 'other');
@@ -1675,43 +1383,25 @@ const processImageWithGemini = async (uri) => {
   }
 };
   
-// --- UPDATED EXTRACTION FUNCTION ---
+// --- UPDATED EXTRACTION FUNCTION (Client-Side Dumb Version) ---
 const extractIngredientsFromAIText = async (inputData) => {
-  const foundIngredients = new Map();
-  
-  // Ensure input is an array
   let candidates = [];
   if (Array.isArray(inputData)) {
     candidates = inputData;
   } else if (typeof inputData === 'string') {
-    // Fallback if backend reverts to string, split by newlines
     candidates = inputData.split('\n');
   }
 
-  // Iterate through the clean array from the AI
-  candidates.forEach(rawTerm => {
-      // Clean up stray punctuation just in case
-      const cleanTerm = rawTerm.replace(/^\d+[\.\-\)]\s*/, '').trim(); 
-      const normalizedCandidate = normalizeForMatching(cleanTerm);
+  // We no longer match against DB here (security). 
+  // We just create temp objects for display in the "Review" step.
+  const simpleIngredients = candidates.map((name, index) => ({
+      id: `temp-${index}`, // Temp ID, server will match real ID
+      name: name.trim(),
+      functionalCategory: 'جاري التحليل...', // Placeholder
+      chemicalType: ''
+  })).filter(i => i.name.length > 1);
 
-      if (!normalizedCandidate || normalizedCandidate.length < 2) return;
-
-      // Check against database
-      for (const { term, ingredient } of allSearchableTerms) {
-          // Exact word match check
-          const regex = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
-          
-          if (regex.test(normalizedCandidate)) {
-              if (!foundIngredients.has(ingredient.id)) {
-                  foundIngredients.set(ingredient.id, ingredient);
-              }
-              // We found a match for this term, move to next term
-              break; 
-          }
-      }
-  });
-
-  return { ingredients: Array.from(foundIngredients.values()) };
+  return { ingredients: simpleIngredients };
 };
   
 
@@ -1732,37 +1422,50 @@ const extractIngredientsFromAIText = async (inputData) => {
         duration: 600,
         easing: Easing.bezier(0.42, 0, 0.58, 1),
         useNativeDriver: true,
-      }).start(() => {
-        const detectedIngredients = preProcessedIngredients || [];
-        const marketingResults = evaluateMarketingClaims(detectedIngredients, selectedClaims, productType);
+      }).start(async () => {
         
-        const { conflicts, user_specific_alerts } = analyzeIngredientInteractions(
-            detectedIngredients, allIngredients,
-            userProfile?.settings?.allergies || [], userProfile?.settings?.conditions || [], 
-            userProfile?.settings?.skinType, userProfile?.settings?.scalpType
-        );
-        
-        const resultData = calculateReliabilityScore_V13(
-            detectedIngredients, allIngredients, conflicts, 
-            user_specific_alerts, marketingResults, productType
-        );
+        // --- NEW SERVER CALL ---
+        try {
+            // 1. Prepare raw list (just names)
+            const rawList = preProcessedIngredients.map(i => i.name);
 
-        const fullAnalysisData = {
-          ...resultData,
-          detected_ingredients: detectedIngredients,
-          conflicts,
-          marketing_results: marketingResults,
-          product_type: productType,
-          user_specific_alerts,
-          sunscreen_analysis: productType === 'sunscreen' ? analyzeSunscreen(detectedIngredients) : null
-        };
+            // 2. Call your NEW endpoint
+            const response = await fetch(VERCEL_EVALUATE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ingredients_list: rawList,
+                    product_type: productType,
+                    selected_claims: selectedClaims,
+                    user_profile: {
+                        allergies: userProfile?.settings?.allergies || [],
+                        conditions: userProfile?.settings?.conditions || [],
+                        skinType: userProfile?.settings?.skinType,
+                        scalpType: userProfile?.settings?.scalpType
+                    }
+                })
+            });
 
-        setFinalAnalysis(fullAnalysisData);
-        
-        setIsAnimatingTransition(false);
-        heroTransitionAnim.setValue(0);
-        changeStep(4);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (!response.ok) throw new Error("Server analysis failed");
+            
+            const fullAnalysisData = await response.json();
+            
+            // 3. Set Data & Transition
+            setFinalAnalysis(fullAnalysisData);
+            
+            setIsAnimatingTransition(false);
+            heroTransitionAnim.setValue(0);
+            changeStep(4);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Analysis Error", "Could not connect to analysis server.");
+            setIsAnimatingTransition(false);
+            heroTransitionAnim.setValue(0);
+        }
+        // -----------------------
+
       });
 
       setTimeout(() => {

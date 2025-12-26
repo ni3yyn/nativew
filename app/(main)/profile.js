@@ -3986,80 +3986,146 @@ export default function ProfileScreen() {
         'oily': 8.5         // High tolerance (oil protects)
     };
 
-    // ** Barrier Load Calculation (Fixed) **
    // ** Barrier Load Calculation (Enhanced) **
    const calculateBarrierHealth = (dailyProducts) => {
     
+    // 1. Define Constants Locally (To ensure no missing references)
+    const SKIN_TOLERANCE_BUDGET = {
+        'sensitive': 4.0, 'dry': 5.5, 'normal': 7.0, 'combo': 7.5, 'oily': 8.5
+    };
+
+    const IRRITATION_WEIGHTS = {
+        // Strong Actives
+        'tretinoin': 5.0, 'isotretinoin': 5.0, 'hydroquinone': 4.5,
+        'adapalene': 3.5, 'tazarotene': 3.5, 'glycolic-acid': 3.0, 'benzoyl-peroxide': 3.0,
+        'retinol': 2.5, 'retinal': 2.5, 'salicylic-acid': 2.0, 'lactic-acid': 2.0, 'ascorbic-acid': 2.0,
+        'azelaic-acid': 1.5, 'mandelic-acid': 1.5, 'ethyl-ascorbic-acid': 1.0, 'gluconolactone': 1.0,
+        'niacinamide': 0.5, 'bakuchiol': 0.5,
+        // Hidden Aggressors (Surfactants & Alcohol)
+        'alcohol-denat': 1.0, 'sls': 1.5, 'sles': 1.0, 'fragrance': 0.5,
+        'sodium-lauryl-sulfate': 1.5, 'sodium-laureth-sulfate': 1.0,
+        'sodium-c14-16-olefin-sulfonate': 1.0
+    };
+
+    const SOOTHING_WEIGHTS = {
+        // Structural Repair
+        'ceramides': 2.0, 'cholesterol': 2.0, 'fatty-acids': 2.0, 'phytosphingosine': 2.0,
+        'panthenol': 1.5, 'madecassoside': 1.5, 'centella-asiatica': 1.5, 'allantoin': 1.5, 
+        'bisabolol': 1.5, 'colloidal-oatmeal': 1.5,
+        // Hydrators & Occlusives
+        'hyaluronic-acid': 0.5, 'glycerin': 0.8, 'polyglutamic-acid': 0.5, 'squalane': 1.0, 
+        'shea-butter': 1.0, 'petrolatum': 2.0, 'dimethicone': 1.0, 'mineral-oil': 1.0, 
+        'paraffin': 1.5, 'jojoba-oil': 0.5, 'argan-oil': 0.5, 'aloe-vera': 0.5
+    };
+
+    // 2. Determine User Budget
     const skinType = settings.skinType || 'normal'; 
     let baseTolerance = SKIN_TOLERANCE_BUDGET[skinType] || 7.0;
 
     if (settings.conditions?.includes('rosacea') || settings.conditions?.includes('eczema')) baseTolerance -= 2.0; 
     if (settings.conditions?.includes('retinoid_naive')) baseTolerance -= 1.0; 
 
-    const offenders = [];
-    const defenders = [];
-
-    // Helper: Now returns lists of specific ingredient names
-    const getProductImpact = (product) => {
-        let irritation = 0;
-        let soothing = 0;
-        let irritantNames = []; // Store names of bad guys
-        let sootherNames = [];  // Store names of good guys
-
-        const type = product.analysisData.product_type;
-        let factor = 1.0;
-        if (type === 'cleanser' || type === 'mask') factor = 0.3; 
-        if (type === 'toner') factor = 0.8; 
-
-        product.analysisData.detected_ingredients.forEach(rawIng => {
-            const resolved = resolveIngredient(rawIng.name);
-            if (!resolved) return;
-            const id = resolved.id;
-            // Use Arabic name if available, else English
-            const displayName = resolved.name || rawIng.name; 
-
-            if (IRRITATION_WEIGHTS[id]) {
-                irritation += (IRRITATION_WEIGHTS[id] * factor);
-                irritantNames.push(displayName);
-            }
-            
-            if (SOOTHING_WEIGHTS[id]) {
-                soothing += (SOOTHING_WEIGHTS[id] * factor); 
-                sootherNames.push(displayName);
-            }
-        });
-
-        return { irritation, soothing, irritantNames, sootherNames };
-    };
+    // 3. Prep Data Containers
+    const offendersMap = new Map();
+    const defendersMap = new Map();
 
     let totalIrritation = 0;
     let totalSoothing = 0;
 
+    // 4. Iterate Products
     dailyProducts.forEach(p => {
-        const impact = getProductImpact(p);
-        totalIrritation += impact.irritation;
-        totalSoothing += impact.soothing;
+        let pIrritation = 0;
+        let pSoothing = 0;
+        let pIrritantNames = [];
+        let pSootherNames = [];
 
-        // Save the product AND the specific ingredients
-        if (impact.irritation > 0.1) {
-            offenders.push({ 
-                name: p.productName, 
-                score: impact.irritation,
-                ingredients: impact.irritantNames 
-            });
+        const type = p.analysisData.product_type;
+        
+        // A. BASELINE SCORING (The Type Tax/Bonus)
+        if (type === 'cleanser') {
+            pIrritation += 0.5; 
+            pIrritantNames.push('تأثير منظف'); 
+        } else if (type === 'toner' && !p.productName.toLowerCase().includes('hydrat')) {
+            pIrritation += 0.2; 
+        } else if (type === 'lotion_cream' || type === 'oil_blend') {
+            pSoothing += 0.5; 
+            pSootherNames.push('قاعدة مرطبة');
+        } else if (type === 'sunscreen') {
+            pSoothing += 0.2; // SPF is protective by nature
         }
-        if (impact.soothing > 0.1) {
-            defenders.push({ 
-                name: p.productName, 
-                score: impact.soothing,
-                ingredients: impact.sootherNames 
-            });
+
+        // B. INGREDIENT SCORING
+        // Wash-off products count for less (30%), leave-on for 100%
+        let factor = (type === 'cleanser' || type === 'mask') ? 0.3 : 1.0; 
+
+        p.analysisData.detected_ingredients.forEach(rawIng => {
+            const resolved = resolveIngredient(rawIng.name);
+            if (!resolved) return;
+            const id = resolved.id;
+            const name = resolved.name || rawIng.name;
+
+            if (IRRITATION_WEIGHTS[id]) {
+                pIrritation += (IRRITATION_WEIGHTS[id] * factor);
+                pIrritantNames.push(name);
+            }
+            
+            if (SOOTHING_WEIGHTS[id]) {
+                pSoothing += (SOOTHING_WEIGHTS[id] * factor); 
+                pSootherNames.push(name);
+            }
+        });
+
+        // C. Accumulate Totals
+        totalIrritation += pIrritation;
+        totalSoothing += pSoothing;
+
+        // D. Aggregate for Lists (Merge Duplicates)
+        // If product already in map, just increment stats
+        if (pIrritation > 0.1) {
+            if (offendersMap.has(p.id)) {
+                const existing = offendersMap.get(p.id);
+                existing.score += pIrritation;
+                existing.count += 1;
+                // We don't push duplicate ingredient names here, handled in formatList
+            } else {
+                offendersMap.set(p.id, { 
+                    name: p.productName, 
+                    score: pIrritation, 
+                    ingredients: pIrritantNames,
+                    count: 1 
+                });
+            }
+        }
+
+        if (pSoothing > 0.1) {
+            if (defendersMap.has(p.id)) {
+                const existing = defendersMap.get(p.id);
+                existing.score += pSoothing;
+                existing.count += 1;
+            } else {
+                defendersMap.set(p.id, { 
+                    name: p.productName, 
+                    score: pSoothing, 
+                    ingredients: pSootherNames,
+                    count: 1 
+                });
+            }
         }
     });
 
-    offenders.sort((a,b) => b.score - a.score);
-    defenders.sort((a,b) => b.score - a.score);
+    // 5. Format Lists for UI
+    const formatList = (map) => Array.from(map.values()).map(item => ({
+        ...item,
+        // If count > 1, append (x2) to name
+        name: item.count > 1 ? `${item.name} (x${item.count})` : item.name,
+        // Unique ingredients only
+        ingredients: [...new Set(item.ingredients)]
+    })).sort((a,b) => b.score - a.score);
 
+    const offenders = formatList(offendersMap);
+    const defenders = formatList(defendersMap);
+
+    // 6. Final Calculation Logic
     const maxSoothingBonus = baseTolerance * 0.5; 
     const effectiveTolerance = baseTolerance + Math.min(totalSoothing, maxSoothingBonus);
     const loadRatio = totalIrritation > 0 ? (totalIrritation / effectiveTolerance) : 0;
@@ -4069,22 +4135,17 @@ export default function ProfileScreen() {
     if (totalIrritation === 0) healthScore = 100; 
 
     let status, color, desc;
-    
     if (loadRatio > 1.2) {
-        status = 'خطر احتراق 🚨';
-        color = COLORS.danger;
-        desc = `حملك الكيميائي (${totalIrritation.toFixed(1)}) يتجاوز قدرة تحمّل بشرتك (${effectiveTolerance.toFixed(1)}) بشكل كبير.`;
+        status = 'خطر احتراق 🚨'; color = COLORS.danger;
+        desc = `حملك الكيميائي (${totalIrritation.toFixed(1)}) مرتفع جداً.`;
     } else if (loadRatio > 0.9) {
-        status = 'حاجز مجهد';
-        color = COLORS.warning;
-        desc = `أنت على حافة التحمل. ميزانية بشرتك (${effectiveTolerance.toFixed(1)}) ممتلئة.`;
+        status = 'حاجز مجهد'; color = COLORS.warning;
+        desc = `أنت على حافة التحمل.`;
     } else if (loadRatio > 0.5) {
-        status = 'نشط ومتوازن';
-        color = COLORS.success;
-        desc = `تستخدمين ${(totalIrritation/effectiveTolerance*100).toFixed(0)}% من طاقة بشرتك. التوازن ممتاز.`;
+        status = 'نشط ومتوازن'; color = COLORS.success;
+        desc = `توازن ممتاز بين التقشير والترميم.`;
     } else {
-        status = 'سليم وقوي';
-        color = COLORS.success;
+        status = 'سليم وقوي'; color = COLORS.success;
         desc = `حاجز بشرتك في حالة راحة تامة.`;
     }
 
