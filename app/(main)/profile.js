@@ -19,18 +19,14 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { 
-  commonAllergies, 
-  commonConditions,
-  basicSkinTypes,
-  basicScalpTypes
-} from '../../src/data/allergiesandconditions';
-import { combinedOilsDB } from '../../src/data/alloilsdb';
+import { generateFingerprint } from '../../src/utils/cacheHelpers';
 
 // --- 1. SYSTEM CONFIG ---
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
 const { width, height } = Dimensions.get('window');
 
@@ -1738,580 +1734,180 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
 
 // --- The Main Routine Section Component ---
 const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
-  const { user } = useAppContext();
-  const [routines, setRoutines] = useState({ am: [], pm: [] });
-  const [activePeriod, setActivePeriod] = useState('am');
-  const [selectedStep, setSelectedStep] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  // REMOVED: isAddStepModalVisible and addStepHandler state
-
-  useEffect(() => {
-      const initialRoutines = userProfile?.routines || { am: [], pm: [] };
-      setRoutines(initialRoutines);
-      if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
-          setShowOnboarding(true);
-      }
-  }, [userProfile]);
-  
-  const saveRoutines = async (newRoutines) => {
-      setRoutines(newRoutines);
-      try { await updateDoc(doc(db, 'profiles', user.uid), { routines: newRoutines }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (error) { console.error("Error saving routines:", error); Alert.alert("Error", "Could not save routine."); }
-  };
-
-  const switchPeriod = (period) => {
-    if (period === activePeriod) return;
-    Haptics.selectionAsync();
-    // REMOVED: LayoutAnimation.configureNext(...) <- This caused the glitch
-    setActivePeriod(period);
-};
-
-const handleAddStep = (stepName) => {
-  if (stepName) {
-      const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
-      const newRoutines = JSON.parse(JSON.stringify(routines));
-      
-      if (!newRoutines[activePeriod]) newRoutines[activePeriod] = [];
-      newRoutines[activePeriod].push(newStep);
-      
-      // REMOVED: LayoutAnimation.configureNext(...) <- Rely on StaggeredItem instead
-      
-      saveRoutines(newRoutines);
-      
-      // Scroll to bottom roughly (optional, if you have a ref to FlatList)
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }
-};
-
-const handleDeleteStep = (stepId) => {
+    const { user } = useAppContext();
+    const [routines, setRoutines] = useState({ am: [], pm: [] });
+    const [activePeriod, setActivePeriod] = useState('am');
+    const [selectedStep, setSelectedStep] = useState(null);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     
-    // 1. Define the core delete logic (reused for both Web and Mobile)
-    const performDelete = async () => {
-        try {
+    // New state to track server request status
+    const [isBuilding, setIsBuilding] = useState(false);
+  
+    useEffect(() => {
+        const initialRoutines = userProfile?.routines || { am: [], pm: [] };
+        setRoutines(initialRoutines);
+        if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
+            setShowOnboarding(true);
+        }
+    }, [userProfile]);
+    
+    const saveRoutines = async (newRoutines) => {
+        setRoutines(newRoutines);
+        try { 
+            await updateDoc(doc(db, 'profiles', user.uid), { routines: newRoutines }); 
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
+        } catch (error) { 
+            console.error("Error saving routines:", error); 
+            Alert.alert("Error", "Could not save routine."); 
+        }
+    };
+  
+    const switchPeriod = (period) => {
+      if (period === activePeriod) return;
+      Haptics.selectionAsync();
+      setActivePeriod(period);
+    };
+  
+    const handleAddStep = (stepName) => {
+        if (stepName) {
+            const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
             const newRoutines = JSON.parse(JSON.stringify(routines));
-            newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
-            
-            // Optimistic Update
-            setRoutines(newRoutines);
-            
-            // Database Update
-            await updateDoc(doc(db, 'profiles', user.uid), { routines: newRoutines });
-            
-            // Feedback
-            if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-        } catch (error) {
-            console.error(error);
-            // On web, simple alert for error
-            if (Platform.OS === 'web') alert("فشل الحذف");
-            else Alert.alert("خطأ", "فشل الحذف");
+            if (!newRoutines[activePeriod]) newRoutines[activePeriod] = [];
+            newRoutines[activePeriod].push(newStep);
+            saveRoutines(newRoutines);
         }
     };
-
-    // 2. Platform Specific Confirmation
-    if (Platform.OS === 'web') {
-        // WEB: Use standard browser confirm
-        // This looks "ugly" (native browser popup) but works 100% for testing logic
-        const confirmed = window.confirm("هل أنت متأكد من حذف هذه الخطوة؟");
-        if (confirmed) {
-            performDelete();
-        }
-    } else {
-        // MOBILE: Use Native App Alert
-        Alert.alert(
-            "حذف الخطوة",
-            "هل أنت متأكد من حذف هذه الخطوة؟ سيتم إزالتها نهائياً من الروتين.",
-            [
-                { text: "إلغاء", style: "cancel" },
-                { 
-                    text: "حذف", 
-                    style: "destructive", 
-                    onPress: performDelete 
-                }
-            ]
-        );
-    }
-};
-
-  const handleUpdateStep = (stepId, newProductIds) => {
-      const newRoutines = JSON.parse(JSON.stringify(routines));
-      const stepIndex = newRoutines[activePeriod].findIndex(s => s.id === stepId);
-      if (stepIndex !== -1) { newRoutines[activePeriod][stepIndex].productIds = newProductIds; saveRoutines(newRoutines); }
-  };
-
-  // --- THE "DERMATOLOGIST ARCHITECT" ENGINE (Gen 9 - Complete & Un-omitted) ---
-const handleAutoBuildRoutine = () => {
-    // 0. Minimum Viable Shelf Check
-    if (savedProducts.length < 2) {
-        const msg = "نحتاج إلى منتجين على الأقل (غسول + مرطب) لبناء روتين ذكي.";
-        Platform.OS === 'web' ? window.alert(msg) : Alert.alert("الرف غير كافٍ", msg);
-        return;
-    }
-
-    const runBioAlgorithm = async () => {
-        // --- 1. LOAD USER BIO-CONTEXT ---
-        // Robustly fetch user settings with fallbacks
-        const SETTINGS = userProfile?.settings || {};
-        const SKIN_TYPE = SETTINGS.skinType || 'normal';
-        const CONDITIONS = SETTINGS.conditions || []; // e.g., ['pregnancy', 'rosacea', 'eczema']
-        const GOALS = SETTINGS.goals || []; // e.g., ['acne', 'anti_aging']
-
-        // Derived Bio-Flags
-        const IS_PREGNANT = CONDITIONS.includes('pregnancy');
-        const IS_OILY = SKIN_TYPE === 'oily' || SKIN_TYPE === 'combo';
-        const IS_DRY = SKIN_TYPE === 'dry';
-        const IS_ACNE_PRONE = IS_OILY || CONDITIONS.includes('acne_prone') || GOALS.includes('acne');
-        const IS_SENSITIVE = 
-            CONDITIONS.includes('sensitive_skin') || 
-            CONDITIONS.includes('rosacea') || 
-            CONDITIONS.includes('eczema') || 
-            SKIN_TYPE === 'sensitive';
-
-        // --- HELPER 1: TEXTURE PHYSICS (0=Water -> 100=Balm) ---
-        // Determines layering order based on product density
-        const calculateViscosity = (p) => {
-            const type = p.analysisData?.product_type;
-            const name = p.productName.toLowerCase();
-            let v = 50; // Default Medium Viscosity
-            
-            // Base Types
-            if (type === 'toner') v = 10;
-            else if (type === 'serum' || type === 'treatment') v = 30;
-            else if (type === 'lotion_cream') v = 70;
-            else if (type === 'oil_blend') v = 90;
-            else if (type === 'sunscreen') v = 99; // Always last in AM
-            else if (type === 'cleanser') v = 0;   // Always first
-
-            // Keyword Physics Modifiers
-            if (name.includes('water') || name.includes('essence') || name.includes('mist') || name.includes('aqua')) v -= 5;
-            if (name.includes('gel')) v -= 15; // Gel is lighter than cream
-            if (name.includes('milk') || name.includes('lotion')) v -= 5;
-            if (name.includes('rich') || name.includes('balm') || name.includes('butter') || name.includes('thick')) v += 15;
-            
-            // Clamp between 0 and 100
-            return Math.min(Math.max(v, 0), 100);
-        };
-
-        // --- HELPER 2: DEEP CHEMICAL PROFILING ---
-        // Scans GLOBAL_INGREDIENTS_MAP to build a rich chemical profile
-        const getChemicalData = (p) => {
-            const data = {
-                role: 'generic',
-                actives: [],
-                conflicts: [],   // From DB Negative Synergy
-                synergies: {},   // From DB Synergy
-                risks: [],       // Pregnancy, Sensitivity flags
-                properties: {
-                    isPhotosensitive: false,
-                    isHumectant: false,
-                    isOcclusive: false,
-                    isLowPh: false, // For Pure Vit C / Acids / pH Dependent
-                    isComedogenic: false
-                },
-                benefit: 'maintenance', // purpose for naming
-                keyIngredient: null     // name of hero ingredient
-            };
-
-            const ingredients = p.analysisData?.detected_ingredients || [];
-            
-            ingredients.forEach(i => {
-                // Lookup by ID or Name
-                const dbIng = GLOBAL_INGREDIENTS_MAP.get(i.id) || GLOBAL_INGREDIENTS_MAP.get(i.name.toLowerCase());
-                
-                if (dbIng) {
-                    const iName = (dbIng.name || '').toLowerCase();
-                    const iType = (dbIng.chemicalType || '').toLowerCase();
-
-                    // 1. Database Metadata Extraction
-                    if (dbIng.synergy) Object.assign(data.synergies, dbIng.synergy);
-                    if (dbIng.negativeSynergy) data.conflicts.push(...Object.keys(dbIng.negativeSynergy));
-
-                    // 2. Role & Risk Logic
-                    if (iType.includes('retinoid') || iName.includes('retinol') || iName.includes('tretinoin') || iName.includes('adapalene')) {
-                        data.role = 'retinoid';
-                        data.properties.isPhotosensitive = true;
-                        data.actives.push('retinoid');
-                        data.risks.push('pregnancy'); // Unsafe for pregnancy
-                        data.benefit = 'anti_aging';
-                        data.keyIngredient = 'الريتينول';
-                    }
-                    else if (iName.includes('benzoyl peroxide')) {
-                        data.role = 'acne_treatment';
-                        data.properties.isPhotosensitive = true;
-                        data.actives.push('bpo');
-                        data.benefit = 'acne';
-                        data.keyIngredient = 'بنزاك';
-                    }
-                    else if (iName === 'ascorbic acid' || iName === 'l-ascorbic') {
-                        data.role = 'vitamin_c';
-                        data.properties.isLowPh = true; // Needs acidic pH
-                        data.actives.push('vitamin-c');
-                        data.benefit = 'brightening';
-                        data.keyIngredient = 'فيتامين C';
-                    }
-                    else if (iName.includes('salicylic') || iName.includes('glycolic') || iName.includes('lactic') || iType.includes('aha') || iType.includes('bha')) {
-                        // Don't mark cleansers as exfoliants here (handled in fallback)
-                        if (p.analysisData?.product_type !== 'cleanser') {
-                            data.role = 'exfoliant';
-                            data.properties.isLowPh = true;
-                            data.properties.isPhotosensitive = true;
-                            data.actives.push('acid');
-                            data.benefit = 'texture';
-                            data.keyIngredient = 'أحماض مقشرة';
-                            if (iName.includes('salicylic')) data.risks.push('pregnancy_caution');
-                        }
-                    }
-                    else if (iName.includes('copper') && iType.includes('peptide')) {
-                        data.role = 'copper_peptides';
-                        data.actives.push('copper');
-                        data.benefit = 'repair';
-                        data.keyIngredient = 'ببتيدات النحاس';
-                    }
-
-                    // 3. Physical Properties (For TEWL & Comedogenic Checks)
-                    if (iName.includes('hyaluronic') || iName.includes('glycerin') || iName.includes('urea') || iName.includes('aloe')) {
-                        data.properties.isHumectant = true;
-                    }
-                    if (iName.includes('dimethicone') || iName.includes('shea') || iName.includes('oil') || iName.includes('petrolatum') || iName.includes('squalane')) {
-                        data.properties.isOcclusive = true;
-                    }
-                    if (iName.includes('wax') || iName.includes('coconut oil') || iName.includes('algae') || iName.includes('myristate')) {
-                        data.properties.isComedogenic = true;
-                    }
-                    
-                    // 4. Benefit Naming
-                    if (!data.keyIngredient) {
-                        if (iName.includes('niacinamide')) { data.benefit = 'pores'; data.keyIngredient = 'نياسيناميد'; }
-                        else if (iName.includes('ceramide')) { data.benefit = 'barrier'; data.keyIngredient = 'سيراميد'; }
-                        else if (iName.includes('centella')) { data.benefit = 'soothing'; data.keyIngredient = 'سنتيلا'; }
-                    }
-                }
-            });
-
-            // Fallback Role Mapping (If no strong active found)
-            const pType = p.analysisData?.product_type;
-            if (data.role === 'generic') {
-                if (pType === 'sunscreen') { data.role = 'sunscreen'; data.benefit = 'protection'; }
-                else if (pType === 'cleanser') { data.role = 'cleanser'; data.benefit = 'cleansing'; }
-                else if (pType === 'lotion_cream') { data.role = 'moisturizer'; data.benefit = 'barrier'; }
-                else if (pType === 'oil_blend') { data.role = 'oil'; data.properties.isOcclusive = true; data.benefit = 'locking'; }
-            }
-
-            return data;
-        };
-
-        // --- STEP 1: INVENTORY SCAN & FILTERING ---
-        let logs = []; // To store exclusion reasons
-        let processedInventory = [];
-
-        savedProducts.forEach(p => {
-            const pName = p.productName.toLowerCase();
-            const pType = p.analysisData?.product_type;
-
-            // FILTER 1: Face Only (Exclude Hair/Body)
-            if (['shampoo', 'conditioner', 'body', 'shower', 'soap'].some(k => pName.includes(k) || pType === k)) return;
-
-            // Compute Data
-            const chem = getChemicalData(p);
-            const viscosity = calculateViscosity(p);
-            
-            // FILTER 2: Pregnancy Safety
-            if (IS_PREGNANT && chem.risks.includes('pregnancy')) {
-                logs.push(`⛔ تم استبعاد "${p.productName}" (غير آمن للحمل).`);
-                return;
-            }
-
-            // FILTER 3: Sensitive Skin Safety
-            if (IS_SENSITIVE && (chem.role === 'exfoliant' || chem.role === 'retinoid')) {
-                // Heuristic: If sensitive, exclude leave-on strong acids/retinoids for safety
-                // Exception: Low strength might be okay, but AI plays it safe.
-                if (chem.role === 'exfoliant' && pType !== 'cleanser') {
-                    logs.push(`⚠️ تم استبعاد "${p.productName}" (قوي جداً للبشرة الحساسة).`);
-                    return;
-                }
-            }
-
-            // FILTER 4: Comedogenic Risk (Acne/Oily)
-            if (IS_ACNE_PRONE && chem.properties.isComedogenic && chem.role !== 'cleanser') {
-                 logs.push(`⚠️ تم استبعاد "${p.productName}" (مكونات قد تسد المسام).`);
-                 return;
-            }
-
-            // SCORING: Personal Match (0-100)
-            let score = 50;
-            // Goal alignment
-            if (GOALS.includes('acne') && (chem.benefit === 'acne' || chem.benefit === 'pores')) score += 20;
-            if (GOALS.includes('anti_aging') && (chem.benefit === 'anti_aging' || chem.benefit === 'repair')) score += 20;
-            if (GOALS.includes('hydration') && chem.benefit === 'barrier') score += 15;
-            
-            // Texture alignment
-            if (IS_OILY && viscosity < 50) score += 15; // Loves lightweight
-            if (IS_DRY && viscosity > 60) score += 15;  // Loves heavyweight
-            
-            processedInventory.push({ ...p, chem, viscosity, matchScore: score });
-        });
-
-        // --- STEP 2: REDUNDANCY CHECK (Best in Class) ---
-        // Prevents using 2 sunscreens, 3 moisturizers, or multiple retinoids.
-        const pickBest = (list, role) => {
-            const candidates = list.filter(p => p.chem.role === role);
-            if (candidates.length <= 1) return list;
-            
-            // Sort by Match Score (Highest first)
-            candidates.sort((a, b) => b.matchScore - a.matchScore);
-            const bestId = candidates[0].id;
-            
-            // Return list where (role is different OR id is the winner)
-            return list.filter(p => p.chem.role !== role || p.id === bestId);
-        };
-        
-        // Execute Redundancy Filters
-        processedInventory = pickBest(processedInventory, 'sunscreen');
-        processedInventory = pickBest(processedInventory, 'retinoid');
-        processedInventory = pickBest(processedInventory, 'vitamin_c');
-        processedInventory = pickBest(processedInventory, 'moisturizer');
-        processedInventory = pickBest(processedInventory, 'cleanser'); // Single cleanser per "type"
-
-        // --- STEP 3: DISTRIBUTION (AM/PM) & BARRIER BUDGET ---
-        let am = [], pm = [];
-        
-        // Budget: Sensitive skin gets fewer "Active Points"
-        let barrierBudget = IS_SENSITIVE ? 2 : 4; 
-        let currentLoad = 0;
-
-        // Sort priority: Actives first so they consume budget
-        processedInventory.sort((a, b) => b.chem.actives.length - a.chem.actives.length);
-
-        processedInventory.forEach(p => {
-            const r = p.chem.role;
-            const irritationCost = p.chem.actives.length > 0 ? (r === 'retinoid' ? 2 : 1) : 0;
-
-            // Check Budget
-            if (irritationCost > 0) {
-                if (currentLoad + irritationCost > barrierBudget) {
-                    logs.push(`🛡️ تم تأجيل "${p.productName}" (ميزانية الحاجز ممتلئة - Skin Cycling).`);
-                    return; // Exclude
-                }
-                currentLoad += irritationCost;
-            }
-
-            // Allocation Rules
-            if (r === 'sunscreen') { am.push(p); return; }
-            if (r === 'retinoid') { pm.push(p); return; }
-            if (p.chem.properties.isPhotosensitive) { pm.push(p); return; } // Acids/BPO -> PM
-            if (r === 'vitamin_c') { am.push(p); return; } // Vit C -> AM usually
-            
-            if (r === 'cleanser') {
-                if (p.viscosity > 50) pm.push(p); // Oil/Balm cleanse -> PM
-                else { am.push(p); pm.push(p); }  // Gel/Foam -> Both
-                return;
-            }
-            
-            if (r === 'moisturizer') {
-                if (IS_OILY && p.viscosity > 80) pm.push(p); // Heavy cream PM only for oily
-                else { am.push(p); pm.push(p); }
-                return;
-            }
-            
-            if (r === 'oil') { pm.push(p); return; } // Oils ruin sunscreen film -> PM
-
-            // Generic Fallback
-            am.push(p); pm.push(p);
-        });
-
-        // --- COMPLICATION 1: SYNERGY LABELS ---
-        // Detects if products enhance each other based on DB Data
-        const applySynergy = (list) => list.map(p => {
-            let label = null;
-            list.forEach(other => {
-                if (p.id !== other.id) {
-                    Object.keys(p.chem.synergies).forEach(k => {
-                        // Check if other product contains the synergistic ingredient
-                        if (other.analysisData.detected_ingredients.some(i => i.name.toLowerCase().includes(k))) {
-                            label = `Power Duo ⚡ (مع ${other.productName.split(' ')[0]})`;
-                        }
-                    });
-                }
-            });
-            return label ? { ...p, synergyLabel: label } : p;
-        });
-        
-        am = applySynergy(am);
-        pm = applySynergy(pm);
-
-        // --- STEP 4: SCIENTIFIC SORTING (The Layering Engine) ---
-        const sortRoutine = (list, timeOfDay) => {
-            return list.sort((a, b) => {
-                // A. pH-Stability Priority (Low pH Acids First)
-                if (a.chem.properties.isLowPh && !b.chem.properties.isLowPh && a.chem.role !== 'cleanser') return -1;
-                if (b.chem.properties.isLowPh && !a.chem.properties.isLowPh && b.chem.role !== 'cleanser') return 1;
-
-                // B. Functional Priority Order
-                const getPrio = (p) => {
-                    const r = p.chem.role;
-                    if (r === 'cleanser') return 1;
-                    if (r === 'acid_toner') return 2;
-                    if (p.chem.properties.isLowPh) return 3; // Actives like Pure C
-                    
-                    // COMPLICATION 2: SENSITIVITY BUFFERING (Sandwich Method)
-                    // If Sensitive & PM, Retinol (Priority 8) goes AFTER Moisturizer (Priority 7)
-                    if (r === 'retinoid') return (timeOfDay === 'pm' && IS_SENSITIVE) ? 8 : 4;
-                    
-                    if (r === 'generic') return 5;
-                    
-                    if (r === 'moisturizer') return 7;
-                    if (r === 'oil') return 9;
-                    if (r === 'sunscreen') return 10;
-                    return 5;
-                };
-
-                const prioA = getPrio(a);
-                const prioB = getPrio(b);
-                if (prioA !== prioB) return prioA - prioB;
-
-                // C. Physics Tie-Breaker (Viscosity)
-                return a.viscosity - b.viscosity;
-            });
-        };
-
-        const finalAM = sortRoutine(am, 'am');
-        const finalPM = sortRoutine(pm, 'pm');
-
-        // --- COMPLICATION 3: TEWL (Hydration Leak) CHECK ---
-        const checkTEWL = (routine, name) => {
-            const hasHumectant = routine.some(p => p.chem.properties.isHumectant);
-            const hasOcclusive = routine.some(p => p.chem.properties.isOcclusive || p.chem.role === 'moisturizer' || p.chem.role === 'sunscreen');
-            if (hasHumectant && !hasOcclusive) {
-                logs.push(`💧 تحذير ${name}: روتينك يحتوي على مرطبات مائية بدون إغلاق (Occlusive). قد يسبب جفافاً.`);
-            }
-        };
-        // Check PM (most critical for TEWL)
-        checkTEWL(finalPM, "المساء");
-
-        // --- STEP 5: PURPOSE-DRIVEN NAMING ---
-        const generateName = (p, time, idx, fullList) => {
-            if (p.synergyLabel) return p.synergyLabel;
-
-            const r = p.chem.role;
-            const b = p.chem.benefit; // barrier, acne, etc.
-            const k = p.chem.keyIngredient;
-
-            // A. Specific Roles
-            if (r === 'cleanser') {
-                if (time === 'pm' && p.viscosity > 50) return "الخطوة 1: إذابة الدهون (زيتي)";
-                if (time === 'pm' && fullList.some(x => x.chem.role === 'cleanser' && x.id !== p.id && x.viscosity > 50)) return "الخطوة 2: تنظيف عميق (مائي)";
-                return "غسول يومي (Cleansing)";
-            }
-            if (r === 'toner') return "تهيئة البشرة (Prep)";
-            if (r === 'sunscreen') return "حماية قصوى (Protection) 🛡️";
-            if (r === 'moisturizer') return IS_DRY ? "ترطيب عميق (Repair)" : "ترطيب يومي (Hydration)";
-            if (r === 'oil') return "إغلاق المسام (Lock)";
-            if (r === 'vitamin_c') return "مضاد أكسدة (Antioxidant) ✨";
-            if (r === 'retinoid') return IS_SENSITIVE ? "ريتينول (Buffer Method) 🥪" : "ريتينول (تجديد ليلي)";
-            if (r === 'exfoliant') return "تقشير (Exfoliation)";
-            if (r === 'acne_treatment') return "علاج موضعي (Spot Treat)";
-            
-            // B. Generic Products named by Purpose/Ingredient
-            if (k) {
-                if (b === 'barrier') return `${k} (ترميم الحاجز)`;
-                if (b === 'pores') return `${k} (تنظيم المسام)`;
-                if (b === 'hydration') return `${k} (نضارة مائية)`;
-                if (b === 'soothing') return `${k} (تهدئة الاحمرار)`;
-                return `سيروم ${k}`;
-            }
-            
-            return p.productName;
-        };
-
-        // --- UI MAPPING & SAVING ---
-        const toSteps = (list, time) => list.map((p, i) => ({
-            id: `step-${Date.now()}-${i}-${Math.random()}`,
-            name: generateName(p, time, i, list),
-            productIds: [p.id]
-        }));
-
-        await saveRoutines({ am: toSteps(finalAM, 'am'), pm: toSteps(finalPM, 'pm') });
-
-        // --- FINAL REPORT ---
-        let report = `✅ تم بناء الروتين المعماري (Gen 9)\n\n`;
-        if (IS_SENSITIVE) report += `🥪 تم تفعيل تقنية "الساندويتش" للبشرة الحساسة.\n`;
-        if (IS_PREGNANT) report += `👶 وضع "أمان الحمل" نشط.\n`;
-        if (IS_ACNE_PRONE) report += `🔍 فلتر "المسام" نشط.\n`;
-        if (am.some(p => p.chem.properties.isLowPh)) report += `⚗️ تم ترتيب الأحماض حسب استقرار الـ pH.\n`;
-        
-        if (logs.length > 0) report += `\n📝 ملاحظات الطبيب الرقمي:\n${logs.slice(0, 3).join('\n')}`;
-
-        if (Platform.OS === 'web') setTimeout(() => window.alert(report), 500);
-        else {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setTimeout(() => Alert.alert("المعمار الرقمي 🧬", report), 600);
-        }
-    };
-
-    // --- INTRO PROMPT ---
-    const intro = "تشغيل 'المعمار الرقمي' (Gen 9)؟\n\n1. تسمية الخطوات حسب الغرض العلاجي.\n2. ترتيب الطبقات حسب الثبات الكيميائي (pH).\n3. عزل المواد المهيجة تلقائياً.";
-
-    if (Platform.OS === 'web') {
-        if(window.confirm(intro)) runBioAlgorithm();
-    } else {
-        Alert.alert("بناء الروتين المتقدم", intro, [
-            { text: "إلغاء", style: "cancel" },
-            { text: "بدء التحليل", onPress: runBioAlgorithm }
+  
+    const handleDeleteStep = async (stepId) => {
+        Alert.alert("حذف الخطوة", "هل أنت متأكد؟", [
+            { text: "إلغاء", style: "cancel" }, 
+            { text: "حذف", style: "destructive", onPress: async () => {
+                const newRoutines = JSON.parse(JSON.stringify(routines));
+                newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
+                saveRoutines(newRoutines);
+            }}
         ]);
-    }
-};
-
-  return (
-    <View style={{ flex: 1 }}>
-        <View style={styles.routineHeaderContainer}>
-             <View style={styles.routineSwitchContainer}>
-                <PressableScale onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}><Feather name="moon" size={16} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text></PressableScale>
-                <PressableScale onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}><Feather name="sun" size={16} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text></PressableScale>
-            </View>
-             <PressableScale onPress={handleAutoBuildRoutine} style={styles.autoBuildButton}><MaterialCommunityIcons name="auto-fix" size={20} color={COLORS.accentGreen} /></PressableScale>
-        </View>
-        <FlatList
-            data={routines[activePeriod]}
-            renderItem={({ item, index }) => (
-                // WRAP RoutineStepCard with StaggeredItem
-                <StaggeredItem index={index}> 
-                    <RoutineStepCard 
-                        step={item} 
-                        index={index} // Pass index to RoutineStepCard if it uses it (which it does for the badge)
-                        onManage={() => setSelectedStep(item)} 
-                        onDelete={() => handleDeleteStep(item.id)}
-                        products={savedProducts} 
-                    />
-                </StaggeredItem>
-            )}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
-            scrollEnabled={false}
-            ListEmptyComponent={() => (
-                <View style={styles.routineEmptyState}><MaterialCommunityIcons name="playlist-edit" size={60} color={COLORS.textDim} style={{opacity: 0.5}}/><Text style={styles.routineEmptyTitle}>الروتين فارغ</Text><Text style={styles.routineEmptySub}>استخدم زر "+" في الأسفل لبناء روتينك المخصص.</Text></View>
-            )}
-        />
-        
-        {/* The FAB now calls the hoisted function, passing its own logic as a callback */}
-        <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
-            <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}><FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} /></LinearGradient>
-        </PressableScale>
-
-        {selectedStep && (
-    <StepEditorModal 
-        isVisible={!!selectedStep} 
-        onClose={() => setSelectedStep(null)} 
-        step={selectedStep} 
-        onSave={handleUpdateStep} 
-        allProducts={savedProducts} // <--- THIS is the connection to the shelf
-    />
-)}
-        {showOnboarding && <RoutineOnboardingGuide onDismiss={() => setShowOnboarding(false)} />}
-        
-        {/* The AddStepModal is NO LONGER RENDERED HERE */}
-    </View>
-);
-};
+    };
+  
+    const handleUpdateStep = (stepId, newProductIds) => {
+        const newRoutines = JSON.parse(JSON.stringify(routines));
+        const stepIndex = newRoutines[activePeriod].findIndex(s => s.id === stepId);
+        if (stepIndex !== -1) { 
+            newRoutines[activePeriod][stepIndex].productIds = newProductIds; 
+            saveRoutines(newRoutines); 
+        }
+    };
+  
+    // --- NEW SERVER-SIDE ROUTINE ARCHITECT ---
+    const handleAutoBuildRoutine = () => {
+      // 0. Minimum Viable Shelf Check
+      if (savedProducts.length < 2) {
+          Alert.alert("الرف غير كافٍ", "نحتاج إلى منتجين على الأقل (غسول + مرطب) لبناء روتين ذكي.");
+          return;
+      }
+  
+      const runArchitect = async () => {
+        setIsBuilding(true);
+        try {
+            // UPDATED FETCH CALL
+            const response = await fetch(`${PROFILE_API_URL}/generate-routine.js`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    products: savedProducts,
+                    settings: userProfile?.settings || {}
+                })
+            });
+  
+              const data = await response.json();
+              
+              if (!response.ok) throw new Error(data.error || "Server Error");
+  
+              // 2. Receive Optimized Routine & Save
+              const newRoutines = { 
+                  am: data.am || [], 
+                  pm: data.pm || [] 
+              };
+              
+              await saveRoutines(newRoutines);
+  
+              // 3. Show Doctor's Report
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              setTimeout(() => Alert.alert("المعمار الرقمي 🧬", data.logs || "تم بناء الروتين بنجاح"), 500);
+  
+          } catch (error) {
+              console.error("Routine Generation Error:", error);
+              Alert.alert("خطأ", "تعذر الاتصال بالخادم الذكي. يرجى المحاولة لاحقاً.");
+          } finally {
+              setIsBuilding(false);
+          }
+      };
+  
+      Alert.alert("بناء الروتين المتقدم", "تشغيل 'المعمار الرقمي' (Gen 9)؟ سيتم تحليل كثافة المنتجات والـ pH عبر الخادم السحابي.", [
+          { text: "إلغاء", style: "cancel" },
+          { text: "بدء التحليل", onPress: runArchitect }
+      ]);
+    }; 
+  
+    return (
+      <View style={{ flex: 1 }}>
+          <View style={styles.routineHeaderContainer}>
+               <View style={styles.routineSwitchContainer}>
+                  <PressableScale onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}><Feather name="moon" size={16} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text></PressableScale>
+                  <PressableScale onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}><Feather name="sun" size={16} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text></PressableScale>
+              </View>
+               
+               {/* Auto Build Button with Loading State */}
+               <PressableScale onPress={handleAutoBuildRoutine} style={styles.autoBuildButton} disabled={isBuilding}>
+                  {isBuilding ? 
+                      <ActivityIndicator size="small" color={COLORS.accentGreen} /> : 
+                      <MaterialCommunityIcons name="auto-fix" size={20} color={COLORS.accentGreen} />
+                  }
+               </PressableScale>
+          </View>
+  
+          <FlatList
+              data={routines[activePeriod]}
+              renderItem={({ item, index }) => (
+                  <StaggeredItem index={index}> 
+                      <RoutineStepCard 
+                          step={item} 
+                          index={index} 
+                          onManage={() => setSelectedStep(item)} 
+                          onDelete={() => handleDeleteStep(item.id)}
+                          products={savedProducts} 
+                      />
+                  </StaggeredItem>
+              )}
+              keyExtractor={item => item.id}
+              contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
+              scrollEnabled={false}
+              ListEmptyComponent={() => (
+                  <View style={styles.routineEmptyState}>
+                      <MaterialCommunityIcons name="playlist-edit" size={60} color={COLORS.textDim} style={{opacity: 0.5}}/>
+                      <Text style={styles.routineEmptyTitle}>الروتين فارغ</Text>
+                      <Text style={styles.routineEmptySub}>استخدم زر "+" في الأسفل لبناء روتينك المخصص.</Text>
+                  </View>
+              )}
+          />
+          
+          <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
+              <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}><FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} /></LinearGradient>
+          </PressableScale>
+  
+          {selectedStep && (
+              <StepEditorModal 
+                  isVisible={!!selectedStep} 
+                  onClose={() => setSelectedStep(null)} 
+                  step={selectedStep} 
+                  onSave={handleUpdateStep} 
+                  allProducts={savedProducts} 
+              />
+          )}
+          {showOnboarding && <RoutineOnboardingGuide onDismiss={() => setShowOnboarding(false)} />}
+      </View>
+    );
+  };
 
 // --- 1. MEMOIZED LIST ITEM ---
 const IngredientCard = React.memo(({ item, index, onPress }) => {
@@ -2370,186 +1966,170 @@ const IngredientCard = React.memo(({ item, index, onPress }) => {
 });
 
 // --- 2. MAIN SECTION CONTROLLER ---
-const IngredientsSection = ({ products }) => {
+const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     const [search, setSearch] = useState('');
-    const [activeFilter, setActiveFilter] = useState('all');
-    const [selectedIngredient, setSelectedIngredient] = useState(null);
-    const searchAnim = useRef(new Animated.Value(0)).current;
-
-    // Data State
+    const [renderLimit, setRenderLimit] = useState(15);
     const [allIngredients, setAllIngredients] = useState([]);
-    
-    // LAZY LOADING STATE
-    const BATCH_SIZE = 10;
-    const INITIAL_LOAD = 15;
-    const [renderLimit, setRenderLimit] = useState(INITIAL_LOAD);
+    const [loading, setLoading] = useState(false);
+    const [selectedIngredient, setSelectedIngredient] = useState(null);
 
     useEffect(() => {
-        Animated.spring(searchAnim, { toValue: 1, friction: 8, useNativeDriver: true }).start();
-    }, []);
+        const fetchIngredientsData = async () => {
+            if (products.length === 0) {
+                setAllIngredients([]);
+                return;
+            }
 
-    // --- DATA PREPARATION ---
-    useEffect(() => {
-        // Reset limit when products change
-        setRenderLimit(INITIAL_LOAD);
+            const currentHash = generateFingerprint(products, userProfile?.settings);
 
-        // Heavy Data Processing
-        const map = new Map();
-        products.forEach(p => {
-            const productIngs = p.analysisData?.detected_ingredients || [];
-            productIngs.forEach(rawIng => {
-                const richData = findIngredientData(rawIng.name);
-                const key = richData ? richData.id : rawIng.name.toLowerCase();
-                
-                if (!map.has(key)) {
-                    map.set(key, {
-                        ...richData, 
-                        displayName: richData ? richData.name : rawIng.name, 
-                        isRich: !!richData, 
-                        count: 1,
-                        productIds: [p.id],
-                        productNames: [p.productName],
-                        functionalCategory: richData?.functionalCategory || rawIng.category || 'غير مصنف'
-                    });
-                } else {
-                    const data = map.get(key);
-                    data.count++;
-                    if (!data.productIds.includes(p.id)) {
-                        data.productIds.push(p.id);
-                        data.productNames.push(p.productName);
-                    }
-                }
+            // CHECK PARENT CACHE REF
+            if (cacheRef.current.hash === currentHash && cacheRef.current.data.length > 0) {
+                setAllIngredients(cacheRef.current.data);
+                return;
+            }
+            
+            setLoading(true);
+
+            // 1. Gather unique names from local shelf
+            const uniqueNames = new Set();
+            products.forEach(p => {
+                p.analysisData?.detected_ingredients?.forEach(i => {
+                    if (i.name) uniqueNames.add(i.name);
+                });
             });
-        });
-        
-        const sorted = Array.from(map.values()).sort((a,b) => b.count - a.count);
-        setAllIngredients(sorted);
-        
-        // Note: We removed the setTimeout that forced full render to prevent freezing
-    }, [products]);
+            const ingredientsList = Array.from(uniqueNames);
 
-    // --- FILTERING ---
-    const filteredList = useMemo(() => {
-        return allIngredients.filter(ing => {
-            const matchesSearch = ing.displayName.toLowerCase().includes(search.toLowerCase()) || 
-                                  (ing.scientific_name && ing.scientific_name.toLowerCase().includes(search.toLowerCase()));
-            
-            if (!matchesSearch) return false;
+            try {
+                // 2. Call Evaluate API (Fixed URL: removed .js)
+                const response = await fetch(`${PROFILE_API_URL}/evaluate.js`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ingredients_list: ingredientsList,
+                        product_type: 'other', 
+                        user_profile: userProfile?.settings || {},
+                        selected_claims: []
+                    })
+                });
 
-            if (activeFilter === 'all') return true;
-            if (activeFilter === 'actives') return ['مكون فعال', 'مقشر', 'مضاد أكسدة', 'مبيض'].includes(ing.functionalCategory);
-            if (activeFilter === 'moisturizers') return ['مرطب / مطري', 'مرطب'].includes(ing.functionalCategory);
-            if (activeFilter === 'harmful') return ['مكون ضار', 'مادة حافظة (مثيرة للجدل)'].includes(ing.functionalCategory) || ing.warnings?.some(w => w.level === 'risk');
-            if (activeFilter === 'natural') return ing.chemicalType?.includes('نباتي') || ing.chemicalType?.includes('طبيعي');
-            
-            return true;
-        });
-    }, [allIngredients, search, activeFilter]);
+                const data = await response.json();
+                
+                if (!response.ok) throw new Error("Server fetch failed");
 
-    // Reset render limit when search or filter changes
-    useEffect(() => {
-        setRenderLimit(INITIAL_LOAD);
-    }, [search, activeFilter]);
+                const serverData = data.detected_ingredients || [];
 
-    // Slice based on lazy load limit
+                // 3. Merge Server Data with Local Shelf Counts
+                const aggregated = serverData.map(serverIng => {
+                    // Find occurrence in local shelf
+                    const productsContaining = products.filter(p => 
+                        p.analysisData?.detected_ingredients?.some(localIng => 
+                            // Match by ID if available, else Name
+                            (serverIng.id && localIng.id === serverIng.id) ||
+                            (localIng.name && localIng.name.toLowerCase() === serverIng.name.toLowerCase())
+                        )
+                    );
+
+                    return {
+                        ...serverIng, 
+                        displayName: serverIng.name,
+                        isRich: true,
+                        count: productsContaining.length,
+                        productIds: productsContaining.map(p => p.id),
+                        productNames: productsContaining.map(p => p.productName)
+                    };
+                });
+
+                // Sort results
+                const sortedData = aggregated.sort((a,b) => b.count - a.count);
+
+                // --- IMPORTANT: Update the Cache so we don't fetch next time ---
+                cacheRef.current = { hash: currentHash, data: sortedData };
+                
+                setAllIngredients(sortedData);
+
+            } catch (error) {
+                console.error("Ingredients enrichment failed:", error);
+                // Fallback: Aggregate locally without rich data
+                const fallbackMap = new Map();
+                products.forEach(p => {
+                    p.analysisData?.detected_ingredients?.forEach(i => {
+                        const key = i.name;
+                        if (!fallbackMap.has(key)) {
+                            fallbackMap.set(key, { 
+                                id: key, name: key, displayName: key, 
+                                isRich: false, count: 0, productIds: [], productNames: [] 
+                            });
+                        }
+                        const entry = fallbackMap.get(key);
+                        entry.count++;
+                        if (!entry.productIds.includes(p.id)) entry.productIds.push(p.id);
+                    });
+                });
+                setAllIngredients(Array.from(fallbackMap.values()).sort((a,b) => b.count - a.count));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // Debounce fetch slightly
+        const timeout = setTimeout(fetchIngredientsData, 500);
+        return () => clearTimeout(timeout);
+    }, [products, userProfile]);
+
+    const filteredList = useMemo(() => 
+        allIngredients.filter(ing => 
+            (ing.displayName || ing.name).toLowerCase().includes(search.toLowerCase())
+        ), 
+    [allIngredients, search]);
+    
     const visibleData = filteredList.slice(0, renderLimit);
-    const hasMore = renderLimit < filteredList.length;
-
-    const handleLoadMore = () => {
-        if (hasMore) {
-            Haptics.selectionAsync();
-            setRenderLimit(prev => prev + BATCH_SIZE);
-        }
-    };
-
-    const filters = [
-        { id: 'all', label: 'الكل', icon: 'layer-group' },
-        { id: 'actives', label: 'مكونات فعالة', icon: 'bolt' },
-        { id: 'moisturizers', label: 'مرطبات', icon: 'tint' },
-        { id: 'natural', label: 'طبيعي', icon: 'leaf' },
-        { id: 'harmful', label: 'تنبيه', icon: 'exclamation-triangle' },
-    ];
-
-    // Footer Component for "Load More"
-    const ListFooter = () => {
-        if (!hasMore) return <View style={{ height: 100 }} />; // Spacer
-        
-        return (
-            <PressableScale onPress={handleLoadMore} style={styles.loadMoreButton}>
-                <Text style={styles.loadMoreText}>عرض المزيد ({Math.min(BATCH_SIZE, filteredList.length - renderLimit)})</Text>
-                <FontAwesome5 name="chevron-down" size={12} color={COLORS.textOnAccent} />
-            </PressableScale>
-        );
-    };
 
     return (
         <View style={{ flex: 1 }}>
-            {/* Search */}
-            <Animated.View style={[styles.searchBar, { transform: [{ scale: searchAnim }] }]}>
+            <View style={styles.searchBar}>
                 <TextInput 
-                    placeholder="بحث في المكونات (العربية أو الإنجليزية)..." 
+                    placeholder="بحث في المكونات..." 
                     placeholderTextColor={COLORS.textDim} 
                     style={styles.searchInput} 
                     value={search} 
                     onChangeText={setSearch} 
                 />
                 <FontAwesome5 name="search" size={16} color={COLORS.textDim} />
-            </Animated.View>
-            
-            {/* Filters */}
-            <View style={{marginBottom: 15}}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:'row-reverse', paddingHorizontal: 5}}>
-                    {filters.map((f) => (
-                        <PressableScale
-                            key={f.id}
-                            onPress={() => setActiveFilter(f.id)}
-                            style={[styles.filterPill, activeFilter === f.id && styles.filterPillActive, {marginLeft: 8}]}
-                        >
-                            <FontAwesome5 name={f.icon} size={12} color={activeFilter === f.id ? COLORS.textOnAccent : COLORS.textDim} />
-                            <Text style={[styles.filterText, activeFilter === f.id && styles.filterTextActive]}>{f.label}</Text>
-                        </PressableScale>
-                    ))}
-                </ScrollView>
             </View>
 
-            {/* Optimized Lazy List */}
-            {visibleData.length > 0 ? (
-                <FlatList
-                    data={visibleData}
-                    keyExtractor={(item, index) => item.id + index}
-                    renderItem={({ item, index }) => (
-                        <IngredientCard 
-                            item={item} 
-                            index={index} 
-                            onPress={setSelectedIngredient}
-                        />
-                    )}
-                    // Crucial: scrollEnabled={false} prevents conflict with parent ScrollView
-                    scrollEnabled={false} 
-                    initialNumToRender={10}
-                    maxToRenderPerBatch={10}
-                    windowSize={5}
-                    removeClippedSubviews={true}
-                    ListFooterComponent={ListFooter}
-                    contentContainerStyle={{ paddingBottom: 50 }}
-                />
+            {loading ? (
+                <View style={{ padding: 20 }}>
+                    <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                </View>
             ) : (
-                /* Empty State */
-                allIngredients.length > 0 && (
-                    <View style={styles.emptyState}>
-                        <FontAwesome5 name="flask" size={40} color={COLORS.textDim} style={{opacity:0.5}} />
-                        <Text style={styles.emptyText}>لم يتم العثور على نتائج</Text>
-                    </View>
-                )
+                <FlatList 
+                    data={visibleData} 
+                    keyExtractor={item => item.id || item.name} 
+                    renderItem={({ item, index }) => (
+                        <IngredientCard item={item} index={index} onPress={setSelectedIngredient} />
+                    )} 
+                    scrollEnabled={false} 
+                    contentContainerStyle={{ paddingBottom: 50 }} 
+                    ListEmptyComponent={
+                        <Text style={{ textAlign: 'center', color: COLORS.textDim, marginTop: 20 }}>
+                            {allIngredients.length === 0 ? "لا توجد مكونات" : "لا توجد نتائج"}
+                        </Text>
+                    }
+                />
             )}
 
-            {/* Detail Modal */}
+            {visibleData.length < filteredList.length && (
+                <PressableScale onPress={() => setRenderLimit(l => l + 10)} style={styles.loadMoreButton}>
+                    <Text style={styles.loadMoreText}>عرض المزيد</Text>
+                </PressableScale>
+            )}
+
             {selectedIngredient && (
-                <IngredientDetailsModal
-                    visible={!!selectedIngredient}
-                    ingredient={selectedIngredient}
-                    productsContaining={products.filter(p => selectedIngredient.productIds.includes(p.id))}
-                    onClose={() => setSelectedIngredient(null)}
+                <IngredientDetailsModal 
+                    visible={!!selectedIngredient} 
+                    ingredient={selectedIngredient} 
+                    productsContaining={products.filter(p => selectedIngredient.productIds.includes(p.id))} 
+                    onClose={() => setSelectedIngredient(null)} 
                 />
             )}
         </View>
@@ -2621,7 +2201,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.ingModalTitle}>{ingredient.name}</Text>
-                                    {/* Scientific Name Style */}
                                     <Text style={styles.ingModalScientific}>{ingredient.scientific_name}</Text>
                                 </View>
                                 <View style={[styles.ingTypeBadge, { backgroundColor: safetyColor + '15' }]}>
@@ -2667,26 +2246,33 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             </View>
                         )}
 
-                        {/* Synergies & Conflicts (Added Styles) */}
+                        {/* Synergies & Conflicts - FIX: Removed findIngredientData */}
                         {(ingredient.synergy || ingredient.negativeSynergy) && (
                             <View style={styles.ingSection}>
                                 <Text style={styles.ingSectionTitle}>التفاعلات</Text>
                                 <View style={{ flexDirection: 'row-reverse', gap: 10 }}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.interactionHeader}>✅ تآزر ممتاز مع</Text>
-                                        {Object.entries(ingredient.synergy || {}).map(([key, val]) => (
-                                            <Text key={key} style={styles.synergyItem}>• {findIngredientData(key)?.name || key}</Text>
-                                        ))}
-                                        {(!ingredient.synergy || Object.keys(ingredient.synergy).length === 0) && <Text style={styles.noDataText}>لا يوجد تآزر معروف</Text>}
-                                    </View>
-                                    <View style={{ width: 1, backgroundColor: COLORS.border }} />
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.interactionHeader}>❌ تجنب خلطه مع</Text>
-                                        {Object.entries(ingredient.negativeSynergy || {}).map(([key, val]) => (
-                                            <Text key={key} style={styles.conflictItem}>• {findIngredientData(key)?.name || key}</Text>
-                                        ))}
-                                        {(!ingredient.negativeSynergy || Object.keys(ingredient.negativeSynergy).length === 0) && <Text style={styles.noDataText}>آمن للمزج</Text>}
-                                    </View>
+                                    {ingredient.synergy && Object.keys(ingredient.synergy).length > 0 && (
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.interactionHeader}>✅ تآزر ممتاز مع</Text>
+                                            {/* Key is usually the ingredient ID/Name, so we just display it directly */}
+                                            {Object.keys(ingredient.synergy).map((key) => (
+                                                <Text key={key} style={styles.synergyItem}>• {key}</Text>
+                                            ))}
+                                        </View>
+                                    )}
+                                    
+                                    {ingredient.negativeSynergy && Object.keys(ingredient.negativeSynergy).length > 0 && (
+                                        <>
+                                            <View style={{ width: 1, backgroundColor: COLORS.border }} />
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.interactionHeader}>❌ تجنب خلطه مع</Text>
+                                                {/* Display key directly since we don't have local lookup */}
+                                                {Object.keys(ingredient.negativeSynergy).map((key) => (
+                                                    <Text key={key} style={styles.conflictItem}>• {key}</Text>
+                                                ))}
+                                            </View>
+                                        </>
+                                    )}
                                 </View>
                             </View>
                         )}
@@ -2705,18 +2291,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                 </View>
             </Animated.View>
         </Modal>
-    );
-};
-
-const findIngredientData = (name) => {
-    if (!name) return null; // Safety check for input
-    const search = name.toLowerCase().trim();
-    
-    return combinedOilsDB.ingredients.find(item => 
-        (item.id === search) || 
-        (item.name && item.name.toLowerCase() === search) || 
-        (item.scientific_name && item.scientific_name.toLowerCase() === search) ||
-        (item.searchKeywords && item.searchKeywords.some(k => k && k.toLowerCase() === search))
     );
 };
 
@@ -3338,12 +2912,6 @@ const ShelfActionGroup = ({ router }) => {
     );
 };
 
-const GLOBAL_INGREDIENTS_MAP = new Map();
-combinedOilsDB.ingredients.forEach(ing => { 
-    if (ing && ing.id) GLOBAL_INGREDIENTS_MAP.set(ing.id, ing);
-    // Optional: Also map by name for faster fallback lookups
-    if (ing && ing.name) GLOBAL_INGREDIENTS_MAP.set(ing.name.toLowerCase(), ing);
-});
 
 const REGEX_DIACRITICS = /[\u0300-\u036f]/g;
 const REGEX_PUNCTUATION = /[.,،؛()/]/g;
@@ -3448,8 +3016,6 @@ const buildIngredientIndex = (db) => {
     return { index, normalize };
 };
 
-// Initialize once
-const { index: ingredientIndex, normalize } = buildIngredientIndex(combinedOilsDB);
 
 const resolveIngredient = (detectedName) => {
     if (!detectedName) return null;
@@ -3476,1111 +3042,162 @@ const getMechanism = (ingId) => {
 // ============================================================================
 
 export default function ProfileScreen() {
-  const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
-  const router = useRouter();
-  const insets = useSafeAreaInsets(); 
-
-  const HEADER_BASE_HEIGHT = 150; 
-  const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
-  const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
-  const scrollDistance = headerMaxHeight - headerMinHeight;
-  const [activeTab, setActiveTab] = useState('shelf');
-  const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
-  const [addStepHandler, setAddStepHandler] = useState(null);
-  const openAddStepModal = (onAddCallback) => {
-    setAddStepHandler(() => onAddCallback); // Store the function to call on "Add"
-    setAddStepModalVisible(true);
-  };
-  // Scroll & Animation Refs
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const headerHeight = scrollY.interpolate({ 
-    inputRange: [0, scrollDistance], 
-    outputRange: [headerMaxHeight, headerMinHeight], 
-    extrapolate: 'clamp' 
-  });
-
-  const expandedHeaderOpacity = scrollY.interpolate({
-    inputRange: [0, scrollDistance / 2],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const expandedHeaderTranslate = scrollY.interpolate({
-    inputRange: [0, scrollDistance],
-    outputRange: [0, -20],
-    extrapolate: 'clamp',
-  });
-
-  const collapsedHeaderOpacity = scrollY.interpolate({
-    inputRange: [scrollDistance / 2, scrollDistance],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  // Transition for Tab Switch
-  const contentOpacity = useRef(new Animated.Value(1)).current;
-  const contentTranslate = useRef(new Animated.Value(0)).current;
-  const switchTab = (tab) => {
-    if(tab === activeTab) return;
-    Haptics.selectionAsync();
-    
-    // We removed LayoutAnimation here to prevent UI blocking.
-    // The NatureDock component handles the pill animation separately.
-    setActiveTab(tab);
-};
-
-  // Particles
-  const particles = useMemo(() => [...Array(15)].map((_, i) => ({ 
-    id: i, // <--- Renamed from key to id
-    size: Math.random()*5+3, 
-    startX: Math.random()*width, 
-    duration: 8000+Math.random()*7000, 
-    delay: Math.random()*5000 
-  })), []);
-
-  const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
+    const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
+    const router = useRouter();
+    const insets = useSafeAreaInsets(); 
   
-
-  const handleDismissPraise = (insightId) => {
-    if (!dismissedInsightIds.includes(insightId)) {
-      setDismissedInsightIds(prev => [...prev, insightId]);
-    }
-  };
-
-  // ========================================================================
-  // --- THE PERSONALIZED DERMATOLOGY ENGINE (Updated) ---
-  // ========================================================================
-  const analysisResults = useMemo(() => {
+    const HEADER_BASE_HEIGHT = 150; 
+    const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
+    const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
+    const scrollDistance = headerMaxHeight - headerMinHeight;
+    const [activeTab, setActiveTab] = useState('shelf');
+    const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
+    const [addStepHandler, setAddStepHandler] = useState(null);
     
-    // --- 0. INITIAL SETUP & DATA PREP ---
-    
-    combinedOilsDB.ingredients.forEach(ing => { if (ing && ing.id) GLOBAL_INGREDIENTS_MAP.set(ing.id, ing); });
-
-    const results = {
-        aiCoachInsights: [],
-        amRoutine: { products: [], conflicts: 0, synergies: 0 },
-        pmRoutine: { products: [], conflicts: 0, synergies: 0 },
-        sunProtectionGrade: { score: 0, notes: [] },
-        barrierHealth: { score: 0, status: 'Optimal', color: COLORS.success, desc: '' },
-        formulationBreakdown: { actives: 0, hydrators: 0, antioxidants: 0 }
+    const openAddStepModal = (onAddCallback) => {
+      setAddStepHandler(() => onAddCallback); 
+      setAddStepModalVisible(true);
     };
-
-    const validProducts = savedProducts.filter(p => p && p.analysisData);
-    if (!userProfile || validProducts.length === 0) return results;
-
-    const settings = userProfile.settings || {};
-    const { skinType, scalpType, conditions = [], allergies = [], goals = [], blacklistedIngredients = [] } = settings;
-    
-    const insightsMap = new Map();
-    const addInsight = (id, title, summary, details, severity, related_products = [], customData = null) => {
-        if (!insightsMap.has(id)) {
-            insightsMap.set(id, { 
-                id, 
-                title, 
-                short_summary: summary, 
-                details, 
-                severity, 
-                related_products,
-                customData, // <--- NEW FIELD
-                type: customData ? 'goal_analysis' : 'standard' // Flag for UI
-            });
-        }
-    };
-
-    // --- 1. DEFINE CONSTANTS & HELPERS ---
-    const NIACINAMIDE_ID = 'niacinamide';
-    const PURE_VITAMIN_C_ID = 'vitamin-c';
-    const STRONG_ACTIVES = new Set(['Retinoid', 'AHA', 'BHA']);
-    const BARRIER_SUPPORT_INGREDIENTS = new Set(['ceramide', 'panthenol', 'cholesterol', 'squalane', NIACINAMIDE_ID]);
-
-    const getIngredientFunction = (dbIng) => {
-        if (!dbIng) return new Set();
-        const funcs = new Set();
-        const chemType = dbIng.chemicalType?.toLowerCase() || '';
-        const funcCategory = dbIng.functionalCategory?.toLowerCase() || '';
-        
-        if (chemType.includes('ريتينويد') || chemType.includes('retinoid')) funcs.add('Retinoid');
-        if (chemType.includes('aha') || dbIng.id === 'glycolic-acid') funcs.add('AHA');
-        if (chemType.includes('bha') || dbIng.id === 'salicylic-acid') funcs.add('BHA');
-        if (chemType.includes('pha')) funcs.add('PHA');
-        if (dbIng.id === 'vitamin-c') funcs.add('Pure Vitamin C');
-        if (dbIng.id === 'copper-peptides') funcs.add('Copper Peptides');
-        if (funcCategory.includes('مضاد أكسدة')) funcs.add('Antioxidant');
-        if (funcCategory.includes('مقشر')) funcs.add('Exfoliant');
-        if (dbIng.id === 'benzoyl-peroxide') funcs.add('Benzoyl Peroxide');
-        return funcs;
-    };
-
-    const getProductsWithFunction = (products, func) => 
-        products.filter(p => p.analysisData.detected_ingredients.some(i => {
-             const dbIng = GLOBAL_INGREDIENTS_MAP.get(i.id) || GLOBAL_INGREDIENTS_MAP.get(i.name.toLowerCase());
-             return getIngredientFunction(dbIng).has(func);
-        }));
-
-    // --- 2. PERSONALIZATION CHECKS (Allergies, Conditions, Bio) ---
-    
-   // A. Build Exclusion Maps
-    
-    // FIX 1: Create a Map to link Ingredient -> Allergy Name directly
-    const userAllergenMap = new Map(); 
-    
-    allergies.forEach(id => {
-        // Find the allergy definition from your data file
-        const allergyDef = commonAllergies.find(a => a.id === id);
-        if (allergyDef && allergyDef.ingredients) {
-            allergyDef.ingredients.forEach(ing => {
-                // Map the ingredient name to the Allergy Name (e.g. "حساسية المكسرات")
-                // NOTE: Your data uses .name, not .label
-                userAllergenMap.set(normalizeForMatching(ing), allergyDef.name); 
-            });
-        }
-    });
-
-    const userConditionAvoidMap = new Map();
-    
-    // Map Conditions to Avoided Ingredients
-    conditions.forEach(id => {
-        const condition = commonConditions.find(c => c.id === id);
-        if (condition && condition.avoidIngredients) {
-            condition.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), condition.name));
-        }
-    });
-
-    // Map Skin Type Rules
-    if (skinType) {
-        const skinData = basicSkinTypes.find(t => t.id === skinType);
-        if (skinData && skinData.avoidIngredients) {
-            skinData.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), `بشرة ${skinData.label}`));
-        }
-    }
-    // Map Scalp Type Rules
-    if (scalpType) {
-        const scalpData = basicScalpTypes.find(t => t.id === scalpType);
-        if (scalpData && scalpData.avoidIngredients) {
-            scalpData.avoidIngredients.forEach(ing => userConditionAvoidMap.set(normalizeForMatching(ing), `فروة رأس ${scalpData.label}`));
-        }
-    }
-
-    // B. Execute Checks on Shelf
-    validProducts.forEach(product => {
-        product.analysisData.detected_ingredients.forEach(ing => {
-            const normalizedIngName = normalizeForMatching(ing.name);
-            
-            // FIX 2: Check the Map
-            if (userAllergenMap.has(normalizedIngName)) {
-                // Retrieve the specific name immediately (e.g., "حساسية المكسرات")
-                const allergyName = userAllergenMap.get(normalizedIngName);
-                
-                addInsight(
-                    `allergy-${product.id}-${ing.id || ing.name}`,
-                    'خطر: مكون مسبب للحساسية',
-                    `يحتوي "${product.productName}" على "${ing.name}".`,
-                    `لقد أشرت في ملفك الشخصي إلى إصابتك بـ "${allergyName}". هذا المنتج يحتوي على "${ing.name}" الذي يثير هذه الحساسية مباشرة. يرجى تجنبه تماماً.`,
-                    'critical',
-                    [product.productName]
-                );
-            }
-
-            // Check Bio-Compatibility / Conditions
-            if (userConditionAvoidMap.has(normalizedIngName)) {
-                const reason = userConditionAvoidMap.get(normalizedIngName);
-                addInsight(
-                    `condition-${product.id}-${ing.id || ing.name}`,
-                    `تنبيه: لا يناسب ${reason}`,
-                    `يحتوي "${product.productName}" على "${ing.name}".`,
-                    `بما أنك تعاني من "${reason}"، فإن المكون "${ing.name}" قد يؤدي إلى تفاقم المشكلة (مثل زيادة الجفاف أو التهيج). يفضل البحث عن بديل ألطف.`,
-                    'warning',
-                    [product.productName]
-                );
-            }
-        });
-    });
-
-    // C. Blacklist Check
-    if (blacklistedIngredients.length > 0) {
-        validProducts.forEach(product => {
-            product.analysisData.detected_ingredients.forEach(ing => {
-                if (blacklistedIngredients.some(b => normalizeForMatching(b) === normalizeForMatching(ing.name))) {
-                    addInsight(
-                        `blacklist-${product.id}-${ing.name}`,
-                        'مكون محظور شخصياً',
-                        `وجدت المكون "${ing.name}" في منتجك.`,
-                        `أنت قمت بإضافة "${ing.name}" يدوياً إلى قائمتك السوداء. هذا المكون موجود في منتج "${product.productName}".`,
-                        'critical',
-                        [product.productName]
-                    );
-                }
-            });
-        });
-    }
-
-    // D. Pregnancy Specific Check (Retinoids)
-    if (conditions.includes('pregnancy')) {
-        const retinoidProducts = getProductsWithFunction(validProducts, 'Retinoid');
-        if (retinoidProducts.length > 0) {
-            retinoidProducts.forEach(p => {
-                const retinoidIng = p.analysisData.detected_ingredients.find(i => getIngredientFunction(GLOBAL_INGREDIENTS_MAP.get(i.id)).has('Retinoid'));
-                addInsight(
-                    `preg-unsafe-${p.id}`,
-                    'تحذير حمل: ريتينويد',
-                    `منتج "${p.productName}" غير آمن حالياً.`,
-                    `هذا المنتج يحتوي على "${retinoidIng?.name || 'مشتقات فيتامين A'}"، والتي يحذر الأطباء من استخدامها أثناء الحمل لأنها قد تؤثر على الجنين.`,
-                    'critical',
-                    [p.productName]
-                );
-            });
-        }
-    }
-
-    // --- 3. GOAL ALIGNMENT ---
-    const GOAL_DEFINITIONS = {
-        acne: {
-            label: 'مكافحة حب الشباب',
-            // Dermatologists want: 1. Unclog Pores (BHA), 2. Kill Bacteria (BPO), 3. Calm/Regulate (Niacinamide/Retinoid)
-            mechanisms: ['exfoliation_bha', 'anti_bacterial', 'cell_turnover', 'sebum_control'],
-            heroIds: new Set([
-                'salicylic-acid', 'benzoyl-peroxide', 'adapalene', 'tretinoin', 'retinol',
-                'azelaic-acid', 'niacinamide', 'sulfur', 'tea-tree-oil', 'zinc-pca', 'succinic-acid'
-            ]),
-            synergy: { ids: ['salicylic-acid', 'niacinamide'], label: 'تنظيف وتهدئة' },
-            requiresSunscreen: false 
-        },
-        anti_aging: {
-            label: 'مكافحة الشيخوخة',
-            mechanisms: ['cell_turnover', 'antioxidant', 'barrier_repair', 'collagen_stimulation'],
-            heroIds: new Set([
-                // Retinoids
-                'retinol', 'tretinoin', 'retinal', 'bakuchiol', 'hydroxypinacolone-retinoate',
-                // Peptides
-                'peptides', 'copper-peptides', 'matrixyl', 'argireline',
-                // Vitamin C & Antioxidants (Added ethyl-ascorbic-acid here)
-                'vitamin-c', 'ascorbic-acid', 'ethyl-ascorbic-acid', 'resveratrol', 'coenzyme-q10',
-                // Barrier & Structure
-                'ceramides', 'glycolic-acid', 'fatty-acids'
-            ]),
-            synergy: { ids: ['retinol', 'ceramides'], label: 'تجديد وترميم' },
-            requiresSunscreen: true 
-        },
-        brightening: {
-            label: 'تفتيح وتوحيد اللون',
-            // Dermatologists want: 1. Stop Pigment (Tyrosinase Inhibitor), 2. Shed Pigment (Exfoliation/Turnover)
-            mechanisms: ['tyrosinase_inhibitor', 'antioxidant', 'exfoliation_aha', 'cell_turnover'],
-            heroIds: new Set([
-                'vitamin-c', 'ascorbic-acid', 'alpha-arbutin', 'kojic-acid', 'tranexamic-acid',
-                'niacinamide', 'licorice-root', 'azelaic-acid', 'glycolic-acid', 'lactic-acid', 'glutathione'
-            ]),
-            synergy: { ids: ['vitamin-c', 'vitamin-e', 'ferulic-acid'], label: 'مثلث النضارة' },
-            requiresSunscreen: true
-        },
-        hydration: {
-            label: 'ترطيب عميق & حاجز',
-            // Dermatologists want: 1. Water (Humectant), 2. Seal (Occlusive/Barrier)
-            mechanisms: ['humectant', 'barrier_repair', 'occlusive'],
-            heroIds: new Set([
-                'hyaluronic-acid', 'glycerin', 'panthenol', 'urea', 'polyglutamic-acid',
-                'ceramides', 'cholesterol', 'squalane', 'shea-butter', 'allantoin', 'centella-asiatica'
-            ]),
-            synergy: { ids: ['hyaluronic-acid', 'ceramides'], label: 'ترطيب متكامل' },
-            requiresSunscreen: false
-        }
-    };
-
-    goals.forEach(goalId => {
-        const def = GOAL_DEFINITIONS[goalId];
-        if (!def) return;
-
-        // TRACKING
-        let foundMechanisms = new Set();
-        let foundHeroes = new Set(); // Localized names
-        let foundHeroIds = new Set();
-        let contributingProducts = new Map(); // Store product name -> potency
-
-        // 1. SCAN SHELF
-        validProducts.forEach(p => {
-            const productType = p.analysisData.product_type;
-            
-            // Define Vehicle Potency (Serum > Cream > Wash)
-            let vehicleScore = 0.5; // Base
-            if (['serum', 'treatment', 'ampoule'].includes(productType)) vehicleScore = 1.0;
-            else if (['lotion_cream', 'oil_blend'].includes(productType)) vehicleScore = 0.8;
-            else if (['toner', 'essence'].includes(productType)) vehicleScore = 0.6;
-            else if (productType === 'sunscreen') vehicleScore = 0.7;
-            else if (productType === 'cleanser') vehicleScore = 0.3; // Wash-off is weak
-
-            p.analysisData.detected_ingredients.forEach(rawIng => {
-                // A. RESOLVE (Fixing the issue using searchKeywords)
-                const resolved = resolveIngredient(rawIng.name);
-                if (!resolved) return;
-
-                const ingId = resolved.id;
-                const ingName = resolved.name;
-
-                // B. CHECK HERO STATUS
-                if (def.heroIds.has(ingId)) {
-                    foundHeroes.add(ingName);
-                    foundHeroIds.add(ingId);
-                    
-                    // C. IDENTIFY MECHANISM
-                    const mech = getMechanism(ingId);
-                    if (def.mechanisms.includes(mech)) {
-                        foundMechanisms.add(mech);
-                    }
-
-                    // Log contribution
-                    const existingPotency = contributingProducts.get(p.productName) || 0;
-                    contributingProducts.set(p.productName, Math.max(existingPotency, vehicleScore));
-                }
-            });
-        });
-
-        // 2. CALCULATE "DERM SCORE"
-        // A. Mechanism Coverage (50% of score)
-        // If the goal requires 3 mechanisms and you have 2, that's good.
-        // We cap it so you don't need 100% of mechanisms for a perfect score, usually 2-3 is excellent.
-        const mechanismCount = foundMechanisms.size;
-        let mechScore = 0;
-        if (mechanismCount >= 1) mechScore += 20;
-        if (mechanismCount >= 2) mechScore += 20;
-        if (mechanismCount >= 3) mechScore += 10; // Bonus
-        
-        // B. Potency/Concentration (30% of score)
-        // Sum of top 2 strongest products
-        const potencies = Array.from(contributingProducts.values()).sort((a,b) => b-a);
-        const top1 = (potencies[0] || 0) * 20; // Max 20
-        const top2 = (potencies[1] || 0) * 10; // Max 10
-        let potencyScore = top1 + top2;
-
-        // C. Synergy Bonus (10% of score)
-        let synergyActive = false;
-        let synergyLabel = null;
-        if (def.synergy) {
-            // Check if ALL synergy IDs are present in the routine
-            const hasSynergy = def.synergy.ids.every(id => foundHeroIds.has(id));
-            if (hasSynergy) {
-                potencyScore += 10;
-                synergyActive = true;
-                synergyLabel = def.synergy.label;
-            }
-        }
-
-        // D. Sunscreen Veto (20% negative impact or cap)
-        const hasSunscreen = validProducts.some(p => p.analysisData.product_type === 'sunscreen');
-        let sunscreenPenalty = false;
-        
-        let totalScore = mechScore + potencyScore;
-
-        if (def.requiresSunscreen && !hasSunscreen) {
-            // If treating pigmentation/aging without SPF, efficacy is basically zero in real life.
-            // We cap the score harshly.
-            if (totalScore > 35) {
-                totalScore = 35;
-                sunscreenPenalty = true;
-            }
-        } else if (def.requiresSunscreen && hasSunscreen) {
-            totalScore += 20; // Full marks for protection
-        } else {
-            // For goals that don't STRICTLY need it (like hydration), just fill the gap
-            totalScore += 20; 
-        }
-
-        totalScore = Math.min(Math.round(totalScore), 100);
-
-        // 3. GENERATE INTELLIGENT SUGGESTIONS
-        // Instead of random missing ingredients, suggest missing MECHANISMS.
-        const missingMechanisms = def.mechanisms.filter(m => !foundMechanisms.has(m));
-        
-        // Find ingredients that solve the missing mechanisms
-        const missingHeroes = [];
-        missingMechanisms.slice(0, 2).forEach(mech => {
-            // Find a hero ID from the definition that matches this mechanism
-            const suggestionId = Array.from(def.heroIds).find(id => getMechanism(id) === mech);
-            if (suggestionId) {
-                const info = ingredientIndex.get(suggestionId);
-                if(info) missingHeroes.push(info.name);
-            }
-        });
-        
-        // If we still need suggestions, fill with generic missing heroes
-        if (missingHeroes.length < 3) {
-            Array.from(def.heroIds).forEach(id => {
-                if (!foundHeroIds.has(id) && missingHeroes.length < 3) {
-                    const info = ingredientIndex.get(id);
-                    if (info && !missingHeroes.includes(info.name)) missingHeroes.push(info.name);
-                }
-            });
-        }
-
-        // 4. CREATE INSIGHT
-        let severity = 'good';
-        let summary = `روتين متكامل (${totalScore}%)`;
-        
-        if (totalScore < 45) {
-            severity = 'critical';
-            summary = sunscreenPenalty ? "الحماية مفقودة تماماً" : `بداية جيدة (${totalScore}%)`;
-        } else if (totalScore < 80) {
-            severity = 'warning';
-            summary = `فعال، ولكن يمكن تحسينه (${totalScore}%)`;
-        } else {
-            summary = `روتين احترافي (${totalScore}%)`;
-        }
-
-        addInsight(
-            `goal-derm-${goalId}`,
-            `مسار: ${def.label}`,
-            summary,
-            "اضغط لعرض تحليل الطبيب الرقمي",
-            severity,
-            Array.from(contributingProducts.keys()),
-            {
-                score: totalScore,
-                goalLabel: def.label,
-                foundHeroes: Array.from(foundHeroes),
-                missingHeroes,
-                sunscreenPenalty,
-                synergyActive,
-                synergyLabel,
-                // Pass mechanism data for advanced UI if needed
-                mechanismsCovered: Array.from(foundMechanisms).length,
-                totalMechanisms: def.mechanisms.length
-            }
-        );
-    });
-
-    // --- 4. ROUTINE INTEGRITY & BARRIER HEALTH ---
-    
-    // Map Routine IDs to Product Objects
-    const mapRoutine = (period) => (userProfile.routines?.[period] || [])
-        .flatMap(s => s.productIds).map(id => validProducts.find(p => p.id === id)).filter(Boolean);
-    
-    const amProducts = mapRoutine('am');
-    const pmProducts = mapRoutine('pm');
-
-    const IRRITATION_WEIGHTS = {
-        // Nuclear Option
-        'tretinoin': 5.0, 'isotretinoin': 5.0, 'hydroquinone': 4.5,
-        // Heavy Hitters
-        'adapalene': 3.5, 'tazarotene': 3.5, 'glycolic-acid': 3.0, 'benzoyl-peroxide': 3.0,
-        // Standard Actives
-        'retinol': 2.5, 'retinal': 2.5, 'salicylic-acid': 2.0, 'lactic-acid': 2.0, 'ascorbic-acid': 2.0, // Pure Vit C is acidic
-        // Mild Actives
-        'azelaic-acid': 1.5, 'mandelic-acid': 1.5, 'ethyl-ascorbic-acid': 1.0, 'gluconolactone': 1.0, // PHA
-        'niacinamide': 0.5, // Only irritating at high % or sensitive skin
-        'bakuchiol': 0.5
-    };
-    
-    // 2. DEFENDERS: How much does this soothe/repair?
-    const SOOTHING_WEIGHTS = {
-        // Structural Repair (The Cement)
-        'ceramides': 2.0, 'cholesterol': 2.0, 'fatty-acids': 2.0, 'phytosphingosine': 2.0,
-        // Deep Soothers
-        'panthenol': 1.5, 'madecassoside': 1.5, 'centella-asiatica': 1.5, 'allantoin': 1.5, 'bisabolol': 1.5, 'colloidal-oatmeal': 1.5,
-        // Hydrators (Buffers)
-        'hyaluronic-acid': 0.5, 'glycerin': 0.5, 'polyglutamic-acid': 0.5, 'squalane': 1.0, 'shea-butter': 1.0
-    };
-    
-    // 3. SKIN TOLERANCE: The "Budget" based on profile
-    const SKIN_TOLERANCE_BUDGET = {
-        'sensitive': 4.0,   // Low budget
-        'dry': 5.5,         // Medium-Low
-        'normal': 7.0,      // Standard
-        'combo': 7.5,
-        'oily': 8.5         // High tolerance (oil protects)
-    };
-
-   // ** Barrier Load Calculation (Enhanced) **
-   const calculateBarrierHealth = (dailyProducts) => {
-    
-    // 1. Define Constants Locally (To ensure no missing references)
-    const SKIN_TOLERANCE_BUDGET = {
-        'sensitive': 4.0, 'dry': 5.5, 'normal': 7.0, 'combo': 7.5, 'oily': 8.5
-    };
-
-    const IRRITATION_WEIGHTS = {
-        // Strong Actives
-        'tretinoin': 5.0, 'isotretinoin': 5.0, 'hydroquinone': 4.5,
-        'adapalene': 3.5, 'tazarotene': 3.5, 'glycolic-acid': 3.0, 'benzoyl-peroxide': 3.0,
-        'retinol': 2.5, 'retinal': 2.5, 'salicylic-acid': 2.0, 'lactic-acid': 2.0, 'ascorbic-acid': 2.0,
-        'azelaic-acid': 1.5, 'mandelic-acid': 1.5, 'ethyl-ascorbic-acid': 1.0, 'gluconolactone': 1.0,
-        'niacinamide': 0.5, 'bakuchiol': 0.5,
-        // Hidden Aggressors (Surfactants & Alcohol)
-        'alcohol-denat': 1.0, 'sls': 1.5, 'sles': 1.0, 'fragrance': 0.5,
-        'sodium-lauryl-sulfate': 1.5, 'sodium-laureth-sulfate': 1.0,
-        'sodium-c14-16-olefin-sulfonate': 1.0
-    };
-
-    const SOOTHING_WEIGHTS = {
-        // Structural Repair
-        'ceramides': 2.0, 'cholesterol': 2.0, 'fatty-acids': 2.0, 'phytosphingosine': 2.0,
-        'panthenol': 1.5, 'madecassoside': 1.5, 'centella-asiatica': 1.5, 'allantoin': 1.5, 
-        'bisabolol': 1.5, 'colloidal-oatmeal': 1.5,
-        // Hydrators & Occlusives
-        'hyaluronic-acid': 0.5, 'glycerin': 0.8, 'polyglutamic-acid': 0.5, 'squalane': 1.0, 
-        'shea-butter': 1.0, 'petrolatum': 2.0, 'dimethicone': 1.0, 'mineral-oil': 1.0, 
-        'paraffin': 1.5, 'jojoba-oil': 0.5, 'argan-oil': 0.5, 'aloe-vera': 0.5
-    };
-
-    // 2. Determine User Budget
-    const skinType = settings.skinType || 'normal'; 
-    let baseTolerance = SKIN_TOLERANCE_BUDGET[skinType] || 7.0;
-
-    if (settings.conditions?.includes('rosacea') || settings.conditions?.includes('eczema')) baseTolerance -= 2.0; 
-    if (settings.conditions?.includes('retinoid_naive')) baseTolerance -= 1.0; 
-
-    // 3. Prep Data Containers
-    const offendersMap = new Map();
-    const defendersMap = new Map();
-
-    let totalIrritation = 0;
-    let totalSoothing = 0;
-
-    // 4. Iterate Products
-    dailyProducts.forEach(p => {
-        let pIrritation = 0;
-        let pSoothing = 0;
-        let pIrritantNames = [];
-        let pSootherNames = [];
-
-        const type = p.analysisData.product_type;
-        
-        // A. BASELINE SCORING (The Type Tax/Bonus)
-        if (type === 'cleanser') {
-            pIrritation += 0.5; 
-            pIrritantNames.push('تأثير منظف'); 
-        } else if (type === 'toner' && !p.productName.toLowerCase().includes('hydrat')) {
-            pIrritation += 0.2; 
-        } else if (type === 'lotion_cream' || type === 'oil_blend') {
-            pSoothing += 0.5; 
-            pSootherNames.push('قاعدة مرطبة');
-        } else if (type === 'sunscreen') {
-            pSoothing += 0.2; // SPF is protective by nature
-        }
-
-        // B. INGREDIENT SCORING
-        // Wash-off products count for less (30%), leave-on for 100%
-        let factor = (type === 'cleanser' || type === 'mask') ? 0.3 : 1.0; 
-
-        p.analysisData.detected_ingredients.forEach(rawIng => {
-            const resolved = resolveIngredient(rawIng.name);
-            if (!resolved) return;
-            const id = resolved.id;
-            const name = resolved.name || rawIng.name;
-
-            if (IRRITATION_WEIGHTS[id]) {
-                pIrritation += (IRRITATION_WEIGHTS[id] * factor);
-                pIrritantNames.push(name);
-            }
-            
-            if (SOOTHING_WEIGHTS[id]) {
-                pSoothing += (SOOTHING_WEIGHTS[id] * factor); 
-                pSootherNames.push(name);
-            }
-        });
-
-        // C. Accumulate Totals
-        totalIrritation += pIrritation;
-        totalSoothing += pSoothing;
-
-        // D. Aggregate for Lists (Merge Duplicates)
-        // If product already in map, just increment stats
-        if (pIrritation > 0.1) {
-            if (offendersMap.has(p.id)) {
-                const existing = offendersMap.get(p.id);
-                existing.score += pIrritation;
-                existing.count += 1;
-                // We don't push duplicate ingredient names here, handled in formatList
-            } else {
-                offendersMap.set(p.id, { 
-                    name: p.productName, 
-                    score: pIrritation, 
-                    ingredients: pIrritantNames,
-                    count: 1 
-                });
-            }
-        }
-
-        if (pSoothing > 0.1) {
-            if (defendersMap.has(p.id)) {
-                const existing = defendersMap.get(p.id);
-                existing.score += pSoothing;
-                existing.count += 1;
-            } else {
-                defendersMap.set(p.id, { 
-                    name: p.productName, 
-                    score: pSoothing, 
-                    ingredients: pSootherNames,
-                    count: 1 
-                });
-            }
-        }
-    });
-
-    // 5. Format Lists for UI
-    const formatList = (map) => Array.from(map.values()).map(item => ({
-        ...item,
-        // If count > 1, append (x2) to name
-        name: item.count > 1 ? `${item.name} (x${item.count})` : item.name,
-        // Unique ingredients only
-        ingredients: [...new Set(item.ingredients)]
-    })).sort((a,b) => b.score - a.score);
-
-    const offenders = formatList(offendersMap);
-    const defenders = formatList(defendersMap);
-
-    // 6. Final Calculation Logic
-    const maxSoothingBonus = baseTolerance * 0.5; 
-    const effectiveTolerance = baseTolerance + Math.min(totalSoothing, maxSoothingBonus);
-    const loadRatio = totalIrritation > 0 ? (totalIrritation / effectiveTolerance) : 0;
-    
-    let visualScore = Math.min(Math.round((loadRatio / 1.5) * 100), 100);
-    let healthScore = 100 - visualScore;
-    if (totalIrritation === 0) healthScore = 100; 
-
-    let status, color, desc;
-    if (loadRatio > 1.2) {
-        status = 'خطر احتراق 🚨'; color = COLORS.danger;
-        desc = `حملك الكيميائي (${totalIrritation.toFixed(1)}) مرتفع جداً.`;
-    } else if (loadRatio > 0.9) {
-        status = 'حاجز مجهد'; color = COLORS.warning;
-        desc = `أنت على حافة التحمل.`;
-    } else if (loadRatio > 0.5) {
-        status = 'نشط ومتوازن'; color = COLORS.success;
-        desc = `توازن ممتاز بين التقشير والترميم.`;
-    } else {
-        status = 'سليم وقوي'; color = COLORS.success;
-        desc = `حاجز بشرتك في حالة راحة تامة.`;
-    }
-
-    return {
-        score: healthScore, status, color, desc, totalIrritation, totalSoothing, offenders, defenders
-    };
-};
-
-    // Calculate once for the daily total
-    const barrierStats = calculateBarrierHealth([...amProducts, ...pmProducts]);
-
-    // Set Barrier Health Object (UPDATED TO SAVE DETAILS)
-    results.barrierHealth = {
-        ...results.barrierHealth,
-        score: barrierStats.score,
-        status: barrierStats.status,
-        color: barrierStats.color,
-        desc: barrierStats.desc,
-        totalIrritation: barrierStats.totalIrritation,
-        totalSoothing: barrierStats.totalSoothing,
-        offenders: barrierStats.offenders,
-        defenders: barrierStats.defenders
-    };
-
-    // Additional Insights based on calculated stats
-    if (barrierStats.score > 75 && barrierStats.score <= 90) {
-        addInsight('barrier-warning', 'حمل كيميائي مرتفع', 'انتبه من الجفاف.', 'تستخدم عدة مواد فعالة قوية في روتينك اليومي، مما قد يرهق حاجز البشرة.', 'warning');
-    } else if (barrierStats.score > 90) {
-        addInsight('barrier-danger', 'خطر: احتراق كيميائي', 'توقف فوراً!', 'مجموع نقاط التهيج في روتينك مرتفع جداً. قلل استخدام الأحماض والريتينول فوراً.', 'critical');
-    }
-
-
-    // --- 5. DETAILED ROUTINE ANALYSIS (AM/PM) ---
-    
-    // Global Routine Checks
-    if (pmProducts.length > 0 && !pmProducts.some(p => p.analysisData.product_type === 'cleanser' || p.productName.includes('غسول'))) {
-        addInsight(
-            'missing-pm-cleanser', 
-            'خطوة أساسية مفقودة', 
-            'لا يوجد غسول في روتين المساء.', 
-            'النوم ببقايا واقي الشمس والأوساخ يسبب انسداد المسام فوراً. أضيفي غسولاً لروتين المساء.', 
-            'critical'
-        );
-    }
-
-    const hasActives = validProducts.some(p => {
-        const ings = p.analysisData.detected_ingredients;
-        return ings.some(i => STRONG_ACTIVES.has(Array.from(getIngredientFunction(GLOBAL_INGREDIENTS_MAP.get(i.id)))[0]));
-    });
-
-    if ((hasActives || goals.includes('hydration')) && !validProducts.some(p => p.analysisData.product_type === 'lotion_cream')) {
-        addInsight(
-            'missing-moisturizer', 
-            'أساسيات ناقصة', 
-            'تحتاجين لمرطب لدعم بشرتك.', 
-            'عند استخدام مكونات نشطة قوية، يصبح المرطب ضرورياً لحماية الحاجز الجلدي من التلف.', 
-            'warning'
-        );
-    }
-
-    // Routine-Specific Logic Function
-    const analyzeRoutine = (products, routineName) => {
-        if (products.length === 0) return { conflicts: 0, synergies: 0 };
-        let conflicts = 0, synergies = 0;
-
-        // A. Layering Check (Oil before Water)
-        const productBases = products.map(p => ({ 
-            name: p.productName, 
-            base: (p.analysisData.product_type === 'oil_blend' || p.productName.includes('oil')) ? 'oil' : 'water'
-        }));
-        const firstOil = productBases.findIndex(p => p.base === 'oil');
-        const lastWater = productBases.map(p => p.base).lastIndexOf('water');
-        
-        if (firstOil !== -1 && lastWater !== -1 && firstOil < lastWater) {
-            addInsight(
-                `layering-${routineName}`,
-                `ترتيب خاطئ: ${routineName}`,
-                `الزيوت تمنع امتصاص السيرومات.`,
-                `أنتِ تضعين "${productBases[firstOil].name}" (زيت) قبل "${productBases[lastWater].name}" (مائي). الزيت يشكل حاجزاً يمنع امتصاص الماء، لذا ضعي المائي أولاً.`,
-                'warning',
-                [productBases[firstOil].name, productBases[lastWater].name]
-            );
-        }
-
-        // B. Barrier Neglect (Active w/o Support)
-        const ingredientsInRoutine = new Map(products.flatMap(p => p.analysisData.detected_ingredients.map(i => [i.id, { ...i, product: p }])));
-        const productFunctions = new Map(products.map(p => [
-            p.id, 
-            new Set(p.analysisData.detected_ingredients.flatMap(i => Array.from(getIngredientFunction(GLOBAL_INGREDIENTS_MAP.get(i.id)))))
-        ]));
-
-        const activeProducts = products.filter(p => Array.from(productFunctions.get(p.id) || []).some(f => STRONG_ACTIVES.has(f)));
-        const hasBarrierSupport = products.some(p => p.analysisData.detected_ingredients.some(i => BARRIER_SUPPORT_INGREDIENTS.has(i.id)));
-        
-        if (activeProducts.length > 0 && !hasBarrierSupport) {
-            conflicts++;
-            const activeNames = activeProducts.map(p => p.productName).join(' و ');
-            const isDry = skinType === 'dry' || skinType === 'sensitive';
-            addInsight(
-                `barrier-neglect-${routineName}`,
-                'خطر على الحاجز الجلدي',
-                'تستخدمين مقشرات قوية بدون ترميم.',
-                `أنت تستخدمين "${activeNames}" في روتين ${routineName}، لكن لا يوجد مرطب يحتوي على سيراميد أو بانثينول لتهدئة البشرة.`,
-                isDry ? 'critical' : 'warning',
-                activeProducts.map(p => p.productName)
-            );
-        }
-
-        // C. Over-exfoliation
-        const exfoliantProducts = products.filter(p => Array.from(productFunctions.get(p.id) || []).some(f => ['AHA', 'BHA', 'PHA', 'Retinoid'].includes(f)));
-        if (exfoliantProducts.length > 1) {
-            conflicts++;
-            const names = exfoliantProducts.map(p => p.productName).join('\n• ');
-            addInsight(
-                `over-exfoliation-${routineName}`,
-                'إفراط في التقشير!',
-                'تستخدمين أكثر من مقشر في وقت واحد.',
-                `لقد جمعت بين المنتجات التالية في روتين واحد:\n• ${names}\nهذا كثير جداً وقد يحرق بشرتك. وزعيهم على ليالٍ مختلفة.`,
-                'critical',
-                exfoliantProducts.map(p => p.productName)
-            );
-        }
-
-        // D. Redundant Vitamin C
-        const vitCProducts = getProductsWithFunction(products, 'Pure Vitamin C');
-        if (vitCProducts.length > 1) {
-            addInsight(
-                `redundant-vitc-${routineName}`, 
-                'تكرار غير مفيد', 
-                'لديك أكثر من سيروم فيتامين C.', 
-                `أنت تستخدمين "${vitCProducts[0].productName}" و "${vitCProducts[1].productName}". منتج واحد بتركيز جيد يكفي؛ الزيادة لن تمنحك نتيجة أفضل بل قد تهيج البشرة.`, 
-                'good'
-            );
-        }
-
-        // E. Timing (Exfoliants in AM)
-        if (routineName === 'الصباح' && exfoliantProducts.length > 0) {
-            conflicts++;
-            const names = exfoliantProducts.map(p => p.productName).join(' و ');
-            addInsight(
-                'timing-exfoliant-am', 
-                'توقيت غير مناسب', 
-                'المقشرات تجعل بشرتك حساسة للشمس.', 
-                `أنت تستخدمين "${names}" في الصباح. الأحماض والريتينول يفضل استخدامها مساءً لتجنب التصبغات وحروق الشمس.`, 
-                'warning', 
-                exfoliantProducts.map(p=>p.productName)
-            );
-        }
-
-        // F. pH Conflict (Vit C + Niacinamide)
-        const hasNia = ingredientsInRoutine.has(NIACINAMIDE_ID);
-        const hasPureVitC = ingredientsInRoutine.has(PURE_VITAMIN_C_ID);
-        
-        if (hasNia && hasPureVitC) {
-            conflicts++;
-            const vitCName = ingredientsInRoutine.get(PURE_VITAMIN_C_ID).product.productName;
-            const niaName = ingredientsInRoutine.get(NIACINAMIDE_ID).product.productName;
-            addInsight(
-                `conflict-vitc-nia-${routineName}`,
-                'تعارض كيميائي (pH)',
-                'فيتامين C النقي + نياسيناميد.',
-                `أنت تخلطين "${vitCName}" (حامضي) مع "${niaName}" (قلوي). هذا يسبب احمراراً (Flushing) ويقلل فعالية المنتجين. استخدمي الفيتامين C صباحاً والنياسيناميد مساءً.`,
-                'warning',
-                [vitCName, niaName]
-            );
-        }
-
-        // G. Synergy (Retinoid + Niacinamide)
-        const hasRetinoid = products.some(p => Array.from(productFunctions.get(p.id) || []).includes('Retinoid'));
-        if (routineName === 'المساء' && hasRetinoid && hasNia) {
-            synergies++;
-            const retName = products.find(p => Array.from(productFunctions.get(p.id)).includes('Retinoid')).productName;
-            const niaName = ingredientsInRoutine.get(NIACINAMIDE_ID).product.productName;
-            addInsight(
-                'synergy-ret-nia', 
-                'ثنائي ذهبي ✨', 
-                'ريتينويد + نياسيناميد.', 
-                `دمجك لـ "${retName}" مع "${niaName}" ممتاز! النياسيناميد يقوي حاجز البشرة ويجعلها تتحمل الريتينول بشكل أفضل.`, 
-                'good',
-                [retName, niaName]
-            );
-        }
-
-        return { conflicts, synergies };
-    };
-
-    const amAnalysis = analyzeRoutine(amProducts, 'الصباح');
-    const pmAnalysis = analyzeRoutine(pmProducts, 'المساء');
-
-    results.amRoutine = { products: amProducts, ...amAnalysis };
-    results.pmRoutine = { products: pmProducts, ...pmAnalysis };
-
-    // --- 6. SUN PROTECTION ---
-    const usesSunscreen = amProducts.some(p => p.analysisData.product_type === 'sunscreen');
-    if (amProducts.length > 0) {
-        if (usesSunscreen) {
-            results.sunProtectionGrade.score += 70;
-            results.sunProtectionGrade.notes.push("✓ واقي شمس موجود صباحاً.");
-            
-            // Synergy: SPF + Antioxidant
-            const hasAntioxidant = getProductsWithFunction(amProducts, 'Antioxidant').length > 0 || getProductsWithFunction(amProducts, 'Pure Vitamin C').length > 0;
-            if (hasAntioxidant) {
-                results.sunProtectionGrade.score += 30;
-                results.sunProtectionGrade.notes.push("✓ معزز بمضادات الأكسدة (+30%).");
-                addInsight(
-                    'synergy-spf-antioxidant', 
-                    'حماية مضاعفة', 
-                    'واقي شمس + مضاد أكسدة.', 
-                    'استخدامك لسيروم مضاد للأكسدة (مثل فيتامين C) تحت الواقي الشمسي يقضي على الجذور الحرة التي تتسرب عبر الواقي.', 
-                    'good'
-                );
-            }
-        } else {
-            results.sunProtectionGrade.notes.push("✗ لا يوجد واقي شمس!");
-            const isAntiAging = goals.includes('anti_aging');
-            const isBrightening = goals.includes('brightening');
-            let impactMsg = 'الشمس هي المسبب الأول لتلف البشرة.';
-            if (isAntiAging) impactMsg = 'بما أن هدفك "مكافحة الشيخوخة"، فإن غياب واقي الشمس يلغي مفعول كل منتجاتك العلاجية.';
-            if (isBrightening) impactMsg = 'بما أن هدفك "التفتيح"، فلن تري أي نتيجة بدون واقي شمس، بل قد تزيد التصبغات.';
-            
-            addInsight(
-                'missing-sunscreen', 
-                'خطر: لا يوجد واقي شمس', 
-                'روتين الصباح يفتقر لأهم خطوة.', 
-                `${impactMsg} يجب إضافة واقي شمس كخطوة أخيرة كل صباح.`, 
-                'critical'
-            );
-        }
-    }
-
-    // --- 7. STATS BREAKDOWN ---
-    const uniqueIngs = new Set(validProducts.flatMap(p => p.analysisData.detected_ingredients.map(i => i.id)));
-    uniqueIngs.forEach(id => {
-        const dbIng = GLOBAL_INGREDIENTS_MAP.get(id);
-        const funcs = getIngredientFunction(dbIng);
-        if (funcs.has('Retinoid') || funcs.has('AHA') || funcs.has('BHA')) results.formulationBreakdown.actives++;
-        if (dbIng?.functionalCategory?.includes('مرطب')) results.formulationBreakdown.hydrators++;
-        if (funcs.has('Antioxidant')) results.formulationBreakdown.antioxidants++;
-    });
-
-    // Final Sort by Severity
-    const severityOrder = { 'critical': 1, 'warning': 2, 'good': 3 };
-    results.aiCoachInsights = Array.from(insightsMap.values()).sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
-
-    return results;
-
-  }, [savedProducts, userProfile]);
   
-  const avatarOpacity = scrollY.interpolate({ 
-    inputRange: [0, 100], 
-    outputRange: [1, 0], 
-    extrapolate: 'clamp' 
-  });
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
+    const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
+    const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
+    const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
+    
+    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const contentTranslate = useRef(new Animated.Value(0)).current;
+    const analysisCache = useRef({ hash: '', data: null });
+    const ingredientsCache = useRef({ hash: '', data: [] }); 
+    const switchTab = (tab) => { if(tab !== activeTab) { Haptics.selectionAsync(); setActiveTab(tab); } };
   
-  const headerScale = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [1, 0.95],
-    extrapolate: 'clamp'
-  });
-
- const handleDelete = async (id) => { 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
     
-    // 1. The Animation
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
+    const handleDismissPraise = (id) => { if (!dismissedInsightIds.includes(id)) setDismissedInsightIds(prev => [...prev, id]); };
+  
+    const handleDelete = async (id) => { 
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      const old = [...savedProducts];
+      setSavedProducts(prev => prev.filter(p => p.id !== id));
+      try { await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id)); } catch (error) { setSavedProducts(old); Alert.alert("خطأ", "تعذر حذف المنتج"); }
+    };
+  
+    const TABS = [
+        { id: 'shelf', label: 'الرف', icon: 'list' },
+        { id: 'routine', label: 'روتيني', icon: 'calendar-check' },
+        { id: 'analysis', label: 'تحليل', icon: 'chart-pie' },
+        { id: 'migration', label: 'البديل', icon: 'exchange-alt' },
+        { id: 'ingredients', label: 'مكونات', icon: 'flask' },
+        { id: 'settings', label: 'إعدادات', icon: 'cog' },
+    ];
+  
+    // --- NEW: SERVER SIDE ANALYSIS FETCH ---
+    const [analysisData, setAnalysisData] = useState(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+    useEffect(() => {
+        const fetchAnalysis = async () => {
+            if (!savedProducts || savedProducts.length === 0) return;
     
-    // 2. The State Update (The row will collapse smoothly)
-    const old = [...savedProducts];
-    setSavedProducts(prev => prev.filter(p => p.id !== id));
-      try { 
-          await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id)); 
-      } catch (error) { 
-          setSavedProducts(old); 
-          Alert.alert("خطأ", "تعذر حذف المنتج");
-      }
-  };
+            // CALLING THE IMPORTED FUNCTION
+            const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
+    
+            // CHECK CACHE
+            if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
+                setAnalysisData(analysisCache.current.data);
+                return; 
+            }
 
-  const handleRefresh = async () => {
-    // Implement refresh logic here
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  // Bottom Floating Dock Items
-  const TABS = [
-      { id: 'shelf', label: 'الرف', icon: 'list' },
-      { id: 'routine', label: 'روتيني', icon: 'calendar-check' },
-      { id: 'analysis', label: 'تحليل', icon: 'chart-pie' },
-      { id: 'migration', label: 'البديل', icon: 'exchange-alt' },
-      { id: 'ingredients', label: 'مكونات', icon: 'flask' },
-      { id: 'settings', label: 'إعدادات', icon: 'cog' },
-  ];
-
-  return (
-    <View style={styles.container}>
-        {/* ... (StatusBar, Particles, Header, ScrollView) */}
-        
-        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-        
-        {/* Particles are now direct children of the main container */}
-        {particles.map((p) => <Spore key={p.id} {...p} />)}
-            
-        {/* --- PARALLAX HEADER (No Blur) --- */}
-        <Animated.View style={[styles.header, { height: headerHeight }]}>
-                {/* Background color is now part of the style, not a separate layer */}
-                <LinearGradient 
-                    colors={['rgba(26, 45, 39, 0.7)', 'transparent']} 
-                    style={StyleSheet.absoluteFill} 
-                />
-                
-                {/* EXPANDED STATE CONTENT (Fades out on scroll) */}
-                <Animated.View style={[
-                    styles.headerContentExpanded, 
-                    { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }
-                ]}>
-                     <View>
-                        <Text style={styles.welcomeText}>
-                             أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
-                        </Text>
-                        <Text style={styles.subWelcome}>رحلتك لجمال طبيعي ✨</Text>
-                     </View>
-                     <View style={styles.avatar}>
-                         <Text style={{fontSize: 28}}>🧖‍♀️</Text>
-                     </View>
-                </Animated.View>
-
-                {/* COLLAPSED STATE CONTENT (Fades in on scroll) */}
-                <Animated.View style={[styles.headerContentCollapsed, { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }]}>
-                    <Text style={styles.collapsedTitle}>
-                        {userProfile?.settings?.name || 'الملف الشخصي'}
-                    </Text>
-                </Animated.View>
-            </Animated.View>
-
-            {/* --- MAIN SCROLL --- */}
-            {/* --- MAIN SCROLL --- */}
-            <Animated.ScrollView
-                contentContainerStyle={{ 
-                    paddingHorizontal: 15, 
-                    paddingTop: headerMaxHeight + 20,
-                    paddingBottom: 100 
-                }}
-                scrollEventThrottle={16}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: false }
-                )}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={loading}
-                        onRefresh={handleRefresh}
-                        tintColor={COLORS.textPrimary}
-                        colors={[COLORS.textPrimary]}
-                        progressBackgroundColor="rgba(255,255,255,0.1)"
-                    />
+            setIsAnalyzing(true);
+            try {
+                // UPDATED FETCH CALL (Removed .js)
+                const response = await fetch(`${PROFILE_API_URL}/analyze-profile.js`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        products: savedProducts,
+                        settings: userProfile?.settings || {},
+                        currentRoutine: userProfile?.routines 
+                    })
+                });    
+  
+                const data = await response.json();
+                if (response.ok) {
+                    setAnalysisData(data);
+                    // --- ADDED: Update the cache on successful fetch ---
+                    analysisCache.current = { hash: currentHash, data: data };
+                } else {
+                    console.warn("Analysis API Error:", data.error);
                 }
-            >
-                <Animated.View style={{ 
-                    opacity: contentOpacity, 
-                    transform: [{ translateY: contentTranslate }],
-                    minHeight: 400 // Prevents scroll jump during switch
-                }}>
-                    
-                    {activeTab === 'shelf' && (
-                        <ShelfSection 
-                            products={savedProducts} 
-                            loading={loading} 
-                            onDelete={handleDelete} 
-                            onRefresh={handleRefresh}
-                            router={router}
-                        />
-                    )}
-
-                    {activeTab === 'routine' && (
-                        <RoutineSection 
-                            savedProducts={savedProducts} 
-                            userProfile={userProfile} 
-                            onOpenAddStepModal={openAddStepModal}
-                        />
-                    )}
-
-                    {activeTab === 'analysis' && (
-                        <AnalysisSection 
-                            savedProducts={savedProducts} 
-                            loading={loading}
-                            analysisResults={analysisResults}
-                            dismissedInsightIds={dismissedInsightIds}
-                            handleDismissPraise={handleDismissPraise}
-                        />
-                    )}
-
-                    {activeTab === 'ingredients' && (
-                        <IngredientsSection products={savedProducts} />
-                    )}
-
-                    {activeTab === 'migration' && (
-                        <MigrationSection products={savedProducts} />
-                    )}
-
-                    {activeTab === 'settings' && (
-                        <SettingsSection 
-                            profile={userProfile} 
-                            onLogout={() => { 
-                                logout(); 
-                                router.replace('/login'); 
-                            }} 
-                        />
-                    )}
-
-                </Animated.View>
-            </Animated.ScrollView>
-
-        {/* --- FLOATING GLASS DOCK & MODAL RENDERED AT TOP LEVEL --- */}
-        <NatureDock 
-            tabs={TABS} 
-            activeTab={activeTab} 
-            onTabChange={switchTab}
-        />
-
-        {/* MODAL IS NOW RENDERED HERE, OUTSIDE THE SCROLLVIEW */}
-        <AddStepModal 
-            isVisible={isAddStepModalVisible}
-            onClose={() => setAddStepModalVisible(false)}
-            onAdd={(stepName) => {
-                if (addStepHandler) {
-                    addStepHandler(stepName);
-                }
-            }}
-        />
-
-        {/* ... (FAB for shelf) */}
-        {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
-    </View>
-  );
-}
+            } catch (e) {
+                console.error("Analysis Network Error:", e);
+            } finally {
+                setIsAnalyzing(false);
+            }
+        };
+  
+      const timer = setTimeout(() => {
+          fetchAnalysis();
+      }, 600); // 600ms debounce
+  
+      return () => clearTimeout(timer);
+    }, [savedProducts, userProfile?.settings]); // Dependencies are correct
+  
+    return (
+      <View style={styles.container}>
+          <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+          {particles.map((p) => <Spore key={p.id} {...p} />)}
+          
+          <Animated.View style={[styles.header, { height: headerHeight }]}>
+              <LinearGradient colors={['rgba(26, 45, 39, 0.7)', 'transparent']} style={StyleSheet.absoluteFill} />
+              <Animated.View style={[styles.headerContentExpanded, { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }]}>
+                      <View><Text style={styles.welcomeText}>أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}</Text><Text style={styles.subWelcome}>رحلتك لجمال طبيعي ✨</Text></View>
+                      <View style={styles.avatar}><Text style={{fontSize: 28}}>🧖‍♀️</Text></View>
+              </Animated.View>
+              <Animated.View style={[styles.headerContentCollapsed, { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }]}>
+                  <Text style={styles.collapsedTitle}>{userProfile?.settings?.name || 'الملف الشخصي'}</Text>
+              </Animated.View>
+          </Animated.View>
+  
+          <Animated.ScrollView contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }} scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })} showsVerticalScrollIndicator={false}>
+              <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
+                  
+                  {activeTab === 'shelf' && <ShelfSection products={savedProducts} loading={loading} onDelete={handleDelete} router={router} />}
+                  
+                  {activeTab === 'routine' && <RoutineSection savedProducts={savedProducts} userProfile={userProfile} onOpenAddStepModal={openAddStepModal} />}
+                  
+                  {activeTab === 'analysis' && (
+                      <AnalysisSection 
+                          savedProducts={savedProducts} 
+                          loading={isAnalyzing} // Use local loading state for analysis
+                          analysisResults={analysisData} // Pass fetched data
+                          dismissedInsightIds={dismissedInsightIds} 
+                          handleDismissPraise={handleDismissPraise} 
+                          userProfile={userProfile} 
+                      />
+                  )}
+                  
+                  {activeTab === 'ingredients' && (
+    <IngredientsSection 
+        products={savedProducts} 
+        userProfile={userProfile} 
+        cacheRef={ingredientsCache}
+    />
+)}
+                  {activeTab === 'migration' && <MigrationSection products={savedProducts} />}
+                  
+                  {activeTab === 'settings' && <SettingsSection profile={userProfile} onLogout={() => { logout(); router.replace('/login'); }} />}
+              
+              </Animated.View>
+          </Animated.ScrollView>
+  
+          <NatureDock tabs={TABS} activeTab={activeTab} onTabChange={switchTab} />
+          <AddStepModal isVisible={isAddStepModalVisible} onClose={() => setAddStepModalVisible(false)} onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }} />
+          {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
+      </View>
+    );
+  }
 
 const styles = StyleSheet.create({
   // ========================================================================
