@@ -20,6 +20,12 @@ import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Path } from 're
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
+import { 
+    commonAllergies, 
+    commonConditions,
+    basicSkinTypes,
+    basicScalpTypes
+  } from '../../src/data/allergiesandconditions';
 
 // --- 1. SYSTEM CONFIG ---
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
