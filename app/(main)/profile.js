@@ -3355,6 +3355,14 @@ const WeatherDetailedSheet = ({ insight }) => {
                 colors={theme.colors}
                 style={{ padding: 25, borderRadius: 24, alignItems: 'center', marginBottom: 20 }}
             >
+                {/* LOCATION BADGE (NEW) */}
+                {data.location && (
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 15 }}>
+                        <FontAwesome5 name="map-marker-alt" size={10} color="#fff" style={{ marginLeft: 6 }} />
+                        <Text style={{ color: '#fff', fontFamily: 'Tajawal-Regular', fontSize: 12 }}>{data.location}</Text>
+                    </View>
+                )}
+
                 <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
                     <FontAwesome5 name={theme.icon} size={28} color="#fff" />
                 </View>
@@ -3515,7 +3523,7 @@ export default function ProfileScreen() {
     const fetchAnalysis = async () => {
         if (!savedProducts || savedProducts.length === 0) return;
 
-        // Cache Check...
+        // Cache Check
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
         if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
             setAnalysisData(analysisCache.current.data);
@@ -3524,31 +3532,42 @@ export default function ProfileScreen() {
 
         setIsAnalyzing(true);
 
-        // 1. GET GPS ONLY (No API Calls)
+        // 1. GET GPS & CITY NAME
         let locationPayload = null;
-    try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        setLocationPermission(status); // <--- STORE STATUS HERE
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                setLocationPermission(status);
 
-        if (status === 'granted') {
-            let loc = await Location.getCurrentPositionAsync({});
-            locationPayload = { lat: loc.coords.latitude, lon: loc.coords.longitude };
-        }
-    } catch (error) {
-        console.log("GPS failed:", error);
-    }
-        try {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === 'granted') {
-                let loc = await Location.getCurrentPositionAsync({});
-                locationPayload = {
-                    lat: loc.coords.latitude,
-                    lon: loc.coords.longitude
-                };
+                if (status === 'granted') {
+                    let loc = await Location.getCurrentPositionAsync({});
+                    
+                    // --- FIX: USE FREE API INSTEAD OF NATIVE GEOCODER ---
+                    let cityName = 'موقعي';
+                    try {
+                        const lat = loc.coords.latitude;
+                        const lon = loc.coords.longitude;
+                        // Free API, No Key, Arabic Support
+                        const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ar`;
+                        
+                        const geoRes = await fetch(geoUrl);
+                        const geoData = await geoRes.json();
+                        
+                        // Extract best available name
+                        cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'موقعي';
+                        console.log("📍 Detected City:", cityName);
+                    } catch (geoError) {
+                        console.log("City fetch failed, using fallback:", geoError);
+                    }
+
+                    locationPayload = {
+                        lat: loc.coords.latitude,
+                        lon: loc.coords.longitude,
+                        city: cityName // <--- Sending Arabic Name
+                    };
+                }
+            } catch (error) {
+                console.log("Location error:", error);
             }
-        } catch (error) {
-            console.log("GPS failed:", error.message);
-        }
 
         // 2. SEND TO BACKEND
         try {
@@ -3559,7 +3578,7 @@ export default function ProfileScreen() {
                     products: savedProducts,
                     settings: userProfile?.settings || {},
                     currentRoutine: userProfile?.routines,
-                    location: locationPayload // <--- SENDING COORDINATES ONLY
+                    location: locationPayload 
                 })
             });
 
@@ -3575,13 +3594,16 @@ export default function ProfileScreen() {
             if (isMounted) setIsAnalyzing(false);
         }
     };
-  
-      const timer = setTimeout(() => {
-          fetchAnalysis();
-      }, 600); // 600ms debounce
-  
-      return () => clearTimeout(timer);
-    }, [savedProducts, userProfile?.settings]); // Dependencies are correct
+
+    const timer = setTimeout(() => {
+        fetchAnalysis();
+    }, 600);
+
+    return () => {
+        isMounted = false;
+        clearTimeout(timer);
+    };
+}, [savedProducts, userProfile?.settings]); // Dependencies are correct
   
     return (
       <View style={styles.container}>
