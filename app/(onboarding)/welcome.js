@@ -4,7 +4,7 @@ import {
   Dimensions, KeyboardAvoidingView, Platform, ScrollView, 
   Animated, Easing, ImageBackground, StatusBar, UIManager
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase';
@@ -27,7 +27,10 @@ const COLORS = {
   darkGreen: '#1a3b25',
   text: '#FFFFFF',
   textDim: 'rgba(255, 255, 255, 0.65)',
-  glassTint: 'rgba(8, 12, 10, 0.80)', 
+  
+  // UPDATE THIS LINE (Darker tint for better readability without blur)
+  glassTint: 'rgba(8, 12, 10, 0.92)', 
+  
   glassBorder: 'rgba(178, 216, 180, 0.2)',
   cardBg: 'rgba(255, 255, 255, 0.05)',
   cardBgSelected: '#B2D8B4', 
@@ -361,55 +364,56 @@ export default function WelcomeScreen() {
             </View>
 
             <View style={styles.cardContainer}>
-              <BlurView intensity={70} tint="dark" style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
-                
-                <View style={styles.cardHeader}>
-                  <Text style={styles.title}>{STEPS[currentStep].title}</Text>
-                  <Text style={styles.subtitle}>{STEPS[currentStep].subtitle}</Text>
-                </View>
+  {/* Just a simple View with the semi-transparent background color */}
+  <View style={[styles.glass, { backgroundColor: COLORS.glassTint }]}>
+    
+    <View style={styles.cardHeader}>
+      <Text style={styles.title}>{STEPS[currentStep].title}</Text>
+      <Text style={styles.subtitle}>{STEPS[currentStep].subtitle}</Text>
+    </View>
 
-                <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
-                  <ScrollView 
-                    contentContainerStyle={{ 
-                      flexGrow: 1, 
-                      justifyContent: currentStep === 1 ? 'flex-start' : 'center',
-                      paddingBottom: 20,
-                      paddingTop: currentStep === 1 ? 40 : 0
-                    }} 
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {renderContent()}
-                  </ScrollView>
-                </Animated.View>
+    <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
+      <ScrollView 
+        contentContainerStyle={{ 
+          flexGrow: 1, 
+          justifyContent: currentStep === 1 ? 'flex-start' : 'center',
+          paddingBottom: 20,
+          paddingTop: currentStep === 1 ? 40 : 0
+        }} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {renderContent()}
+      </ScrollView>
+    </Animated.View>
 
-                <View style={styles.footer}>
-                  {currentStep > 0 ? (
-                    <TouchableOpacity onPress={() => changeStep(-1)} style={styles.backBtn}>
-                      <Ionicons name="arrow-back" size={24} color={COLORS.textDim} />
-                    </TouchableOpacity>
-                  ) : <View style={{ width: 50 }} />}
+    <View style={styles.footer}>
+      {currentStep > 0 ? (
+        <TouchableOpacity onPress={() => changeStep(-1)} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.textDim} />
+        </TouchableOpacity>
+      ) : <View style={{ width: 50 }} />}
 
-                  {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep].id) && (
-                    <TouchableOpacity 
-                      onPress={() => changeStep(1)} 
-                      disabled={!isNextEnabled() || loading}
-                      style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
-                    >
-                      {loading ? (
-                        <Text style={styles.btnText}>جاري الحفظ...</Text>
-                      ) : (
-                        <Text style={styles.btnText}>
-                          {currentStep === 6 ? (formData.gender === 'أنثى' ? 'انطلقي' : 'انطلق') : 'التالي'}
-                        </Text>
-                      )}
-                      {currentStep !== 6 && !loading && <Ionicons name="arrow-forward" size={18} color={COLORS.darkGreen} style={{ marginLeft: 8 }} />}
-                    </TouchableOpacity>
-                  )}
-                </View>
+      {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep].id) && (
+        <TouchableOpacity 
+          onPress={() => changeStep(1)} 
+          disabled={!isNextEnabled() || loading}
+          style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
+        >
+          {loading ? (
+            <Text style={styles.btnText}>جاري الحفظ...</Text>
+          ) : (
+            <Text style={styles.btnText}>
+              {currentStep === 6 ? (formData.gender === 'أنثى' ? 'انطلقي' : 'انطلق') : 'التالي'}
+            </Text>
+          )}
+          {currentStep !== 6 && !loading && <Ionicons name="arrow-forward" size={18} color={COLORS.darkGreen} style={{ marginLeft: 8 }} />}
+        </TouchableOpacity>
+      )}
+    </View>
 
-              </BlurView>
-            </View>
+  </View>
+</View>
 
           </View>
         </KeyboardAvoidingView>

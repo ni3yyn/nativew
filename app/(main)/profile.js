@@ -9,7 +9,6 @@ import * as Linking from 'expo-linking';
 import { TouchableWithoutFeedback } from 'react-native'; 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PanResponder } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { doc, updateDoc, Timestamp, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
@@ -19,7 +18,6 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
 import * as Location from 'expo-location';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
 import { 
     commonAllergies, 
@@ -120,106 +118,107 @@ const INGREDIENT_FILTERS = [
 
 // 1. ENHANCED FLOATING SPORES with glass effect
 const Spore = ({ size, startX, duration, delay }) => {
-  const animY = useRef(new Animated.Value(0)).current; 
-  const animX = useRef(new Animated.Value(0)).current; 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const floatLoop = Animated.loop(
-        Animated.timing(animY, { 
-          toValue: 1, 
-          duration, 
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true 
-        })
-    );
-    
-    const driftLoop = Animated.loop(
-        Animated.sequence([
-            Animated.timing(animX, { 
-              toValue: 1, 
-              duration: duration * 0.35, 
-              useNativeDriver: true, 
-              easing: Easing.sin 
-            }),
-            Animated.timing(animX, { 
-              toValue: -1, 
-              duration: duration * 0.35, 
-              useNativeDriver: true, 
-              easing: Easing.sin 
-            }),
-            Animated.timing(animX, { 
-              toValue: 0, 
-              duration: duration * 0.3, 
-              useNativeDriver: true, 
-              easing: Easing.sin 
-            }),
-        ])
-    );
-    
-    const opacityPulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { 
-          toValue: 0.6, 
-          duration: duration * 0.2, 
-          useNativeDriver: true 
-        }),
-        Animated.delay(duration * 0.6),
-        Animated.timing(opacity, { 
-          toValue: 0.2, 
-          duration: duration * 0.2, 
-          useNativeDriver: true 
-        }),
-      ])
-    );
-
-    const scaleIn = Animated.spring(scale, { 
-      toValue: 1, 
-      friction: 8, 
-      tension: 60, 
-      useNativeDriver: true,
-      delay 
-    });
-
-    const timeout = setTimeout(() => { 
-      scaleIn.start();
-      floatLoop.start(); 
-      driftLoop.start(); 
-      opacityPulse.start();
-    }, delay);
-
-    return () => { 
-      clearTimeout(timeout); 
-      floatLoop.stop(); 
-      driftLoop.stop(); 
-      opacityPulse.stop();
-    };
-  }, []);
-
-  const translateY = animY.interpolate({ 
-    inputRange: [0, 1], 
-    outputRange: [height + 100, -100] 
-  });
+    const animY = useRef(new Animated.Value(0)).current; 
+    const animX = useRef(new Animated.Value(0)).current; 
+    const opacity = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(0)).current;
   
-  const translateX = animX.interpolate({ 
-    inputRange: [-1, 1], 
-    outputRange: [-35, 35] 
-  });
-
-  return (
-    <BlurView  intensity={20} tint="dark" style={{ position: 'absolute', zIndex: 0 }} >
-      <Animated.View style={{ 
-        width: size, 
-        height: size, 
-        borderRadius: size/2, 
-        backgroundColor: COLORS.primaryGlow,
-        transform: [{ translateY }, { translateX }, { scale }], 
-        opacity,
-      }} />
-    </BlurView>
-  );
-};
+    useEffect(() => {
+      const floatLoop = Animated.loop(
+          Animated.timing(animY, { 
+            toValue: 1, 
+            duration, 
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true 
+          })
+      );
+      
+      const driftLoop = Animated.loop(
+          Animated.sequence([
+              Animated.timing(animX, { 
+                toValue: 1, 
+                duration: duration * 0.35, 
+                useNativeDriver: true, 
+                easing: Easing.sin 
+              }),
+              Animated.timing(animX, { 
+                toValue: -1, 
+                duration: duration * 0.35, 
+                useNativeDriver: true, 
+                easing: Easing.sin 
+              }),
+              Animated.timing(animX, { 
+                toValue: 0, 
+                duration: duration * 0.3, 
+                useNativeDriver: true, 
+                easing: Easing.sin 
+              }),
+          ])
+      );
+      
+      const opacityPulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, { 
+            toValue: 0.6, 
+            duration: duration * 0.2, 
+            useNativeDriver: true 
+          }),
+          Animated.delay(duration * 0.6),
+          Animated.timing(opacity, { 
+            toValue: 0.2, 
+            duration: duration * 0.2, 
+            useNativeDriver: true 
+          }),
+        ])
+      );
+  
+      const scaleIn = Animated.spring(scale, { 
+        toValue: 1, 
+        friction: 8, 
+        tension: 60, 
+        useNativeDriver: true,
+        delay 
+      });
+  
+      const timeout = setTimeout(() => { 
+        scaleIn.start();
+        floatLoop.start(); 
+        driftLoop.start(); 
+        opacityPulse.start();
+      }, delay);
+  
+      return () => { 
+        clearTimeout(timeout); 
+        floatLoop.stop(); 
+        driftLoop.stop(); 
+        opacityPulse.stop();
+      };
+    }, []);
+  
+    const translateY = animY.interpolate({ 
+      inputRange: [0, 1], 
+      outputRange: [height + 100, -100] 
+    });
+    
+    const translateX = animX.interpolate({ 
+      inputRange: [-1, 1], 
+      outputRange: [-35, 35] 
+    });
+  
+    return (
+        <Animated.View style={{ 
+          position: 'absolute', // Moved here
+          zIndex: 0,            // Moved here
+          width: size, 
+          height: size, 
+          borderRadius: size / 2, 
+          backgroundColor: COLORS.accentGlow, // Fixed variable name
+          transform: [{ translateY }, { translateX }, { scale }], 
+          opacity,
+        }} />
+    );
+  };
+  
 
 // 2. TACTILE PRESSABLE (Haptics + Shrink)
 const PressableScale = ({ onPress, children, style, disabled, onLongPress, delay = 0 }) => {
@@ -385,16 +384,6 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color = COLORS.pr
     const circumference = 2 * Math.PI * radius;
     const [displayPercentage, setDisplayPercentage] = useState(0);
     const rotation = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.05, duration: 2000, useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 1, duration: 2000, useNativeDriver: true })
-            ])
-        ).start();
-    }, []);
 
     useEffect(() => {
         // Start rotation animation
@@ -466,37 +455,6 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color = COLORS.pr
 };
 
 // --- COMPONENTS: ORGANIC DOCK ---
-
-const SwipeHint = () => {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 800, delay: 500, useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 800, delay: 1000, useNativeDriver: true }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, []);
-
-  const translateX = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -10], // Moves 10px to the left
-  });
-
-  const opacity = anim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.7, 1, 0.7],
-  });
-
-  return (
-    <Animated.View style={[styles.swipeHint, { opacity, transform: [{ translateX }] }]}>
-      <Feather name="chevrons-right" size={24} color={COLORS.textSecondary} />
-    </Animated.View>
-  );
-};
 
 const NatureDock = ({ tabs, activeTab, onTabChange }) => {
   const [tabLayouts, setTabLayouts] = useState({});
@@ -835,11 +793,10 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
 
 
 // 3. The new sophisticated Bottom Sheet for product details (SCROLLING & LAYOUT FIXED)
+// 3. The new sophisticated Bottom Sheet for product details (FIXED STYLING)
 const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
-    // 1. Animation Controller (0 = closed, 1 = open)
     const animController = useRef(new Animated.Value(0)).current;
 
-    // 2. Handle Opening
     useEffect(() => {
         if (isVisible) {
             Animated.spring(animController, {
@@ -851,7 +808,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
         }
     }, [isVisible]);
 
-    // 3. Handle Closing
     const handleClose = () => {
         Animated.timing(animController, {
             toValue: 0,
@@ -863,41 +819,63 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
         });
     };
 
-    // 4. Gestures
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 5,
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) {
-                    // Dragging down reduces value from 1
-                    animController.setValue(1 - (gestureState.dy / height));
-                }
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (gestureState.dy > height * 0.2 || gestureState.vy > 0.8) {
-                    handleClose();
-                } else {
-                    Animated.spring(animController, { toValue: 1, useNativeDriver: true }).start();
-                }
-            },
-        })
-    ).current;
-
     if (!product) return null;
 
-    // 5. Interpolations
-    const translateY = animController.interpolate({
-        inputRange: [0, 1],
-        outputRange: [height, 0],
-    });
-    
-    const backdropOpacity = animController.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 0.6],
-    });
+    // --- HELPER: Dynamic Alert Styling ---
+    const getAlertStyle = (type) => {
+        const safeType = type ? type.toLowerCase() : 'info';
+        switch (safeType) {
+            case 'risk':
+            case 'danger':
+            case 'critical':
+                return { 
+                    bg: 'rgba(239, 68, 68, 0.1)', 
+                    border: COLORS.danger, 
+                    text: COLORS.danger, 
+                    icon: 'exclamation-circle' 
+                };
+            case 'caution':
+            case 'warning':
+                return { 
+                    bg: 'rgba(245, 158, 11, 0.1)', 
+                    border: COLORS.warning, 
+                    text: COLORS.warning, 
+                    icon: 'exclamation-triangle' 
+                };
+            case 'good':
+            case 'success':
+                return { 
+                    bg: 'rgba(34, 197, 94, 0.1)', 
+                    border: COLORS.success, 
+                    text: COLORS.success, 
+                    icon: 'check-circle' 
+                };
+            default: // info
+                return { 
+                    bg: 'rgba(59, 130, 246, 0.1)', 
+                    border: COLORS.info, 
+                    text: COLORS.info, 
+                    icon: 'info-circle' 
+                };
+        }
+    };
 
-    const { safety, efficacy, user_specific_alerts = [] } = product.analysisData || { safety: {}, efficacy: {} };
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+
+    // --- DATA EXTRACTION ---
+    const { productName } = product;
+    const { 
+        oilGuardScore = 0, 
+        finalVerdict = 'غير معروف', 
+        product_type = 'other', 
+        detected_ingredients = [],
+        user_specific_alerts = [],
+        safety = { score: 0 },
+        efficacy = { score: 0 }
+    } = product.analysisData || {};
+
+    const scoreColor = oilGuardScore >= 80 ? COLORS.success : oilGuardScore >= 65 ? COLORS.warning : COLORS.danger;
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -911,49 +889,104 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
                         
-                        {/* CONDITIONAL RENDERING LOGIC */}
-                        
-                        {/* A. WEATHER DASHBOARD */}
-                       {insight.customData?.type === 'weather_dashboard' ? (
-    <WeatherDetailedSheet insight={insight} />
-) :
-                        
-                        /* B. GOAL DASHBOARD */
-                        insight.type === 'goal_analysis' && insight.customData ? (
-                            renderGoalDashboard(insight.customData)
-                        ) : (
-                            
-                        /* C. STANDARD INSIGHT (Fallback) */
-                            <>
-                                <View style={styles.modalHeader}>
-                                    <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
-                                        <FontAwesome5 
-                                            name={insight.severity === 'critical' ? 'shield-alt' : 'info-circle'} 
-                                            size={24} 
-                                            color={mainColor} 
-                                        />
-                                    </View>
-                                    <Text style={styles.modalTitle}>{insight.title}</Text>
+                        {/* 1. Header */}
+                        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                            <View style={{ 
+                                width: 80, height: 80, borderRadius: 40, 
+                                backgroundColor: COLORS.background, 
+                                justifyContent: 'center', alignItems: 'center',
+                                marginBottom: 15, borderWidth: 2, borderColor: scoreColor 
+                            }}>
+                                <FontAwesome5 
+                                    name={PRODUCT_TYPES[product_type]?.icon || 'bottle-droplet'} 
+                                    size={32} 
+                                    color={scoreColor} 
+                                />
+                            </View>
+                            <Text style={styles.sheetProductTitle}>{productName}</Text>
+                            <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginTop: 5 }}>
+                                {PRODUCT_TYPES[product_type]?.label || 'منتج غير محدد'}
+                            </Text>
+                        </View>
+
+                        {/* 2. Main Score Card */}
+                        <View style={styles.sheetSection}>
+                            <View style={[styles.alertBox, { backgroundColor: scoreColor + '15', borderColor: scoreColor }]}>
+                                <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
+                                     <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: scoreColor }}>{oilGuardScore}</Text>
                                 </View>
+                                <View style={{ width: 1, height: '80%', backgroundColor: scoreColor, opacity: 0.3, marginHorizontal: 10 }} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: scoreColor, fontFamily: 'Tajawal-Bold', fontSize: 16, textAlign: 'right' }}>
+                                        {finalVerdict}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
 
-                                <Text style={styles.modalDescription}>{insight.details}</Text>
-                                
-                                {insight.related_products?.length > 0 && (
-                                    <View style={{ marginTop: 20 }}>
-                                        <Text style={styles.relatedProductsTitle}>المنتجات المعنية:</Text>
-                                        {insight.related_products.map((p, i) => (
-                                            <View key={i} style={styles.productChip}>
-                                                <FontAwesome5 name="bottle-droplet" size={12} color={COLORS.textSecondary} />
-                                                <Text style={styles.productChipText}>{p}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
+                        {/* 3. Safety & Efficacy Pillars */}
+                        <View style={styles.sheetPillarsContainer}>
+                            <View style={styles.sheetPillar}>
+                                <FontAwesome5 name="magic" size={18} color={COLORS.accentGreen} />
+                                <Text style={styles.sheetPillarLabel}>الفعالية</Text>
+                                <Text style={styles.sheetPillarValue}>
+                                    {typeof efficacy === 'object' ? efficacy.score : efficacy}% 
+                                </Text>
+                            </View>
+                            <View style={styles.sheetDividerVertical} />
+                            <View style={styles.sheetPillar}>
+                                <FontAwesome5 name="shield-alt" size={18} color={COLORS.gold} />
+                                <Text style={styles.sheetPillarLabel}>الأمان</Text>
+                                <Text style={styles.sheetPillarValue}>
+                                    {typeof safety === 'object' ? safety.score : safety}%
+                                </Text>
+                            </View>
+                        </View>
+
+                         {/* 4. User Alerts (DYNAMIC STYLING) */}
+                         {user_specific_alerts.length > 0 && (
+                            <View style={styles.sheetSection}>
+                                <Text style={[styles.sheetSectionTitle, {color: COLORS.textPrimary}]}> ملاحظات خاصة لكِ</Text>
+                                {user_specific_alerts.map((alert, i) => {
+                                    // Handle Object {text, type} vs String
+                                    const isObj = typeof alert === 'object' && alert !== null;
+                                    const alertText = isObj ? alert.text : alert;
+                                    const alertType = isObj ? alert.type : 'info';
+                                    
+                                    const style = getAlertStyle(alertType);
+
+                                    return (
+                                        <View key={i} style={[styles.alertBox, { backgroundColor: style.bg, borderColor: style.border, marginBottom: 8 }]}>
+                                            <FontAwesome5 name={style.icon} size={16} color={style.text} />
+                                            <Text style={[styles.alertBoxText, { color: style.text }]}>{alertText}</Text>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                         )}
+
+                        {/* 5. Ingredients List */}
+                        <View style={styles.sheetSection}>
+                            <Text style={styles.sheetSectionTitle}>المكونات المكتشفة ({detected_ingredients.length})</Text>
+                            <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                                {detected_ingredients.map((ing, i) => {
+                                    const ingName = (typeof ing === 'object' && ing !== null) ? ing.name : ing;
+                                    return (
+                                        <View key={i} style={styles.ingredientChip}>
+                                            <Text style={styles.ingredientChipText}>{ingName}</Text>
+                                        </View>
+                                    );
+                                })}
+                                {detected_ingredients.length === 0 && (
+                                    <Text style={{ color: COLORS.textDim, fontFamily: 'Tajawal-Regular', width: '100%', textAlign: 'center' }}>
+                                        لم يتم العثور على مكونات مسجلة.
+                                    </Text>
                                 )}
-                            </>
-                        )}
+                            </View>
+                        </View>
 
-                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, marginTop: 30 }]}>
-                            <Text style={[styles.closeButtonText, {color: COLORS.textPrimary}]}>إغلاق</Text>
+                        <Pressable onPress={handleClose} style={[styles.closeButton, { marginTop: 20 }]}>
+                            <Text style={styles.closeButtonText}>إغلاق</Text>
                         </Pressable>
                     </ScrollView>
                 </View>
@@ -1092,39 +1125,6 @@ const LiquidProgressBar = ({ score, max = 10, color }) => {
     );
 };
 
-  const InsightCard = React.memo(({ insight, onSelect, onDismiss }) => {
-    const isDismissible = insight.severity === 'good';
-    const severityStyles = {
-      critical: { icon: 'shield-alt', color: COLORS.danger, bg: 'rgba(239, 68, 68, 0.1)' },
-      warning: { icon: 'exclamation-triangle', color: COLORS.warning, bg: 'rgba(245, 158, 11, 0.1)' },
-      good: { icon: 'check-circle', color: COLORS.success, bg: 'rgba(34, 197, 94, 0.1)' },
-    };
-    const style = severityStyles[insight.severity] || severityStyles.warning;
-    useEffect(() => {
-        // Card appears
-        Animated.timing(cardOpacity, { toValue: 1, duration: 400 }).start();
-        
-        // Text appears 100ms later
-        Animated.timing(textOpacity, { toValue: 1, duration: 600, delay: 150 }).start();
-    }, []);
-
-    return (
-      <StaggeredItem index={0}>
-          <PressableScale onPress={() => onSelect(insight)} style={[styles.insightPill, { backgroundColor: style.bg }]}>
-              <View style={styles.insightPillHeader}>
-                  <FontAwesome5 name={style.icon} size={14} color={style.color} />
-                  <Text style={[styles.insightPillTitle, { color: style.color }]}>{insight.title}</Text>
-                  {isDismissible && (
-                       <TouchableOpacity onPress={() => onDismiss(insight.id)} style={styles.dismissButton}>
-                           <Feather name="x" size={16} color={COLORS.textSecondary} />
-                       </TouchableOpacity>
-                  )}
-              </View>
-              <Text style={styles.insightPillSummary}>{insight.short_summary}</Text>
-          </PressableScale>
-      </StaggeredItem>
-    );
-  });
 
 // --- The Main Analysis Section ---
 const FocusInsight = ({ insight, onSelect }) => {
@@ -1166,42 +1166,100 @@ const AllClearState = () => (
   </StaggeredItem>
 );
 
+const StandardInsightCard = ({ insight, onPress, index }) => {
+    // Determine color theme based on severity
+    const getTheme = () => {
+        switch (insight.severity) {
+            case 'critical': return { border: COLORS.danger, icon: 'shield-alt', bg: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)'] };
+            case 'warning': return { border: COLORS.warning, icon: 'exclamation-triangle', bg: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)'] };
+            default: return { border: COLORS.accentGreen, icon: 'lightbulb', bg: ['rgba(90, 156, 132, 0.15)', 'rgba(90, 156, 132, 0.05)'] };
+        }
+    };
+    
+    const theme = getTheme();
+
+    return (
+        <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }}>
+            <PressableScale onPress={() => onPress(insight)}>
+                <View style={[styles.modernCardContainer, { borderColor: theme.border }]}>
+                    {/* Background Gradient for depth */}
+                    <LinearGradient 
+                        colors={theme.bg} 
+                        style={StyleSheet.absoluteFill} 
+                        start={{ x: 0, y: 0 }} 
+                        end={{ x: 1, y: 1 }} 
+                    />
+                    
+                    {/* Top Row: Icon & Dot */}
+                    <View style={styles.modernCardHeader}>
+                        <View style={[styles.modernIconBox, { backgroundColor: theme.border }]}>
+                            <FontAwesome5 name={theme.icon} size={12} color={COLORS.textOnAccent} />
+                        </View>
+                        {/* A small dot to balance the header */}
+                        <View style={[styles.statusDot, { backgroundColor: theme.border }]} />
+                    </View>
+
+                    {/* Middle: Text */}
+                    <View style={{flex: 1, justifyContent: 'center'}}>
+                        <Text style={styles.modernCardTitle} numberOfLines={3}>
+                            {insight.title}
+                        </Text>
+                    </View>
+
+                    {/* Bottom: 'Read More' Indicator */}
+                    <View style={styles.modernCardFooter}>
+                        <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
+                        <Feather name="chevron-left" size={12} color={theme.border} />
+                    </View>
+                </View>
+            </PressableScale>
+        </StaggeredItem>
+    );
+};
+
 // 3. The horizontal carousel for secondary insights
+// --- UPDATED CAROUSEL (Handles Weather Mini Cards) ---
 const InsightCarousel = ({ insights, onSelect }) => (
-    <View>
-        <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+    <View style={{ marginBottom: 25 }}>
+        <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15}}>
+             <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+             {/* Optional: Add a 'See All' button here if you want */}
+        </View>
+        
         <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carouselContentContainer}
-            // specific RTL fix for Android horizontal scrolls if needed
             style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }} 
         >
-            {insights.map((insight, index) => (
-                <StaggeredItem 
-                    index={index} 
-                    key={insight.id}
-                    // FIX: Override the default 100% width and add margin here
-                    style={{ width: 'auto', paddingLeft: 12 }} 
-                >
-                    <PressableScale onPress={() => onSelect(insight)} style={styles.carouselItem}>
-                         <View style={[styles.carouselIconWrapper, {backgroundColor: `${COLORS[insight.severity]}20`}]}>
-                            <FontAwesome5 
-                                name={insight.severity === 'good' ? 'check-circle' : 'info-circle'} 
-                                size={16} 
-                                color={COLORS[insight.severity]} 
-                            />
-                        </View>
-                        <Text style={styles.carouselItemTitle} numberOfLines={2}>{insight.title}</Text>
-                    </PressableScale>
-                </StaggeredItem>
-            ))}
+            {insights.map((insight, index) => {
+                const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
+
+                if (isWeather) {
+                    return (
+                        <WeatherMiniCard 
+                            key={insight.id} 
+                            insight={insight} 
+                            onPress={onSelect} 
+                        />
+                    );
+                }
+
+                return (
+                    <StandardInsightCard 
+                        key={insight.id} 
+                        insight={insight} 
+                        onPress={onSelect}
+                        index={index}
+                    />
+                );
+            })}
         </ScrollView>
     </View>
-  );
+);
 
-  // --- NEW COMPONENT: BARRIER HEALTH LEDGER ---
-  const BarrierDetailsModal = ({ visible, onClose, data }) => {
+// --- NEW COMPONENT: BARRIER HEALTH LEDGER (Full Unomitted) ---
+const BarrierDetailsModal = ({ visible, onClose, data }) => {
     const animController = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -1318,12 +1376,85 @@ const InsightCarousel = ({ insights, onSelect }) => (
     );
 };
 
+// --- COMPONENT: MINI WEATHER CARD (For Carousel) ---
+const WeatherMiniCard = ({ insight, onPress }) => {
+    const meta = insight.customData?.meta || {};
+    const { temp, uvIndex } = meta;
+    
+    // Theme Logic: Vibrant Gradients
+    const getTheme = () => {
+        const id = insight.id.toLowerCase();
+        if (insight.customData?.isPermissionError) return { colors: ['#4b5563', '#1f2937'], icon: 'map-marker-alt', label: 'الموقع' };
+        if (insight.customData?.isServiceError) return { colors: ['#d97706', '#92400e'], icon: 'wifi', label: 'غير متاح' };
+        if (insight.severity === 'good') return { colors: ['#10b981', '#059669'], icon: 'smile-beam', label: 'ممتاز' }; // Green
+        if (id.includes('uv')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', label: 'UV عالي' }; // Red
+        if (id.includes('dry')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'tint-slash', label: 'جفاف' }; // Blue
+        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', label: 'طقس' };
+    };
+
+    const theme = getTheme();
+
+    return (
+        <StaggeredItem index={0} style={{ width: 'auto', paddingLeft: 12 }}>
+            <PressableScale onPress={() => onPress(insight)}>
+                {/* 1. Container: Same dimensions (150x150) and Radius (22) as Standard Card */}
+                <View style={styles.weatherCardContainer}>
+                    
+                    <LinearGradient
+                        colors={theme.colors}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    />
+                    
+                    {/* Header: Icon Top Left (RTL) */}
+                    <View style={styles.weatherCardHeader}>
+                         {/* Translucent circle behind icon for depth */}
+                        <View style={styles.weatherIconCircle}>
+                            <FontAwesome5 name={theme.icon} size={14} color="#fff" />
+                        </View>
+                        {/* Live Indicator (Optional) */}
+                        <View style={styles.liveDot} />
+                    </View>
+
+                    {/* Middle: Title & Main Data */}
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                         <Text style={styles.weatherCardTitle} numberOfLines={2}>
+                            {insight.title}
+                        </Text>
+                    </View>
+
+                    {/* Bottom: Data Pills (Glass Effect) */}
+                    <View style={styles.weatherCardFooter}>
+                        {temp !== undefined ? (
+                            <View style={styles.glassPill}>
+                                <Text style={styles.glassPillText}>{Math.round(temp)}°</Text>
+                                {uvIndex !== undefined && (
+                                    <>
+                                        <View style={styles.glassSeparator} />
+                                        <Text style={styles.glassPillText}>UV {Math.round(uvIndex)}</Text>
+                                    </>
+                                )}
+                            </View>
+                        ) : (
+                             <View style={styles.glassPill}>
+                                <Text style={styles.glassPillText}>{theme.label}</Text>
+                             </View>
+                        )}
+                    </View>
+
+                </View>
+            </PressableScale>
+        </StaggeredItem>
+    );
+};
+
 // --- NEW: COMPACT WEATHER WIDGET (Main Screen) ---
+// --- COMPONENT: SMART WEATHER WIDGET (Unified Web/Mobile) ---
 const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }) => {
     
     // 1. Extract Data
     const meta = insight.customData?.meta || {};
-    const { temp, uvIndex, humidity } = meta;
+    const { temp, uvIndex } = meta;
     const isPermissionError = insight.customData?.isPermissionError;
     const isServiceError = insight.customData?.isServiceError;
 
@@ -1331,30 +1462,11 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
     const getTheme = () => {
         const id = insight.id.toLowerCase();
         
-        if (isPermissionError) {
-            return { 
-                colors: ['#374151', '#1f2937'], // Dark Gray
-                icon: 'map-marker-alt', 
-                actionText: 'تفعيل', 
-                isAction: 'permission',
-                title: 'الموقع غير مفعل'
-            };
-        }
-        if (isServiceError) {
-            return { 
-                colors: ['#b45309', '#78350f'], // Amber/Brown
-                icon: 'wifi', 
-                actionText: 'تحديث', 
-                isAction: 'retry',
-                title: 'الطقس غير متاح'
-            };
-        }
+        if (isPermissionError) return { colors: ['#374151', '#1f2937'], icon: 'map-marker-alt', actionText: 'تفعيل', title: 'الموقع غير مفعل', isAction: 'permission' };
+        if (isServiceError) return { colors: ['#b45309', '#78350f'], icon: 'wifi', actionText: 'تحديث', title: 'الطقس غير متاح', isAction: 'retry' };
         
-        // Good Weather
-        if (insight.severity === 'good') {
-            return { colors: ['#10b981', '#059669'], icon: 'smile-beam', actionText: 'التفاصيل', title: 'الطقس مثالي' };
-        }
-        // Bad Weather
+        if (insight.severity === 'good') return { colors: ['#10b981', '#059669'], icon: 'smile-beam', actionText: 'المزيد', title: 'الطقس مثالي' };
+        
         if (id.includes('uv')) return { colors: ['#ef4444', '#991b1b'], icon: 'sun', actionText: 'الحماية', title: 'خطر أشعة UV' };
         if (id.includes('dry')) return { colors: ['#3b82f6', '#1e40af'], icon: 'tint-slash', actionText: 'الترطيب', title: 'جفاف شديد' };
         if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', actionText: 'التنظيف', title: 'تلوث جوي' };
@@ -1364,17 +1476,28 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
     };
 
     const theme = getTheme();
+    const displayTitle = theme.title || insight.title;
 
     const handlePress = async () => {
         Haptics.selectionAsync();
+        
         if (theme.isAction === 'permission') {
-            if (Platform.OS === 'web') alert("يرجى تفعيل الموقع.");
-            else {
-                try {
-                    const { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status === 'granted' && onRetry) onRetry(true);
-                    else if (onPermissionBlocked) onPermissionBlocked();
-                } catch { if (onPermissionBlocked) onPermissionBlocked(); }
+            try {
+                // 1. Try Standard Request (Works on Mobile & Web)
+                // On Web, this triggers the browser popup if not already blocked
+                const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+                
+                if (status === 'granted') {
+                    // Success! Refresh
+                    if (onRetry) onRetry(true); 
+                } else {
+                    // 2. If Denied (Mobile "Don't Ask" OR Web "Blocked")
+                    // Trigger the Custom Modal
+                    if (onPermissionBlocked) onPermissionBlocked(); 
+                }
+            } catch (e) {
+                // Fallback for any weird errors
+                if (onPermissionBlocked) onPermissionBlocked();
             }
         } 
         else if (theme.isAction === 'retry') {
@@ -1390,40 +1513,44 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
             <PressableScale onPress={handlePress}>
                 <LinearGradient 
                     colors={theme.colors} 
-                    style={styles.weatherWidgetCard} // New Style
+                    style={styles.weatherWidgetCard}
                     start={{x: 0, y: 0}} end={{x: 1, y: 1}}
                 >
-                    {/* LEFT: Main Icon */}
                     <View style={styles.weatherIconContainer}>
                         <FontAwesome5 name={theme.icon} size={24} color="#fff" />
                     </View>
 
-                    {/* MIDDLE: Info */}
-                    <View style={{ flex: 1, justifyContent: 'center' }}>
-                        <Text style={styles.weatherWidgetTitle}>{theme.title}</Text>
+                    <View style={{ flex: 1, justifyContent: 'center', paddingRight: 10 }}>
+                        <Text style={styles.weatherWidgetTitle}>{displayTitle}</Text>
                         
-                        {/* Data Pills (Only show if data exists) */}
                         {!isPermissionError && !isServiceError && temp !== undefined ? (
                             <View style={styles.weatherPillsRow}>
                                 <View style={styles.weatherPill}>
                                     <Text style={styles.weatherPillText}>{Math.round(temp)}°</Text>
                                     <FontAwesome5 name="thermometer-half" size={10} color="rgba(255,255,255,0.9)" />
                                 </View>
-                                <View style={styles.weatherPill}>
-                                    <Text style={styles.weatherPillText}>{Math.round(uvIndex)}</Text>
-                                    <Text style={[styles.weatherPillText, {fontSize: 8, marginRight: 2}]}>UV</Text>
-                                    <FontAwesome5 name="sun" size={10} color="rgba(255,255,255,0.9)" />
-                                </View>
+                                {uvIndex !== undefined && (
+                                    <View style={styles.weatherPill}>
+                                        <Text style={styles.weatherPillText}>{Math.round(uvIndex)}</Text>
+                                        <Text style={[styles.weatherPillText, {fontSize: 8, marginRight: 4}]}>UV</Text>
+                                        <FontAwesome5 name="sun" size={10} color="rgba(255,255,255,0.9)" />
+                                    </View>
+                                )}
                             </View>
                         ) : (
-                            <Text style={styles.weatherWidgetSub}>{insight.short_summary}</Text>
+                            <Text style={styles.weatherWidgetSub} numberOfLines={1}>
+                                {insight.short_summary}
+                            </Text>
                         )}
                     </View>
 
-                    {/* RIGHT: Action Button */}
                     <View style={styles.weatherActionBtn}>
                         <Text style={styles.weatherActionText}>{theme.actionText}</Text>
-                        <Feather name="chevron-left" size={16} color="#fff" />
+                        <Feather 
+                            name={theme.isAction === 'permission' ? "map-pin" : theme.isAction === 'retry' ? "refresh-cw" : "chevron-left"} 
+                            size={14} 
+                            color="#fff" 
+                        />
                     </View>
 
                 </LinearGradient>
@@ -2829,139 +2956,6 @@ const SettingsSection = ({ profile, onLogout }) => {
     );
 };
 
-const WeatherDashboard = ({ insight }) => {
-    
-    const getTheme = () => {
-        const id = insight.id.toLowerCase();
-        
-        // 1. Permission Error
-        if (insight.customData?.isPermissionError) {
-            return {
-                gradient: ['#4b5563', '#1f2937'], // Dark Gray
-                icon: 'map-marker-alt',
-                accent: '#9ca3af',
-                label: 'الموقع مطلوب',
-                isError: true
-            };
-        }
-
-        if (insight.customData?.isServiceError) {
-            return {
-                gradient: ['#d97706', '#92400e'], // Amber/Brown
-                icon: 'wifi',
-                accent: '#fbbf24',
-                label: 'خطأ في الاتصال',
-                isError: true,
-                action: () => {} // No action, just informational
-            };
-        }
-
-        // 2. Good / Normal Weather
-        if (insight.severity === 'good' || id.includes('normal')) {
-            return {
-                gradient: ['#10b981', '#059669'], // Emerald Green
-                icon: 'smile-beam',
-                accent: '#a7f3d0',
-                label: 'الطقس مثالي',
-                isGood: true
-            };
-        }
-
-        // 3. Bad Weather (Existing logic)
-        if (id.includes('uv') || id.includes('sun')) return { gradient: ['#ef4444', '#b91c1c'], icon: 'sun', accent: '#fca5a5', label: 'خطر أشعة UV' };
-        if (id.includes('dry') || id.includes('cold')) return { gradient: ['#3b82f6', '#1d4ed8'], icon: 'snowflake', accent: '#93c5fd', label: 'جفاف شديد' };
-        if (id.includes('humid') || id.includes('sweat')) return { gradient: ['#f59e0b', '#b45309'], icon: 'water', accent: '#fde68a', label: 'رطوبة عالية' };
-
-        return { gradient: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', accent: '#a7f3d0', label: 'تنبيه طقس' };
-    };
-
-    const theme = getTheme();
-    const advice = insight.customData?.advice || insight.details;
-    const meta = insight.customData?.meta; // { temp, uvIndex, humidity } if available
-
-    // Pulse Animation
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.1, duration: 1500, useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
-            ])
-        ).start();
-    }, []);
-
-    const handleAction = () => {
-        if (theme.isError) {
-            Linking.openSettings(); // Open Phone Settings
-        }
-    };
-
-    return (
-        <View style={{ marginBottom: 20 }}>
-            <Pressable onPress={handleAction} disabled={!theme.isError}>
-                <View style={{ borderRadius: 24, overflow: 'hidden', marginBottom: 20 }}>
-                    <LinearGradient 
-                        colors={theme.gradient} 
-                        start={{ x: 0, y: 0 }} 
-                        end={{ x: 1, y: 1 }} 
-                        style={{ padding: 30, alignItems: 'center', minHeight: 220, justifyContent: 'center' }}
-                    >
-                        {/* Live Data Strip (Only if Good Weather) */}
-                        {theme.isGood && meta && (
-                            <View style={{ flexDirection: 'row-reverse', gap: 15, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 }}>
-                                <Text style={{color: '#fff', fontFamily: 'Tajawal-Bold'}}>{Math.round(meta.temp)}°C</Text>
-                                <Text style={{color: '#fff'}}>|</Text>
-                                <Text style={{color: '#fff', fontFamily: 'Tajawal-Bold'}}>UV {meta.uvIndex}</Text>
-                            </View>
-                        )}
-
-                        <Animated.View style={{ transform: [{ scale: scaleAnim }], marginBottom: 15 }}>
-                            <FontAwesome5 name={theme.icon} size={60} color="#fff" style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: {width: 0, height: 4}, textShadowRadius: 10 }} />
-                        </Animated.View>
-                        
-                        <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 5 }}>
-                            {theme.label}
-                        </Text>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }}>
-                            {insight.short_summary}
-                        </Text>
-                    </LinearGradient>
-                </View>
-            </Pressable>
-
-            {/* Science / Details */}
-            <View style={{ flexDirection: 'row-reverse', gap: 15, marginBottom: 20 }}>
-                <View style={[styles.sheetPillar, { flex: 1, backgroundColor: COLORS.card, alignItems: 'flex-start', paddingHorizontal: 15 }]}>
-                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                        <FontAwesome5 name="info-circle" size={14} color={COLORS.textSecondary} />
-                        <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12 }}>
-                            {theme.isError ? 'لماذا؟' : 'الحالة'}
-                        </Text>
-                    </View>
-                    <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, lineHeight: 20, textAlign: 'left' }}>
-                        {insight.details}
-                    </Text>
-                </View>
-            </View>
-
-            {/* Action Box */}
-            <View style={{ backgroundColor: theme.gradient[0] + '15', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: theme.gradient[0] + '40' }}>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: theme.gradient[0], alignItems: 'center', justifyContent: 'center' }}>
-                        <FontAwesome5 name={theme.isError ? "cog" : "check"} size={14} color="#fff" />
-                    </View>
-                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 16, color: theme.gradient[0] }}>
-                        {theme.isError ? 'الإجراء المطلوب' : 'التوصية'}
-                    </Text>
-                </View>
-                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, lineHeight: 28, textAlign: 'left' }}>
-                    {advice}
-                </Text>
-            </View>
-        </View>
-    );
-};
-
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const animController = useRef(new Animated.Value(0)).current;
 
@@ -3259,24 +3253,6 @@ const ShelfActionGroup = ({ router }) => {
     );
 };
 
-
-const REGEX_DIACRITICS = /[\u0300-\u036f]/g;
-const REGEX_PUNCTUATION = /[.,،؛()/]/g;
-const REGEX_NON_ALPHANUM = /[^\p{L}\p{N}\s-]/gu;
-const REGEX_WHITESPACE = /\s+/g;
-
-const normalizeForMatching = (name) => {
-    if (!name) return '';
-    // Chain them efficiently or use a single pass if possible. 
-    // This looks cleaner and avoids memory thrashing.
-    return name.toString().toLowerCase()
-      .normalize("NFD").replace(REGEX_DIACRITICS, "") 
-      .replace(REGEX_PUNCTUATION, ' ') 
-      .replace(REGEX_NON_ALPHANUM, '') 
-      .replace(REGEX_WHITESPACE, ' ') 
-      .trim();
-};
-
 // --- OPTIMIZED COMPONENT: ANIMATED SCORE RING (Fixed Latency) ---
 const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth = 4 }) => {
     // 1. Calculate Geometry immediately
@@ -3343,46 +3319,6 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
         </View>
     );
 });
-
-const buildIngredientIndex = (db) => {
-    const index = new Map();
-    const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
-
-    db.ingredients.forEach(ing => {
-        const entry = { ...ing, _normId: normalize(ing.id) };
-        
-        // Index by everything possible
-        index.set(normalize(ing.id), entry);
-        if (ing.name) index.set(normalize(ing.name), entry);
-        if (ing.scientific_name) index.set(normalize(ing.scientific_name), entry);
-        
-        if (ing.searchKeywords && Array.isArray(ing.searchKeywords)) {
-            ing.searchKeywords.forEach(k => index.set(normalize(k), entry));
-        }
-    });
-    return { index, normalize };
-};
-
-
-const resolveIngredient = (detectedName) => {
-    if (!detectedName) return null;
-    return ingredientIndex.get(normalize(detectedName));
-};
-
-// --- HELPER 2: MECHANISM CLASSIFIER ---
-// Maps specific ingredients to their dermatological function
-const getMechanism = (ingId) => {
-    const id = ingId.toLowerCase();
-    if (['salicylic-acid', 'betaine-salicylate', 'willow-bark'].includes(id)) return 'exfoliation_bha';
-    if (['benzoyl-peroxide', 'tea-tree-oil', 'sulfur'].includes(id)) return 'anti_bacterial';
-    if (['niacinamide', 'zinc-pca', 'green-tea'].includes(id)) return 'sebum_control';
-    if (['retinol', 'tretinoin', 'adapalene', 'retinal'].includes(id)) return 'cell_turnover';
-    if (['vitamin-c', 'ascorbic-acid', 'resveratrol', 'ferulic-acid'].includes(id)) return 'antioxidant';
-    if (['hyaluronic-acid', 'glycerin', 'panthenol'].includes(id)) return 'humectant';
-    if (['ceramides', 'cholesterol', 'fatty-acids', 'squalane'].includes(id)) return 'barrier_repair';
-    if (['hydroquinone', 'kojic-acid', 'alpha-arbutin', 'tranexamic-acid'].includes(id)) return 'tyrosinase_inhibitor';
-    return 'general';
-};
 
 // --- COMPONENT: RICH WEATHER SHEET UI (Fixed) ---
 const WeatherDetailedSheet = ({ insight }) => {
@@ -3959,11 +3895,6 @@ useEffect(() => {
         flex: 1,
         backgroundColor: COLORS.background
     },
-    loadingContainer: {
-        height: 200,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
     divider: {
         height: 1,
         backgroundColor: COLORS.border,
@@ -4000,7 +3931,6 @@ useEffect(() => {
         bottom: 0,
         left: 0,
         right: 0,
-        
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -4131,17 +4061,7 @@ useEffect(() => {
     // ========================================================================
     // --- 5. FLOATING ACTION BUTTON (FAB) ---
     // ========================================================================
-    fab: {
-        position: 'absolute',
-        bottom: 130,
-        right: 20,
-        shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 10
-    },
-    fabRoutine: { // Specific position for Routine tab
+    fabRoutine: { 
         position: 'absolute',
         bottom: 130,
         right: 20,
@@ -4163,19 +4083,10 @@ useEffect(() => {
   
     fabContainer: {
       position: 'absolute',
-      bottom: 130, // Aligned above the dock
+      bottom: 130, 
       right: 20,
       alignItems: 'center',
       zIndex: 999,
-  },
-  fabBackdrop: {
-      position: 'absolute',
-      width: width,
-      height: height,
-      top: -height + 150, // Offset to cover screen
-      left: -width + 40,  // Offset to centered
-      backgroundColor: 'rgba(26, 45, 39, 0.85)', // Matches COLORS.background with high opacity
-      zIndex: -1,
   },
   mainFab: {
       shadowColor: "#000",
@@ -4188,11 +4099,11 @@ useEffect(() => {
   actionBtnWrap: {
       position: 'absolute',
       bottom: 0,
-      right: 4, // Align centers of small buttons with main button
-      flexDirection: 'row', // Label left, Button right
+      right: 4, 
+      flexDirection: 'row', 
       alignItems: 'center',
       justifyContent: 'flex-end',
-      width: 200, // Width to hold the label
+      width: 200, 
       zIndex: 2,
       pointerEvents: 'box-none',
   },
@@ -4211,11 +4122,11 @@ useEffect(() => {
       elevation: 5,
   },
   actionLabelContainer: {
-      backgroundColor: COLORS.card, // Matches your cards
+      backgroundColor: COLORS.card, 
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 10,
-      marginRight: 12, // Space between label and button
+      marginRight: 12, 
       borderWidth: 1,
       borderColor: COLORS.border,
       shadowColor: "#000",
@@ -4232,8 +4143,7 @@ useEffect(() => {
     // ========================================================================
     // --- 6. SECTION: SHELF & PRODUCTS ---
     // ========================================================================
-    // --- Stats Bar ---
-    statsContainer: {
+  statsContainer: {
       flexDirection: 'row-reverse',
       justifyContent: 'space-around',
   },
@@ -4259,7 +4169,6 @@ useEffect(() => {
       alignSelf: 'center'
   },
   
-  // --- New Product List Item ---
   productListItemWrapper: {
       backgroundColor: COLORS.card,
       borderRadius: 20,
@@ -4296,7 +4205,6 @@ useEffect(() => {
       alignItems: 'center',
       gap: 6,
       marginTop: 2,
-      
   },
   listItemVerdict: {
       fontFamily: 'Tajawal-Bold',
@@ -4315,7 +4223,6 @@ useEffect(() => {
       fontSize: 16,
   },
   
-  // --- Swipe to Delete ---
   deleteActionContainer: {
       position: 'absolute',
       right: 0,
@@ -4328,27 +4235,6 @@ useEffect(() => {
       alignItems: 'center',
   },
   
-  // --- Empty State ---
-  emptyState: {
-      alignItems: 'center',
-      marginTop: 40,
-      padding: 30,
-  },
-  emptyText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
-      color: COLORS.textPrimary,
-      marginTop: 15,
-      textAlign: 'center',
-  },
-  emptySub: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
-      color: COLORS.textSecondary,
-      textAlign: 'center',
-      marginTop: 5,
-      lineHeight: 20,
-  },
   emptyStateButton: {
       flexDirection: 'row-reverse',
       gap: 10,
@@ -4365,8 +4251,9 @@ useEffect(() => {
       color: COLORS.textOnAccent,
   },
   
-  // --- Product Details Bottom Sheet (Sophisticated & Scrollable) ---
+  // --- Product Details Bottom Sheet ---
   sheetContent: {
+      flex: 1,
       backgroundColor: COLORS.card,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
@@ -4375,9 +4262,11 @@ useEffect(() => {
       borderBottomWidth: 0,
       maxHeight: height * 0.85,
       overflow: 'hidden',
-  },
-  sheetDraggableArea: {
-      paddingBottom: 5,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -5 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 20,
   },
   sheetPillarsContainer: {
       flexDirection: 'row-reverse',
@@ -4402,10 +4291,6 @@ useEffect(() => {
       fontFamily: 'Tajawal-Regular',
       fontSize: 12,
       color: COLORS.textSecondary,
-  },
-  sheetPillarValue: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
   },
   sheetSection: {
       paddingHorizontal: 15,
@@ -4535,30 +4420,52 @@ useEffect(() => {
         paddingHorizontal: 5,
         paddingBottom: 25,
     },
-    carouselItem: {
+    modernCardContainer: {
         width: 150,
         height: 150,
-        backgroundColor: COLORS.card,
-        borderRadius: 20,
-        padding: 15,
-        
-        borderWidth: 1,
-        borderColor: COLORS.border,
+        borderRadius: 22, 
+        padding: 14,
         justifyContent: 'space-between',
+        borderWidth: 1, 
+        backgroundColor: COLORS.card, 
+        overflow: 'hidden',
     },
-    carouselIconWrapper: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
+    modernCardHeader: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    carouselItemTitle: {
+    modernIconBox: {
+        width: 28,
+        height: 28,
+        borderRadius: 10, 
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        opacity: 0.6,
+    },
+    modernCardTitle: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
         color: COLORS.textPrimary,
         textAlign: 'right',
-        lineHeight: 19,
+        lineHeight: 18,
+        marginTop: 8,
+        marginBottom: 4,
+    },
+    modernCardFooter: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 4,
+        opacity: 0.8,
+    },
+    readMoreText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
     },
     overviewContainer: {
         flexDirection: 'row-reverse',
@@ -4685,16 +4592,14 @@ useEffect(() => {
       borderWidth: 1,
       borderColor: COLORS.border,
       overflow: 'hidden',
-      // Android Shadow
       elevation: 2, 
-      // iOS Shadow
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
   },
   stepHeaderRow: {
-      flexDirection: 'row-reverse', // RTL Layout
+      flexDirection: 'row-reverse', 
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: 12,
@@ -4740,7 +4645,7 @@ useEffect(() => {
   stepProductsScroll: {
       flexDirection: 'row-reverse',
       gap: 8,
-      paddingRight: 4, // Padding for first item scroll
+      paddingRight: 4, 
   },
   chipIconBox: {
       width: 18,
@@ -4776,15 +4681,25 @@ useEffect(() => {
   editIndicator: {
       position: 'absolute',
       bottom: 6,
-      left: 12, // Since it's RTL, left is the "end"
+      left: 12, 
       opacity: 0.5
+  },
+  stepProductChip: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      backgroundColor: COLORS.background,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+      maxWidth: 160,
   },
     
     // ========================================================================
     // --- 9. SECTION: INGREDIENTS ---
     // ========================================================================
     
-    // --- Search & Filters ---
     searchBar: {
       flexDirection: 'row-reverse',
       backgroundColor: COLORS.card,
@@ -4805,30 +4720,6 @@ useEffect(() => {
       textAlign: 'right',
       paddingVertical: 10,
     },
-    filterPill: {
-      backgroundColor: COLORS.card,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 6,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-    },
-    filterPillActive: {
-      backgroundColor: COLORS.accentGreen,
-      borderColor: COLORS.accentGreen,
-    },
-    filterText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textSecondary,
-    },
-    filterTextActive: {
-      color: COLORS.textOnAccent,
-      fontFamily: 'Tajawal-Bold',
-    },
   
     // --- LIST CARD STYLES ---
     ingCard: {
@@ -4845,7 +4736,7 @@ useEffect(() => {
         elevation: 2,
     },
     ingCardContent: {
-        flexDirection: 'row-reverse', // Critical: Forces RTL layout
+        flexDirection: 'row-reverse', 
         alignItems: 'center',
         padding: 12,
         gap: 12,
@@ -4875,7 +4766,6 @@ useEffect(() => {
         color: COLORS.textPrimary,
         textAlign: 'right',
     },
-    // *** Scientific Name Style (Added) ***
     ingSciText: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 11,
@@ -4905,8 +4795,6 @@ useEffect(() => {
     },
   
     // --- MODAL STYLES ---
-    
-    // Header
     ingModalHeader: {
       backgroundColor: COLORS.card,
       borderBottomWidth: 1,
@@ -4921,7 +4809,6 @@ useEffect(() => {
       textAlign: 'right',
       marginBottom: 4,
     },
-    // *** Scientific Name in Modal (Added) ***
     ingModalScientific: {
       fontFamily: 'Tajawal-Regular',
       fontSize: 13,
@@ -4963,7 +4850,6 @@ useEffect(() => {
       color: COLORS.textSecondary,
     },
   
-    // Content Sections
     ingSection: {
       marginBottom: 30,
     },
@@ -5039,7 +4925,6 @@ useEffect(() => {
       lineHeight: 20,
     },
   
-    // *** Synergy & Conflict Styles (Added) ***
     interactionHeader: {
       fontFamily: 'Tajawal-Bold',
       fontSize: 13,
@@ -5072,7 +4957,6 @@ useEffect(() => {
       opacity: 0.7,
     },
     
-    // Products Chip
     productChip: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
@@ -5104,7 +4988,7 @@ useEffect(() => {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: COLORS.accentGreen,
-      marginBottom: 120 // Extra space for dock
+      marginBottom: 120 
   },
   loadMoreText: {
       fontFamily: 'Tajawal-Bold',
@@ -5112,7 +4996,6 @@ useEffect(() => {
       color: COLORS.textPrimary,
   },
   
-    
     // ========================================================================
     // --- 10. SECTION: MIGRATION ---
     // ========================================================================
@@ -5299,140 +5182,147 @@ useEffect(() => {
     // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
     // ========================================================================
     
-    // --- Overlays & Containers ---
-    sheetOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.65)',
-      justifyContent: 'flex-end',
-  },
-  backdrop: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: '#000',
-      zIndex: 1,
-  },
-  sheetContainer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: height * 0.85, // Standard height for most sheets
-      zIndex: 2,
-      justifyContent: 'flex-end',
-  },
-  sheetContent: {
-      flex: 1,
-      backgroundColor: COLORS.card,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      overflow: 'hidden',
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: -5 },
-      shadowOpacity: 0.3,
-      shadowRadius: 10,
-      elevation: 20,
-  },
-  sheetHandleBar: {
-      alignItems: 'center',
-      paddingVertical: 15,
-      backgroundColor: COLORS.card,
-      width: '100%',
-  },
-  sheetHandle: {
-      width: 40,
-      height: 5,
-      backgroundColor: COLORS.border,
-      borderRadius: 2.5,
-  },
-  
-  // --- Specific Modal Content Styles ---
-  sheetProductTitle: {
-      fontFamily: 'Tajawal-ExtraBold',
-      fontSize: 20,
-      color: COLORS.textPrimary,
-      textAlign: 'center',
-      paddingHorizontal: 20,
-      marginBottom: 10,
-  },
-  
-    // --- Modal/Sheet Header (Unified) ---
-    modalHeader: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 15,
-      marginBottom: 20,
-  },
-  modalIconContainer: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  modalTitle: {
-      flex: 1,
-      fontFamily: 'Tajawal-ExtraBold',
-      fontSize: 18,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-  },
-  modalDescription: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 15,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-      lineHeight: 24,
-      marginBottom: 20,
-  },
-  relatedProductsTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 14,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-      marginBottom: 10,
-  },
-    relatedProductItem: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        textAlign: 'right',
-        marginBottom: 4,
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000',
+        zIndex: 99,
+    },
+    sheetContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: height * 0.85, // Occupies 85% of the screen
+        zIndex: 100,
+        justifyContent: 'flex-end',
+    },
+    sheetContent: {
+        flex: 1,
+        backgroundColor: COLORS.card,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 25,
+    },
+    sheetHandleBar: {
+        alignItems: 'center',
+        paddingVertical: 15,
+        width: '100%',
+        backgroundColor: COLORS.card,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.02)',
+    },
+    sheetHandle: {
+        width: 48,
+        height: 5,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 10,
+    },
+    sheetProductTitle: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 22,
+        color: COLORS.textPrimary,
+        textAlign: 'center',
+        marginTop: 10,
         paddingHorizontal: 20,
     },
-    promptModalSub: {
+    sheetSection: {
+        marginBottom: 20,
+    },
+    sheetSectionTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        color: COLORS.textSecondary,
+        textAlign: 'right', // RTL
+        marginBottom: 10,
+        paddingRight: 5,
+    },
+  
+    // --- Alert Box (Dynamic Colored Cards) ---
+    alertBox: {
+        flexDirection: 'row-reverse', // RTL
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 16,
+        borderWidth: 1,
+        gap: 12,
+    },
+    alertBoxText: {
+        flex: 1,
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        textAlign: 'right', // RTL
+        lineHeight: 20,
+    },
+  
+    // --- Pillars (Safety & Efficacy) ---
+    sheetPillarsContainer: {
+        flexDirection: 'row-reverse', // RTL
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    sheetPillar: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 8,
+    },
+    sheetDividerVertical: {
+        width: 1,
+        height: '80%',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignSelf: 'center',
+    },
+    sheetPillarLabel: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 13,
         color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginBottom: 20,
-        marginTop: 5,
     },
-    promptInput: {
-        backgroundColor: COLORS.background,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: 12,
-        padding: 14,
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
+    sheetPillarValue: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 24,
         color: COLORS.textPrimary,
-        textAlign: 'right',
-        marginHorizontal: 20,
-        marginBottom: 25,
     },
   
-    // --- Modal/Sheet Action Buttons ---
-    closeButton: {
-        backgroundColor: COLORS.accentGreen,
-        padding: 14,
+    // --- Ingredient Chips ---
+    ingredientChip: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingVertical: 8,
+        paddingHorizontal: 14,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    ingredientChipText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textPrimary,
+    },
+  
+    // --- Close Button ---
+    closeButton: {
+        backgroundColor: COLORS.card,
+        paddingVertical: 15,
+        borderRadius: 16,
         alignItems: 'center',
-        marginHorizontal: 20,
-        marginTop: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+        marginBottom: 20, // Bottom margin for safety
     },
     closeButtonText: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 16,
-        color: COLORS.textOnAccent,
+        color: COLORS.textPrimary,
     },
     promptButtonRow: {
         flexDirection: 'row-reverse',
@@ -5509,20 +5399,12 @@ useEffect(() => {
         marginBottom: 10,
         marginHorizontal: 20,
     },
-    reorderControls: {
-        gap: 8,
-        marginLeft: 10,
-        paddingHorizontal: 5,
-    },
     reorderItemText: {
         flex: 1,
         fontFamily: 'Tajawal-Regular',
         fontSize: 14,
         color: COLORS.textPrimary,
         textAlign: 'right',
-    },
-    reorderRemoveButton: {
-        padding: 8,
     },
     saveStepButton: {
         backgroundColor: COLORS.accentGreen,
@@ -5553,118 +5435,6 @@ useEffect(() => {
         color: COLORS.textPrimary,
         fontSize: 14,
     },
-    stepCardContainer: {
-      backgroundColor: COLORS.card,
-      borderRadius: 18,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      overflow: 'hidden',
-      // Android Shadow
-      elevation: 2, 
-      // iOS Shadow
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-  },
-  stepHeaderRow: {
-      flexDirection: 'row-reverse', // RTL Layout
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 12,
-      paddingBottom: 0,
-  },
-  stepTitleGroup: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 12,
-  },
-  stepNumberBadge: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  stepNumberText: {
-      fontFamily: 'Tajawal-ExtraBold',
-      fontSize: 16,
-      color: '#fff',
-  },
-  stepName: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-  },
-  stepSubText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 11,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-  },
-  deleteIconButton: {
-      padding: 8,
-      opacity: 0.7,
-  },
-  stepBody: {
-      padding: 12,
-      paddingTop: 10,
-  },
-  stepProductsScroll: {
-      flexDirection: 'row-reverse',
-      gap: 8,
-      paddingRight: 4, // Padding for first item scroll
-  },
-  stepProductChip: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      backgroundColor: COLORS.background,
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)',
-      maxWidth: 160,
-  },
-  chipIconBox: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginLeft: 6,
-  },
-  stepProductText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textPrimary,
-      flexShrink: 1,
-  },
-  stepEmptyState: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 10,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      borderStyle: 'dashed',
-      borderRadius: 12,
-      backgroundColor: 'rgba(0,0,0,0.1)',
-  },
-  stepEmptyLabel: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textDim,
-  },
-  editIndicator: {
-      position: 'absolute',
-      bottom: 6,
-      left: 12, // Since it's RTL, left is the "end"
-      opacity: 0.5
-  },
   barrierTrack: {
       height: 8,
       backgroundColor: 'rgba(255,255,255,0.05)',
@@ -5714,7 +5484,7 @@ useEffect(() => {
   },
   balanceBarTrack: {
       height: 12,
-      flexDirection: 'row', // Left to Right for the bar visuals
+      flexDirection: 'row', 
       backgroundColor: 'rgba(255,255,255,0.05)',
       borderRadius: 10,
       width: '100%',
@@ -5786,7 +5556,7 @@ customAlertContainer: {
 },
 customAlertIconContainer: {
     marginBottom: 15,
-    marginTop: -45, // Floating effect
+    marginTop: -45, 
     shadowColor: COLORS.accentGreen,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -5841,11 +5611,7 @@ stepNumber: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
 },
-stepNumberText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.accentGreen,
-},
+
 stepText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 13,
@@ -5882,7 +5648,6 @@ customAlertBtnPrimary: {
     shadowRadius: 8,
     elevation: 4,
 },
-// New wrapper to force centering of content
 btnContentWrapper: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -5912,7 +5677,7 @@ customAlertBtnTextSecondary: {
     textAlign: 'center',
 },
 weatherWidgetCard: {
-    flexDirection: 'row-reverse', // RTL Layout
+    flexDirection: 'row-reverse', 
     alignItems: 'center',
     borderRadius: 22,
     padding: 16,
@@ -5932,7 +5697,7 @@ weatherIconContainer: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 15, // Space between icon and text
+    marginLeft: 15, 
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
 },
@@ -5949,9 +5714,8 @@ weatherWidgetSub: {
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'right',
 },
-// The Data Pills
 weatherPillsRow: {
-    flexDirection: 'row-reverse', // RTL
+    flexDirection: 'row-reverse', 
     gap: 8,
 },
 weatherPill: {
@@ -5968,7 +5732,6 @@ weatherPillText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
 },
-// Action Button
 weatherActionBtn: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -5983,5 +5746,78 @@ weatherActionText: {
     color: '#fff',
     fontFamily: 'Tajawal-Bold',
     fontSize: 10,
+},
+
+// weather caard styles
+weatherCardContainer: {
+    width: 150, 
+    height: 150, 
+    borderRadius: 22, 
+    padding: 14, 
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+},
+weatherCardHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+},
+weatherIconCircle: {
+    width: 28, 
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+},
+liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+    opacity: 0.8,
+},
+weatherCardTitle: {
+    fontFamily: 'Tajawal-ExtraBold', 
+    fontSize: 15,
+    color: '#fff',
+    textAlign: 'right',
+    marginTop: 8,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+},
+weatherCardFooter: {
+    flexDirection: 'row-reverse', 
+},
+glassPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)', 
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignSelf: 'flex-start', 
+},
+glassPillText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 11,
+    color: '#fff',
+},
+glassSeparator: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 6,
 },
   });

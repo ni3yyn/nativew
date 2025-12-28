@@ -5,7 +5,6 @@ import {
   Animated, Easing, ImageBackground, StatusBar, 
   LayoutAnimation, UIManager
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
@@ -32,18 +31,21 @@ const FEATURES = [
 ];
 
 const COLORS = {
-  primary: '#B2D8B4',
-  primaryDark: '#5E8C61',
-  darkGreen: '#1a3b25',
-  text: '#FFFFFF',
-  textDim: 'rgba(255, 255, 255, 0.75)',
-  glassTint: 'rgba(8, 20, 15, 0.65)', // Slightly more transparent for depth
-  glassBorder: 'rgba(178, 216, 180, 0.2)',
-  inputBg: 'rgba(0, 0, 0, 0.2)',
-  inputBgActive: 'rgba(20, 50, 35, 0.4)',
-  error: '#ff6b6b', 
-  success: '#B2D8B4' 
-};
+    primary: '#B2D8B4',
+    primaryDark: '#5E8C61',
+    darkGreen: '#1a3b25',
+    text: '#FFFFFF',
+    textDim: 'rgba(255, 255, 255, 0.75)',
+    
+    // UPDATE THIS LINE (Darker opacity to replace blur)
+    glassTint: 'rgba(5, 15, 10, 0.90)', 
+    
+    glassBorder: 'rgba(178, 216, 180, 0.2)',
+    inputBg: 'rgba(0, 0, 0, 0.2)',
+    inputBgActive: 'rgba(20, 50, 35, 0.4)',
+    error: '#ff6b6b', 
+    success: '#B2D8B4' 
+  };
 
 // --- COMPONENT: SMOOTH TOAST NOTIFICATION (Replaces Modal) ---
 const FloatingToast = ({ visible, title, message, type }) => {
@@ -70,14 +72,15 @@ const FloatingToast = ({ visible, title, message, type }) => {
 
     return (
         <Animated.View style={[styles.toastContainer, { opacity, transform: [{ translateY }] }]}>
-            <BlurView intensity={40} tint="dark" style={styles.toastGlass}>
+            {/* REPLACED BLURVIEW WITH VIEW */}
+            <View style={styles.toastGlass}>
                 <View style={[styles.toastBar, { backgroundColor: barColor }]} />
                 <View style={styles.toastContent}>
                     <Text style={styles.toastTitle}>{title}</Text>
                     <Text style={styles.toastMessage}>{message}</Text>
                 </View>
                 <FontAwesome5 name={iconName} size={24} color={iconColor} style={{ marginLeft: 15 }} />
-            </BlurView>
+            </View>
         </Animated.View>
     );
 };
@@ -259,8 +262,7 @@ const PromoSlider = () => {
 
     return (
         <View style={styles.sliderOuterContainer}>
-            <BlurView intensity={10} tint="light" style={[styles.sliderGlass, { backgroundColor: COLORS.glassTint }]}>
-                
+            <View style={[styles.sliderGlass, { backgroundColor: COLORS.glassTint }]}>  
                 <Animated.ScrollView
                     ref={slidesRef}
                     horizontal
@@ -306,7 +308,7 @@ const PromoSlider = () => {
                         );
                     })}
                 </View>
-            </BlurView>
+            </View>
         </View>
     );
 };
@@ -467,8 +469,7 @@ export default function LoginScreen() {
                 <PromoSlider />
 
                 <View style={styles.formOuterContainer}>
-                    <BlurView intensity={15} tint="dark" style={[styles.formGlass, { backgroundColor: COLORS.glassTint }]} >
-                        
+                <View style={[styles.formGlass, { backgroundColor: COLORS.glassTint }]} > 
                         {/* Smooth Switching Content */}
                         <Animated.View style={{ 
                             padding: 25, 
@@ -497,7 +498,7 @@ export default function LoginScreen() {
                             </TouchableOpacity>
                         </Animated.View>
 
-                    </BlurView>
+                    </View>
                 </View>
 
                 <Text style={styles.copyright}>© وثيق | تكنولوجيا الجمال الجزائرية</Text>
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
       zIndex: 100, borderRadius: 16, overflow: 'hidden',
       shadowColor: "#000", shadowOffset: {width: 0, height: 5}, shadowOpacity: 0.3, shadowRadius: 10, elevation: 20
   },
-  toastGlass: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: 'rgba(20, 30, 25, 0.95)' },
+  toastGlass: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: 'rgba(20, 30, 25, 0.96)' },
   toastBar: { width: 4, height: '100%', position: 'absolute', left: 0, top: 0, bottom: 0 },
   toastContent: { flex: 1 },
   toastTitle: { color: COLORS.text, fontSize: 16, fontFamily: 'Tajawal-Bold', marginBottom: 4, textAlign: 'right' },

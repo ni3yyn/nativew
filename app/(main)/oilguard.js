@@ -3,8 +3,9 @@ import {
   View, Text, TouchableOpacity, Dimensions, 
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, SafeAreaView, FlatList, Slider, PanResponder, Vibration, StyleSheet
+  RefreshControl, Easing, SafeAreaView, FlatList, PanResponder, Vibration, StyleSheet
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
@@ -430,12 +431,16 @@ const Pagination = ({ data, scrollX }) => {
 
 const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   const getWarningStyle = (level) => {
-    switch (level) {
+    // Normalize input to lowercase to ensure matching works even if backend sends "Risk" instead of "risk"
+    const safeLevel = level ? level.toLowerCase() : '';
+    
+    switch (safeLevel) {
       case 'risk':
         return { color: COLORS.danger, icon: 'exclamation-circle' };
       case 'caution':
         return { color: COLORS.warning, icon: 'exclamation-triangle' };
       default: 
+        // Default (Info) - usually blue/green depending on your theme
         return { color: COLORS.info, icon: 'info-circle' };
     }
   };
@@ -453,10 +458,11 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
       outputRange: [0.6, 1, 0.6],
       extrapolate: 'clamp',
   });
+  
   return (
     <StaggeredItem index={index}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <View  intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+            <View intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
         <View style={styles.ingHeader}>
           <Text style={styles.ingName}>{ingredient.name}</Text>
           <View style={styles.ingTagsContainer}>
@@ -489,9 +495,10 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
             {ingredient.warnings.map((warning, idx) => {
               const style = getWarningStyle(warning.level);
               return (
-                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20` }]}>
+                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
                   <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
-                  <Text style={styles.ingWarningText}>{warning.text}</Text>
+                  {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
+                  <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
                 </View>
               );
             })}
