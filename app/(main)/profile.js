@@ -1319,90 +1319,62 @@ const InsightCarousel = ({ insights, onSelect }) => (
 };
 
 // --- NEW: COMPACT WEATHER WIDGET (Main Screen) ---
-const WeatherCompactWidget = ({ insight, onPress, onRetry }) => {
+const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }) => {
     
-    // Theme Logic
+    // 1. Extract Data
+    const meta = insight.customData?.meta || {};
+    const { temp, uvIndex, humidity } = meta;
+    const isPermissionError = insight.customData?.isPermissionError;
+    const isServiceError = insight.customData?.isServiceError;
+
+    // 2. Theme Logic
     const getTheme = () => {
         const id = insight.id.toLowerCase();
         
-        // 1. Permission Error
-        if (insight.customData?.isPermissionError) {
+        if (isPermissionError) {
             return { 
-                colors: ['#4b5563', '#1f2937'], 
+                colors: ['#374151', '#1f2937'], // Dark Gray
                 icon: 'map-marker-alt', 
-                actionText: 'تفعيل الموقع',
-                isAction: 'permission'
+                actionText: 'تفعيل', 
+                isAction: 'permission',
+                title: 'الموقع غير مفعل'
             };
         }
-        // 2. Service Error
-        if (insight.customData?.isServiceError) {
+        if (isServiceError) {
             return { 
-                colors: ['#d97706', '#92400e'], 
+                colors: ['#b45309', '#78350f'], // Amber/Brown
                 icon: 'wifi', 
-                actionText: 'إعادة المحاولة',
-                isAction: 'retry'
+                actionText: 'تحديث', 
+                isAction: 'retry',
+                title: 'الطقس غير متاح'
             };
         }
-        // 3. Good Weather
-        if (insight.severity === 'good' || id.includes('normal')) {
-            return { colors: ['#10b981', '#059669'], icon: 'smile-beam', actionText: 'التفاصيل' };
-        }
-        // 4. Bad Weather
-        if (id.includes('uv') || id.includes('sun')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', actionText: 'الحماية' };
-        if (id.includes('dry') || id.includes('wind')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'wind', actionText: 'الترطيب' };
-        if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', actionText: 'التنظيف' };
         
-        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', actionText: 'عرض' };
+        // Good Weather
+        if (insight.severity === 'good') {
+            return { colors: ['#10b981', '#059669'], icon: 'smile-beam', actionText: 'التفاصيل', title: 'الطقس مثالي' };
+        }
+        // Bad Weather
+        if (id.includes('uv')) return { colors: ['#ef4444', '#991b1b'], icon: 'sun', actionText: 'الحماية', title: 'خطر أشعة UV' };
+        if (id.includes('dry')) return { colors: ['#3b82f6', '#1e40af'], icon: 'tint-slash', actionText: 'الترطيب', title: 'جفاف شديد' };
+        if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', actionText: 'التنظيف', title: 'تلوث جوي' };
+        if (id.includes('humid')) return { colors: ['#f97316', '#c2410c'], icon: 'water', actionText: 'نصائح', title: 'رطوبة عالية' };
+        
+        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', actionText: 'عرض', title: 'حالة الطقس' };
     };
 
     const theme = getTheme();
 
     const handlePress = async () => {
         Haptics.selectionAsync();
-        
         if (theme.isAction === 'permission') {
-            // --- WEB SUPPORT ---
-            if (Platform.OS === 'web') {
+            if (Platform.OS === 'web') alert("يرجى تفعيل الموقع.");
+            else {
                 try {
-                    // Try to ask again
                     const { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status === 'granted') {
-                        if (onRetry) onRetry(true);
-                    } else {
-                        // Web Alert: Tell them to fix it in the browser
-                        alert("تم حظر الموقع. يرجى الضغط على أيقونة القفل 🔒 في شريط العنوان والسماح بالوصول للموقع، ثم تحديث الصفحة.");
-                    }
-                } catch (e) {
-                    console.log("Web Permission Error", e);
-                }
-                return; // Stop here for Web
-            }
-
-            // --- NATIVE MOBILE SUPPORT ---
-            try {
-                // 1. Try Native Popup
-                const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
-                
-                if (status === 'granted') {
-                    if (onRetry) onRetry(true); 
-                } else {
-                    // 2. Guide to Settings if blocked
-                    if (!canAskAgain || status === 'denied') {
-                        Alert.alert(
-                            "الموقع مطلوب",
-                            "لتحليل الطقس، يرجى تفعيل الموقع من الإعدادات:\n\n1. اضغط على 'الإعدادات'\n2. اختر 'الموقع'\n3. اختر 'أثناء استخدام التطبيق'",
-                            [
-                                { text: "إلغاء", style: "cancel" },
-                                { 
-                                    text: "الإعدادات", 
-                                    onPress: () => Linking.openSettings() 
-                                }
-                            ]
-                        );
-                    }
-                }
-            } catch (e) {
-                Linking.openSettings();
+                    if (status === 'granted' && onRetry) onRetry(true);
+                    else if (onPermissionBlocked) onPermissionBlocked();
+                } catch { if (onPermissionBlocked) onPermissionBlocked(); }
             }
         } 
         else if (theme.isAction === 'retry') {
@@ -1418,30 +1390,42 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry }) => {
             <PressableScale onPress={handlePress}>
                 <LinearGradient 
                     colors={theme.colors} 
-                    style={styles.focusInsightCard} 
+                    style={styles.weatherWidgetCard} // New Style
                     start={{x: 0, y: 0}} end={{x: 1, y: 1}}
                 >
-                    <View style={styles.focusInsightHeader}>
-                        <FontAwesome5 name={theme.icon} size={22} color="#fff" />
-                        <Text style={[styles.focusInsightTitle, { color: '#fff', marginLeft: 10 }]}>
-                            {insight.title}
-                        </Text>
+                    {/* LEFT: Main Icon */}
+                    <View style={styles.weatherIconContainer}>
+                        <FontAwesome5 name={theme.icon} size={24} color="#fff" />
                     </View>
-                    
-                    <Text style={[styles.focusInsightSummary, { color: 'rgba(255,255,255,0.95)' }]} numberOfLines={2}>
-                        {insight.short_summary}
-                    </Text>
-                    
-                    <View style={styles.focusInsightAction}>
-                        <Text style={[styles.focusInsightActionText, { color: '#fff' }]}>
-                            {theme.actionText}
-                        </Text>
-                        <Feather 
-                            name={theme.isAction === 'permission' ? "map-pin" : theme.isAction === 'retry' ? "refresh-cw" : "chevron-left"} 
-                            size={16} 
-                            color="#fff" 
-                        />
+
+                    {/* MIDDLE: Info */}
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <Text style={styles.weatherWidgetTitle}>{theme.title}</Text>
+                        
+                        {/* Data Pills (Only show if data exists) */}
+                        {!isPermissionError && !isServiceError && temp !== undefined ? (
+                            <View style={styles.weatherPillsRow}>
+                                <View style={styles.weatherPill}>
+                                    <Text style={styles.weatherPillText}>{Math.round(temp)}°</Text>
+                                    <FontAwesome5 name="thermometer-half" size={10} color="rgba(255,255,255,0.9)" />
+                                </View>
+                                <View style={styles.weatherPill}>
+                                    <Text style={styles.weatherPillText}>{Math.round(uvIndex)}</Text>
+                                    <Text style={[styles.weatherPillText, {fontSize: 8, marginRight: 2}]}>UV</Text>
+                                    <FontAwesome5 name="sun" size={10} color="rgba(255,255,255,0.9)" />
+                                </View>
+                            </View>
+                        ) : (
+                            <Text style={styles.weatherWidgetSub}>{insight.short_summary}</Text>
+                        )}
                     </View>
+
+                    {/* RIGHT: Action Button */}
+                    <View style={styles.weatherActionBtn}>
+                        <Text style={styles.weatherActionText}>{theme.actionText}</Text>
+                        <Feather name="chevron-left" size={16} color="#fff" />
+                    </View>
+
                 </LinearGradient>
             </PressableScale>
         </StaggeredItem>
@@ -1449,7 +1433,7 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry }) => {
 };
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry }) => {
+const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry, onShowPermissionAlert }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
   
@@ -1534,7 +1518,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 {focusInsight ? (
                     // Conditional Rendering based on Type
                     focusInsight.customData?.type === 'weather_advice' ? (
-                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} onRetry={onRetry} />
+                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} onRetry={onRetry} onPermissionBlocked={onShowPermissionAlert} />
                     ) : (
                         <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
                     )
@@ -3527,6 +3511,133 @@ const WeatherDetailedSheet = ({ insight }) => {
     );
 };
 
+const LocationPermissionModal = ({ visible, onClose }) => {
+    // 1. Internal state to keep Modal mounted during exit animation
+    const [showModal, setShowModal] = useState(visible);
+    
+    // 2. Animation Values
+    const slideAnim = useRef(new Animated.Value(100)).current; // Start 100px down
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) {
+            setShowModal(true); // Mount immediately
+            // Animate IN
+            Animated.parallel([
+                Animated.spring(slideAnim, { 
+                    toValue: 0, 
+                    friction: 8, 
+                    tension: 60, 
+                    useNativeDriver: true 
+                }),
+                Animated.timing(opacityAnim, { 
+                    toValue: 1, 
+                    duration: 300, 
+                    useNativeDriver: true 
+                })
+            ]).start();
+        } else {
+            // Animate OUT
+            Animated.parallel([
+                Animated.timing(slideAnim, { 
+                    toValue: 100, // Slide back down
+                    duration: 250, 
+                    easing: Easing.in(Easing.cubic),
+                    useNativeDriver: true 
+                }),
+                Animated.timing(opacityAnim, { 
+                    toValue: 0, 
+                    duration: 200, 
+                    useNativeDriver: true 
+                })
+            ]).start(({ finished }) => {
+                // Only unmount AFTER animation finishes
+                if (finished) {
+                    setShowModal(false);
+                }
+            });
+        }
+    }, [visible]);
+
+    // Don't render anything if internal state is false
+    if (!showModal) return null;
+
+    const handleSettings = () => {
+        // Trigger close animation first, then open settings
+        onClose(); 
+        // Small delay to let animation start before app switches context
+        setTimeout(() => Linking.openSettings(), 300);
+    };
+
+    return (
+        <Modal transparent visible={showModal} onRequestClose={onClose} animationType="none" statusBarTranslucent>
+            <View style={styles.customAlertOverlay}>
+                {/* Backdrop Fade */}
+                <Animated.View style={[styles.customAlertBackdrop, { opacity: opacityAnim }]}>
+                    <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+                </Animated.View>
+
+                {/* Main Card Slide */}
+                <Animated.View style={[
+                    styles.customAlertContainer, 
+                    { 
+                        opacity: opacityAnim,
+                        transform: [{ translateY: slideAnim }] 
+                    }
+                ]}>
+                    
+                    {/* Floating Icon */}
+                    <View style={styles.customAlertIconContainer}>
+                        <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.customAlertIconBg}>
+                            <FontAwesome5 name="map-marked-alt" size={28} color="#fff" />
+                        </LinearGradient>
+                    </View>
+
+                    <Text style={styles.customAlertTitle}>الموقع مطلوب</Text>
+                    <Text style={styles.customAlertBody}>
+                        لتحليل الطقس بدقة وحماية بشرتك، نحتاج إلى معرفة ظروف منطقتك.
+                    </Text>
+
+                    {/* Steps */}
+                    <View style={styles.customAlertSteps}>
+                        <View style={styles.stepItem}>
+                            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
+                            <Text style={styles.stepText}>اضغط على زر <Text style={styles.boldText}>الإعدادات</Text></Text>
+                        </View>
+                        <View style={styles.stepConnector} />
+                        <View style={styles.stepItem}>
+                            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
+                            <Text style={styles.stepText}>اختر <Text style={styles.boldText}>الموقع (Location)</Text></Text>
+                        </View>
+                        <View style={styles.stepConnector} />
+                        <View style={styles.stepItem}>
+                            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
+                            <Text style={styles.stepText}>اختر <Text style={styles.boldText}>دائماً</Text> أو <Text style={styles.boldText}>أثناء الاستخدام</Text></Text>
+                        </View>
+                    </View>
+
+                    {/* Actions */}
+                    <View style={styles.customAlertActions}>
+                        <PressableScale onPress={onClose} style={styles.customAlertBtnSecondary}>
+                            <Text style={styles.customAlertBtnTextSecondary}>إلغاء</Text>
+                        </PressableScale>
+                        
+                        <PressableScale onPress={handleSettings} style={styles.customAlertBtnPrimary}>
+                            {/* Content Wrapper to force centering */}
+                            <View style={styles.btnContentWrapper}>
+                                <Text style={styles.customAlertBtnTextPrimary}>الإعدادات</Text>
+                                <FontAwesome5 name="cog" size={14} color={COLORS.textOnAccent} />
+                            </View>
+                        </PressableScale>
+                    </View>
+
+                </Animated.View>
+            </View>
+        </Modal>
+    );
+};
+
+
 // ============================================================================
 //                       MAIN PROFILE CONTROLLER
 // ============================================================================
@@ -3588,6 +3699,7 @@ export default function ProfileScreen() {
     // --- NEW: SERVER SIDE ANALYSIS FETCH ---
     const [analysisData, setAnalysisData] = useState(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
   
     useEffect(() => {
     let isMounted = true;
@@ -3809,6 +3921,8 @@ useEffect(() => {
                           handleDismissPraise={handleDismissPraise} 
                           userProfile={userProfile} 
                           locationPermission={locationPermission} 
+                          onRetry={() => runAnalysis(false)} 
+                          onShowPermissionAlert={() => setPermissionModalVisible(true)} // <--- PASS DOWN
                       />
                   )}
                   
@@ -3829,6 +3943,10 @@ useEffect(() => {
           <NatureDock tabs={TABS} activeTab={activeTab} onTabChange={switchTab} />
           <AddStepModal isVisible={isAddStepModalVisible} onClose={() => setAddStepModalVisible(false)} onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }} />
           {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
+          <LocationPermissionModal 
+              visible={isPermissionModalVisible} 
+              onClose={() => setPermissionModalVisible(false)} 
+          />
       </View>
     );
   }
@@ -5639,4 +5757,231 @@ useEffect(() => {
       marginTop: 2,
       marginLeft: 10
   },
+
+// --- CUSTOM ALERT MODAL STYLES ---
+customAlertOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 1000,
+},
+customAlertBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+},
+customAlertContainer: {
+    width: '85%',
+    backgroundColor: COLORS.card,
+    borderRadius: 28,
+    padding: 25,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.4,
+    shadowRadius: 30,
+    elevation: 20,
+},
+customAlertIconContainer: {
+    marginBottom: 15,
+    marginTop: -45, // Floating effect
+    shadowColor: COLORS.accentGreen,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+},
+customAlertIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: COLORS.card,
+},
+customAlertTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 20,
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+    marginTop: 5,
+},
+customAlertBody: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 25,
+    paddingHorizontal: 10,
+},
+
+// Steps
+customAlertSteps: {
+    width: '100%',
+    alignItems: 'flex-end',
+    marginBottom: 25,
+    paddingRight: 10,
+},
+stepItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+},
+stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+},
+stepNumberText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    color: COLORS.accentGreen,
+},
+stepText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+},
+boldText: {
+    fontFamily: 'Tajawal-Bold',
+    color: COLORS.textPrimary,
+},
+stepConnector: {
+    height: 12,
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginRight: 11.5,
+    marginVertical: 4,
+},
+
+// Buttons
+customAlertActions: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    width: '100%',
+},
+customAlertBtnPrimary: {
+    flex: 1,
+    backgroundColor: COLORS.accentGreen,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.accentGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+},
+// New wrapper to force centering of content
+btnContentWrapper: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+},
+customAlertBtnSecondary: {
+    flex: 0.6,
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+},
+customAlertBtnTextPrimary: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 15,
+    color: COLORS.textOnAccent,
+    textAlign: 'center',
+},
+customAlertBtnTextSecondary: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+},
+weatherWidgetCard: {
+    flexDirection: 'row-reverse', // RTL Layout
+    alignItems: 'center',
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+},
+weatherIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 15, // Space between icon and text
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+},
+weatherWidgetTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'right',
+    marginBottom: 6,
+},
+weatherWidgetSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'right',
+},
+// The Data Pills
+weatherPillsRow: {
+    flexDirection: 'row-reverse', // RTL
+    gap: 8,
+},
+weatherPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    gap: 4,
+},
+weatherPillText: {
+    color: '#fff',
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+},
+// Action Button
+weatherActionBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginRight: 5,
+    gap: 4
+},
+weatherActionText: {
+    color: '#fff',
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 10,
+},
   });
