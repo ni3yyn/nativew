@@ -5,6 +5,7 @@ import {
   Platform, UIManager, Alert, StatusBar, ActivityIndicator, LayoutAnimation,
   RefreshControl, Keyboard, Easing, I18nManager
 } from 'react-native';
+import * as Linking from 'expo-linking';
 import { TouchableWithoutFeedback } from 'react-native'; 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PanResponder } from 'react-native';
@@ -906,45 +907,54 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
 
             <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                 <View style={styles.sheetContent}>
-                    {/* Header (Draggable) */}
-                    <View {...panResponder.panHandlers} style={styles.ingModalHeader}>
-                        <View style={styles.sheetHandleBar}><View style={styles.sheetHandle}/></View>
-                        <Text style={styles.sheetProductTitle} numberOfLines={2}>{product.productName}</Text>
-                    </View>
+                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
-                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-                        {/* Pillars */}
-                        <View style={styles.sheetPillarsContainer}>
-                            <View style={styles.sheetPillar}>
-                                <FontAwesome5 name="shield-alt" size={20} color={COLORS.success} />
-                                <Text style={styles.sheetPillarLabel}>الأمان</Text>
-                                <Text style={[styles.sheetPillarValue, { color: COLORS.success }]}>{safety?.score || 0}%</Text>
-                            </View>
-                            <View style={styles.sheetDividerVertical} />
-                            <View style={styles.sheetPillar}>
-                                <FontAwesome5 name="flask" size={20} color={COLORS.info} />
-                                <Text style={styles.sheetPillarLabel}>الفعالية</Text>
-                                <Text style={[styles.sheetPillarValue, { color: COLORS.info }]}>{efficacy?.score || 0}%</Text>
-                            </View>
-                        </View>
-
-                        {/* Alerts */}
-                        {user_specific_alerts.map((alert, index) => (
-                            <View key={index} style={[styles.alertBox, { backgroundColor: COLORS.warning + '15', borderColor: COLORS.warning }]}>
-                                <FontAwesome5 name="exclamation-triangle" size={16} color={COLORS.warning} />
-                                <Text style={styles.alertBoxText}>{alert.text}</Text>
-                            </View>
-                        ))}
-
-                        {/* Ingredients */}
-                        <Text style={styles.sheetSectionTitle}>المكونات المكتشفة</Text>
-                        <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-                            {product.analysisData?.detected_ingredients?.map((item, i) => (
-                                <View key={i} style={styles.ingredientChip}>
-                                    <Text style={styles.ingredientChipText}>{item.name}</Text>
+                    <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+                        
+                        {/* CONDITIONAL RENDERING LOGIC */}
+                        
+                        {/* A. WEATHER DASHBOARD */}
+                       {insight.customData?.type === 'weather_dashboard' ? (
+    <WeatherDetailedSheet insight={insight} />
+) :
+                        
+                        /* B. GOAL DASHBOARD */
+                        insight.type === 'goal_analysis' && insight.customData ? (
+                            renderGoalDashboard(insight.customData)
+                        ) : (
+                            
+                        /* C. STANDARD INSIGHT (Fallback) */
+                            <>
+                                <View style={styles.modalHeader}>
+                                    <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
+                                        <FontAwesome5 
+                                            name={insight.severity === 'critical' ? 'shield-alt' : 'info-circle'} 
+                                            size={24} 
+                                            color={mainColor} 
+                                        />
+                                    </View>
+                                    <Text style={styles.modalTitle}>{insight.title}</Text>
                                 </View>
-                            ))}
-                        </View>
+
+                                <Text style={styles.modalDescription}>{insight.details}</Text>
+                                
+                                {insight.related_products?.length > 0 && (
+                                    <View style={{ marginTop: 20 }}>
+                                        <Text style={styles.relatedProductsTitle}>المنتجات المعنية:</Text>
+                                        {insight.related_products.map((p, i) => (
+                                            <View key={i} style={styles.productChip}>
+                                                <FontAwesome5 name="bottle-droplet" size={12} color={COLORS.textSecondary} />
+                                                <Text style={styles.productChipText}>{p}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                            </>
+                        )}
+
+                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, marginTop: 30 }]}>
+                            <Text style={[styles.closeButtonText, {color: COLORS.textPrimary}]}>إغلاق</Text>
+                        </Pressable>
                     </ScrollView>
                 </View>
             </Animated.View>
@@ -1308,20 +1318,82 @@ const InsightCarousel = ({ insights, onSelect }) => (
     );
 };
 
+// --- NEW: COMPACT WEATHER WIDGET (Main Screen) ---
+const WeatherCompactWidget = ({ insight, onPress }) => {
+    
+    // Theme Logic matching your colors
+    const getTheme = () => {
+        const id = insight.id.toLowerCase();
+        
+        if (insight.customData?.isPermissionError) return { colors: ['#4b5563', '#1f2937'], icon: 'map-marker-alt', action: 'تفعيل' };
+        if (insight.customData?.isServiceError) return { colors: ['#d97706', '#92400e'], icon: 'wifi', action: 'إعادة المحاولة' };
+        
+        // Good Weather
+        if (insight.severity === 'good' || id.includes('normal')) return { colors: ['#10b981', '#059669'], icon: 'smile-beam', action: 'التفاصيل' };
+        
+        // Bad Weather
+        if (id.includes('uv') || id.includes('sun')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', action: 'الحماية' };
+        if (id.includes('dry') || id.includes('wind')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'wind', action: 'الترطيب' };
+        if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', action: 'التنظيف' };
+        
+        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', action: 'عرض' };
+    };
+
+    const theme = getTheme();
+    const isAction = insight.customData?.isPermissionError;
+
+    const handlePress = () => {
+        if (isAction) Linking.openSettings();
+        else onPress(insight);
+    };
+
+    return (
+        <StaggeredItem index={0}>
+            <PressableScale onPress={handlePress}>
+                <LinearGradient 
+                    colors={theme.colors} 
+                    style={styles.focusInsightCard} // Reusing your existing style
+                    start={{x: 0, y: 0}} end={{x: 1, y: 1}}
+                >
+                    <View style={styles.focusInsightHeader}>
+                        <FontAwesome5 name={theme.icon} size={22} color="#fff" />
+                        <Text style={[styles.focusInsightTitle, { color: '#fff', marginLeft: 10 }]}>
+                            {insight.title}
+                        </Text>
+                    </View>
+                    
+                    <Text style={[styles.focusInsightSummary, { color: 'rgba(255,255,255,0.95)' }]} numberOfLines={2}>
+                        {insight.short_summary}
+                    </Text>
+                    
+                    <View style={styles.focusInsightAction}>
+                        <Text style={[styles.focusInsightActionText, { color: '#fff' }]}>
+                            {theme.action}
+                        </Text>
+                        <Feather name={isAction ? "settings" : "chevron-left"} size={16} color="#fff" />
+                    </View>
+                </LinearGradient>
+            </PressableScale>
+        </StaggeredItem>
+    );
+};
+
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise }) => {
+const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
-    const [showBarrierDetails, setShowBarrierDetails] = useState(false); // New State
+    const [showBarrierDetails, setShowBarrierDetails] = useState(false);
   
     const handleSelectInsight = useCallback((insight) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setSelectedInsight(insight);
     }, []);
   
+    // 1. Loading State
     if (loading || !analysisResults) {
         return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
     }
   
+    // 2. Empty State
     if (savedProducts.length === 0) {
         return (
             <ContentCard style={styles.emptyState}>
@@ -1332,32 +1404,78 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
         );
     }
     
-    const visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
-    const focusInsight = visibleInsights.find(i => i.severity === 'critical' || i.severity === 'warning') || null;
+    // --- LOGIC: PREPARE INSIGHTS LIST ---
+    
+    // A. Filter out dismissed insights from the raw server result
+    let visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
+
+    // FIX: Check for BOTH types of weather data
+    const hasServerWeather = visibleInsights.some(i => 
+        i.customData?.type === 'weather_advice' || 
+        i.customData?.type === 'weather_dashboard'
+    );
+
+    // B. Inject Weather Status Cards
+    if (locationPermission !== 'granted') {
+        const permissionInsight = {
+            id: 'weather-permission-denied',
+            title: 'خدمة الطقس متوقفة',
+            short_summary: 'يرجى تفعيل الموقع.',
+            details: 'نحتاج لمعرفة موقعك لجلب بيانات الحرارة وUV.',
+            severity: 'warning',
+            customData: { type: 'weather_advice', isPermissionError: true }
+        };
+        visibleInsights = [permissionInsight, ...visibleInsights];
+    } 
+    else if (!hasServerWeather) {
+        const unavailableInsight = {
+            id: 'weather-unavailable',
+            title: 'بيانات الطقس غير متاحة',
+            short_summary: 'تعذر الاتصال بالخادم.',
+            details: 'تأكد من اتصالك بالإنترنت.',
+            severity: 'warning',
+            customData: { type: 'weather_advice', isServiceError: true }
+        };
+        visibleInsights = [unavailableInsight, ...visibleInsights];
+    }
+
+    // C. Determine Hero Card
+    const focusInsight = visibleInsights.find(i => 
+        i.customData?.type === 'weather_advice' ||
+        i.customData?.type === 'weather_dashboard' ||
+        i.severity === 'critical' || 
+        i.severity === 'warning'
+    ) || null;
+
+    // D. Remaining cards go to carousel
     const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
     
-    // SAFE FALLBACK: Initialize barrier with all fields to prevent "undefined" errors
+    // E. Barrier Health Fallback
     const barrier = analysisResults.barrierHealth || { 
-        score: 0, 
-        status: '...', 
-        color: COLORS.textSecondary, 
-        desc: '', 
-        totalIrritation: 0, 
-        totalSoothing: 0,
-        offenders: [],
-        defenders: []
+        score: 0, status: '...', color: COLORS.textSecondary, desc: '', 
+        totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: [] 
     };
   
+    // --- RENDER ---
     return (
         <View style={{flex: 1}}>
             <View style={{ paddingBottom: 150 }}> 
                 {/* 1. Hero Section */}
-                {focusInsight ? <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} /> : <AllClearState />}
+                {focusInsight ? (
+                    // Conditional Rendering based on Type
+                    focusInsight.customData?.type === 'weather_advice' ? (
+                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} />
+                    ) : (
+                        <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
+                    )
+                ) : (
+                    <AllClearState />
+                )}
   
                 {/* 2. Insight Carousel */}
                 {carouselInsights.length > 0 && <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />}
   
-                {/* 3. ENHANCED BARRIER HEALTH CARD */}
+                {/* 3. BARRIER HEALTH CARD */}
                 <PressableScale onPress={() => setShowBarrierDetails(true)}>
                     <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }}>
                         <View style={{ padding: 20, paddingBottom: 10 }}>
@@ -1382,7 +1500,6 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                             <Text style={styles.barrierDesc} numberOfLines={2}>{barrier.desc}</Text>
                         </View>
                         
-                        {/* Footer Hint */}
                         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
                              <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
                                  {(barrier.totalIrritation || 0) > 0 ? `حمل كيميائي: ${(barrier.totalIrritation || 0).toFixed(1)}` : 'لا يوجد إجهاد كيميائي'}
@@ -1406,7 +1523,16 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                            </View>
                            <View style={styles.routineOverviewGrid}>
                                <View style={styles.routineColumn}>
-                                   <Text style={styles.routineColumnTitle}>الصباح</Text>
+                                   <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
+                                       <Text style={styles.routineColumnTitle}>الصباح</Text>
+                                       {(analysisResults?.amRoutine?.conflicts || 0) > 0 && (
+                                           <View style={{backgroundColor: COLORS.danger + '20', paddingHorizontal:6, borderRadius:4}}>
+                                               <Text style={{color: COLORS.danger, fontSize:10, fontFamily:'Tajawal-Bold'}}>
+                                                   {analysisResults.amRoutine.conflicts} !
+                                               </Text>
+                                           </View>
+                                       )}
+                                   </View>
                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
                                    {analysisResults?.amRoutine?.products?.length > 0 ? (
                                        analysisResults.amRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
@@ -1415,7 +1541,16 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                                </View>
                                 <View style={styles.routineDivider} />
                                 <View style={styles.routineColumn}>
-                                   <Text style={styles.routineColumnTitle}>المساء</Text>
+                                   <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
+                                       <Text style={styles.routineColumnTitle}>المساء</Text>
+                                       {(analysisResults?.pmRoutine?.conflicts || 0) > 0 && (
+                                           <View style={{backgroundColor: COLORS.danger + '20', paddingHorizontal:6, borderRadius:4}}>
+                                               <Text style={{color: COLORS.danger, fontSize:10, fontFamily:'Tajawal-Bold'}}>
+                                                   {analysisResults.pmRoutine.conflicts} !
+                                               </Text>
+                                           </View>
+                                       )}
+                                   </View>
                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
                                    {analysisResults?.pmRoutine?.products?.length > 0 ? (
                                        analysisResults.pmRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
@@ -1440,9 +1575,13 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                                    strokeWidth={6}
                                />
                                <View style={{flex: 1, marginRight: 15, justifyContent: 'center'}}>
-                                   {(analysisResults?.sunProtectionGrade?.notes || []).map((note, i) => (
-                                        <Text key={i} style={styles.sunProtectionNote}>{note}</Text>
-                                   ))}
+                                   {(analysisResults?.sunProtectionGrade?.notes || []).length > 0 ? (
+                                       analysisResults.sunProtectionGrade.notes.map((note, i) => (
+                                            <Text key={i} style={styles.sunProtectionNote}>{note}</Text>
+                                       ))
+                                   ) : (
+                                       <Text style={styles.sunProtectionNote}>لا توجد بيانات كافية</Text>
+                                   )}
                                </View>
                            </View>
                         </ContentCard>
@@ -1454,12 +1593,10 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 <InsightDetailsModal visible={!!selectedInsight} insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
             )}
 
-            {/* NEW MODAL RENDERED HERE */}
             <BarrierDetailsModal visible={showBarrierDetails} onClose={() => setShowBarrierDetails(false)} data={barrier} />
         </View>
     );
 };
-
 
 // --- HELPER 1: The Custom Prompt Modal as a Bottom Sheet ---
 const AddStepModal = ({ isVisible, onClose, onAdd }) => {
@@ -2007,7 +2144,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
             try {
                 // 2. Call Evaluate API (Fixed URL: removed .js)
-                const response = await fetch(`${PROFILE_API_URL}/evaluate.js`, {
+                const response = await fetch(`${PROFILE_API_URL}/evaluate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2638,6 +2775,139 @@ const SettingsSection = ({ profile, onLogout }) => {
     );
 };
 
+const WeatherDashboard = ({ insight }) => {
+    
+    const getTheme = () => {
+        const id = insight.id.toLowerCase();
+        
+        // 1. Permission Error
+        if (insight.customData?.isPermissionError) {
+            return {
+                gradient: ['#4b5563', '#1f2937'], // Dark Gray
+                icon: 'map-marker-alt',
+                accent: '#9ca3af',
+                label: 'الموقع مطلوب',
+                isError: true
+            };
+        }
+
+        if (insight.customData?.isServiceError) {
+            return {
+                gradient: ['#d97706', '#92400e'], // Amber/Brown
+                icon: 'wifi',
+                accent: '#fbbf24',
+                label: 'خطأ في الاتصال',
+                isError: true,
+                action: () => {} // No action, just informational
+            };
+        }
+
+        // 2. Good / Normal Weather
+        if (insight.severity === 'good' || id.includes('normal')) {
+            return {
+                gradient: ['#10b981', '#059669'], // Emerald Green
+                icon: 'smile-beam',
+                accent: '#a7f3d0',
+                label: 'الطقس مثالي',
+                isGood: true
+            };
+        }
+
+        // 3. Bad Weather (Existing logic)
+        if (id.includes('uv') || id.includes('sun')) return { gradient: ['#ef4444', '#b91c1c'], icon: 'sun', accent: '#fca5a5', label: 'خطر أشعة UV' };
+        if (id.includes('dry') || id.includes('cold')) return { gradient: ['#3b82f6', '#1d4ed8'], icon: 'snowflake', accent: '#93c5fd', label: 'جفاف شديد' };
+        if (id.includes('humid') || id.includes('sweat')) return { gradient: ['#f59e0b', '#b45309'], icon: 'water', accent: '#fde68a', label: 'رطوبة عالية' };
+
+        return { gradient: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', accent: '#a7f3d0', label: 'تنبيه طقس' };
+    };
+
+    const theme = getTheme();
+    const advice = insight.customData?.advice || insight.details;
+    const meta = insight.customData?.meta; // { temp, uvIndex, humidity } if available
+
+    // Pulse Animation
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(scaleAnim, { toValue: 1.1, duration: 1500, useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    const handleAction = () => {
+        if (theme.isError) {
+            Linking.openSettings(); // Open Phone Settings
+        }
+    };
+
+    return (
+        <View style={{ marginBottom: 20 }}>
+            <Pressable onPress={handleAction} disabled={!theme.isError}>
+                <View style={{ borderRadius: 24, overflow: 'hidden', marginBottom: 20 }}>
+                    <LinearGradient 
+                        colors={theme.gradient} 
+                        start={{ x: 0, y: 0 }} 
+                        end={{ x: 1, y: 1 }} 
+                        style={{ padding: 30, alignItems: 'center', minHeight: 220, justifyContent: 'center' }}
+                    >
+                        {/* Live Data Strip (Only if Good Weather) */}
+                        {theme.isGood && meta && (
+                            <View style={{ flexDirection: 'row-reverse', gap: 15, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 }}>
+                                <Text style={{color: '#fff', fontFamily: 'Tajawal-Bold'}}>{Math.round(meta.temp)}°C</Text>
+                                <Text style={{color: '#fff'}}>|</Text>
+                                <Text style={{color: '#fff', fontFamily: 'Tajawal-Bold'}}>UV {meta.uvIndex}</Text>
+                            </View>
+                        )}
+
+                        <Animated.View style={{ transform: [{ scale: scaleAnim }], marginBottom: 15 }}>
+                            <FontAwesome5 name={theme.icon} size={60} color="#fff" style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: {width: 0, height: 4}, textShadowRadius: 10 }} />
+                        </Animated.View>
+                        
+                        <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 5 }}>
+                            {theme.label}
+                        </Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center' }}>
+                            {insight.short_summary}
+                        </Text>
+                    </LinearGradient>
+                </View>
+            </Pressable>
+
+            {/* Science / Details */}
+            <View style={{ flexDirection: 'row-reverse', gap: 15, marginBottom: 20 }}>
+                <View style={[styles.sheetPillar, { flex: 1, backgroundColor: COLORS.card, alignItems: 'flex-start', paddingHorizontal: 15 }]}>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <FontAwesome5 name="info-circle" size={14} color={COLORS.textSecondary} />
+                        <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12 }}>
+                            {theme.isError ? 'لماذا؟' : 'الحالة'}
+                        </Text>
+                    </View>
+                    <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, lineHeight: 20, textAlign: 'left' }}>
+                        {insight.details}
+                    </Text>
+                </View>
+            </View>
+
+            {/* Action Box */}
+            <View style={{ backgroundColor: theme.gradient[0] + '15', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: theme.gradient[0] + '40' }}>
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: theme.gradient[0], alignItems: 'center', justifyContent: 'center' }}>
+                        <FontAwesome5 name={theme.isError ? "cog" : "check"} size={14} color="#fff" />
+                    </View>
+                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 16, color: theme.gradient[0] }}>
+                        {theme.isError ? 'الإجراء المطلوب' : 'التوصية'}
+                    </Text>
+                </View>
+                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, lineHeight: 28, textAlign: 'left' }}>
+                    {advice}
+                </Text>
+            </View>
+        </View>
+    );
+};
+
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const animController = useRef(new Animated.Value(0)).current;
 
@@ -2659,79 +2929,87 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const mainColor = getSeverityColor(insight.severity);
 
     // --- RENDERER: RICH GOAL DASHBOARD ---
-    const renderGoalDashboard = (data) => (
-        <View>
-            {/* 1. Large Score Circle */}
-            <View style={{ alignItems: 'center', marginBottom: 25 }}>
-                <ChartRing 
-                    percentage={data.score} 
-                    color={mainColor} 
-                    radius={60} 
-                    strokeWidth={10} 
-                />
-                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, marginTop: 10 }}>مؤشر التطابق</Text>
-            </View>
+    const renderGoalDashboard = (data) => {
+        // 1. SAFETY CHECKS (Prevents Crash)
+        // Ensure arrays exist before checking .length
+        const foundHeroes = data?.foundHeroes || [];
+        const missingHeroes = data?.missingHeroes || [];
+        const relatedProducts = insight.related_products || [];
 
-            {/* 2. Sunscreen Alert (If Penalty) */}
-            {data.sunscreenPenalty && (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: COLORS.danger }]}>
-                    <FontAwesome5 name="sun" size={18} color={COLORS.danger} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.alertBoxText, { color: COLORS.danger, fontFamily: 'Tajawal-Bold' }]}>تنبيه حماية</Text>
-                        <Text style={[styles.alertBoxText, { color: COLORS.danger }]}>تم إيقاف تقدم الهدف عند 35% لأنك لا تستخدمين واقي شمس. المكونات العلاجية لن تعمل بفعالية بدونه.</Text>
+        return (
+            <View>
+                {/* 1. Large Score Circle */}
+                <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                    <ChartRing 
+                        percentage={data.score || 0} 
+                        color={mainColor} 
+                        radius={60} 
+                        strokeWidth={10} 
+                    />
+                    <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, marginTop: 10 }}>مؤشر التطابق</Text>
+                </View>
+
+                {/* 2. Sunscreen Alert (If Penalty) */}
+                {data.sunscreenPenalty && (
+                    <View style={[styles.alertBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: COLORS.danger }]}>
+                        <FontAwesome5 name="sun" size={18} color={COLORS.danger} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.alertBoxText, { color: COLORS.danger, fontFamily: 'Tajawal-Bold' }]}>تنبيه حماية</Text>
+                            <Text style={[styles.alertBoxText, { color: COLORS.danger }]}>تم إيقاف تقدم الهدف عند 35% لأنك لا تستخدمين واقي شمس.</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* 3. Hero Ingredients Found (Green) */}
+                <View style={styles.ingSection}>
+                    <Text style={styles.ingSectionTitle}>✅ مكونات نشطة لديكِ</Text>
+                    <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                        {foundHeroes.length > 0 ? (
+                            foundHeroes.map((h, i) => (
+                                <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', borderWidth: 1 }]}>
+                                    <Text style={[styles.ingredientChipText, { color: COLORS.success }]}>{h}</Text>
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.noDataText}>لا توجد مكونات قوية لهذا الهدف حتى الآن.</Text>
+                        )}
                     </View>
                 </View>
-            )}
 
-            {/* 3. Hero Ingredients Found (Green) */}
-            <View style={styles.ingSection}>
-                <Text style={styles.ingSectionTitle}>✅ مكونات نشطة لديكِ</Text>
-                <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-                    {data.foundHeroes.length > 0 ? (
-                        data.foundHeroes.map((h, i) => (
-                            <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', borderWidth: 1 }]}>
-                                <Text style={[styles.ingredientChipText, { color: COLORS.success }]}>{h}</Text>
-                            </View>
-                        ))
-                    ) : (
-                        <Text style={styles.noDataText}>لا توجد مكونات قوية لهذا الهدف حتى الآن.</Text>
-                    )}
-                </View>
-            </View>
+                {/* 4. Missing Suggestions (Yellow/Red) */}
+                {(data.score || 0) < 100 && (
+                    <View style={styles.ingSection}>
+                        <Text style={styles.ingSectionTitle}>🧪 مقترحات لرفع النتيجة</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginBottom: 10, textAlign: 'right' }}>
+                            ابحثي عن منتجات تحتوي على:
+                        </Text>
+                        <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                            {missingHeroes.map((h, i) => (
+                                <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: COLORS.warning, borderWidth: 1, borderStyle: 'dashed' }]}>
+                                    <Text style={[styles.ingredientChipText, { color: COLORS.warning }]}>
+                                        {h.replace(/-/g, ' ')}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
-            {/* 4. Missing Suggestions (Yellow/Red) */}
-            {data.score < 100 && (
-                <View style={styles.ingSection}>
-                    <Text style={styles.ingSectionTitle}>🧪 مقترحات لرفع النتيجة</Text>
-                    <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginBottom: 10, textAlign: 'right' }}>
-                        ابحثي عن منتجات (سيروم أو كريم) تحتوي على:
-                    </Text>
-                    <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-                        {data.missingHeroes.map((h, i) => (
-                            <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: COLORS.warning, borderWidth: 1, borderStyle: 'dashed' }]}>
-                                <Text style={[styles.ingredientChipText, { color: COLORS.warning }]}>
-                                    {h.replace(/-/g, ' ')}
-                                </Text>
+                {/* 5. Contributing Products List */}
+                {relatedProducts.length > 0 && (
+                    <View style={styles.ingSection}>
+                        <Text style={styles.ingSectionTitle}>المنتجات المساهمة</Text>
+                        {relatedProducts.map((p, i) => (
+                            <View key={i} style={styles.productChip}>
+                                <FontAwesome5 name="check" size={12} color={COLORS.accentGreen} />
+                                <Text style={styles.productChipText}>{p}</Text>
                             </View>
                         ))}
                     </View>
-                </View>
-            )}
-
-            {/* 5. Contributing Products List */}
-            {insight.related_products.length > 0 && (
-                <View style={styles.ingSection}>
-                    <Text style={styles.ingSectionTitle}>المنتجات المساهمة</Text>
-                    {insight.related_products.map((p, i) => (
-                        <View key={i} style={styles.productChip}>
-                            <FontAwesome5 name="check" size={12} color={COLORS.accentGreen} />
-                            <Text style={styles.productChipText}>{p}</Text>
-                        </View>
-                    ))}
-                </View>
-            )}
-        </View>
-    );
+                )}
+            </View>
+        );
+    }; // <--- CLOSING BRACE ADDED HERE
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -2744,25 +3022,34 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-                        {/* Header */}
-                        <View style={styles.modalHeader}>
-                            <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
-                                <FontAwesome5 
-                                    name={insight.type === 'goal_analysis' ? 'bullseye' : (insight.severity === 'critical' ? 'shield-alt' : 'info-circle')} 
-                                    size={24} 
-                                    color={mainColor} 
-                                />
-                            </View>
-                            <Text style={styles.modalTitle}>{insight.title}</Text>
-                        </View>
-
-                        {/* CONDITIONAL RENDERING: Standard Text vs. Rich Dashboard */}
-                        {insight.type === 'goal_analysis' && insight.customData ? (
+                        
+                        {/* CONDITIONAL RENDERING LOGIC */}
+                        
+                        {/* A. WEATHER DASHBOARD (Use the special component) */}
+                        {(insight.customData?.type === 'weather_dashboard' || insight.customData?.type === 'weather_advice') ? (
+                            <WeatherDetailedSheet insight={insight} />
+                        ) : 
+                        
+                        /* B. GOAL DASHBOARD (Use the specific renderer) */
+                        (insight.type === 'goal_analysis' && insight.customData) ? (
                             renderGoalDashboard(insight.customData)
                         ) : (
-                            // Fallback for standard insights
+                            
+                        /* C. STANDARD INSIGHT (Fallback) */
                             <>
+                                <View style={styles.modalHeader}>
+                                    <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
+                                        <FontAwesome5 
+                                            name={insight.severity === 'critical' ? 'shield-alt' : 'info-circle'} 
+                                            size={24} 
+                                            color={mainColor} 
+                                        />
+                                    </View>
+                                    <Text style={styles.modalTitle}>{insight.title}</Text>
+                                </View>
+
                                 <Text style={styles.modalDescription}>{insight.details}</Text>
+                                
                                 {insight.related_products?.length > 0 && (
                                     <View style={{ marginTop: 20 }}>
                                         <Text style={styles.relatedProductsTitle}>المنتجات المعنية:</Text>
@@ -2777,8 +3064,8 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                             </>
                         )}
 
-                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: mainColor, marginTop: 30 }]}>
-                            <Text style={styles.closeButtonText}>إغلاق</Text>
+                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, marginTop: 30 }]}>
+                            <Text style={[styles.closeButtonText, {color: COLORS.textPrimary}]}>إغلاق</Text>
                         </Pressable>
                     </ScrollView>
                 </View>
@@ -3043,6 +3330,125 @@ const getMechanism = (ingId) => {
     return 'general';
 };
 
+// --- COMPONENT: RICH WEATHER SHEET UI (Fixed) ---
+const WeatherDetailedSheet = ({ insight }) => {
+    const data = insight.customData;
+    if (!data) return null;
+
+    // Theme Config
+    const themes = {
+        pollution: { colors: ['#4c1d95', '#6d28d9'], icon: 'smog' }, 
+        dry: { colors: ['#1e40af', '#3b82f6'], icon: 'wind' },       
+        uv: { colors: ['#991b1b', '#ef4444'], icon: 'sun' },         
+        humid: { colors: ['#9a3412', '#f97316'], icon: 'water' },    
+        perfect: { colors: ['#065f46', '#10b981'], icon: 'smile-beam' },
+        unknown: { colors: ['#4b5563', '#1f2937'], icon: 'cloud' } 
+    };
+    
+    const themeKey = data.theme || 'unknown';
+    const theme = themes[themeKey] || themes.unknown;
+
+    return (
+        <View>
+            {/* 1. ATMOSPHERIC HEADER */}
+            <LinearGradient
+                colors={theme.colors}
+                style={{ padding: 25, borderRadius: 24, alignItems: 'center', marginBottom: 20 }}
+            >
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+                    <FontAwesome5 name={theme.icon} size={28} color="#fff" />
+                </View>
+                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 24, color: '#fff', textAlign: 'center' }}>
+                    {insight.title}
+                </Text>
+                
+                {/* Live Metrics Pill */}
+                {data.metrics ? (
+                    <View style={{ flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginTop: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Text style={{ color: '#fff', fontFamily: 'Tajawal-Bold', fontSize: 14 }}>
+                            {data.metrics.label}: {data.metrics.value}
+                        </Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.6)', marginHorizontal: 10 }}>|</Text>
+                        <Text style={{ color: '#fff', fontFamily: 'Tajawal-Regular', fontSize: 14 }}>{data.metrics.status}</Text>
+                    </View>
+                ) : null}
+            </LinearGradient>
+
+            {/* 2. IMPACT SECTION (Using Your SheetPillar Styles) */}
+            {data.impact && (
+                <View style={styles.sheetPillarsContainer}>
+                    {/* Skin */}
+                    <View style={styles.sheetPillar}>
+                        <FontAwesome5 name="user-alt" size={18} color={COLORS.accentGreen} />
+                        <Text style={styles.sheetPillarLabel}>تأثير البشرة</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textPrimary, textAlign: 'center', lineHeight: 18 }}>
+                            {data.impact.skin}
+                        </Text>
+                    </View>
+                    <View style={styles.sheetDividerVertical} />
+                    {/* Hair */}
+                    <View style={styles.sheetPillar}>
+                        <FontAwesome5 name="cut" size={18} color={COLORS.gold} />
+                        <Text style={styles.sheetPillarLabel}>تأثير الشعر</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textPrimary, textAlign: 'center', lineHeight: 18 }}>
+                            {data.impact.hair}
+                        </Text>
+                    </View>
+                </View>
+            )}
+
+            {/* 3. ROUTINE ADJUSTMENTS (Using Your AlertBox/List Styles) */}
+            {data.routine_adjustments && data.routine_adjustments.length > 0 && (
+                <View style={styles.sheetSection}>
+                    <Text style={styles.sheetSectionTitle}>تحديثات الروتين المقترحة</Text>
+
+                    {data.routine_adjustments.map((item, index) => (
+                        <View key={index} style={[styles.productListItemWrapper, { marginBottom: 10, padding: 12, borderWidth: 1, borderColor: COLORS.border }]}>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 12 }}>
+                                {/* Step Badge */}
+                                <View style={{ backgroundColor: COLORS.accentGreen + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                                    <Text style={{ color: COLORS.accentGreen, fontSize: 11, fontFamily: 'Tajawal-Bold' }}>{item.step}</Text>
+                                </View>
+
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 14, textAlign: 'right', marginBottom: 4 }}>
+                                        {item.action}
+                                    </Text>
+                                    
+                                    {/* Found Product */}
+                                    {item.product ? (
+                                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
+                                            <FontAwesome5 name="check-circle" size={12} color={COLORS.success} style={{ marginLeft: 6 }} />
+                                            <Text style={{ color: COLORS.success, fontSize: 12, fontFamily: 'Tajawal-Regular' }}>
+                                                لديكِ: {item.product}
+                                            </Text>
+                                        </View>
+                                    ) : item.missing_suggestion ? (
+                                    /* Missing Suggestion */
+                                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(251, 191, 36, 0.1)', padding: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
+                                            <FontAwesome5 name="shopping-bag" size={10} color={COLORS.warning} style={{ marginLeft: 6 }} />
+                                            <Text style={{ color: COLORS.warning, fontSize: 12, fontFamily: 'Tajawal-Regular' }}>
+                                                نقترح: {item.missing_suggestion}
+                                            </Text>
+                                        </View>
+                                    ) : null}
+                                </View>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            )}
+            
+            {/* Fallback Text */}
+            {(!data.metrics && !data.impact) && (
+                <View style={[styles.emptyState, { marginTop: 0 }]}>
+                    <Text style={styles.emptySub}>{insight.details}</Text>
+                </View>
+            )}
+        </View>
+    );
+};
+
 // ============================================================================
 //                       MAIN PROFILE CONTROLLER
 // ============================================================================
@@ -3059,6 +3465,7 @@ export default function ProfileScreen() {
     const [activeTab, setActiveTab] = useState('shelf');
     const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
     const [addStepHandler, setAddStepHandler] = useState(null);
+    const [locationPermission, setLocationPermission] = useState('undetermined'); // 'granted', 'denied', 'undetermined'
     
     const openAddStepModal = (onAddCallback) => {
       setAddStepHandler(() => onAddCallback); 
@@ -3103,45 +3510,71 @@ export default function ProfileScreen() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
   
     useEffect(() => {
-        const fetchAnalysis = async () => {
-            if (!savedProducts || savedProducts.length === 0) return;
-    
-            // CALLING THE IMPORTED FUNCTION
-            const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
-    
-            // CHECK CACHE
-            if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
-                setAnalysisData(analysisCache.current.data);
-                return; 
-            }
+    let isMounted = true;
 
-            setIsAnalyzing(true);
-            try {
-                // UPDATED FETCH CALL (Removed .js)
-                const response = await fetch(`${PROFILE_API_URL}/analyze-profile.js`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        products: savedProducts,
-                        settings: userProfile?.settings || {},
-                        currentRoutine: userProfile?.routines 
-                    })
-                });    
-  
-                const data = await response.json();
-                if (response.ok) {
-                    setAnalysisData(data);
-                    // --- ADDED: Update the cache on successful fetch ---
-                    analysisCache.current = { hash: currentHash, data: data };
-                } else {
-                    console.warn("Analysis API Error:", data.error);
-                }
-            } catch (e) {
-                console.error("Analysis Network Error:", e);
-            } finally {
-                setIsAnalyzing(false);
+    const fetchAnalysis = async () => {
+        if (!savedProducts || savedProducts.length === 0) return;
+
+        // Cache Check...
+        const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
+        if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
+            setAnalysisData(analysisCache.current.data);
+            return;
+        }
+
+        setIsAnalyzing(true);
+
+        // 1. GET GPS ONLY (No API Calls)
+        let locationPayload = null;
+    try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        setLocationPermission(status); // <--- STORE STATUS HERE
+
+        if (status === 'granted') {
+            let loc = await Location.getCurrentPositionAsync({});
+            locationPayload = { lat: loc.coords.latitude, lon: loc.coords.longitude };
+        }
+    } catch (error) {
+        console.log("GPS failed:", error);
+    }
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                let loc = await Location.getCurrentPositionAsync({});
+                locationPayload = {
+                    lat: loc.coords.latitude,
+                    lon: loc.coords.longitude
+                };
             }
-        };
+        } catch (error) {
+            console.log("GPS failed:", error.message);
+        }
+
+        // 2. SEND TO BACKEND
+        try {
+            const response = await fetch(`${PROFILE_API_URL}/analyze-profile`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    products: savedProducts,
+                    settings: userProfile?.settings || {},
+                    currentRoutine: userProfile?.routines,
+                    location: locationPayload // <--- SENDING COORDINATES ONLY
+                })
+            });
+
+            const data = await response.json();
+            
+            if (isMounted && response.ok) {
+                setAnalysisData(data);
+                analysisCache.current = { hash: currentHash, data: data };
+            }
+        } catch (e) {
+            console.error("Analysis Network Error:", e);
+        } finally {
+            if (isMounted) setIsAnalyzing(false);
+        }
+    };
   
       const timer = setTimeout(() => {
           fetchAnalysis();
@@ -3181,6 +3614,7 @@ export default function ProfileScreen() {
                           dismissedInsightIds={dismissedInsightIds} 
                           handleDismissPraise={handleDismissPraise} 
                           userProfile={userProfile} 
+                          locationPermission={locationPermission} 
                       />
                   )}
                   
@@ -3205,105 +3639,388 @@ export default function ProfileScreen() {
     );
   }
 
-const styles = StyleSheet.create({
-  // ========================================================================
-  // --- 1. GLOBAL & CONTAINER ---
-  // ========================================================================
-  container: {
-      flex: 1,
-      backgroundColor: COLORS.background
-  },
-  loadingContainer: {
-      height: 200,
-      justifyContent: 'center',
-      alignItems: 'center'
-  },
-  divider: {
-      height: 1,
-      backgroundColor: COLORS.border,
-      marginVertical: 12
-  },
-
-  // ========================================================================
-  // --- 2. HEADER (PARALLAX) ---
-  // ========================================================================
-  header: {
+  const styles = StyleSheet.create({
+    // ========================================================================
+    // --- 1. GLOBAL & CONTAINER ---
+    // ========================================================================
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background
+    },
+    loadingContainer: {
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    divider: {
+        height: 1,
+        backgroundColor: COLORS.border,
+        marginVertical: 12
+    },
+  
+    // ========================================================================
+    // --- 2. HEADER (PARALLAX) ---
+    // ========================================================================
+    header: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1,
+        backgroundColor: COLORS.background,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+        overflow: 'hidden',
+    },
+    headerContentExpanded: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        paddingBottom: 15,
+    },
+    headerContentCollapsed: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    welcomeText: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 26,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    subWelcome: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+        marginTop: 2,
+    },
+    collapsedTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+    },
+    avatar: {
+        width: 55,
+        height: 55,
+        borderRadius: 27.5,
+        backgroundColor: COLORS.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: COLORS.accentGreen
+    },
+  
+    // ========================================================================
+    // --- 3. BASE UI & GENERAL COMPONENTS ---
+    // ========================================================================
+    cardBase: {
+        backgroundColor: COLORS.card,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 20,
+        marginBottom: 15,
+    },
+    emptyState: {
+        alignItems: 'center',
+        marginTop: 40,
+        padding: 30,
+        borderRadius: 20,
+        backgroundColor: COLORS.card,
+    },
+    emptyText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+        marginTop: 15,
+        textAlign: 'center',
+    },
+    emptySub: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginTop: 5,
+        lineHeight: 20,
+    },
+    iconBoxSm: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(90, 156, 132, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+  
+    // ========================================================================
+    // --- 4. BOTTOM DOCK (NATURE DOCK) ---
+    // ========================================================================
+    dockOuterContainer: {
+        position: 'absolute',
+        bottom: 60,
+        left: 20,
+        right: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    dockContainer: {
+        height: 65,
+        borderRadius: 35,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.card,
+        overflow: 'hidden',
+    },
+    pillIndicator: {
+        position: 'absolute',
+        top: 5,
+        left: 0,
+        height: 52,
+        borderRadius: 24,
+        backgroundColor: COLORS.accentGreen,
+        zIndex: 1,
+    },
+    tabsContainer: {
+        ...StyleSheet.absoluteFillObject,
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        zIndex: 2,
+    },
+    dockItem: {
+        flex: 1,
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    dockLabel: {
+        position: 'absolute',
+        bottom: 7,
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
+        color: COLORS.textOnAccent,
+    },
+  
+    // ========================================================================
+    // --- 5. FLOATING ACTION BUTTON (FAB) ---
+    // ========================================================================
+    fab: {
+        position: 'absolute',
+        bottom: 130,
+        right: 20,
+        shadowColor: COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        elevation: 10
+    },
+    fabRoutine: { // Specific position for Routine tab
+        position: 'absolute',
+        bottom: 130,
+        right: 20,
+        shadowColor: COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        elevation: 10
+    },
+    fabGradient: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+  
+    fabContainer: {
       position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1,
-      backgroundColor: COLORS.background,
-      borderBottomWidth: 1,
-      borderBottomColor: COLORS.border,
-      overflow: 'hidden',
+      bottom: 130, // Aligned above the dock
+      right: 20,
+      alignItems: 'center',
+      zIndex: 999,
   },
-  headerContentExpanded: {
+  fabBackdrop: {
+      position: 'absolute',
+      width: width,
+      height: height,
+      top: -height + 150, // Offset to cover screen
+      left: -width + 40,  // Offset to centered
+      backgroundColor: 'rgba(26, 45, 39, 0.85)', // Matches COLORS.background with high opacity
+      zIndex: -1,
+  },
+  mainFab: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+      zIndex: 2,
+  },
+  actionBtnWrap: {
       position: 'absolute',
       bottom: 0,
-      left: 0,
-      right: 0,
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
+      right: 4, // Align centers of small buttons with main button
+      flexDirection: 'row', // Label left, Button right
       alignItems: 'center',
-      paddingHorizontal: 25,
-      paddingBottom: 15,
+      justifyContent: 'flex-end',
+      width: 200, // Width to hold the label
+      zIndex: 2,
+      pointerEvents: 'box-none',
   },
-  headerContentCollapsed: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      
+  actionBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 5,
   },
-  welcomeText: {
-      fontFamily: 'Tajawal-ExtraBold',
-      fontSize: 26,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
+  actionLabelContainer: {
+      backgroundColor: COLORS.card, // Matches your cards
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginRight: 12, // Space between label and button
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
   },
-  subWelcome: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-      marginTop: 2,
-  },
-  collapsedTitle: {
+  actionLabel: {
       fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
+      fontSize: 12,
       color: COLORS.textPrimary,
   },
-  avatar: {
-      width: 55,
-      height: 55,
-      borderRadius: 27.5,
-      backgroundColor: COLORS.card,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: COLORS.accentGreen
+  
+    // ========================================================================
+    // --- 6. SECTION: SHELF & PRODUCTS ---
+    // ========================================================================
+    // --- Stats Bar ---
+    statsContainer: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-around',
   },
-
-  // ========================================================================
-  // --- 3. BASE UI & GENERAL COMPONENTS ---
-  // ========================================================================
-  cardBase: {
+  statBox: {
+      alignItems: 'center',
+      flex: 1,
+  },
+  statLabel: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 10,
+      color: COLORS.textSecondary,
+      marginBottom: 5,
+  },
+  statValue: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 22,
+      color: COLORS.accentGreen
+  },
+  statDivider: {
+      width: 1,
+      height: '60%',
+      backgroundColor: COLORS.border,
+      alignSelf: 'center'
+  },
+  
+  // --- New Product List Item ---
+  productListItemWrapper: {
+      backgroundColor: COLORS.card,
+      borderRadius: 20,
+  },
+  productListItem: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      padding: 16,
+      gap: 16,
       backgroundColor: COLORS.card,
       borderRadius: 20,
       borderWidth: 1,
       borderColor: COLORS.border,
-      padding: 20,
-      marginBottom: 15,
   },
+  listItemContent: {
+      flex: 1,
+      alignItems: 'flex-end',
+      gap: 4,
+  },
+  listItemName: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  listItemType: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+  },
+  verdictContainer: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 2,
+      
+  },
+  listItemVerdict: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      textAlign: 'right',
+  },
+  listItemScoreContainer: {
+      width: 56,
+      height: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  listItemScoreText: {
+      position: 'absolute',
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 16,
+  },
+  
+  // --- Swipe to Delete ---
+  deleteActionContainer: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      bottom: 0,
+      width: 100,
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  
+  // --- Empty State ---
   emptyState: {
       alignItems: 'center',
       marginTop: 40,
       padding: 30,
-      borderRadius: 20,
-      backgroundColor: COLORS.card,
   },
   emptyText: {
       fontFamily: 'Tajawal-Bold',
@@ -3320,1695 +4037,1412 @@ const styles = StyleSheet.create({
       marginTop: 5,
       lineHeight: 20,
   },
-  iconBoxSm: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: 'rgba(90, 156, 132, 0.15)',
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-
-  // ========================================================================
-  // --- 4. BOTTOM DOCK (NATURE DOCK) ---
-  // ========================================================================
-  dockOuterContainer: {
-      position: 'absolute',
-      bottom: 60,
-      left: 20,
-      right: 20,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.3,
-      shadowRadius: 20,
-      elevation: 10,
-  },
-  dockContainer: {
-      height: 65,
-      borderRadius: 35,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.card,
-      overflow: 'hidden',
-  },
-  pillIndicator: {
-      position: 'absolute',
-      top: 5,
-      left: 0,
-      height: 52,
-      borderRadius: 24,
-      backgroundColor: COLORS.accentGreen,
-      zIndex: 1,
-  },
-  tabsContainer: {
-      ...StyleSheet.absoluteFillObject,
+  emptyStateButton: {
       flexDirection: 'row-reverse',
-      justifyContent: 'space-around',
+      gap: 10,
+      marginTop: 20,
+      backgroundColor: COLORS.accentGreen,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 14,
       alignItems: 'center',
-      zIndex: 2,
   },
-  dockItem: {
-      flex: 1,
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
-  },
-  dockLabel: {
-      position: 'absolute',
-      bottom: 7,
+  emptyStateButtonText: {
       fontFamily: 'Tajawal-Bold',
-      fontSize: 10,
+      fontSize: 15,
       color: COLORS.textOnAccent,
   },
-
-  // ========================================================================
-  // --- 5. FLOATING ACTION BUTTON (FAB) ---
-  // ========================================================================
-  fab: {
-      position: 'absolute',
-      bottom: 130,
-      right: 20,
-      shadowColor: COLORS.accentGreen,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4,
-      shadowRadius: 15,
-      elevation: 10
-  },
-  fabRoutine: { // Specific position for Routine tab
-      position: 'absolute',
-      bottom: 130,
-      right: 20,
-      shadowColor: COLORS.accentGreen,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4,
-      shadowRadius: 15,
-      elevation: 10
-  },
-  fabGradient: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-
-  fabContainer: {
-    position: 'absolute',
-    bottom: 130, // Aligned above the dock
-    right: 20,
-    alignItems: 'center',
-    zIndex: 999,
-},
-fabBackdrop: {
-    position: 'absolute',
-    width: width,
-    height: height,
-    top: -height + 150, // Offset to cover screen
-    left: -width + 40,  // Offset to centered
-    backgroundColor: 'rgba(26, 45, 39, 0.85)', // Matches COLORS.background with high opacity
-    zIndex: -1,
-},
-mainFab: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 2,
-},
-actionBtnWrap: {
-    position: 'absolute',
-    bottom: 0,
-    right: 4, // Align centers of small buttons with main button
-    flexDirection: 'row', // Label left, Button right
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: 200, // Width to hold the label
-    zIndex: 2,
-    pointerEvents: 'box-none',
-},
-actionBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-},
-actionLabelContainer: {
-    backgroundColor: COLORS.card, // Matches your cards
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginRight: 12, // Space between label and button
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-},
-actionLabel: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-},
-
-  // ========================================================================
-  // --- 6. SECTION: SHELF & PRODUCTS ---
-  // ========================================================================
-  // --- Stats Bar ---
-  statsContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-around',
-},
-statBox: {
-    alignItems: 'center',
-    flex: 1,
-},
-statLabel: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    marginBottom: 5,
-},
-statValue: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 22,
-    color: COLORS.accentGreen
-},
-statDivider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: COLORS.border,
-    alignSelf: 'center'
-},
-
-// --- New Product List Item ---
-productListItemWrapper: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-},
-productListItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    padding: 16,
-    gap: 16,
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-},
-listItemContent: {
-    flex: 1,
-    alignItems: 'flex-end',
-    gap: 4,
-},
-listItemName: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-},
-listItemType: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-},
-verdictContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-    
-},
-listItemVerdict: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    textAlign: 'right',
-},
-listItemScoreContainer: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-},
-listItemScoreText: {
-    position: 'absolute',
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 16,
-},
-
-// --- Swipe to Delete ---
-deleteActionContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 100,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-},
-
-// --- Empty State ---
-emptyState: {
-    alignItems: 'center',
-    marginTop: 40,
-    padding: 30,
-},
-emptyText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 18,
-    color: COLORS.textPrimary,
-    marginTop: 15,
-    textAlign: 'center',
-},
-emptySub: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 5,
-    lineHeight: 20,
-},
-emptyStateButton: {
-    flexDirection: 'row-reverse',
-    gap: 10,
-    marginTop: 20,
-    backgroundColor: COLORS.accentGreen,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    alignItems: 'center',
-},
-emptyStateButtonText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 15,
-    color: COLORS.textOnAccent,
-},
-
-// --- Product Details Bottom Sheet (Sophisticated & Scrollable) ---
-sheetContent: {
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderBottomWidth: 0,
-    maxHeight: height * 0.85,
-    overflow: 'hidden',
-},
-sheetDraggableArea: {
-    paddingBottom: 5,
-},
-sheetPillarsContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-around',
-    padding: 15,
-    backgroundColor: COLORS.background,
-    borderRadius: 16,
-    marginBottom: 15,
-    marginHorizontal: 15,
-},
-sheetPillar: {
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-},
-sheetDividerVertical: {
-    width: 1,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 10,
-},
-sheetPillarLabel: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-},
-sheetPillarValue: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 20,
-},
-sheetSection: {
-    paddingHorizontal: 15,
-    marginBottom: 15,
-},
-sheetSectionTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 10,
-},
-alertBox: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-},
-alertBoxText: {
-    flex: 1,
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    lineHeight: 18,
-},
-ingredientChip: {
-    backgroundColor: COLORS.background,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginHorizontal: 5,
-    marginBottom: 10,
-},
-ingredientChipText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-},
   
-  // ========================================================================
-  // --- 7. SECTION: ANALYSIS & INSIGHTS ---
-  // ========================================================================
-  focusInsightCard: {
-      borderRadius: 24,
-      padding: 25,
-      marginBottom: 25,
+  // --- Product Details Bottom Sheet (Sophisticated & Scrollable) ---
+  sheetContent: {
+      backgroundColor: COLORS.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
+      borderColor: COLORS.border,
+      borderBottomWidth: 0,
+      maxHeight: height * 0.85,
+      overflow: 'hidden',
   },
-  focusInsightHeader: {
+  sheetDraggableArea: {
+      paddingBottom: 5,
+  },
+  sheetPillarsContainer: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-around',
+      padding: 15,
+      backgroundColor: COLORS.background,
+      borderRadius: 16,
+      marginBottom: 15,
+      marginHorizontal: 15,
+  },
+  sheetPillar: {
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+  },
+  sheetDividerVertical: {
+      width: 1,
+      backgroundColor: COLORS.border,
+      marginHorizontal: 10,
+  },
+  sheetPillarLabel: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+  },
+  sheetPillarValue: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 20,
+  },
+  sheetSection: {
+      paddingHorizontal: 15,
+      marginBottom: 15,
+  },
+  sheetSectionTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 10,
+  },
+  alertBox: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 8,
+  },
+  alertBoxText: {
+      flex: 1,
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      lineHeight: 18,
+  },
+  ingredientChip: {
+      backgroundColor: COLORS.background,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginHorizontal: 5,
+      marginBottom: 10,
+  },
+  ingredientChipText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+  },
+    
+    // ========================================================================
+    // --- 7. SECTION: ANALYSIS & INSIGHTS ---
+    // ========================================================================
+    focusInsightCard: {
+        borderRadius: 24,
+        padding: 25,
+        marginBottom: 25,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    focusInsightHeader: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 12,
+    },
+    focusInsightTitle: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+    },
+    focusInsightSummary: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+        marginTop: 12,
+        lineHeight: 22,
+    },
+    focusInsightAction: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+        marginTop: 20,
+    },
+    focusInsightActionText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        color: COLORS.accentGreen,
+    },
+    allClearContainer: {
+        alignItems: 'center',
+        padding: 30,
+        marginBottom: 25,
+    },
+    allClearIconWrapper: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: 'rgba(34, 197, 94, 0.2)',
+    },
+    allClearTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+    },
+    allClearSummary: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginTop: 5,
+        lineHeight: 20,
+    },
+    carouselTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+        marginBottom: 15,
+        paddingHorizontal: 5,
+    },
+    carouselContentContainer: {
+        paddingHorizontal: 5,
+        paddingBottom: 25,
+    },
+    carouselItem: {
+        width: 150,
+        height: 150,
+        backgroundColor: COLORS.card,
+        borderRadius: 20,
+        padding: 15,
+        
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        justifyContent: 'space-between',
+    },
+    carouselIconWrapper: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    carouselItemTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+        lineHeight: 19,
+    },
+    overviewContainer: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    overviewCard: {
+        flex: 1,
+    },
+    analysisCardHeader: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 15,
+        opacity: 0.8,
+    },
+    analysisCardTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    routineOverviewGrid: {
+        gap: 12,
+    },
+    routineColumn: {
+        gap: 8,
+    },
+    routineColumnTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+        marginBottom: 4,
+    },
+    routineProductPill: {
+        backgroundColor: COLORS.background,
+        color: COLORS.textSecondary,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    routineEmptyText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        color: COLORS.textDim,
+        textAlign: 'right',
+    },
+    routineDivider: {
+        height: 1,
+        backgroundColor: COLORS.border,
+    },
+    sunProtectionContainer: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingVertical: 5,
+        flex: 1,
+        justifyContent: 'center',
+    },
+    sunProtectionNote: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 11,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+        lineHeight: 16,
+    },
+  
+    // ========================================================================
+    // --- 8. SECTION: ROUTINE BUILDER ---
+    // ========================================================================
+    routineHeaderContainer: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        gap: 10,
+    },
+    routineSwitchContainer: {
+        flex: 1,
+        flexDirection: 'row-reverse',
+        backgroundColor: COLORS.card,
+        borderRadius: 99,
+        padding: 6,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    periodBtn: {
+        flex: 1,
+        flexDirection: 'row-reverse',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        borderRadius: 99,
+    },
+    periodBtnActive: {
+        backgroundColor: COLORS.accentGreen,
+    },
+    periodText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+    },
+    periodTextActive: {
+        color: COLORS.textOnAccent,
+    },
+    autoBuildButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.card,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    
+    stepCardContainer: {
+      backgroundColor: COLORS.card,
+      borderRadius: 18,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      overflow: 'hidden',
+      // Android Shadow
+      elevation: 2, 
+      // iOS Shadow
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+  },
+  stepHeaderRow: {
+      flexDirection: 'row-reverse', // RTL Layout
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      paddingBottom: 0,
+  },
+  stepTitleGroup: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
   },
-  focusInsightTitle: {
+  stepNumberBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  stepNumberText: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 16,
+      color: '#fff',
+  },
+  stepName: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  stepSubText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+  },
+  deleteIconButton: {
+      padding: 8,
+      opacity: 0.7,
+  },
+  stepBody: {
+      padding: 12,
+      paddingTop: 10,
+  },
+  stepProductsScroll: {
+      flexDirection: 'row-reverse',
+      gap: 8,
+      paddingRight: 4, // Padding for first item scroll
+  },
+  chipIconBox: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 6,
+  },
+  stepProductText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textPrimary,
+      flexShrink: 1,
+  },
+  stepEmptyState: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderStyle: 'dashed',
+      borderRadius: 12,
+      backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  stepEmptyLabel: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textDim,
+  },
+  editIndicator: {
+      position: 'absolute',
+      bottom: 6,
+      left: 12, // Since it's RTL, left is the "end"
+      opacity: 0.5
+  },
+    
+    // ========================================================================
+    // --- 9. SECTION: INGREDIENTS ---
+    // ========================================================================
+    
+    // --- Search & Filters ---
+    searchBar: {
+      flexDirection: 'row-reverse',
+      backgroundColor: COLORS.card,
+      borderRadius: 14,
+      paddingHorizontal: 15,
+      height: 44,
+      alignItems: 'center',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontFamily: 'Tajawal-Regular',
+      color: COLORS.textPrimary,
+      marginRight: 10,
+      fontSize: 14,
+      textAlign: 'right',
+      paddingVertical: 10,
+    },
+    filterPill: {
+      backgroundColor: COLORS.card,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    filterPillActive: {
+      backgroundColor: COLORS.accentGreen,
+      borderColor: COLORS.accentGreen,
+    },
+    filterText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+    },
+    filterTextActive: {
+      color: COLORS.textOnAccent,
+      fontFamily: 'Tajawal-Bold',
+    },
+  
+    // --- LIST CARD STYLES ---
+    ingCard: {
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    ingCardContent: {
+        flexDirection: 'row-reverse', // Critical: Forces RTL layout
+        alignItems: 'center',
+        padding: 12,
+        gap: 12,
+        width: '100%',
+    },
+    ingCountBadge: {
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    ingCountText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+    },
+    ingInfoContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        gap: 2,
+    },
+    ingNameText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    // *** Scientific Name Style (Added) ***
+    ingSciText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 11,
+        color: COLORS.textDim,
+        textAlign: 'right',
+        fontStyle: 'italic',
+        marginTop: -2,
+    },
+    ingTagsRow: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+    },
+    ingCategoryTag: {
+        backgroundColor: 'rgba(90, 156, 132, 0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(90, 156, 132, 0.2)',
+    },
+    ingTagLabel: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
+        color: COLORS.accentGreen,
+    },
+  
+    // --- MODAL STYLES ---
+    
+    // Header
+    ingModalHeader: {
+      backgroundColor: COLORS.card,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+    },
+    ingModalTitle: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 22,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 4,
+    },
+    // *** Scientific Name in Modal (Added) ***
+    ingModalScientific: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      fontStyle: 'italic',
+      marginBottom: 12,
+    },
+    ingTypeBadge: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      alignSelf: 'flex-start',
+    },
+    ingTypeText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+    },
+    ingBadgesRow: {
+      flexDirection: 'row-reverse',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 15,
+    },
+    ingBadge: {
+      backgroundColor: COLORS.background,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    ingBadgeText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+    },
+  
+    // Content Sections
+    ingSection: {
+      marginBottom: 30,
+    },
+    ingSectionTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 15,
+      borderRightWidth: 3,
+      borderRightColor: COLORS.accentGreen,
+      paddingRight: 10,
+    },
+  
+    // Benefits
+    benefitRow: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    benefitLabel: {
+      flex: 1.2,
+      textAlign: 'right',
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+    },
+    benefitBarContainer: {
+      flex: 2,
+      height: 6,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: 3,
+      marginHorizontal: 12,
+      flexDirection: 'row-reverse', 
+    },
+    benefitBarFill: {
+      height: '100%',
+      backgroundColor: COLORS.accentGreen,
+      borderRadius: 3,
+    },
+    benefitScore: {
+      width: 30,
+      textAlign: 'left',
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.textPrimary,
+    },
+  
+    // Warnings
+    warningBox: {
+      flexDirection: 'row-reverse',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 8,
+      gap: 12,
+      alignItems: 'flex-start',
+    },
+    warningBoxRisk: {
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.3)',
+    },
+    warningBoxCaution: {
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
+    warningText: {
+      flex: 1,
+      textAlign: 'right',
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      lineHeight: 20,
+    },
+  
+    // *** Synergy & Conflict Styles (Added) ***
+    interactionHeader: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textPrimary,
+      marginBottom: 10,
+      textAlign: 'right',
+    },
+    synergyItem: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.success,
+      marginBottom: 6,
+      textAlign: 'right',
+      paddingRight: 5,
+    },
+    conflictItem: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.danger,
+      marginBottom: 6,
+      textAlign: 'right',
+      paddingRight: 5,
+    },
+    noDataText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textDim,
+      fontStyle: 'italic',
+      textAlign: 'right',
+      opacity: 0.7,
+    },
+    
+    // Products Chip
+    productChip: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: COLORS.background,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    productChipText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      flex: 1,
+      textAlign: 'right',
+    },
+    loadMoreButton: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: COLORS.card,
+      paddingVertical: 12,
+      marginVertical: 20,
+      marginHorizontal: 40,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.accentGreen,
+      marginBottom: 120 // Extra space for dock
+  },
+  loadMoreText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+  },
+  
+    
+    // ========================================================================
+    // --- 10. SECTION: MIGRATION ---
+    // ========================================================================
+    migName: {
+        fontFamily: 'Tajawal-Bold',
+        color: COLORS.textPrimary,
+        fontSize: 16,
+        textAlign: 'right',
+        flex: 1,
+    },
+    badBadge: {
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginLeft: 6,
+        marginBottom: 4,
+    },
+    criticalBadge: {
+        backgroundColor: COLORS.danger,
+    },
+    badText: {
+        color: COLORS.danger,
+        fontSize: 9,
+        fontFamily: 'Tajawal-Bold'
+    },
+    migReason: {
+        fontFamily: 'Tajawal-Regular',
+        color: COLORS.textSecondary,
+        fontSize: 12,
+        textAlign: 'right',
+        marginTop: 8
+    },
+    migSuggestion: {
+        fontFamily: 'Tajawal-Regular',
+        color: COLORS.accentGreen,
+        textAlign: 'right',
+        fontSize: 13,
+        marginTop: 8,
+        backgroundColor: 'rgba(90, 156, 132, 0.1)',
+        padding: 10,
+        borderRadius: 10
+    },
+    migrationTip: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        padding: 8,
+        backgroundColor: 'rgba(251, 191, 36, 0.1)',
+        borderRadius: 8,
+    },
+    migrationTipText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 11,
+        color: COLORS.gold,
+        flex: 1,
+    },
+    
+    // ========================================================================
+    // --- 11. SECTION: SETTINGS & ACCORDION ---
+    // ========================================================================
+    accordionHeader: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 18,
+        backgroundColor: 'transparent',
+    },
+    accordionTitle: {
+        fontFamily: 'Tajawal-Bold',
+        color: COLORS.textPrimary,
+        fontSize: 16,
+    },
+    accordionBody: {
+        padding: 20,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+    },
+    settingGroup: {
+        marginVertical: 10,
+    },
+    groupLabel: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+        marginBottom: 12,
+    },
+    chipsRow: {
+        flexDirection: 'row-reverse',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    chip: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 8,
+    },
+    chipActive: {
+        backgroundColor: COLORS.accentGreen,
+        borderColor: COLORS.accentGreen,
+    },
+    chipText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+    },
+    logoutBtn: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.5)',
+        gap: 10
+    },
+    logoutText: {
+        fontFamily: 'Tajawal-Bold',
+        color: COLORS.danger,
+        fontSize: 16
+    },
+  
+    // ========================================================================
+    // --- 12. COMPONENT: ONBOARDING GUIDE ---
+    // ========================================================================
+    guideOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        zIndex: 100,
+    },
+    guideContentContainer: {
+        zIndex: 101,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        padding: 30,
+        paddingBottom: height * 0.2,
+    },
+    guideTextBox: {
+        backgroundColor: COLORS.card,
+        borderRadius: 20,
+        padding: 25,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        alignItems: 'center',
+        width: '100%',
+    },
+    guideTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 20,
+        color: COLORS.textPrimary,
+        marginBottom: 10,
+    },
+    guideText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 20,
+    },
+    guideButton: {
+        backgroundColor: COLORS.accentGreen,
+        paddingHorizontal: 30,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    guideButtonText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textOnAccent,
+    },
+  
+    // ========================================================================
+    // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
+    // ========================================================================
+    
+    // --- Overlays & Containers ---
+    sheetOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      justifyContent: 'flex-end',
+  },
+  backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: '#000',
+      zIndex: 1,
+  },
+  sheetContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: height * 0.85, // Standard height for most sheets
+      zIndex: 2,
+      justifyContent: 'flex-end',
+  },
+  sheetContent: {
+      flex: 1,
+      backgroundColor: COLORS.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      overflow: 'hidden',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -5 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 20,
+  },
+  sheetHandleBar: {
+      alignItems: 'center',
+      paddingVertical: 15,
+      backgroundColor: COLORS.card,
+      width: '100%',
+  },
+  sheetHandle: {
+      width: 40,
+      height: 5,
+      backgroundColor: COLORS.border,
+      borderRadius: 2.5,
+  },
+  
+  // --- Specific Modal Content Styles ---
+  sheetProductTitle: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 20,
+      color: COLORS.textPrimary,
+      textAlign: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 10,
+  },
+  
+    // --- Modal/Sheet Header (Unified) ---
+    modalHeader: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 15,
+      marginBottom: 20,
+  },
+  modalIconContainer: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  modalTitle: {
+      flex: 1,
       fontFamily: 'Tajawal-ExtraBold',
       fontSize: 18,
       color: COLORS.textPrimary,
+      textAlign: 'right',
   },
-  focusInsightSummary: {
+  modalDescription: {
       fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
+      fontSize: 15,
       color: COLORS.textSecondary,
       textAlign: 'right',
-      marginTop: 12,
-      lineHeight: 22,
+      lineHeight: 24,
+      marginBottom: 20,
   },
-  focusInsightAction: {
+  relatedProductsTitle: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+      marginBottom: 10,
+  },
+    relatedProductItem: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+        marginBottom: 4,
+        paddingHorizontal: 20,
+    },
+    promptModalSub: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginBottom: 20,
+        marginTop: 5,
+    },
+    promptInput: {
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 12,
+        padding: 14,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+        marginHorizontal: 20,
+        marginBottom: 25,
+    },
+  
+    // --- Modal/Sheet Action Buttons ---
+    closeButton: {
+        backgroundColor: COLORS.accentGreen,
+        padding: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginTop: 10,
+    },
+    closeButtonText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textOnAccent,
+    },
+    promptButtonRow: {
+        flexDirection: 'row-reverse',
+        gap: 10,
+        marginHorizontal: 20,
+    },
+    promptButton: {
+        flex: 1,
+        padding: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    promptButtonPrimary: {
+        backgroundColor: COLORS.accentGreen,
+    },
+    promptButtonSecondary: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    promptButtonText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+    },
+    promptButtonTextPrimary: {
+        color: COLORS.textOnAccent,
+    },
+    promptButtonTextSecondary: {
+        color: COLORS.textSecondary,
+    },
+  
+    // --- Specific Modals: Step Editor & Add Product ---
+    stepModalHeader: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+  },
+    stepModalTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+    },
+    addProductButton: {
+        flexDirection: 'row-reverse',
+        gap: 6,
+        backgroundColor: COLORS.accentGreen,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    addProductButtonText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        color: COLORS.textOnAccent,
+    },
+    stepModalEmpty: {
+        alignItems: 'center',
+        paddingVertical: 40,
+        gap: 10,
+    },
+    stepModalEmptyText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textDim,
+    },
+    reorderItem: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        backgroundColor: COLORS.background,
+        borderRadius: 14,
+        padding: 12,
+        marginBottom: 10,
+        marginHorizontal: 20,
+    },
+    reorderControls: {
+        gap: 8,
+        marginLeft: 10,
+        paddingHorizontal: 5,
+    },
+    reorderItemText: {
+        flex: 1,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    reorderRemoveButton: {
+        padding: 8,
+    },
+    saveStepButton: {
+        backgroundColor: COLORS.accentGreen,
+        padding: 16,
+        borderRadius: 14,
+        alignItems: 'center',
+        margin: 20,
+    },
+    saveStepButtonText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textOnAccent,
+    },
+    modalContent: {
+        width: '90%',
+        maxHeight: height * 0.6,
+    },
+    modalItem: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+    },
+    modalItemName: {
+        fontFamily: 'Tajawal-Regular',
+        color: COLORS.textPrimary,
+        fontSize: 14,
+    },
+    stepCardContainer: {
+      backgroundColor: COLORS.card,
+      borderRadius: 18,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      overflow: 'hidden',
+      // Android Shadow
+      elevation: 2, 
+      // iOS Shadow
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+  },
+  stepHeaderRow: {
+      flexDirection: 'row-reverse', // RTL Layout
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      paddingBottom: 0,
+  },
+  stepTitleGroup: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 8,
-      backgroundColor: 'rgba(0,0,0,0.2)',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      gap: 12,
+  },
+  stepNumberBadge: {
+      width: 36,
+      height: 36,
       borderRadius: 12,
-      alignSelf: 'flex-start',
-      marginTop: 20,
-  },
-  focusInsightActionText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 12,
-      color: COLORS.accentGreen,
-  },
-  allClearContainer: {
       alignItems: 'center',
-      padding: 30,
-      marginBottom: 25,
+      justifyContent: 'center',
   },
-  allClearIconWrapper: {
+  stepNumberText: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 16,
+      color: '#fff',
+  },
+  stepName: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textPrimary,
+      textAlign: 'right',
+  },
+  stepSubText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+  },
+  deleteIconButton: {
+      padding: 8,
+      opacity: 0.7,
+  },
+  stepBody: {
+      padding: 12,
+      paddingTop: 10,
+  },
+  stepProductsScroll: {
+      flexDirection: 'row-reverse',
+      gap: 8,
+      paddingRight: 4, // Padding for first item scroll
+  },
+  stepProductChip: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      backgroundColor: COLORS.background,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+      maxWidth: 160,
+  },
+  chipIconBox: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 6,
+  },
+  stepProductText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textPrimary,
+      flexShrink: 1,
+  },
+  stepEmptyState: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderStyle: 'dashed',
+      borderRadius: 12,
+      backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  stepEmptyLabel: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textDim,
+  },
+  editIndicator: {
+      position: 'absolute',
+      bottom: 6,
+      left: 12, // Since it's RTL, left is the "end"
+      opacity: 0.5
+  },
+  barrierTrack: {
+      height: 8,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: 4,
+      width: '100%',
+      marginBottom: 10,
+      overflow: 'hidden',
+  },
+  barrierFill: {
+      height: '100%',
+      borderRadius: 4,
+  },
+  barrierDesc: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      textAlign: 'right',
+      lineHeight: 18,
+  },
+  barrierScoreBadge: {
       width: 60,
       height: 60,
       borderRadius: 30,
-      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-      justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 15,
-      borderWidth: 1,
-      borderColor: 'rgba(34, 197, 94, 0.2)',
+      justifyContent: 'center',
+      borderWidth: 2,
   },
-  allClearTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
-      color: COLORS.textPrimary,
-  },
-  allClearSummary: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 13,
-      color: COLORS.textSecondary,
-      textAlign: 'center',
-      marginTop: 5,
-      lineHeight: 20,
-  },
-  carouselTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-      marginBottom: 15,
-      paddingHorizontal: 5,
-  },
-  carouselContentContainer: {
-      paddingHorizontal: 5,
-      paddingBottom: 25,
-  },
-  carouselItem: {
-      width: 150,
-      height: 150,
-      backgroundColor: COLORS.card,
-      borderRadius: 20,
+  educationBox: {
+      backgroundColor: COLORS.background,
       padding: 15,
-      
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      justifyContent: 'space-between',
-  },
-  carouselIconWrapper: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  carouselItemTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 13,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-      lineHeight: 19,
-  },
-  overviewContainer: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-      gap: 12,
-  },
-  overviewCard: {
-      flex: 1,
-  },
-  analysisCardHeader: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: 15,
-      opacity: 0.8,
-  },
-  analysisCardTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 14,
-      color: COLORS.textSecondary,
-  },
-  routineOverviewGrid: {
-      gap: 12,
-  },
-  routineColumn: {
-      gap: 8,
-  },
-  routineColumnTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 12,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-      marginBottom: 4,
-  },
-  routineProductPill: {
-      backgroundColor: COLORS.background,
-      color: COLORS.textSecondary,
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-      overflow: 'hidden',
-  },
-  routineEmptyText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textDim,
-      textAlign: 'right',
-  },
-  routineDivider: {
-      height: 1,
-      backgroundColor: COLORS.border,
-  },
-  sunProtectionContainer: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingVertical: 5,
-      flex: 1,
-      justifyContent: 'center',
-  },
-  sunProtectionNote: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 11,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-      lineHeight: 16,
-  },
-
-  // ========================================================================
-  // --- 8. SECTION: ROUTINE BUILDER ---
-  // ========================================================================
-  routineHeaderContainer: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 20,
-      gap: 10,
-  },
-  routineSwitchContainer: {
-      flex: 1,
-      flexDirection: 'row-reverse',
-      backgroundColor: COLORS.card,
-      borderRadius: 99,
-      padding: 6,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-  },
-  periodBtn: {
-      flex: 1,
-      flexDirection: 'row-reverse',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 10,
-      borderRadius: 99,
-  },
-  periodBtnActive: {
-      backgroundColor: COLORS.accentGreen,
-  },
-  periodText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 13,
-      color: COLORS.textSecondary,
-  },
-  periodTextActive: {
-      color: COLORS.textOnAccent,
-  },
-  autoBuildButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: COLORS.card,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: COLORS.border,
-  },
-  
-  stepCardContainer: {
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    // Android Shadow
-    elevation: 2, 
-    // iOS Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-},
-stepHeaderRow: {
-    flexDirection: 'row-reverse', // RTL Layout
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    paddingBottom: 0,
-},
-stepTitleGroup: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-},
-stepNumberBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-},
-stepNumberText: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 16,
-    color: '#fff',
-},
-stepName: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-},
-stepSubText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-},
-deleteIconButton: {
-    padding: 8,
-    opacity: 0.7,
-},
-stepBody: {
-    padding: 12,
-    paddingTop: 10,
-},
-stepProductsScroll: {
-    flexDirection: 'row-reverse',
-    gap: 8,
-    paddingRight: 4, // Padding for first item scroll
-},
-chipIconBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
-},
-stepProductText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-    flexShrink: 1,
-},
-stepEmptyState: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-},
-stepEmptyLabel: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textDim,
-},
-editIndicator: {
-    position: 'absolute',
-    bottom: 6,
-    left: 12, // Since it's RTL, left is the "end"
-    opacity: 0.5
-},
-  
-  // ========================================================================
-  // --- 9. SECTION: INGREDIENTS ---
-  // ========================================================================
-  
-  // --- Search & Filters ---
-  searchBar: {
-    flexDirection: 'row-reverse',
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    paddingHorizontal: 15,
-    height: 44,
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: 'Tajawal-Regular',
-    color: COLORS.textPrimary,
-    marginRight: 10,
-    fontSize: 14,
-    textAlign: 'right',
-    paddingVertical: 10,
-  },
-  filterPill: {
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterPillActive: {
-    backgroundColor: COLORS.accentGreen,
-    borderColor: COLORS.accentGreen,
-  },
-  filterText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  filterTextActive: {
-    color: COLORS.textOnAccent,
-    fontFamily: 'Tajawal-Bold',
-  },
-
-  // --- LIST CARD STYLES ---
-  ingCard: {
-      backgroundColor: COLORS.card,
       borderRadius: 16,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)',
-      overflow: 'hidden',
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-      elevation: 2,
-  },
-  ingCardContent: {
-      flexDirection: 'row-reverse', // Critical: Forces RTL layout
-      alignItems: 'center',
-      padding: 12,
-      gap: 12,
-      width: '100%',
-  },
-  ingCountBadge: {
-      width: 40,
-      height: 40,
-      borderRadius: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-  },
-  ingCountText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-  },
-  ingInfoContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      gap: 2,
-  },
-  ingNameText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 15,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-  },
-  // *** Scientific Name Style (Added) ***
-  ingSciText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 11,
-      color: COLORS.textDim,
-      textAlign: 'right',
-      fontStyle: 'italic',
-      marginTop: -2,
-  },
-  ingTagsRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 6,
-  },
-  ingCategoryTag: {
-      backgroundColor: 'rgba(90, 156, 132, 0.1)',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: 'rgba(90, 156, 132, 0.2)',
-  },
-  ingTagLabel: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 10,
-      color: COLORS.accentGreen,
-  },
-
-  // --- MODAL STYLES ---
-  
-  // Header
-  ingModalHeader: {
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  ingModalTitle: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 22,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  // *** Scientific Name in Modal (Added) ***
-  ingModalScientific: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  ingTypeBadge: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  ingTypeText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-  },
-  ingBadgesRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 15,
-  },
-  ingBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  ingBadgeText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-
-  // Content Sections
-  ingSection: {
-    marginBottom: 30,
-  },
-  ingSectionTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 15,
-    borderRightWidth: 3,
-    borderRightColor: COLORS.accentGreen,
-    paddingRight: 10,
-  },
-
-  // Benefits
-  benefitRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  benefitLabel: {
-    flex: 1.2,
-    textAlign: 'right',
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  benefitBarContainer: {
-    flex: 2,
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 3,
-    marginHorizontal: 12,
-    flexDirection: 'row-reverse', 
-  },
-  benefitBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.accentGreen,
-    borderRadius: 3,
-  },
-  benefitScore: {
-    width: 30,
-    textAlign: 'left',
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-  },
-
-  // Warnings
-  warningBox: {
-    flexDirection: 'row-reverse',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  warningBoxRisk: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  warningBoxCaution: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  warningText: {
-    flex: 1,
-    textAlign: 'right',
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  // *** Synergy & Conflict Styles (Added) ***
-  interactionHeader: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    marginBottom: 10,
-    textAlign: 'right',
-  },
-  synergyItem: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.success,
-    marginBottom: 6,
-    textAlign: 'right',
-    paddingRight: 5,
-  },
-  conflictItem: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.danger,
-    marginBottom: 6,
-    textAlign: 'right',
-    paddingRight: 5,
-  },
-  noDataText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textDim,
-    fontStyle: 'italic',
-    textAlign: 'right',
-    opacity: 0.7,
-  },
-  
-  // Products Chip
-  productChip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.background,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  productChipText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  loadMoreButton: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.card,
-    paddingVertical: 12,
-    marginVertical: 20,
-    marginHorizontal: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.accentGreen,
-    marginBottom: 120 // Extra space for dock
-},
-loadMoreText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 14,
-    color: COLORS.textPrimary,
-},
-
-  
-  // ========================================================================
-  // --- 10. SECTION: MIGRATION ---
-  // ========================================================================
-  migName: {
-      fontFamily: 'Tajawal-Bold',
-      color: COLORS.textPrimary,
-      fontSize: 16,
-      textAlign: 'right',
-      flex: 1,
-  },
-  badBadge: {
-      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
-      marginLeft: 6,
-      marginBottom: 4,
-  },
-  criticalBadge: {
-      backgroundColor: COLORS.danger,
-  },
-  badText: {
-      color: COLORS.danger,
-      fontSize: 9,
-      fontFamily: 'Tajawal-Bold'
-  },
-  migReason: {
-      fontFamily: 'Tajawal-Regular',
-      color: COLORS.textSecondary,
-      fontSize: 12,
-      textAlign: 'right',
-      marginTop: 8
-  },
-  migSuggestion: {
-      fontFamily: 'Tajawal-Regular',
-      color: COLORS.accentGreen,
-      textAlign: 'right',
-      fontSize: 13,
-      marginTop: 8,
-      backgroundColor: 'rgba(90, 156, 132, 0.1)',
-      padding: 10,
-      borderRadius: 10
-  },
-  migrationTip: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 10,
-      padding: 8,
-      backgroundColor: 'rgba(251, 191, 36, 0.1)',
-      borderRadius: 8,
-  },
-  migrationTipText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 11,
-      color: COLORS.gold,
-      flex: 1,
-  },
-  
-  // ========================================================================
-  // --- 11. SECTION: SETTINGS & ACCORDION ---
-  // ========================================================================
-  accordionHeader: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 18,
-      backgroundColor: 'transparent',
-  },
-  accordionTitle: {
-      fontFamily: 'Tajawal-Bold',
-      color: COLORS.textPrimary,
-      fontSize: 16,
-  },
-  accordionBody: {
-      padding: 20,
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.border,
-  },
-  settingGroup: {
-      marginVertical: 10,
-  },
-  groupLabel: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 14,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-      marginBottom: 12,
-  },
-  chipsRow: {
-      flexDirection: 'row-reverse',
-      flexWrap: 'wrap',
-      gap: 10,
-  },
-  chip: {
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 20,
-      backgroundColor: COLORS.background,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 8,
-  },
-  chipActive: {
-      backgroundColor: COLORS.accentGreen,
-      borderColor: COLORS.accentGreen,
-  },
-  chipText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 13,
-      color: COLORS.textSecondary,
-  },
-  logoutBtn: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: 'rgba(239, 68, 68, 0.5)',
-      gap: 10
-  },
-  logoutText: {
-      fontFamily: 'Tajawal-Bold',
-      color: COLORS.danger,
-      fontSize: 16
-  },
-
-  // ========================================================================
-  // --- 12. COMPONENT: ONBOARDING GUIDE ---
-  // ========================================================================
-  guideOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.85)',
-      zIndex: 100,
-  },
-  guideContentContainer: {
-      zIndex: 101,
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      padding: 30,
-      paddingBottom: height * 0.2,
-  },
-  guideTextBox: {
-      backgroundColor: COLORS.card,
-      borderRadius: 20,
-      padding: 25,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      alignItems: 'center',
-      width: '100%',
-  },
-  guideTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 20,
-      color: COLORS.textPrimary,
-      marginBottom: 10,
-  },
-  guideText: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
-      color: COLORS.textSecondary,
-      textAlign: 'center',
-      lineHeight: 22,
-      marginBottom: 20,
-  },
-  guideButton: {
-      backgroundColor: COLORS.accentGreen,
-      paddingHorizontal: 30,
-      paddingVertical: 12,
-      borderRadius: 12,
-  },
-  guideButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textOnAccent,
-  },
-
-  // ========================================================================
-  // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
-  // ========================================================================
-  
-  // --- Overlays & Containers ---
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'flex-end',
-},
-backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-    zIndex: 1,
-},
-sheetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.85, // Standard height for most sheets
-    zIndex: 2,
-    justifyContent: 'flex-end',
-},
-sheetContent: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 20,
-},
-sheetHandleBar: {
-    alignItems: 'center',
-    paddingVertical: 15,
-    backgroundColor: COLORS.card,
-    width: '100%',
-},
-sheetHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: COLORS.border,
-    borderRadius: 2.5,
-},
-
-// --- Specific Modal Content Styles ---
-sheetProductTitle: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 20,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-},
-
-  // --- Modal/Sheet Header (Unified) ---
-  modalHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 15,
-    marginBottom: 20,
-},
-modalIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-},
-modalTitle: {
-    flex: 1,
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 18,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-},
-modalDescription: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    lineHeight: 24,
-    marginBottom: 20,
-},
-relatedProductsTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-    marginBottom: 10,
-},
-  relatedProductItem: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 13,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-      marginBottom: 4,
-      paddingHorizontal: 20,
-  },
-  promptModalSub: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 13,
-      color: COLORS.textSecondary,
-      textAlign: 'center',
-      marginBottom: 20,
-      marginTop: 5,
-  },
-  promptInput: {
-      backgroundColor: COLORS.background,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      borderRadius: 12,
-      padding: 14,
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 14,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-      marginHorizontal: 20,
       marginBottom: 25,
-  },
-
-  // --- Modal/Sheet Action Buttons ---
-  closeButton: {
-      backgroundColor: COLORS.accentGreen,
-      padding: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-      marginHorizontal: 20,
-      marginTop: 10,
-  },
-  closeButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textOnAccent,
-  },
-  promptButtonRow: {
-      flexDirection: 'row-reverse',
-      gap: 10,
-      marginHorizontal: 20,
-  },
-  promptButton: {
-      flex: 1,
-      padding: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-  },
-  promptButtonPrimary: {
-      backgroundColor: COLORS.accentGreen,
-  },
-  promptButtonSecondary: {
-      backgroundColor: 'transparent',
       borderWidth: 1,
       borderColor: COLORS.border,
   },
-  promptButtonText: {
+  educationTitle: {
       fontFamily: 'Tajawal-Bold',
-      fontSize: 15,
-  },
-  promptButtonTextPrimary: {
-      color: COLORS.textOnAccent,
-  },
-  promptButtonTextSecondary: {
-      color: COLORS.textSecondary,
-  },
-
-  // --- Specific Modals: Step Editor & Add Product ---
-  stepModalHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-},
-  stepModalTitle: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 18,
-      color: COLORS.textPrimary,
-  },
-  addProductButton: {
-      flexDirection: 'row-reverse',
-      gap: 6,
-      backgroundColor: COLORS.accentGreen,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 10,
-      alignItems: 'center',
-  },
-  addProductButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 12,
-      color: COLORS.textOnAccent,
-  },
-  stepModalEmpty: {
-      alignItems: 'center',
-      paddingVertical: 40,
-      gap: 10,
-  },
-  stepModalEmptyText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textDim,
-  },
-  reorderItem: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      backgroundColor: COLORS.background,
-      borderRadius: 14,
-      padding: 12,
-      marginBottom: 10,
-      marginHorizontal: 20,
-  },
-  reorderControls: {
-      gap: 8,
-      marginLeft: 10,
-      paddingHorizontal: 5,
-  },
-  reorderItemText: {
-      flex: 1,
-      fontFamily: 'Tajawal-Regular',
       fontSize: 14,
       color: COLORS.textPrimary,
+  },
+  educationText: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      lineHeight: 22,
       textAlign: 'right',
   },
-  reorderRemoveButton: {
-      padding: 8,
+  balanceBarTrack: {
+      height: 12,
+      flexDirection: 'row', // Left to Right for the bar visuals
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: 10,
+      width: '100%',
+      marginBottom: 5,
   },
-  saveStepButton: {
-      backgroundColor: COLORS.accentGreen,
-      padding: 16,
-      borderRadius: 14,
-      alignItems: 'center',
-      margin: 20,
+  balanceBarSegment: {
+      height: '100%',
   },
-  saveStepButtonText: {
+  colHeader: {
       fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textOnAccent,
+      fontSize: 13,
+      textAlign: 'right',
+      marginBottom: 10,
   },
-  modalContent: {
-      width: '90%',
-      maxHeight: height * 0.6,
-  },
-  modalItem: {
+  miniProductRow: {
       flexDirection: 'row-reverse',
-      alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 15,
+      marginBottom: 8,
+      paddingVertical: 4,
       borderBottomWidth: 1,
-      borderBottomColor: COLORS.border,
+      borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  modalItemName: {
+  miniProductText: {
       fontFamily: 'Tajawal-Regular',
-      color: COLORS.textPrimary,
-      fontSize: 14,
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      flex: 1,
+      textAlign: 'right',
+      marginLeft: 10,
   },
-  stepCardContainer: {
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    // Android Shadow
-    elevation: 2, 
-    // iOS Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-},
-stepHeaderRow: {
-    flexDirection: 'row-reverse', // RTL Layout
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    paddingBottom: 0,
-},
-stepTitleGroup: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-},
-stepNumberBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-},
-stepNumberText: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 16,
-    color: '#fff',
-},
-stepName: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    textAlign: 'right',
-},
-stepSubText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-},
-deleteIconButton: {
-    padding: 8,
-    opacity: 0.7,
-},
-stepBody: {
-    padding: 12,
-    paddingTop: 10,
-},
-stepProductsScroll: {
-    flexDirection: 'row-reverse',
-    gap: 8,
-    paddingRight: 4, // Padding for first item scroll
-},
-stepProductChip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    maxWidth: 160,
-},
-chipIconBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
-},
-stepProductText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textPrimary,
-    flexShrink: 1,
-},
-stepEmptyState: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-},
-stepEmptyLabel: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textDim,
-},
-editIndicator: {
-    position: 'absolute',
-    bottom: 6,
-    left: 12, // Since it's RTL, left is the "end"
-    opacity: 0.5
-},
-barrierTrack: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 4,
-    width: '100%',
-    marginBottom: 10,
-    overflow: 'hidden',
-},
-barrierFill: {
-    height: '100%',
-    borderRadius: 4,
-},
-barrierDesc: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    lineHeight: 18,
-},
-barrierScoreBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-},
-educationBox: {
-    backgroundColor: COLORS.background,
-    padding: 15,
-    borderRadius: 16,
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-},
-educationTitle: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 14,
-    color: COLORS.textPrimary,
-},
-educationText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 22,
-    textAlign: 'right',
-},
-balanceBarTrack: {
-    height: 12,
-    flexDirection: 'row', // Left to Right for the bar visuals
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 10,
-    width: '100%',
-    marginBottom: 5,
-},
-balanceBarSegment: {
-    height: '100%',
-},
-colHeader: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    textAlign: 'right',
-    marginBottom: 10,
-},
-miniProductRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-},
-miniProductText: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: 10,
-},
-miniProductScore: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12,
-},
-miniProductIngs: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 10,
-    color: COLORS.textDim,
-    textAlign: 'right',
-    marginTop: 2,
-    marginLeft: 10
-},
-});
+  miniProductScore: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+  },
+  miniProductIngs: {
+      fontFamily: 'Tajawal-Regular',
+      fontSize: 10,
+      color: COLORS.textDim,
+      textAlign: 'right',
+      marginTop: 2,
+      marginLeft: 10
+  },
+  });

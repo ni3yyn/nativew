@@ -1,6 +1,3 @@
-// --- START OF FILE src/data/allergiesandconditions.js ---
-// UI-ONLY DEFINITIONS (No Logic/Ingredients here)
-
 export const commonAllergies = [
     { id: 'nuts', name: 'حساسية المكسرات', description: 'حساسية تجاه المكسرات بأنواعها.' },
     { id: 'soy', name: 'حساسية الصويا', description: 'حساسية تجاه منتجات الصويا.' },
