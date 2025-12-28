@@ -3,7 +3,7 @@ import {
   StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable,
   Dimensions, ScrollView, Animated, ImageBackground, Modal, FlatList,
   Platform, UIManager, Alert, StatusBar, ActivityIndicator, LayoutAnimation,
-  RefreshControl, Keyboard, Easing, I18nManager
+  RefreshControl, Keyboard, Easing, I18nManager, AppState
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import { TouchableWithoutFeedback } from 'react-native'; 
@@ -1319,32 +1319,98 @@ const InsightCarousel = ({ insights, onSelect }) => (
 };
 
 // --- NEW: COMPACT WEATHER WIDGET (Main Screen) ---
-const WeatherCompactWidget = ({ insight, onPress }) => {
+const WeatherCompactWidget = ({ insight, onPress, onRetry }) => {
     
-    // Theme Logic matching your colors
+    // Theme Logic
     const getTheme = () => {
         const id = insight.id.toLowerCase();
         
-        if (insight.customData?.isPermissionError) return { colors: ['#4b5563', '#1f2937'], icon: 'map-marker-alt', action: 'تفعيل' };
-        if (insight.customData?.isServiceError) return { colors: ['#d97706', '#92400e'], icon: 'wifi', action: 'إعادة المحاولة' };
+        // 1. Permission Error
+        if (insight.customData?.isPermissionError) {
+            return { 
+                colors: ['#4b5563', '#1f2937'], 
+                icon: 'map-marker-alt', 
+                actionText: 'تفعيل الموقع',
+                isAction: 'permission'
+            };
+        }
+        // 2. Service Error
+        if (insight.customData?.isServiceError) {
+            return { 
+                colors: ['#d97706', '#92400e'], 
+                icon: 'wifi', 
+                actionText: 'إعادة المحاولة',
+                isAction: 'retry'
+            };
+        }
+        // 3. Good Weather
+        if (insight.severity === 'good' || id.includes('normal')) {
+            return { colors: ['#10b981', '#059669'], icon: 'smile-beam', actionText: 'التفاصيل' };
+        }
+        // 4. Bad Weather
+        if (id.includes('uv') || id.includes('sun')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', actionText: 'الحماية' };
+        if (id.includes('dry') || id.includes('wind')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'wind', actionText: 'الترطيب' };
+        if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', actionText: 'التنظيف' };
         
-        // Good Weather
-        if (insight.severity === 'good' || id.includes('normal')) return { colors: ['#10b981', '#059669'], icon: 'smile-beam', action: 'التفاصيل' };
-        
-        // Bad Weather
-        if (id.includes('uv') || id.includes('sun')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', action: 'الحماية' };
-        if (id.includes('dry') || id.includes('wind')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'wind', action: 'الترطيب' };
-        if (id.includes('pollution')) return { colors: ['#6b7280', '#374151'], icon: 'smog', action: 'التنظيف' };
-        
-        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', action: 'عرض' };
+        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', actionText: 'عرض' };
     };
 
     const theme = getTheme();
-    const isAction = insight.customData?.isPermissionError;
 
-    const handlePress = () => {
-        if (isAction) Linking.openSettings();
-        else onPress(insight);
+    const handlePress = async () => {
+        Haptics.selectionAsync();
+        
+        if (theme.isAction === 'permission') {
+            // --- WEB SUPPORT ---
+            if (Platform.OS === 'web') {
+                try {
+                    // Try to ask again
+                    const { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status === 'granted') {
+                        if (onRetry) onRetry(true);
+                    } else {
+                        // Web Alert: Tell them to fix it in the browser
+                        alert("تم حظر الموقع. يرجى الضغط على أيقونة القفل 🔒 في شريط العنوان والسماح بالوصول للموقع، ثم تحديث الصفحة.");
+                    }
+                } catch (e) {
+                    console.log("Web Permission Error", e);
+                }
+                return; // Stop here for Web
+            }
+
+            // --- NATIVE MOBILE SUPPORT ---
+            try {
+                // 1. Try Native Popup
+                const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+                
+                if (status === 'granted') {
+                    if (onRetry) onRetry(true); 
+                } else {
+                    // 2. Guide to Settings if blocked
+                    if (!canAskAgain || status === 'denied') {
+                        Alert.alert(
+                            "الموقع مطلوب",
+                            "لتحليل الطقس، يرجى تفعيل الموقع من الإعدادات:\n\n1. اضغط على 'الإعدادات'\n2. اختر 'الموقع'\n3. اختر 'أثناء استخدام التطبيق'",
+                            [
+                                { text: "إلغاء", style: "cancel" },
+                                { 
+                                    text: "الإعدادات", 
+                                    onPress: () => Linking.openSettings() 
+                                }
+                            ]
+                        );
+                    }
+                }
+            } catch (e) {
+                Linking.openSettings();
+            }
+        } 
+        else if (theme.isAction === 'retry') {
+            if (onRetry) onRetry(true);
+        } 
+        else {
+            onPress(insight);
+        }
     };
 
     return (
@@ -1352,7 +1418,7 @@ const WeatherCompactWidget = ({ insight, onPress }) => {
             <PressableScale onPress={handlePress}>
                 <LinearGradient 
                     colors={theme.colors} 
-                    style={styles.focusInsightCard} // Reusing your existing style
+                    style={styles.focusInsightCard} 
                     start={{x: 0, y: 0}} end={{x: 1, y: 1}}
                 >
                     <View style={styles.focusInsightHeader}>
@@ -1368,9 +1434,13 @@ const WeatherCompactWidget = ({ insight, onPress }) => {
                     
                     <View style={styles.focusInsightAction}>
                         <Text style={[styles.focusInsightActionText, { color: '#fff' }]}>
-                            {theme.action}
+                            {theme.actionText}
                         </Text>
-                        <Feather name={isAction ? "settings" : "chevron-left"} size={16} color="#fff" />
+                        <Feather 
+                            name={theme.isAction === 'permission' ? "map-pin" : theme.isAction === 'retry' ? "refresh-cw" : "chevron-left"} 
+                            size={16} 
+                            color="#fff" 
+                        />
                     </View>
                 </LinearGradient>
             </PressableScale>
@@ -1379,7 +1449,7 @@ const WeatherCompactWidget = ({ insight, onPress }) => {
 };
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission }) => {
+const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
   
@@ -1464,7 +1534,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 {focusInsight ? (
                     // Conditional Rendering based on Type
                     focusInsight.customData?.type === 'weather_advice' ? (
-                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} />
+                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} onRetry={onRetry} />
                     ) : (
                         <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
                     )
@@ -3474,7 +3544,9 @@ export default function ProfileScreen() {
     const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
     const [addStepHandler, setAddStepHandler] = useState(null);
     const [locationPermission, setLocationPermission] = useState('undetermined'); // 'granted', 'denied', 'undetermined'
-    
+    const [refreshing, setRefreshing] = useState(false); // For Pull-to-Refresh
+    const appState = useRef(AppState.currentState); // Track App State
+
     const openAddStepModal = (onAddCallback) => {
       setAddStepHandler(() => onAddCallback); 
       setAddStepModalVisible(true);
@@ -3605,6 +3677,97 @@ export default function ProfileScreen() {
     };
 }, [savedProducts, userProfile?.settings]); // Dependencies are correct
   
+const runAnalysis = useCallback(async (isPullToRefresh = false) => {
+    if (!savedProducts || savedProducts.length === 0) return;
+
+    if (isPullToRefresh) setRefreshing(true);
+    else setIsAnalyzing(true);
+
+    // 1. GET GPS & CITY
+    let locationPayload = null;
+    try {
+        // Check existing status first to avoid popup loops
+        let { status } = await Location.getForegroundPermissionsAsync();
+        
+        // If undetermined, ask. If denied, we can't ask again easily, just check.
+        if (status === 'undetermined') {
+            const req = await Location.requestForegroundPermissionsAsync();
+            status = req.status;
+        }
+        
+        setLocationPermission(status);
+
+        if (status === 'granted') {
+            let loc = await Location.getCurrentPositionAsync({});
+            
+            // Free Reverse Geocoding
+            let cityName = 'موقعي';
+            try {
+                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=ar`;
+                const geoRes = await fetch(geoUrl);
+                const geoData = await geoRes.json();
+                cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'موقعي';
+            } catch (e) { console.log('City fetch error', e); }
+
+            locationPayload = {
+                lat: loc.coords.latitude,
+                lon: loc.coords.longitude,
+                city: cityName
+            };
+        }
+    } catch (error) {
+        console.log("Location Error:", error);
+    }
+
+    // 2. SEND TO BACKEND
+    try {
+        const response = await fetch(`${PROFILE_API_URL}/analyze-profile`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                products: savedProducts,
+                settings: userProfile?.settings || {},
+                currentRoutine: userProfile?.routines,
+                location: locationPayload 
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            setAnalysisData(data);
+            // Update cache
+            const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
+            analysisCache.current = { hash: currentHash, data: data };
+        }
+    } catch (e) {
+        console.error("Analysis Error:", e);
+    } finally {
+        setIsAnalyzing(false);
+        setRefreshing(false);
+    }
+}, [savedProducts, userProfile]);
+
+// --- 2. INITIAL LOAD & APP RESUME LISTENER ---
+useEffect(() => {
+    // Initial Run
+    runAnalysis();
+
+    // Listen for App Resume (User coming back from Settings)
+    const subscription = AppState.addEventListener('change', nextAppState => {
+        if (
+            appState.current.match(/inactive|background/) && 
+            nextAppState === 'active'
+        ) {
+            console.log('App has come to the foreground! Refreshing Analysis...');
+            // Slight delay to allow Location Services to wake up
+            setTimeout(() => runAnalysis(), 500); 
+        }
+        appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+}, [runAnalysis]);
+
     return (
       <View style={styles.container}>
           <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -3621,7 +3784,16 @@ export default function ProfileScreen() {
               </Animated.View>
           </Animated.View>
   
-          <Animated.ScrollView contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }} scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })} showsVerticalScrollIndicator={false}>
+          <Animated.ScrollView 
+              contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }}
+              scrollEventThrottle={16}
+              onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+              showsVerticalScrollIndicator={false}
+              // ADD REFRESH CONTROL HERE
+              refreshControl={
+                  <RefreshControl refreshing={refreshing} onRefresh={() => runAnalysis(true)} tintColor={COLORS.accentGreen} />
+              }
+          >
               <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
                   
                   {activeTab === 'shelf' && <ShelfSection products={savedProducts} loading={loading} onDelete={handleDelete} router={router} />}
