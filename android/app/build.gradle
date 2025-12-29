@@ -96,6 +96,10 @@ android {
         versionName "1.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+    ndk {
+            // This forces the final APK to ONLY contain arm64-v8a binaries
+            abiFilters "arm64-v8a"
+        }
     }
     signingConfigs {
         debug {
