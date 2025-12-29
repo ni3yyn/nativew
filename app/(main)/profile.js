@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
 import * as Location from 'expo-location';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
+import AuthenticHeader from '../../src/utils/AuthenticHeader';
 import { 
     commonAllergies, 
     commonConditions,
@@ -45,12 +46,11 @@ const COLORS = {
   // --- Elegant Emerald Accent ---
   accentGreen: '#5A9C84', // A confident, muted emerald/seafoam green accent.
   accentGlow: 'rgba(90, 156, 132, 0.4)', // A soft glow for the emerald accent.
-  
+  primary: '#A3E4D7',    // A light, soothing minty green for primary elements.
   // --- High-Contrast Text Colors ---
   textPrimary: '#F1F3F2',   // Soft, near-white for excellent readability.
   textSecondary: '#A3B1AC', // Muted, light green-gray for subtitles.
   textOnAccent: '#1A2D27',  // The deep background color for text on accent buttons.
-  
   // --- System & Feedback Colors ---
   danger: '#ef4444', 
   warning: '#f59e0b', 
@@ -59,6 +59,14 @@ const COLORS = {
   gold: '#fbbf24'
 };
 
+const HEADER_TITLES = {
+    shelf: { title: 'رف المنتجات', icon: 'list' },
+    routine: { title: 'روتين العناية', icon: 'calendar-check' },
+    analysis: { title: 'تحليل البشرة', icon: 'chart-pie' },
+    migration: { title: 'البديل الصحي', icon: 'exchange-alt' },
+    ingredients: { title: 'موسوعة المكونات', icon: 'flask' },
+    settings: { title: 'الإعدادات', icon: 'cog' },
+  };
 
 // --- 3. DATA CONSTANTS ---
 const PRODUCT_TYPES = {
@@ -3583,7 +3591,7 @@ export default function ProfileScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets(); 
   
-    const HEADER_BASE_HEIGHT = 150; 
+    const HEADER_BASE_HEIGHT = 120; 
     const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
     const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
     const scrollDistance = headerMaxHeight - headerMinHeight;
@@ -3624,12 +3632,12 @@ export default function ProfileScreen() {
     };
   
     const TABS = [
-        { id: 'shelf', label: 'الرف', icon: 'list' },
+        { id: 'shelf', label: 'رفي', icon: 'list' },
         { id: 'routine', label: 'روتيني', icon: 'calendar-check' },
         { id: 'analysis', label: 'تحليل', icon: 'chart-pie' },
         { id: 'migration', label: 'البديل', icon: 'exchange-alt' },
-        { id: 'ingredients', label: 'مكونات', icon: 'flask' },
-        { id: 'settings', label: 'إعدادات', icon: 'cog' },
+        { id: 'ingredients', label: 'مكوناتي', icon: 'flask' },
+        { id: 'settings', label: 'إعداداتي', icon: 'cog' },
     ];
   
     // --- NEW: SERVER SIDE ANALYSIS FETCH ---
@@ -3822,13 +3830,64 @@ useEffect(() => {
           {particles.map((p) => <Spore key={p.id} {...p} />)}
           
           <Animated.View style={[styles.header, { height: headerHeight }]}>
-              <LinearGradient colors={['rgba(26, 45, 39, 0.7)', 'transparent']} style={StyleSheet.absoluteFill} />
-              <Animated.View style={[styles.headerContentExpanded, { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }]}>
-                      <View><Text style={styles.welcomeText}>أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}</Text><Text style={styles.subWelcome}>رحلتك لجمال طبيعي ✨</Text></View>
-                      <View style={styles.avatar}><Text style={{fontSize: 28}}>🧖‍♀️</Text></View>
+              {/* Background Gradient */}
+              <LinearGradient 
+                  colors={['#1A2D27', 'rgba(26, 45, 39, 0.95)', 'rgba(26, 45, 39, 0)']} 
+                  style={StyleSheet.absoluteFill} 
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+              />
+
+              {/* 1. EXPANDED HEADER (Normal) */}
+              <Animated.View style={[
+                  styles.headerContentExpanded, 
+                  { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }
+              ]}>
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.welcomeText}>
+                          أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
+                      </Text>
+                      {/* Authentic Component */}
+                      <AuthenticHeader 
+                          productCount={savedProducts.length} 
+                          userName={userProfile?.settings?.name} 
+                      />
+                  </View>
+                  <View style={styles.avatar}><Text style={{fontSize: 28}}>🧖‍♀️</Text></View>
               </Animated.View>
-              <Animated.View style={[styles.headerContentCollapsed, { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }]}>
-                  <Text style={styles.collapsedTitle}>{userProfile?.settings?.name || 'الملف الشخصي'}</Text>
+
+              {/* 2. COLLAPSED HEADER (Clean Context) */}
+              <Animated.View style={[
+                  styles.headerContentCollapsed, 
+                  { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }
+              ]}>
+                  <View style={styles.collapsedContainer}>
+                      
+                      {/* Left Spacer (Invisible) - Balances the Avatar to keep Title centered */}
+                      <View style={{ width: 32 }} />
+
+                      {/* Center: Context Title (Dynamic) */}
+                      <View style={styles.collapsedTitleRow}>
+                           <Text style={styles.collapsedTitle}>
+                              {HEADER_TITLES[activeTab]?.title || 'الملف الشخصي'}
+                           </Text>
+                           <FontAwesome5 
+                              name={HEADER_TITLES[activeTab]?.icon || 'user'} 
+                              size={12} 
+                              color={COLORS.textSecondary} 
+                           />
+                      </View>
+
+                      {/* Right: Mini Avatar */}
+                      <Pressable onPress={() => {
+                          // Optional: Scroll to top logic could go here
+                          Haptics.selectionAsync();
+                      }}>
+                          <View style={styles.collapsedAvatar}>
+                              <Text style={{fontSize: 16}}>🧖‍♀️</Text>
+                          </View>
+                      </Pressable>
+
+                  </View>
               </Animated.View>
           </Animated.View>
   
@@ -3931,8 +3990,56 @@ useEffect(() => {
         bottom: 0,
         left: 0,
         right: 0,
-        justifyContent: 'center',
+        // Remove 'justifyContent: center' and 'alignItems: center'
+        // We handle layout inside the container now
+        paddingHorizontal: 20,
+        paddingBottom: 10, // Adjust based on your header height
+    },
+
+    // NEW STYLES
+    collapsedContainer: {
+        flexDirection: 'row', // Note: Row direction, we will manage RTL manually or via flex
+        justifyContent: 'space-between',
         alignItems: 'center',
+        width: '100%',
+        height: '100%',
+        paddingTop: 5,
+    },
+    collapsedTitleRow: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    collapsedTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textPrimary,
+    },
+    collapsedAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    collapsedBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(90, 156, 132, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(90, 156, 132, 0.3)',
     },
     welcomeText: {
         fontFamily: 'Tajawal-ExtraBold',

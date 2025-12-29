@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Modal, Pressable, Linking, ScrollView } from 'react-native';
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import * as NavigationBar from 'expo-navigation-bar';
+import * as Notifications from 'expo-notifications';
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Import the Notification Helpers
+import { registerForPushNotificationsAsync, scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
+
 SplashScreen.preventAutoHideAsync();
 
-// --- 1. FORCE UPDATE SCREEN (BLOCKING) ---
+// ============================================================================
+// 1. HELPER COMPONENT: FORCE UPDATE SCREEN (BLOCKING)
+// ============================================================================
 const ForceUpdateScreen = ({ url }) => (
   <View style={styles.systemScreen}>
     <StatusBar style="light" />
@@ -33,7 +39,9 @@ const ForceUpdateScreen = ({ url }) => (
   </View>
 );
 
-// --- 2. ENHANCED OPTIONAL UPDATE MODAL ---
+// ============================================================================
+// 2. HELPER COMPONENT: OPTIONAL UPDATE MODAL
+// ============================================================================
 const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
   return (
     <Modal 
@@ -99,7 +107,9 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
   );
 };
 
-// --- 3. MAINTENANCE SCREEN ---
+// ============================================================================
+// 3. HELPER COMPONENT: MAINTENANCE SCREEN
+// ============================================================================
 const MaintenanceScreen = ({ message }) => (
   <View style={styles.systemScreen}>
     <StatusBar style="light" />
@@ -112,6 +122,9 @@ const MaintenanceScreen = ({ message }) => (
   </View>
 );
 
+// ============================================================================
+// 4. HELPER COMPONENT: ANNOUNCEMENT MODAL
+// ============================================================================
 const AnnouncementModal = ({ data, onDismiss }) => {
   if (!data) return null;
   return (
@@ -132,16 +145,18 @@ const AnnouncementModal = ({ data, onDismiss }) => {
   );
 };
 
-// --- INNER LOGIC COMPONENT ---
+// ============================================================================
+// 5. INNER LOGIC COMPONENT (The Brain)
+// ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
-  const { appConfig, activeAnnouncement, dismissAnnouncement } = useAppContext();
+  const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts } = useAppContext();
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
-  
+  const router = useRouter();
+
   // ➤ CURRENT VERSION
   const APP_VERSION = '1.0.0'; 
 
-  // Helper: Create a unique ID for this specific update configuration
-  // This combines Version + The actual text content
+  // --- VERSION CHECKING LOGIC ---
   const getUpdateSignature = (config) => {
     return `${config.latestVersion}_${JSON.stringify(config.changelog || [])}`;
   };
@@ -162,34 +177,27 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  // Check for Optional Update Logic
+  // --- CHECK OPTIONAL UPDATE ---
   useEffect(() => {
     const checkOptionalUpdate = async () => {
         if (!appConfig.latestVersion) return;
 
-        // 1. Is it a newer version?
         const isNewer = compareVersions(appConfig.latestVersion, APP_VERSION) === 1;
         
         if (isNewer) {
-            // 2. Create the unique signature for THIS update
             const currentSignature = getUpdateSignature(appConfig);
-            
-            // 3. Get what the user last skipped
             const storedSignature = await AsyncStorage.getItem('skipped_update_signature');
             
-            // 4. If signatures don't match, SHOW IT (Even if version number is same, but text changed)
             if (currentSignature !== storedSignature) {
                 setShowOptionalUpdate(true);
             }
         }
     };
     checkOptionalUpdate();
-  }, [appConfig]); // Dependency on appConfig ensures this runs every time Admin saves
+  }, [appConfig]);
 
-  // Handle "Later" Click
   const handleSkipUpdate = async () => {
       setShowOptionalUpdate(false);
-      // Save the unique signature so we don't show THIS exact update again
       const signature = getUpdateSignature(appConfig);
       await AsyncStorage.setItem('skipped_update_signature', signature);
   };
@@ -198,20 +206,61 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       if(appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
   };
 
+  // --- SMART NOTIFICATION LOGIC ---
+  useEffect(() => {
+    const initNotifications = async () => {
+        // 1. Register Permissions (Required for Android 13+)
+        await registerForPushNotificationsAsync();
+
+        // 2. Schedule Intelligent Authenticity
+        // This calculates the next 7 days of notifications based on:
+        // - User's Name
+        // - Shelf Status (Empty vs Full)
+        // - Goals (Acne vs Anti-aging)
+        // - Season (Winter vs Summer)
+        if (user && userProfile) {
+            const name = userProfile.settings?.name || 'غالية';
+            const settings = userProfile.settings || {};
+            const products = savedProducts || [];
+            
+            // Runs the 7-day scheduler
+            await scheduleAuthenticNotifications(name, products, settings);
+        }
+    };
+
+    initNotifications();
+
+    // 3. Handle Notification Taps (Deep Linking Logic)
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      
+      // A. If notification data says 'oilguard' (Empty Shelf), go to Scanner
+      if (data?.screen === 'oilguard') {
+        router.push('/oilguard');
+      } 
+      // B. If notification data says 'routine' (Active), go to Profile
+      else if (data?.screen === 'routine') {
+        router.push('/(main)/profile');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [user, userProfile, savedProducts]);
+
   if (!fontsLoaded) return null;
 
-  // 1. Maintenance Check (Priority 1)
+  // 1. Maintenance Check (Highest Priority)
   if (appConfig?.maintenanceMode) {
     return <MaintenanceScreen message={appConfig.maintenanceMessage} />;
   }
 
-  // 2. Force Update Check (Priority 2)
+  // 2. Force Update Check (Medium Priority)
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
     return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
   }
 
-  // 3. Normal App
+  // 3. Normal App Structure
   return (
     <>
       <StatusBar style="light" translucent={true} />
@@ -238,6 +287,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   );
 };
 
+// ============================================================================
+// 6. MAIN EXPORT
+// ============================================================================
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Tajawal-Regular': require('../assets/fonts/Tajawal-Regular.ttf'),
@@ -262,8 +314,11 @@ export default function RootLayout() {
   );
 }
 
+// ============================================================================
+// 7. STYLES
+// ============================================================================
 const styles = StyleSheet.create({
-  // ... (keep systemScreen styles)
+  // --- SYSTEM SCREENS ---
   systemScreen: {
     flex: 1,
     justifyContent: 'center',
@@ -276,7 +331,7 @@ const styles = StyleSheet.create({
   updateButton: { marginTop: 30, backgroundColor: '#fbbf24', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 12 },
   updateButtonText: { fontFamily: 'Tajawal-Bold', color: '#1A2D27', fontSize: 16 },
 
-  // --- ENHANCED OPTIONAL MODAL STYLES ---
+  // --- OPTIONAL UPDATE MODAL ---
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.85)', 
@@ -392,7 +447,7 @@ const styles = StyleSheet.create({
     fontSize: 14 
   },
 
-  // ... (keep announcement styles)
+  // --- ANNOUNCEMENT ---
   announcementCard: { width: '85%', backgroundColor: '#253D34', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(90, 156, 132, 0.5)' },
   announcementHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 15 },
   announcementTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: '#F1F3F2', textAlign: 'right', flex: 1 },
