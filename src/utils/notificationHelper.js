@@ -41,9 +41,9 @@ const MESSAGES = {
   // 🌅 MORNING BANK
   morning: {
     empty: (name) => [
-      `صباح الخير يا ${name} ☀️.. الرف فارغ! لنبدأ بإضافة أول منتج؟`,
-      `يا ${name}، بشرتك تستحق العناية.. امسحي الكود وأضيفي منتجاتك الآن.`,
-      `بداية جديدة.. اضغطي هنا لإضافة غسولك الصباحي إلى الرف 🧴`,
+      `صباح الخير يا ${name} ☀️.. لنبدأ بإضافة أول منتج؟`,
+      `يا ${name}، بشرتك تستحق العناية.. وأضيفي منتجاتك الآن.`,
+      `بداية جديدة..مرحبا بك يا ${name} 🧴`,
     ],
     // ❄️ Winter Mornings (Cold, Dry, Wind)
     winter: (name) => [
@@ -259,8 +259,6 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
   const today = new Date();
   const isEmptyShelf = !savedProducts || savedProducts.length === 0;
 
-  const targetScreen = isEmptyShelf ? 'oilguard' : 'routine';
-
   // 3. Loop: Schedule next 7 days individually
   for (let i = 0; i < 7; i++) {
     const targetDate = new Date(today);
@@ -290,7 +288,11 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
             data: { screen: 'routine', period: 'am' }, // Deep Link Data
             sound: true,
           },
-          trigger: morningTrigger,
+          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: morningTrigger.getTime()
+          },
         });
     }
 
@@ -308,7 +310,11 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
             data: { screen: 'routine', period: 'pm' }, // Deep Link Data
             sound: true,
           },
-          trigger: eveningTrigger,
+          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: eveningTrigger.getTime()
+          },
         });
     }
   }

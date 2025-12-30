@@ -21,7 +21,7 @@ const getAuthenticContent = (productCount, name) => {
   if (productCount === 0) {
     return [
       { text: "الرف فارغ؟.. لنبدأ بأول منتج لديك", icon: "door-open", iconColor: COLORS.accentGreen },
-      { text: "كل بشرة جميلة تبدأ بمنتج واحد.. أضيفيه لوثيق", icon: "pen-nib", iconColor: COLORS.textSecondary },
+      { text: "كل بشرة جميلة تبدأ بمنتج واحد تضيفينه لوثيق", icon: "pen-nib", iconColor: COLORS.textSecondary },
       { text: "لا تحتاري، افحصي أول منتج ونحن معك", icon: "hand-holding-heart", iconColor: COLORS.gold }
     ];
   }
@@ -29,7 +29,7 @@ const getAuthenticContent = (productCount, name) => {
   // 2. Context: Crowded Shelf (The "Baraka but Logic" Phase)
   if (productCount > 10) {
     return [
-      { text: "ما شاء الله! لكن احذري.. كثرة الأيادي تفسد الطبخة", icon: "exclamation-circle", iconColor: COLORS.textSecondary },
+      { text: "خيرات! لكن كثرة الأيادي تفسد الطبخة", icon: "exclamation-circle", iconColor: COLORS.textSecondary },
       { text: "خزانة مليئة.. هل بشرتك فعلاً تحتاج كل هذا؟", icon: "question", iconColor: COLORS.accentGreen },
       { text: "الزين في البساطة، لا في التكدس", icon: "gem", iconColor: COLORS.gold }
     ];
@@ -39,7 +39,7 @@ const getAuthenticContent = (productCount, name) => {
   if (hour >= 5 && hour < 12) { 
     return [
       { text: `صباح النشاط يا ${firstName}.. شمس دزاير لا ترحم!`, icon: "sun", iconColor: COLORS.gold },
-      { text: "استيقظي وتوكلي على الله.. وواقي الشمس أين هو؟", icon: "search", iconColor: COLORS.textDim },
+      { text: "نوضي وتوكلي على ربي.. واقي الشمس وينو؟", icon: "search", iconColor: COLORS.textDim },
       { text: "وجهك يستحق أن يشرق قبل الشمس", icon: "smile-beam", iconColor: COLORS.blue }
     ];
   }
@@ -47,16 +47,16 @@ const getAuthenticContent = (productCount, name) => {
   // 4. Context: Evening (The "Nqa" & Rest)
   if (hour >= 18 || hour < 5) { 
     return [
-      { text: "إياكِ أن يغلبك النعاس قبل الغسول.. حذرتك!", icon: "exclamation-triangle", iconColor: COLORS.danger }, // The "motherly warning" tone
-      { text: "أزيلي غبار اليوم، ونامي بقلب (و وجه) صافٍ", icon: "sparkles", iconColor: COLORS.blue },
-      { text: "تصبحين على خير.. هل شربتِ الماء أم نسيتي؟", icon: "tint", iconColor: COLORS.accentGreen }
+      { text: "بالاكي يغلبك النعاس قبل الغسول!", icon: "exclamation-triangle", iconColor: COLORS.danger }, // The "motherly warning" tone
+      { text: "نامي بقلب ووجه صافيين", icon: "sparkles", iconColor: COLORS.blue },
+      { text: "تصبحين على خير.. شربتِ الماء أم نسيتي؟", icon: "tint", iconColor: COLORS.accentGreen }
     ];
   }
 
   // 5. Context: General Philosophy (The "Thallay" Spirit)
   return [
-    { text: "(اعتني بروحك).. فأنتِ تستحقين الدلال", icon: "hand-holding-heart", iconColor: COLORS.accentGreen },
-    { text: "لا تستعجلي النتائج.. الصبر مفتاح الفرج (والنضارة)", icon: "hourglass-half", iconColor: COLORS.textDim },
+    { text: "اعتني بروحك.. فأنتِ تستحقين الدلال", icon: "hand-holding-heart", iconColor: COLORS.accentGreen },
+    { text: "لا تستعجلي.. الصبر مفتاح النضارة", icon: "hourglass-half", iconColor: COLORS.textDim },
     { text: "وجهك مرآة صحتك.. أكرميه يكرمك", icon: "mirror", iconColor: COLORS.gold }
   ];
 };
