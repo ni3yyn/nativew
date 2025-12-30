@@ -21,6 +21,8 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
+// ... other imports
+import { PremiumShareButton } from './ShareComponent'; // Adjust path if needed
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -34,8 +36,11 @@ import {
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
 
+// UPDATED: Check for Fabric before enabling LayoutAnimation to prevent warning
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+  if (!global?.nativeFabricUIManager) { // Only enable if NOT using New Architecture
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
 }
 
 // ENDPOINTS
@@ -1849,60 +1854,207 @@ const extractIngredientsFromAIText = async (inputData) => {
     );
   };
 
-  const renderResultStep = () => {
-      if(!finalAnalysis) return null;
-      return (
-          <View style={{width: '100%', gap: 15}}>
-              {finalAnalysis.personalMatch.reasons.length > 0 && <StaggeredItem index={0}>
-                  <ContentCard style={[styles.personalMatchCard, styles[`personalMatch_${finalAnalysis.personalMatch.status}`]]}>
-                      <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}><FontAwesome5 name={finalAnalysis.personalMatch.status === 'danger' ? 'times-circle' : finalAnalysis.personalMatch.status === 'warning' ? 'exclamation-triangle' : 'check-circle'} size={24} color={'#FFF'}/><Text style={styles.personalMatchTitle}>{finalAnalysis.personalMatch.status === 'danger' ? 'غير موصى به لك' : finalAnalysis.personalMatch.status === 'warning' ? 'استخدمه بحذر' : 'مطابقة ممتازة لملفك'}</Text></View>
-                      {finalAnalysis.personalMatch.reasons.map((reason, i) => <Text key={i} style={styles.personalMatchReason}>{reason}</Text>)}
-                  </ContentCard>
-              </StaggeredItem>}
-              <StaggeredItem index={1}><ContentCard style={styles.vScoreCard}><Text style={styles.verdictText}>{finalAnalysis.finalVerdict}</Text><ScoreRing score={finalAnalysis.oilGuardScore} /><View style={styles.pillarsRow}><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="flask" /> الفعالية</Text><Text style={[styles.pillarScore, {color: COLORS.info}]}>{finalAnalysis.efficacy.score}%</Text></View><View style={styles.pillar}><Text style={styles.pillarTitle}><FontAwesome5 name="shield-alt" /> السلامة</Text><Text style={[styles.pillarScore, {color: COLORS.primary}]}>{finalAnalysis.safety.score}%</Text></View></View></ContentCard></StaggeredItem>
-              <View style={styles.actionRow}><StaggeredItem index={2} style={{flex: 1}}><PressableScale onPress={resetFlow} style={styles.secBtn}><Text style={styles.secBtnText}>فحص جديد</Text></PressableScale></StaggeredItem><StaggeredItem index={3} style={{flex: 1}}><PressableScale onPress={() => setSaveModalVisible(true)} style={styles.priBtn}><Text style={styles.priBtnText}>حفظ للرف</Text></PressableScale></StaggeredItem></View>
-              {finalAnalysis.marketing_results.length > 0 && (
-    <StaggeredItem index={4}>
-        <Text style={styles.resultsSectionTitle}>🔬 كشف حقائق الادعاءات</Text>
-        <ClaimsGroupedView results={finalAnalysis.marketing_results} />
-    </StaggeredItem>
-)}
-              {finalAnalysis.detected_ingredients.length > 0 && (
-    <StaggeredItem index={5}>
-        <Text style={styles.resultsSectionTitle}>
-            {`🌿 المكونات المكتشفة (${finalAnalysis.detected_ingredients.length})`}
-        </Text>
-        
-        <Pagination data={finalAnalysis.detected_ingredients} scrollX={scrollX} />
-
-        <View style={{ marginHorizontal: -20 }}>
-            <Animated.FlatList
-                data={finalAnalysis.detected_ingredients}
-                renderItem={({ item, index }) => (
-                    <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
-                )}
-                keyExtractor={item => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={ITEM_WIDTH}
-                decelerationRate="fast"
-                contentContainerStyle={{ paddingHorizontal: (width - CARD_WIDTH) / 2 }}
-                ItemSeparatorComponent={() => <View style={{ width: SEPARATOR_WIDTH }} />}
-                onScrollBeginDrag={() => setShowSwipeHint(false)}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                    { useNativeDriver: true }
-                )}
-                scrollEventThrottle={16}
-            />
-            {showSwipeHint && finalAnalysis.detected_ingredients.length > 1 && <SwipeHint />}
-        </View>
-
-    </StaggeredItem>
-)}
-          </View>
+  const BreathingGlow = ({ children, color = COLORS.accentGreen, delay = 0 }) => {
+    const glowAnim = useRef(new Animated.Value(0)).current;
+  
+    useEffect(() => {
+      const animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+            delay: delay
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
       );
+      animation.start();
+      return () => animation.stop();
+    }, []);
+  
+    const scale = glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [1, 1.02], // Subtle size increase
+    });
+  
+    const shadowOpacity = glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.2, 0.6], // Glowing shadow
+    });
+  
+    return (
+      <Animated.View style={{ 
+        transform: [{ scale }],
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity,
+        shadowRadius: 10,
+        elevation: 5, // Android glow
+        flex: 1, 
+      }}>
+        {children}
+      </Animated.View>
+    );
   };
+
+  // ... inside oilguard.js
+
+  const renderResultStep = () => {
+    if(!finalAnalysis) return null;
+    return (
+        <View style={{width: '100%', gap: 15}}>
+            {/* Personal Match Card */}
+            {finalAnalysis.personalMatch.reasons.length > 0 && <StaggeredItem index={0}>
+                <ContentCard style={[styles.personalMatchCard, styles[`personalMatch_${finalAnalysis.personalMatch.status}`]]}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                        <FontAwesome5 name={finalAnalysis.personalMatch.status === 'danger' ? 'times-circle' : finalAnalysis.personalMatch.status === 'warning' ? 'exclamation-triangle' : 'check-circle'} size={24} color={'#FFF'}/>
+                        <Text style={styles.personalMatchTitle}>{finalAnalysis.personalMatch.status === 'danger' ? 'غير موصى به لك' : finalAnalysis.personalMatch.status === 'warning' ? 'استخدمه بحذر' : 'مطابقة ممتازة لملفك'}</Text>
+                    </View>
+                    {finalAnalysis.personalMatch.reasons.map((reason, i) => <Text key={i} style={styles.personalMatchReason}>{reason}</Text>)}
+                </ContentCard>
+            </StaggeredItem>}
+
+            {/* Score Card */}
+            <StaggeredItem index={1}>
+                <ContentCard style={styles.vScoreCard}>
+                    <Text style={styles.verdictText}>{finalAnalysis.finalVerdict}</Text>
+                    <ScoreRing score={finalAnalysis.oilGuardScore} />
+                    <View style={styles.pillarsRow}>
+                        <View style={styles.pillar}>
+                            <Text style={styles.pillarTitle}><FontAwesome5 name="flask" /> الفعالية</Text>
+                            <Text style={[styles.pillarScore, {color: COLORS.info}]}>{finalAnalysis.efficacy.score}%</Text>
+                        </View>
+                        <View style={styles.pillar}>
+                            <Text style={styles.pillarTitle}><FontAwesome5 name="shield-alt" /> السلامة</Text>
+                            <Text style={[styles.pillarScore, {color: COLORS.primary}]}>{finalAnalysis.safety.score}%</Text>
+                        </View>
+                    </View>
+                </ContentCard>
+            </StaggeredItem>
+
+            {/* --- UPDATED HERO ACTION ROW --- */}
+            <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                marginTop: 15,
+                marginBottom: 25,
+                paddingHorizontal: 5,
+            }}>
+                
+                {/* 1. HERO SAVE BUTTON */}
+                {/* Icon moved to the RIGHT of text */}
+                <StaggeredItem index={2} style={{flex: 0.9}}>
+                    <BreathingGlow color={COLORS.accentGreen} delay={0}>
+                        <PressableScale onPress={() => setSaveModalVisible(true)} style={{flex: 1}}>
+                            <LinearGradient
+                                colors={[COLORS.card, '#2C4A42']} 
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                style={{
+                                    flex: 1,
+                                    height: 56, 
+                                    borderRadius: 16,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8, // Identical gap to Share button target
+                                    borderWidth: 1,
+                                    borderColor: COLORS.accentGreen,
+                                }}
+                            >
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 15, 
+                                    color: COLORS.textPrimary,
+                                    paddingBottom: 2, // Fine-tune text alignment
+                                }}>حفظ</Text>
+                                <FontAwesome5 name="bookmark" color={COLORS.textPrimary} size={16} />
+                            </LinearGradient>
+                        </PressableScale>
+                    </BreathingGlow>
+                </StaggeredItem>
+
+                {/* 2. HERO SHARE BUTTON (Premium) */}
+                {/* Tighter flex to reduce white space, wrapper overflow hidden */}
+                <StaggeredItem index={3} style={{flex: 1.3}}> 
+                    <BreathingGlow color={COLORS.gold} delay={1000}>
+                        <View style={{ height: 56, borderRadius: 16, overflow: 'hidden' }}>
+                            <PremiumShareButton 
+                                analysis={finalAnalysis} 
+                                typeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج تجميلي'}
+                            />
+                        </View>
+                    </BreathingGlow>
+                </StaggeredItem>
+
+                {/* 3. RESET BUTTON */}
+                <StaggeredItem index={4}>
+                    <PressableScale onPress={resetFlow} style={{
+                        width: 50, 
+                        height: 56,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                    }}>
+                         <FontAwesome5 name="redo" color={COLORS.textSecondary} size={18} />
+                    </PressableScale>
+                </StaggeredItem>
+            </View>
+            {/* ------------------------- */}
+
+            {finalAnalysis.marketing_results.length > 0 && (
+                <StaggeredItem index={4}>
+                    <Text style={styles.resultsSectionTitle}>🔬 كشف حقائق الادعاءات</Text>
+                    <ClaimsGroupedView results={finalAnalysis.marketing_results} />
+                </StaggeredItem>
+            )}
+
+            {finalAnalysis.detected_ingredients.length > 0 && (
+                <StaggeredItem index={5}>
+                    <Text style={styles.resultsSectionTitle}>
+                        {`🌿 المكونات المكتشفة (${finalAnalysis.detected_ingredients.length})`}
+                    </Text>
+                    
+                    <Pagination data={finalAnalysis.detected_ingredients} scrollX={scrollX} />
+
+                    <View style={{ marginHorizontal: -20 }}>
+                        <Animated.FlatList
+                            data={finalAnalysis.detected_ingredients}
+                            renderItem={({ item, index }) => (
+                                <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
+                            )}
+                            keyExtractor={item => item.id}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            snapToInterval={ITEM_WIDTH}
+                            decelerationRate="fast"
+                            contentContainerStyle={{ paddingHorizontal: (width - CARD_WIDTH) / 2 }}
+                            ItemSeparatorComponent={() => <View style={{ width: SEPARATOR_WIDTH }} />}
+                            onScrollBeginDrag={() => setShowSwipeHint(false)}
+                            onScroll={Animated.event(
+                                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                                { useNativeDriver: true }
+                            )}
+                            scrollEventThrottle={16}
+                        />
+                        {showSwipeHint && finalAnalysis.detected_ingredients.length > 1 && <SwipeHint />}
+                    </View>
+                </StaggeredItem>
+            )}
+        </View>
+    );
+};
   
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

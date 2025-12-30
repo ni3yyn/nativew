@@ -569,12 +569,41 @@ export const styles = StyleSheet.create({
     // --- Shared Components ---
     mainBtn: { flexDirection: 'row-reverse', backgroundColor: COLORS.accentGreen, borderRadius: 50, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' },
     mainBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
-    actionRow: { flexDirection: 'row', gap: 15, marginTop: 20, width: '100%' },
-    secBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.textSecondary, borderRadius: 15 },
-    secBtnText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 15 },
-    priBtn: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.accentGreen, borderRadius: 15 },
-    priBtnText: { color: COLORS.background, fontFamily: 'Tajawal-Bold', fontSize: 15 },
-  
+    actionContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginTop: 10,
+      marginBottom: 20,
+      paddingHorizontal: 5,
+  },
+  secondaryActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      height: 50,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      gap: 8,
+  },
+  secondaryActionText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 14,
+      color: COLORS.textPrimary,
+  },
+  iconActionBtn: {
+      width: 50,
+      height: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
     // --- Save Modal ---
     modalOverlay: {
       flex: 1,

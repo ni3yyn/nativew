@@ -47,25 +47,6 @@
           "photosPermission": "افتح المعرض اودي",
           "cameraPermission": "افتح الكاميرا اودي"
         }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "1.9.23",
-            
-            "reactNativeArchitectures": ["arm64-v8a"],
-
-           
-            "enableProguardInReleaseBuilds": true,
-
-           
-            "enableShrinkResourcesInReleaseBuilds": true,
-
-           
-            "useLegacyPackaging": true
-          }
-        }
       ]
     ],
     "extra": {
