@@ -607,36 +607,118 @@ export const styles = StyleSheet.create({
     // --- Save Modal ---
     modalOverlay: {
       flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    },
-    modalContent: {
-      width: '90%',
+      padding: 20
+  },
+  modalContent: {
+      width: '100%',
       backgroundColor: COLORS.card,
-      borderRadius: 20,
+      borderRadius: 24,
       padding: 25,
       borderWidth: 1,
-      borderColor: COLORS.border,
-      alignItems: 'center',
-    },
-    modalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, marginBottom: 10 },
-    modalSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
-    modalInput: {
-      width: '100%',
-      backgroundColor: COLORS.background,
-      borderRadius: 12,
-      padding: 15,
+      borderColor: 'rgba(255,255,255,0.1)',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.5,
+      shadowRadius: 20,
+      elevation: 10,
+  },
+  modalTitle: {
+      fontFamily: 'Tajawal-ExtraBold',
+      fontSize: 20,
       color: COLORS.textPrimary,
+      marginBottom: 5,
+  },
+  modalSub: {
       fontFamily: 'Tajawal-Regular',
-      textAlign: 'right',
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'center'
+  },
+  
+  // Image Picker
+  frontImagePicker: {
+      width: 100,
+      height: 100,
+      borderRadius: 24,
+      backgroundColor: COLORS.background,
+      alignSelf: 'center',
+      justifyContent: 'center',
+      alignItems: 'center',
       marginBottom: 20,
-    },
-    modalSaveButton: { width: '100%', padding: 15, backgroundColor: COLORS.accentGreen, borderRadius: 12, alignItems: 'center' },
-    modalSaveButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
-    
+      borderWidth: 1,
+      borderColor: COLORS.accentGreen,
+      borderStyle: 'dashed',
+      overflow: 'visible'
+  },
+  frontImagePreview: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 24,
+  },
+  cameraIconCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: COLORS.accentGreen + '20',
+      alignItems: 'center',
+      justifyContent: 'center'
+  },
+  pickerText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 12,
+      color: COLORS.accentGreen
+  },
+  editBadge: {
+      position: 'absolute',
+      bottom: -5,
+      right: -5,
+      backgroundColor: COLORS.accentGreen,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: COLORS.card
+  },
+
+  // Inputs
+  inputWrapper: {
+      marginBottom: 20,
+  },
+  inputLabel: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      marginBottom: 8,
+      textAlign: 'right'
+  },
+  modalInput: {
+      backgroundColor: COLORS.background,
+      borderRadius: 16,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      color: COLORS.textPrimary,
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 15,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalSaveButton: {
+      backgroundColor: COLORS.accentGreen,
+      paddingVertical: 14,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  modalSaveButtonText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 16,
+      color: COLORS.textOnAccent
+  },
     // --- Pagination & Swipe Hint ---
     swipeHintContainer: { position: 'absolute', right: '40%', top: '45%', transform: [{ translateY: -30 }], zIndex: 10, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
     paginationSimpleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },

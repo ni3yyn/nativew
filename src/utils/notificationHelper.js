@@ -55,7 +55,7 @@ const MESSAGES = {
     ],
     // ☀️ Summer Mornings (Heat, Sun, Sweat)
     summer: (name) => [
-      `صباح النور يا ${name} ☀️.. شمس دزاير لا ترحم، زيدي كمية الواقي!`,
+      `صباح النور يا ${name} ☀️!`,
       `يا ${name}، الحرارة تفتح المسام.. غسول بارد وواقي شمس هم الحل.`,
       `صباحو! تذكري: الواقي يوضع قبل الخروج بـ 20 دقيقة، وليس عند الباب 😉`,
       `الجو حار والرطوبة عالية.. خففي الطبقات وركزي على الحماية 🛡️`,
@@ -283,7 +283,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
         await Notifications.scheduleNotificationAsync({
           content: {
             // Vary the title on weekends too
-            title: isWeekend ? "صباح العطلة والدلع ☕" : "صباح النشاط ☀️",
+            title: isWeekend ? "صباح العطلة والدلع ☕" : "صباح السرور ☀️",
             body: msg,
             data: { screen: 'routine', period: 'am' }, // Deep Link Data
             sound: true,
@@ -305,7 +305,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: "روتينك المسائي 🌙",
+            title: "راهو الليل 🌙",
             body: msg,
             data: { screen: 'routine', period: 'pm' }, // Deep Link Data
             sound: true,

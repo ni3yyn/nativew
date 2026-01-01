@@ -11,6 +11,9 @@ import * as Notifications from 'expo-notifications';
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
+import AppIntro from '../src/components/common/AppIntro';
+
 
 // Import the Notification Helpers
 import { registerForPushNotificationsAsync, scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
@@ -151,6 +154,7 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 const RootLayoutNav = ({ fontsLoaded }) => {
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts } = useAppContext();
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
+  const [showAppIntro, setShowAppIntro] = useState(false);
   const router = useRouter();
 
   // ➤ CURRENT VERSION
@@ -172,6 +176,27 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       return 0;
     } catch (e) { return 0; }
   };
+
+  useEffect(() => {
+    const checkIntro = async () => {
+        try {
+            // CHANGE 'false' TO 'true' IF YOU WANT TO FORCE SHOW IT FOR TESTING
+            const FORCE_DEBUG_INTRO = false; 
+
+            const hasSeen = await AsyncStorage.getItem('has_seen_app_intro');
+            if (hasSeen !== 'true' || FORCE_DEBUG_INTRO) {
+                // Slight delay to let the app load visually first
+                setTimeout(() => setShowAppIntro(true), 500);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    if (fontsLoaded) {
+        checkIntro();
+    }
+}, [fontsLoaded]);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
@@ -264,6 +289,8 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   return (
     <>
       <StatusBar style="light" translucent={true} />
+
+      <AppIntro visible={showAppIntro} onClose={() => setShowAppIntro(false)} />
       
       <OptionalUpdateModal 
         visible={showOptionalUpdate}
@@ -309,6 +336,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AppProvider>
         <RootLayoutNav fontsLoaded={fontsLoaded} />
+        <GlobalAlertModal />
       </AppProvider>
     </SafeAreaProvider>
   );

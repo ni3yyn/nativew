@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
-  StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable,
+  StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable, Image,
   Dimensions, ScrollView, Animated, ImageBackground, Modal, FlatList,
   Platform, UIManager, Alert, StatusBar, ActivityIndicator, LayoutAnimation,
   RefreshControl, Keyboard, Easing, I18nManager, AppState, KeyboardAvoidingView
@@ -16,7 +16,7 @@ import { db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
+import Svg, { Defs, Rect, Mask, Circle, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
 import * as Location from 'expo-location';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
 import AuthenticHeader from '../../src/utils/AuthenticHeader';
@@ -26,6 +26,9 @@ import {
     basicSkinTypes,
     basicScalpTypes
   } from '../../src/data/allergiesandconditions';
+import { PRODUCT_TYPES } from '../../src/constants/productData';
+import { AlertService } from '../../src/services/alertService';
+import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge'; // Ensure correct path
 
 // --- 1. SYSTEM CONFIG ---
 
@@ -33,6 +36,8 @@ import {
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
 const { width, height } = Dimensions.get('window');
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 
 // --- 2. THEME & ASSETS ---
 const COLORS = {
@@ -66,19 +71,6 @@ const HEADER_TITLES = {
     settings: { title: 'الإعدادات', icon: 'cog' },
   };
 
-// --- 3. DATA CONSTANTS ---
-const PRODUCT_TYPES = {
-  shampoo: { label: 'شامبو', icon: 'spa', color: '#a7f3d0' },
-  serum: { label: 'سيروم', icon: 'atom', color: '#fde68a' },
-  oil_blend: { label: 'زيت', icon: 'leaf', color: '#bef264' },
-  lotion_cream: { label: 'مرطب', icon: 'hand-holding-water', color: '#93c5fd' },
-  sunscreen: { label: 'واقي', icon: 'sun', color: '#fdba74' },
-  cleanser: { label: 'غسول', icon: 'hands-wash', color: '#67e8f9' },
-  treatment: { label: 'علاج', icon: 'capsules', color: '#fca5a5' },
-  mask: { label: 'قناع', icon: 'mask', color: '#d8b4fe' },
-  toner: { label: 'تونر', icon: 'spray-can', color: '#86efac' },
-  other: { label: 'آخر', icon: 'shopping-bag', color: '#cbd5e1' },
-};
 
 const HEALTH_OPTS = [
     { id: 'acne_prone', label: 'حب الشباب' },
@@ -289,39 +281,41 @@ const PressableScale = ({ onPress, children, style, disabled, onLongPress, delay
 };
 
 // RENAMED & REFACTORED ContentCard (formerly ContentCard)
-const ContentCard = ({ children, style, onPress, disabled = false, delay = 0 }) => {
-  const scale = useRef(new Animated.Value(0.95)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, friction: 12, tension: 40, delay, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, delay, useNativeDriver: true })
-    ]).start();
-  }, []);
-
-  const handlePressIn = () => !disabled && Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 20, bounciness: 0 }).start();
-  const handlePressOut = () => !disabled && Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }).start();
-
-  // The content is now a standard View with solid card styles
-  const content = (
-    <View style={[styles.cardBase, style]}>
-      <Animated.View style={{ opacity }}>
-        {children}
-      </Animated.View>
-    </View>
-  );
-
-  if (onPress) {
-    return (
-      <Pressable onPress={() => { Haptics.selectionAsync(); onPress(); }} onPressIn={handlePressIn} onPressOut={handlePressOut} disabled={disabled}>
-        <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>
-      </Pressable>
+const ContentCard = ({ children, style, onPress, disabled = false, delay = 0, animated = true }) => {
+    const scale = useRef(new Animated.Value(animated ? 0.95 : 1)).current;
+    const opacity = useRef(new Animated.Value(animated ? 0 : 1)).current;
+  
+    useEffect(() => {
+      if (animated) {
+        Animated.parallel([
+          Animated.spring(scale, { toValue: 1, friction: 12, tension: 40, delay, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 1, duration: 200, delay, useNativeDriver: true })
+        ]).start();
+      }
+    }, []);
+  
+    const handlePressIn = () => !disabled && Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 20, bounciness: 0 }).start();
+    const handlePressOut = () => !disabled && Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }).start();
+  
+    // The content is now a standard View with solid card styles
+    const content = (
+      <View style={[styles.cardBase, style]}>
+        <Animated.View style={{ opacity }}>
+          {children}
+        </Animated.View>
+      </View>
     );
-  }
-
-  return <Animated.View style={[{ transform: [{ scale }], opacity }, style]}>{content}</Animated.View>;
-};
+  
+    if (onPress) {
+      return (
+        <Pressable onPress={() => { Haptics.selectionAsync(); onPress(); }} onPressIn={handlePressIn} onPressOut={handlePressOut} disabled={disabled}>
+          <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>
+        </Pressable>
+      );
+    }
+  
+    return <Animated.View style={[{ transform: [{ scale }], opacity }, style]}>{content}</Animated.View>;
+  };
 
 // 4. ANIMATED COUNTER
 const AnimatedCount = ({ value, style }) => {
@@ -353,32 +347,34 @@ const AnimatedCount = ({ value, style }) => {
 };
 
 // 5. STAGGERED LIST ITEM
-const StaggeredItem = ({ index, children, style }) => {
-    const anim = useRef(new Animated.Value(0)).current;
+const StaggeredItem = ({ index, children, style, animated = true }) => {
+    // If not animated, start at final position (0) and full opacity (1)
+    const translateY = useRef(new Animated.Value(animated ? 20 : 0)).current; 
+    const opacity = useRef(new Animated.Value(animated ? 0 : 1)).current;
 
     useEffect(() => {
-        Animated.timing(anim, { 
-          toValue: 1, 
-          duration: 300, 
-          delay: index * 25, 
-          easing: Easing.out(Easing.cubic), 
-          useNativeDriver: true 
-        }).start();
+        if (animated) {
+            Animated.parallel([
+                Animated.timing(translateY, { 
+                    toValue: 0, 
+                    duration: 200, 
+                    delay: index * 30, 
+                    easing: Easing.out(Easing.quad), 
+                    useNativeDriver: true 
+                }),
+                Animated.timing(opacity, { 
+                    toValue: 1, 
+                    duration: 250, 
+                    delay: index * 30, 
+                    useNativeDriver: true 
+                })
+            ]).start();
+        }
     }, []);
 
-    const translateY = anim.interpolate({ 
-        inputRange: [0, 1], 
-        outputRange: [15, 0]
-    });
-
-    const opacity = anim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [0, 0.8, 1]
-    });
-
-    // Added width: '100%' to prevent squeezing
+    // Width is NOT animated to prevent stretching
     return (
-        <Animated.View style={[{ opacity, transform: [{ translateY }], width: '100%' }, style]}>
+        <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
             {children}
         </Animated.View>
     );
@@ -688,118 +684,74 @@ const SkeletonProductCard = ({ index }) => {
 
 // 2. The new interactive, swipeable product list item with Verdict Icons
 const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
-  const translateX = useRef(new Animated.Value(0)).current;
-
-  const getVerdictStyle = (verdict) => {
-    if (!verdict) return { icon: 'question-circle', color: COLORS.textSecondary };
-    const v = verdict.toLowerCase();
-    if (v.includes('elite') || v.includes('مثالية')) return { icon: 'gem', color: '#3b82f6' };
-    if (v.includes('ممتاز')) return { icon: 'star', color: COLORS.success };
-    if (v.includes('جيد')) return { icon: 'check-circle', color: COLORS.success };
-    if (v.includes('خطير') || v.includes('حساسية')) return { icon: 'times-circle', color: COLORS.danger };
-    if (v.includes('غير آمن')) return { icon: 'exclamation-triangle', color: COLORS.danger };
-    return { icon: 'balance-scale-right', color: COLORS.warning };
-  };
+    const translateX = useRef(new Animated.Value(0)).current;
   
-  const verdictStyle = getVerdictStyle(product.analysisData.finalVerdict);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5 && Math.abs(gestureState.dx) > 10,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) translateX.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -width * 0.25) {
-          Animated.timing(translateX, { toValue: -width, duration: 250, useNativeDriver: true }).start(() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            onDelete();
-          });
-        } else {
-          Animated.spring(translateX, { toValue: 0, friction: 5, useNativeDriver: true }).start();
-        }
-      },
-    })
-  ).current;
-
-  const score = product.analysisData.oilGuardScore || 0;
-  const scoreColor = score >= 80 ? COLORS.success : score >= 65 ? COLORS.warning : COLORS.danger;
-  const radius = 28;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
-  const animatedProgress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-      Animated.timing(animatedProgress, {
-          toValue: score, // The target score (e.g., 85)
-          duration: 1400, // Even slower than the bar
-          delay: 200,     // Wait for the card to slide in first
-          easing: Easing.out(Easing.exp),
-          useNativeDriver: true // We will animate opacity or rotation, but for SVG dashoffset we need a trick or just keep it simple.
-      }).start();
-  }, [score]);
+    const panResponder = useRef(
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5 && Math.abs(gestureState.dx) > 10,
+        onPanResponderMove: (_, gestureState) => {
+          if (gestureState.dx < 0) translateX.setValue(gestureState.dx);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < -width * 0.25) {
+            Animated.timing(translateX, { toValue: -width, duration: 250, useNativeDriver: true }).start(() => onDelete());
+          } else {
+            Animated.spring(translateX, { toValue: 0, friction: 5, useNativeDriver: true }).start();
+          }
+        },
+      })
+    ).current;
   
-  // NOTE: Animating SVG strokeDashoffset directly in Native requires Reanimated or setNativeProps. 
-  // A simpler "Cosmetic" hack for standard Animated API:
-  // Fade the ring in slowly while it rotates slightly.
+    const score = product.analysisData?.oilGuardScore || 0;
+    
+    // ✅ THE FIX: Use .find() on the imported array
+    const productTypeLabel = PRODUCT_TYPES.find(
+        type => type.id === product.analysisData?.product_type
+    )?.label || 'منتج'; // Fallback to 'منتج'
   
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-     Animated.parallel([
-         Animated.timing(fadeAnim, { toValue: 1, duration: 1000, delay: 300, useNativeDriver: true }),
-         Animated.timing(rotateAnim, { 
-             toValue: 1, 
-             duration: 1200, 
-             easing: Easing.out(Easing.cubic), 
-             useNativeDriver: true 
-         })
-     ]).start();
-  }, []);
-  
-  const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['-45deg', '0deg'] }); // Subtle twist into place
-  
-  return (
-    <View style={styles.productListItemWrapper}>
-      <View style={styles.deleteActionContainer}>
-        <FontAwesome5 name="trash-alt" size={22} color={COLORS.danger} />
-      </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
-        <Pressable style={styles.productListItem} onPress={onPress}>
-          <View style={styles.listItemContent}>
-            <Text style={styles.listItemName} numberOfLines={2}>{product.productName}</Text>
-            <Text style={styles.listItemType}>{PRODUCT_TYPES[product.analysisData?.product_type]?.label || 'منتج'}</Text>
-            <View style={styles.verdictContainer}>
-              <FontAwesome5 name={verdictStyle.icon} solid color={verdictStyle.color} size={12} />
-              <Text style={[styles.listItemVerdict, {color: verdictStyle.color}]}>{product.analysisData.finalVerdict}</Text>
-            </View>
-          </View>
-          <View style={styles.listItemScoreContainer}>
-              <AnimatedScoreRing 
-                  score={score} 
-                  color={scoreColor} 
-                  radius={28} 
-              />
-          </View>
-        </Pressable>
-      </Animated.View>
-    </View>
-  );
-}, (prevProps, nextProps) => {
-    // Custom Comparator: Only re-render if the Product Data changes.
-    // This ignores changes to onPress/onDelete function references, 
-    // preventing re-renders when parent state updates unrelated things.
     return (
-        prevProps.product.id === nextProps.product.id &&
-        prevProps.product.analysisData?.finalVerdict === nextProps.product.analysisData?.finalVerdict &&
-        prevProps.product.analysisData?.oilGuardScore === nextProps.product.analysisData?.oilGuardScore
+      <View style={styles.productListItemWrapper}>
+        <View style={styles.deleteActionContainer}>
+          <FontAwesome5 name="trash-alt" size={22} color={COLORS.danger} />
+        </View>
+        
+        <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+          <Pressable style={styles.productListItem} onPress={onPress}>
+            
+            {/* 1. Score Badge */}
+            <View style={styles.listItemScoreContainer}>
+                <WathiqScoreBadge score={score} size={54} />
+            </View>
+  
+            {/* 2. Product Info */}
+            <View style={styles.listItemContent}>
+              <Text style={styles.listItemName} numberOfLines={1}>{product.productName}</Text>
+              
+              {/* ✅ Label is now correctly looked up */}
+              <Text style={styles.listItemType}>
+                  {productTypeLabel}
+              </Text>
+            </View>
+  
+            {/* 3. Product Image */}
+            <View style={styles.listImageWrapper}>
+                {product.productImage ? (
+                    <Image source={{ uri: product.productImage }} style={styles.listProductImage} />
+                ) : (
+                    <View style={styles.listImagePlaceholder}>
+                        <FontAwesome5 name="wine-bottle" size={18} color={COLORS.textDim} />
+                    </View>
+                )}
+            </View>
+  
+          </Pressable>
+        </Animated.View>
+      </View>
     );
-});
+  });
 
 
-// 3. The new sophisticated Bottom Sheet for product details (SCROLLING & LAYOUT FIXED)
-// 3. The new sophisticated Bottom Sheet for product details (FIXED STYLING)
+// 3. The new sophisticated Bottom Sheet for product details
 const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     const animController = useRef(new Animated.Value(0)).current;
 
@@ -831,38 +783,14 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     const getAlertStyle = (type) => {
         const safeType = type ? type.toLowerCase() : 'info';
         switch (safeType) {
-            case 'risk':
-            case 'danger':
-            case 'critical':
-                return { 
-                    bg: 'rgba(239, 68, 68, 0.1)', 
-                    border: COLORS.danger, 
-                    text: COLORS.danger, 
-                    icon: 'exclamation-circle' 
-                };
-            case 'caution':
-            case 'warning':
-                return { 
-                    bg: 'rgba(245, 158, 11, 0.1)', 
-                    border: COLORS.warning, 
-                    text: COLORS.warning, 
-                    icon: 'exclamation-triangle' 
-                };
-            case 'good':
-            case 'success':
-                return { 
-                    bg: 'rgba(34, 197, 94, 0.1)', 
-                    border: COLORS.success, 
-                    text: COLORS.success, 
-                    icon: 'check-circle' 
-                };
-            default: // info
-                return { 
-                    bg: 'rgba(59, 130, 246, 0.1)', 
-                    border: COLORS.info, 
-                    text: COLORS.info, 
-                    icon: 'info-circle' 
-                };
+            case 'risk': case 'danger': case 'critical':
+                return { bg: 'rgba(239, 68, 68, 0.1)', border: COLORS.danger, text: COLORS.danger, icon: 'exclamation-circle' };
+            case 'caution': case 'warning':
+                return { bg: 'rgba(245, 158, 11, 0.1)', border: COLORS.warning, text: COLORS.warning, icon: 'exclamation-triangle' };
+            case 'good': case 'success':
+                return { bg: 'rgba(34, 197, 94, 0.1)', border: COLORS.success, text: COLORS.success, icon: 'check-circle' };
+            default: 
+                return { bg: 'rgba(59, 130, 246, 0.1)', border: COLORS.info, text: COLORS.info, icon: 'info-circle' };
         }
     };
 
@@ -870,7 +798,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     // --- DATA EXTRACTION ---
-    const { productName } = product;
+    const { productName, productImage } = product; // <--- Extract productImage
     const { 
         oilGuardScore = 0, 
         finalVerdict = 'غير معروف', 
@@ -895,35 +823,55 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
                         
-                        {/* 1. Header */}
+                        {/* 1. Header (Image or Icon) */}
                         <View style={{ alignItems: 'center', marginBottom: 25 }}>
-                            <View style={{ 
-                                width: 80, height: 80, borderRadius: 40, 
-                                backgroundColor: COLORS.background, 
-                                justifyContent: 'center', alignItems: 'center',
-                                marginBottom: 15, borderWidth: 2, borderColor: scoreColor 
-                            }}>
-                                <FontAwesome5 
-                                    name={PRODUCT_TYPES[product_type]?.icon || 'tint'} 
-                                    size={32} 
-                                    color={scoreColor} 
-                                />
-                            </View>
+                            {productImage ? (
+                                // --- NEW: PRODUCT IMAGE ---
+                                <View style={styles.productImageContainer}>
+                                    <Image 
+                                        source={{ uri: productImage }} 
+                                        style={styles.productRealImage} 
+                                        resizeMode="cover" 
+                                    />
+                                    <View style={[styles.scoreBadgeFloat, { backgroundColor: scoreColor }]}>
+                                        <Text style={styles.scoreBadgeText}>{oilGuardScore}</Text>
+                                    </View>
+                                </View>
+                            ) : (
+                                // --- OLD: FALLBACK ICON ---
+                                <View style={{ 
+                                    width: 80, height: 80, borderRadius: 40, 
+                                    backgroundColor: COLORS.background, 
+                                    justifyContent: 'center', alignItems: 'center',
+                                    marginBottom: 15, borderWidth: 2, borderColor: scoreColor 
+                                }}>
+                                    <FontAwesome5 
+                                        name={PRODUCT_TYPES[product_type]?.icon || 'tint'} 
+                                        size={32} 
+                                        color={scoreColor} 
+                                    />
+                                </View>
+                            )}
+
                             <Text style={styles.sheetProductTitle}>{productName}</Text>
                             <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginTop: 5 }}>
-                                {PRODUCT_TYPES[product_type]?.label || 'منتج غير محدد'}
-                            </Text>
+    {PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج غير محدد'}
+</Text>
                         </View>
 
                         {/* 2. Main Score Card */}
                         <View style={styles.sheetSection}>
                             <View style={[styles.alertBox, { backgroundColor: scoreColor + '15', borderColor: scoreColor }]}>
-                                <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
-                                     <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: scoreColor }}>{oilGuardScore}</Text>
-                                </View>
-                                <View style={{ width: 1, height: '80%', backgroundColor: scoreColor, opacity: 0.3, marginHorizontal: 10 }} />
+                                {/* Only show large number here if we didn't show it on the image */}
+                                {!productImage && (
+                                    <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
+                                         <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: scoreColor }}>{oilGuardScore}</Text>
+                                    </View>
+                                )}
+                                {!productImage && <View style={{ width: 1, height: '80%', backgroundColor: scoreColor, opacity: 0.3, marginHorizontal: 10 }} />}
+                                
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ color: scoreColor, fontFamily: 'Tajawal-Bold', fontSize: 16, textAlign: 'right' }}>
+                                    <Text style={{ color: scoreColor, fontFamily: 'Tajawal-Bold', fontSize: 16, textAlign: 'center' }}>
                                         {finalVerdict}
                                     </Text>
                                 </View>
@@ -949,16 +897,14 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                             </View>
                         </View>
 
-                         {/* 4. User Alerts (DYNAMIC STYLING) */}
+                         {/* 4. User Alerts */}
                          {user_specific_alerts.length > 0 && (
                             <View style={styles.sheetSection}>
                                 <Text style={[styles.sheetSectionTitle, {color: COLORS.textPrimary}]}> ملاحظات خاصة لكِ</Text>
                                 {user_specific_alerts.map((alert, i) => {
-                                    // Handle Object {text, type} vs String
                                     const isObj = typeof alert === 'object' && alert !== null;
                                     const alertText = isObj ? alert.text : alert;
                                     const alertType = isObj ? alert.type : 'info';
-                                    
                                     const style = getAlertStyle(alertType);
 
                                     return (
@@ -983,11 +929,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                         </View>
                                     );
                                 })}
-                                {detected_ingredients.length === 0 && (
-                                    <Text style={{ color: COLORS.textDim, fontFamily: 'Tajawal-Regular', width: '100%', textAlign: 'center' }}>
-                                        لم يتم العثور على مكونات مسجلة.
-                                    </Text>
-                                )}
                             </View>
                         </View>
 
@@ -1151,94 +1092,94 @@ const LiquidProgressBar = ({ score, max = 10, color }) => {
 
 // --- The Main Analysis Section ---
 const FocusInsight = ({ insight, onSelect }) => {
-  const severityStyles = {
-      critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
-      warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
-  };
-  const style = severityStyles[insight.severity] || severityStyles.warning;
-
-  return (
-      <StaggeredItem index={0}>
-          <PressableScale onPress={() => onSelect(insight)}>
-              <LinearGradient colors={style.colors} style={styles.focusInsightCard}>
-                  <View style={styles.focusInsightHeader}>
-                      <FontAwesome5 name={style.icon} size={20} color={COLORS[insight.severity]} />
-                      <Text style={styles.focusInsightTitle}>{insight.title}</Text>
-                  </View>
-                  <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
-                  <View style={styles.focusInsightAction}>
-                      <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
-                      <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
-                  </View>
-              </LinearGradient>
-          </PressableScale>
-      </StaggeredItem>
-  );
-};
-
-// 2. The celebratory state when there are no issues
-const AllClearState = () => (
-  <StaggeredItem index={0}>
-      <ContentCard style={styles.allClearContainer}>
-          <View style={styles.allClearIconWrapper}>
-               <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
-          </View>
-          <Text style={styles.allClearTitle}>روتينك يبدو رائعاً!</Text>
-          <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
-      </ContentCard>
-  </StaggeredItem>
-);
-
-const StandardInsightCard = ({ insight, onPress, index }) => {
-    // Determine color theme based on severity
-    const getTheme = () => {
-        switch (insight.severity) {
-            case 'critical': return { border: COLORS.danger, icon: 'shield-alt', bg: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)'] };
-            case 'warning': return { border: COLORS.warning, icon: 'exclamation-triangle', bg: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)'] };
-            default: return { border: COLORS.accentGreen, icon: 'lightbulb', bg: ['rgba(90, 156, 132, 0.15)', 'rgba(90, 156, 132, 0.05)'] };
-        }
+    const severityStyles = {
+        critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
+        warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
     };
-    
-    const theme = getTheme();
-
+    const style = severityStyles[insight.severity] || severityStyles.warning;
+  
     return (
-        <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }}>
-            <PressableScale onPress={() => onPress(insight)}>
-                <View style={[styles.modernCardContainer, { borderColor: theme.border }]}>
-                    {/* Background Gradient for depth */}
-                    <LinearGradient 
-                        colors={theme.bg} 
-                        style={StyleSheet.absoluteFill} 
-                        start={{ x: 0, y: 0 }} 
-                        end={{ x: 1, y: 1 }} 
-                    />
-                    
-                    {/* Top Row: Icon & Dot */}
-                    <View style={styles.modernCardHeader}>
-                        <View style={[styles.modernIconBox, { backgroundColor: theme.border }]}>
-                            <FontAwesome5 name={theme.icon} size={12} color={COLORS.textOnAccent} />
-                        </View>
-                        {/* A small dot to balance the header */}
-                        <View style={[styles.statusDot, { backgroundColor: theme.border }]} />
+        <StaggeredItem index={0} animated={false}>
+            <PressableScale onPress={() => onSelect(insight)}>
+                <LinearGradient colors={style.colors} style={styles.focusInsightCard}>
+                    <View style={styles.focusInsightHeader}>
+                        <FontAwesome5 name={style.icon} size={20} color={COLORS[insight.severity]} />
+                        <Text style={styles.focusInsightTitle}>{insight.title}</Text>
                     </View>
-
-                    {/* Middle: Text */}
-                    <View style={{flex: 1, justifyContent: 'center'}}>
-                        <Text style={styles.modernCardTitle} numberOfLines={3}>
-                            {insight.title}
-                        </Text>
+                    <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
+                    <View style={styles.focusInsightAction}>
+                        <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
+                        <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
                     </View>
-
-                    {/* Bottom: 'Read More' Indicator */}
-                    <View style={styles.modernCardFooter}>
-                        <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
-                        <Feather name="chevron-left" size={12} color={theme.border} />
-                    </View>
-                </View>
+                </LinearGradient>
             </PressableScale>
         </StaggeredItem>
     );
-};
+  };
+  
+  // 2. The celebratory state when there are no issues
+  const AllClearState = () => (
+    <StaggeredItem index={0} animated={false}>
+        <ContentCard style={styles.allClearContainer} animated={false}>
+            <View style={styles.allClearIconWrapper}>
+                 <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
+            </View>
+            <Text style={styles.allClearTitle}>روتينك يبدو رائعاً!</Text>
+            <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
+        </ContentCard>
+    </StaggeredItem>
+  );
+  
+  const StandardInsightCard = ({ insight, onPress, index }) => {
+      // Determine color theme based on severity
+      const getTheme = () => {
+          switch (insight.severity) {
+              case 'critical': return { border: COLORS.danger, icon: 'shield-alt', bg: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)'] };
+              case 'warning': return { border: COLORS.warning, icon: 'exclamation-triangle', bg: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)'] };
+              default: return { border: COLORS.accentGreen, icon: 'lightbulb', bg: ['rgba(90, 156, 132, 0.15)', 'rgba(90, 156, 132, 0.05)'] };
+          }
+      };
+      
+      const theme = getTheme();
+  
+      return (
+          <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
+              <PressableScale onPress={() => onPress(insight)}>
+                  <View style={[styles.modernCardContainer, { borderColor: theme.border }]}>
+                      {/* Background Gradient for depth */}
+                      <LinearGradient 
+                          colors={theme.bg} 
+                          style={StyleSheet.absoluteFill} 
+                          start={{ x: 0, y: 0 }} 
+                          end={{ x: 1, y: 1 }} 
+                      />
+                      
+                      {/* Top Row: Icon & Dot */}
+                      <View style={styles.modernCardHeader}>
+                          <View style={[styles.modernIconBox, { backgroundColor: theme.border }]}>
+                              <FontAwesome5 name={theme.icon} size={12} color={COLORS.textOnAccent} />
+                          </View>
+                          {/* A small dot to balance the header */}
+                          <View style={[styles.statusDot, { backgroundColor: theme.border }]} />
+                      </View>
+  
+                      {/* Middle: Text */}
+                      <View style={{flex: 1, justifyContent: 'center'}}>
+                          <Text style={styles.modernCardTitle} numberOfLines={3}>
+                              {insight.title}
+                          </Text>
+                      </View>
+  
+                      {/* Bottom: 'Read More' Indicator */}
+                      <View style={styles.modernCardFooter}>
+                          <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
+                          <Feather name="chevron-left" size={12} color={theme.border} />
+                      </View>
+                  </View>
+              </PressableScale>
+          </StaggeredItem>
+      );
+  };
 
 // 3. The horizontal carousel for secondary insights
 // --- UPDATED CAROUSEL (Handles Weather Mini Cards) ---
@@ -1418,7 +1359,7 @@ const WeatherMiniCard = ({ insight, onPress }) => {
     const theme = getTheme();
 
     return (
-        <StaggeredItem index={0} style={{ width: 'auto', paddingLeft: 12 }}>
+        <StaggeredItem index={0} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
             <PressableScale onPress={() => onPress(insight)}>
                 {/* 1. Container: Same dimensions (150x150) and Radius (22) as Standard Card */}
                 <View style={styles.weatherCardContainer}>
@@ -1473,7 +1414,9 @@ const WeatherMiniCard = ({ insight, onPress }) => {
 
 // --- NEW: COMPACT WEATHER WIDGET (Main Screen) ---
 // --- COMPONENT: SMART WEATHER WIDGET (Unified Web/Mobile) ---
+// --- COMPONENT: SMART WEATHER WIDGET (Unified Web/Mobile) ---
 const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }) => {
+    // ... logic remains same ...
     
     // 1. Extract Data
     const meta = insight.customData?.meta || {};
@@ -1502,24 +1445,18 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
     const displayTitle = theme.title || insight.title;
 
     const handlePress = async () => {
+        // ... same press logic ...
         Haptics.selectionAsync();
         
         if (theme.isAction === 'permission') {
             try {
-                // 1. Try Standard Request (Works on Mobile & Web)
-                // On Web, this triggers the browser popup if not already blocked
-                const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
-                
+                const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status === 'granted') {
-                    // Success! Refresh
                     if (onRetry) onRetry(true); 
                 } else {
-                    // 2. If Denied (Mobile "Don't Ask" OR Web "Blocked")
-                    // Trigger the Custom Modal
                     if (onPermissionBlocked) onPermissionBlocked(); 
                 }
             } catch (e) {
-                // Fallback for any weird errors
                 if (onPermissionBlocked) onPermissionBlocked();
             }
         } 
@@ -1532,7 +1469,7 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
     };
 
     return (
-        <StaggeredItem index={0}>
+        <StaggeredItem index={0} animated={false}>
             <PressableScale onPress={handlePress}>
                 <LinearGradient 
                     colors={theme.colors} 
@@ -1583,6 +1520,7 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
 };
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
+// --- THE MAIN ANALYSIS HUB COMPONENT ---
 const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry, onShowPermissionAlert }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
@@ -1600,7 +1538,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
     // 2. Empty State
     if (savedProducts.length === 0) {
         return (
-            <ContentCard style={styles.emptyState}>
+            <ContentCard style={styles.emptyState} animated={false}>
                 <MaterialCommunityIcons name="brain" size={60} color={COLORS.textDim} style={{ opacity: 0.5, marginBottom: 15 }} />
                 <Text style={styles.emptyText}>ابدئي التحليل</Text>
                 <Text style={styles.emptySub}>أضيفي منتجات إلى رفّكِ أولا ليقوم المدرب الذكي بتحليل روتينكِ.</Text>
@@ -1608,8 +1546,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
         );
     }
     
-    // --- LOGIC: PREPARE INSIGHTS LIST ---
-    
+    // ... logic for insights processing ...
     // A. Filter out dismissed insights from the raw server result
     let visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
 
@@ -1681,7 +1618,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
   
                 {/* 3. BARRIER HEALTH CARD */}
                 <PressableScale onPress={() => setShowBarrierDetails(true)}>
-                    <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }}>
+                    <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }} animated={false}>
                         <View style={{ padding: 20, paddingBottom: 10 }}>
                             <View style={styles.analysisCardHeader}>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
@@ -1716,7 +1653,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 {/* 4. Overview Dashboard */}
                 <View style={styles.overviewContainer}>
                     <View style={styles.overviewCard}>
-                        <ContentCard style={{flex: 1}}>
+                        <ContentCard style={{flex: 1}} animated={false}>
                             <View style={styles.analysisCardHeader}>
                                <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 4}}>
                                     <Feather name="sun" size={14} color={COLORS.warning} />
@@ -1766,7 +1703,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                     </View>
 
                     <View style={styles.overviewCard}>
-                         <ContentCard style={{flex: 1}}>
+                         <ContentCard style={{flex: 1}} animated={false}>
                             <View style={styles.analysisCardHeader}>
                                <FontAwesome5 name="shield-alt" size={14} color={COLORS.textSecondary} />
                                <Text style={styles.analysisCardTitle}>حماية الشمس</Text>
@@ -1933,38 +1870,147 @@ const AddStepModal = ({ isVisible, onClose, onAdd }) => {
 
 // --- HELPER 2: The Interactive Onboarding Guide ---
 const RoutineOnboardingGuide = ({ onDismiss }) => {
-  const [step, setStep] = useState(0);
-  const anim = useRef(new Animated.Value(0)).current;
+    const insets = useSafeAreaInsets();
+    const [step, setStep] = useState(0);
+    
+    // Animation Controllers
+    const animX = useRef(new Animated.Value(width / 2)).current; // Start center
+    const animY = useRef(new Animated.Value(height / 2)).current;
+    const animR = useRef(new Animated.Value(0)).current; // Radius starts at 0 (pop effect)
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-      Animated.timing(anim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-  }, []);
+    // --- TARGET CONFIGURATION ---
+    // Precision tuning based on your layout styles
+    const TARGETS = [
+        {
+            id: 'switcher',
+            title: "فترات الروتين",
+            text: "هنا يمكنك التبديل بين روتينك الصباحي والمسائي.",
+            // Position: Top Right-ish (Switch Container is Flex:1 starting from right)
+            x: width - 100, 
+            y: insets.top + 145, 
+            radius: 50
+        },
+        {
+            id: 'auto_build',
+            title: "المعمار الرقمي",
+            text: "دعي الذكاء الاصطناعي يبني لكِ روتيناً مثالياً بضغطة زر.",
+            // Position: Top Left (AutoBuild is on the left in row-reverse)
+            x: 45, 
+            y: insets.top + 145, 
+            radius: 35
+        },
+        {
+            id: 'add_step',
+            title: "إضافة خطوة",
+            text: "زر الإضافة العائم يتيح لكِ إدراج منتجات جديدة يدوياً.",
+            // Position: Bottom Right (FAB is bottom: 130, right: 20)
+            x: width - 52, // 20px margin + 32px half-width
+            y: height - 162, // 130px bottom + 32px half-height
+            radius: 40
+        }
+    ];
 
-  const steps = [
-      { title: "مرحباً بك في مُنشئ الروتين", text: "هنا يمكنك بناء روتينك المثالي خطوة بخطوة. لنبدأ!" },
-      { title: "1. أضف خطوتك الأولى", text: "اضغط على هذا الزر لإضافة أول مرحلة في روتينك، مثل 'غسول'." },
-      { title: "2. املأ رفّك الرقمي", text: "لأفضل النتائج، انتقل إلى علامة تبويب 'الرف' وامسح كل منتجاتك." },
-      { title: "3. دع الذكاء الاصطناعي يساعدك", text: "بعد إضافة منتجاتك، استخدم زر 'الإنشاء التلقائي' لبناء روتين مُقترح فوراً." }
-  ];
+    const currentTarget = TARGETS[step];
 
-  const handleNext = () => step < steps.length - 1 ? setStep(s => s + 1) : onDismiss();
+    useEffect(() => {
+        // 1. Fade In Overlay
+        if (step === 0) {
+            Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+        }
 
-  return (
-      <View style={StyleSheet.absoluteFill}>
-          <Animated.View style={[styles.guideOverlay, { opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) }]} />
-          <View style={[StyleSheet.absoluteFill, styles.guideContentContainer]}>
-              <View style={{flex: 1}} />
-              <Animated.View style={[styles.guideTextBox, { opacity: anim, transform: [{ scale: anim }] }]}>
-                  <Text style={styles.guideTitle}>{steps[step].title}</Text>
-                  <Text style={styles.guideText}>{steps[step].text}</Text>
-                  <PressableScale onPress={handleNext} style={styles.guideButton}>
-                      <Text style={styles.guideButtonText}>{step === steps.length - 1 ? "لنبدأ!" : "التالي"}</Text>
-                  </PressableScale>
-              </Animated.View>
-          </View>
-      </View>
-  );
+        // 2. Move Spotlight smoothly
+        Animated.parallel([
+            Animated.spring(animX, { toValue: currentTarget.x, friction: 6, tension: 50, useNativeDriver: true }),
+            Animated.spring(animY, { toValue: currentTarget.y, friction: 6, tension: 50, useNativeDriver: true }),
+            Animated.spring(animR, { toValue: currentTarget.radius, friction: 6, tension: 50, useNativeDriver: true })
+        ]).start();
+
+    }, [step]);
+
+    const handleNext = () => {
+        if (step < TARGETS.length - 1) {
+            setStep(s => s + 1);
+        } else {
+            // Exit Animation: Expand hole to fill screen or fade out
+            Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onDismiss);
+        }
+    };
+
+    return (
+        <Modal transparent visible={true} animationType="none">
+            <View style={styles.guideOverlay}>
+                
+                {/* 1. SVG Mask Layer */}
+                <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+                    <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
+                        <Defs>
+                            <Mask id="mask" x="0" y="0" height="100%" width="100%">
+                                {/* White = Visible (Overlay) */}
+                                <Rect height="100%" width="100%" fill="#fff" />
+                                {/* Black = Invisible (The Hole) */}
+                                <AnimatedCircle 
+                                    cx={animX} 
+                                    cy={animY} 
+                                    r={animR} 
+                                    fill="black" 
+                                />
+                            </Mask>
+                        </Defs>
+                        
+                        {/* The Dark Overlay applying the mask */}
+                        <Rect 
+                            height="100%" 
+                            width="100%" 
+                            fill="rgba(26, 45, 39, 0.92)" 
+                            mask="url(#mask)" 
+                        />
+
+                        {/* Optional: Glowing Ring around the hole */}
+                        <AnimatedCircle 
+                            cx={animX} 
+                            cy={animY} 
+                            r={animR} 
+                            stroke={COLORS.accentGreen} 
+                            strokeWidth="3" 
+                            fill="transparent" 
+                            strokeDasharray="10, 5"
+                        />
+                    </Svg>
+                </Animated.View>
+
+                {/* 2. Text Card (Floating) */}
+                <View style={styles.guideCardWrapper}>
+                    <Animated.View style={[styles.guideCard, { opacity: fadeAnim }]}>
+                        <View style={styles.guideHeader}>
+                            <View style={styles.guideIconBox}>
+                                <FontAwesome5 name="lightbulb" size={20} color={COLORS.gold} />
+                            </View>
+                            <Text style={styles.guideTitle}>{currentTarget.title}</Text>
+                        </View>
+                        
+                        <Text style={styles.guideText}>{currentTarget.text}</Text>
+                        
+                        <View style={styles.guideFooter}>
+                            <TouchableOpacity onPress={onDismiss}>
+                                <Text style={styles.guideSkip}>إنهاء</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity onPress={handleNext} style={styles.guideNextBtn}>
+                                <Text style={styles.guideNextText}>
+                                    {step === TARGETS.length - 1 ? 'فهمت' : 'التالي'}
+                                </Text>
+                                <FontAwesome5 name={step === TARGETS.length - 1 ? "check" : "arrow-left"} size={14} color="#1A2D27" />
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                </View>
+
+            </View>
+        </Modal>
+    );
 };
+
 
 
 // --- HELPER 3: The Card for Each Step in the Timeline ---
@@ -1973,7 +2019,12 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
     const isStepFilled = productList.length > 0;
   
     return (
-        <PressableScale onPress={onManage} style={styles.stepCardContainer}>
+        // Changed to TouchableOpacity to remove the "stretchy" entry animation
+        <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={onManage} 
+            style={styles.stepCardContainer}
+        >
             {/* HEADER: Number + Title + Delete */}
             <View style={styles.stepHeaderRow}>
                 <View style={styles.stepTitleGroup}>
@@ -2013,9 +2064,7 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
                         contentContainerStyle={styles.stepProductsScroll}
                     >
                         {productList.map((p) => {
-                            // Dynamic Colors based on type
                             const isSunscreen = p.analysisData?.product_type === 'sunscreen';
-                            // Gold for Sun, Green for others
                             const iconColor = isSunscreen ? '#fbbf24' : '#34d399'; 
                             const bgTint = isSunscreen ? 'rgba(251, 191, 36, 0.15)' : 'rgba(52, 211, 153, 0.15)';
 
@@ -2043,12 +2092,11 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
                 )}
             </View>
             
-            {/* Edit Indicator */}
             <View style={styles.editIndicator}>
                 <Feather name="more-horizontal" size={16} color={COLORS.border} />
             </View>
 
-        </PressableScale>
+        </TouchableOpacity>
     );
 };
 
@@ -2313,13 +2361,13 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
         } catch (error) { 
             console.error("Error saving routines:", error); 
-            Alert.alert("Error", "Could not save routine."); 
+            AlertService.error("خطأ", "تعذر حفظ الروتين.");
         }
     };
   
     const switchPeriod = (period) => {
       if (period === activePeriod) return;
-      Haptics.selectionAsync();
+      Haptics.selectionAsync(); // Keep the haptic, remove the visual bounce
       setActivePeriod(period);
     };
   
@@ -2334,14 +2382,15 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     };
   
     const handleDeleteStep = async (stepId) => {
-        Alert.alert("حذف الخطوة", "هل أنت متأكد؟", [
-            { text: "إلغاء", style: "cancel" }, 
-            { text: "حذف", style: "destructive", onPress: async () => {
+        AlertService.delete(
+            "حذف الخطوة",
+            "هل أنت متأكد من حذف هذه الخطوة؟",
+            async () => {
                 const newRoutines = JSON.parse(JSON.stringify(routines));
                 newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
                 saveRoutines(newRoutines);
-            }}
-        ]);
+            }
+        );
     };
   
     const handleUpdateStep = (stepId, newProductIds) => {
@@ -2357,14 +2406,17 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const handleAutoBuildRoutine = () => {
       // 0. Minimum Viable Shelf Check
       if (savedProducts.length < 2) {
-          Alert.alert("الرف غير كافٍ", "نحتاج إلى منتجين على الأقل (غسول + مرطب) لبناء روتين ذكي.");
+          AlertService.show({
+              title: "الرف غير كافٍ",
+              message: "نحتاج إلى منتجين على الأقل (غسول + مرطب) لبناء روتين ذكي.",
+              type: 'warning'
+          });
           return;
       }
   
       const runArchitect = async () => {
         setIsBuilding(true);
         try {
-            // UPDATED FETCH CALL
             const response = await fetch(`${PROFILE_API_URL}/generate-routine.js`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2375,44 +2427,57 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
             });
   
               const data = await response.json();
-              
               if (!response.ok) throw new Error(data.error || "Server Error");
   
               // 2. Receive Optimized Routine & Save
-              const newRoutines = { 
-                  am: data.am || [], 
-                  pm: data.pm || [] 
-              };
-              
+              const newRoutines = { am: data.am || [], pm: data.pm || [] };
               await saveRoutines(newRoutines);
   
               // 3. Show Doctor's Report
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              setTimeout(() => Alert.alert("المعمار الرقمي 🧬", data.logs || "تم بناء الروتين بنجاح"), 500);
+              setTimeout(() => {
+                  AlertService.success("المعمار الرقمي 🧬", data.logs || "تم بناء الروتين بنجاح");
+              }, 500);
   
           } catch (error) {
               console.error("Routine Generation Error:", error);
-              Alert.alert("خطأ", "تعذر الاتصال بالخادم الذكي. يرجى المحاولة لاحقاً.");
+              AlertService.error("خطأ", "تعذر الاتصال بالخادم الذكي. يرجى المحاولة لاحقاً.");
           } finally {
               setIsBuilding(false);
           }
       };
   
-      Alert.alert("بناء الروتين المتقدم", "تشغيل 'المعمار الرقمي' (Gen 9)؟ سيتم تحليل كثافة المنتجات والـ pH عبر الخادم السحابي.", [
-          { text: "إلغاء", style: "cancel" },
-          { text: "بدء التحليل", onPress: runArchitect }
-      ]);
-    }; 
+      AlertService.confirm(
+          "بناء الروتين المتقدم",
+          "تشغيل 'المعمار الرقمي' (Gen 9)؟ سيتم تحليل كثافة المنتجات والـ pH عبر الخادم السحابي.",
+          runArchitect
+      );
+    };
   
     return (
       <View style={{ flex: 1 }}>
           <View style={styles.routineHeaderContainer}>
                <View style={styles.routineSwitchContainer}>
-                  <PressableScale onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}><Feather name="moon" size={16} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text></PressableScale>
-                  <PressableScale onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}><Feather name="sun" size={16} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} /><Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text></PressableScale>
+                  {/* CHANGED: Used standard TouchableOpacity to remove bounce/stretch */}
+                  <TouchableOpacity 
+                      activeOpacity={0.8} 
+                      onPress={() => switchPeriod('pm')} 
+                      style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}
+                  >
+                      <Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text>
+                      <Feather name="moon" size={14} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                      activeOpacity={0.8} 
+                      onPress={() => switchPeriod('am')} 
+                      style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}
+                  >
+                      <Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text>
+                      <Feather name="sun" size={14} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} />
+                  </TouchableOpacity>
               </View>
                
-               {/* Auto Build Button with Loading State */}
                <PressableScale onPress={handleAutoBuildRoutine} style={styles.autoBuildButton} disabled={isBuilding}>
                   {isBuilding ? 
                       <ActivityIndicator size="small" color={COLORS.accentGreen} /> : 
@@ -2462,7 +2527,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
           {showOnboarding && <RoutineOnboardingGuide onDismiss={() => setShowOnboarding(false)} />}
       </View>
     );
-  };
+};
 
 // --- 1. MEMOIZED LIST ITEM ---
 const IngredientCard = React.memo(({ item, index, onPress }) => {
@@ -3384,8 +3449,11 @@ const ShelfActionGroup = ({ router }) => {
     };
 
     const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
-    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -130] });
-    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });
+    
+    // Updated Spacing for 3 Buttons:
+    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -190] }); // Top (Comparison)
+    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -130] }); // Middle (Community) - NEW
+    const action3Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });  // Bottom (Scan)
     
     // Buttons appear instantly (0 -> 1 quickly)
     const buttonOpacity = anim.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 1] });
@@ -3396,31 +3464,25 @@ const ShelfActionGroup = ({ router }) => {
     return (
         <View style={styles.fabContainer} pointerEvents="box-none">
             
-            {/* 
-                1. INDEPENDENT OVERLAY 
-                - No transforms (prevents flickering)
-                - Massive size to cover any screen
-                - pointerEvents controls interactivity (Pass-through when closed, Blocking when open)
-            */}
+            {/* 1. INDEPENDENT OVERLAY */}
             <Animated.View 
                 style={{
                     position: 'absolute',
-                    // Position relative to the FAB to cover the whole screen
                     top: -height * 1.5, 
                     left: -width * 1.5, 
                     width: width * 3, 
                     height: height * 3,
                     backgroundColor: 'rgba(26, 45, 39, 0.9)',
-                    zIndex: 0, // Bottom Layer
+                    zIndex: 0, 
                     opacity: backdropOpacity,
-                    elevation: 0 // Ensure Android doesn't mess up transparency
+                    elevation: 0 
                 }} 
                 pointerEvents={isOpen ? 'auto' : 'none'}
             >
                 <Pressable style={{flex: 1}} onPress={toggleMenu} />
             </Animated.View>
 
-            {/* 2. BUTTON 1: Comparison (Layer 10) */}
+            {/* 2. BUTTON 1: Comparison (Top) */}
             <Animated.View 
                 style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action1Y }], zIndex: 10 }]}
             >
@@ -3435,7 +3497,6 @@ const ShelfActionGroup = ({ router }) => {
                         styles.actionBtn, 
                         { backgroundColor: '#4a8a73', opacity: pressed ? 0.8 : 1 }
                     ]}
-                    // Large hit area + Retention offset for instant moving clicks
                     hitSlop={20} 
                     pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
                 >
@@ -3443,9 +3504,31 @@ const ShelfActionGroup = ({ router }) => {
                 </Pressable>
             </Animated.View>
 
-            {/* 3. BUTTON 2: Scan (Layer 10) */}
+            {/* 3. BUTTON 2: Community (Middle - NEW) */}
             <Animated.View 
                 style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action2Y }], zIndex: 10 }]}
+            >
+                <View style={styles.actionLabelContainer}>
+                    <Text style={styles.actionLabel}>المجتمع</Text>
+                </View>
+                
+                <Pressable
+                    onPressIn={handlePressIn}
+                    onPress={() => handlePress('/community')}
+                    style={({ pressed }) => [
+                        styles.actionBtn, 
+                        { backgroundColor: COLORS.gold, opacity: pressed ? 0.8 : 1 }
+                    ]}
+                    hitSlop={20} 
+                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
+                >
+                    <FontAwesome5 name="users" size={16} color={COLORS.textOnAccent} />
+                </Pressable>
+            </Animated.View>
+
+            {/* 4. BUTTON 3: Scan (Bottom) */}
+            <Animated.View 
+                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action3Y }], zIndex: 10 }]}
             >
                 <View style={styles.actionLabelContainer}>
                     <Text style={styles.actionLabel}>فحص منتج</Text>
@@ -3465,7 +3548,7 @@ const ShelfActionGroup = ({ router }) => {
                 </Pressable>
             </Animated.View>
 
-            {/* 4. MAIN FAB (Layer 20) */}
+            {/* 5. MAIN FAB */}
             <PressableScale 
                 style={[styles.mainFab, { zIndex: 20 }]} 
                 onPress={toggleMenu}
@@ -4522,32 +4605,53 @@ useEffect(() => {
       borderRadius: 20,
   },
   productListItem: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      padding: 16,
-      gap: 16,
-      backgroundColor: COLORS.card,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-  },
-  listItemContent: {
-      flex: 1,
-      alignItems: 'flex-end',
-      gap: 4,
-  },
-  listItemName: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 16,
-      color: COLORS.textPrimary,
-      textAlign: 'right',
-  },
-  listItemType: {
-      fontFamily: 'Tajawal-Regular',
-      fontSize: 12,
-      color: COLORS.textSecondary,
-      textAlign: 'right',
-  },
+    flexDirection: 'row', // Use standard row, we manage children order
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: COLORS.card,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+},
+listItemScoreContainer: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+},
+listItemContent: {
+    flex: 1,
+    paddingHorizontal: 12,
+    alignItems: 'flex-end', // Text to the right for Arabic
+},
+listItemName: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+},
+listItemType: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textSecondary,
+},
+listImageWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+},
+listProductImage: {
+    width: '100%',
+    height: '100%',
+},
+listImagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+},
   verdictContainer: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
@@ -4891,48 +4995,49 @@ useEffect(() => {
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 20,
-        gap: 10,
+        gap: 12,
     },
     routineSwitchContainer: {
         flex: 1,
         flexDirection: 'row-reverse',
         backgroundColor: COLORS.card,
-        borderRadius: 99,
-        padding: 6,
+        borderRadius: 14, // Slightly less rounded for a cleaner look
+        padding: 4,
         borderWidth: 1,
         borderColor: COLORS.border,
     },
     periodBtn: {
         flex: 1,
-        flexDirection: 'row-reverse',
+        flexDirection: 'row', // Aligns Text and Icon in one line
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 8,
+        gap: 8, // Space between icon and text
         paddingVertical: 10,
-        borderRadius: 99,
+        borderRadius: 12,
     },
     periodBtnActive: {
         backgroundColor: COLORS.accentGreen,
     },
     periodText: {
         fontFamily: 'Tajawal-Bold',
-        fontSize: 13,
+        fontSize: 14,
         color: COLORS.textSecondary,
+        paddingBottom: 2, // Tiny optical adjustment for font baseline
     },
     periodTextActive: {
         color: COLORS.textOnAccent,
     },
     autoBuildButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 46,
+        height: 46,
+        borderRadius: 14,
         backgroundColor: COLORS.card,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: COLORS.border,
     },
-    
+    //steps styles
     stepCardContainer: {
       backgroundColor: COLORS.card,
       borderRadius: 18,
@@ -5495,52 +5600,93 @@ stepProductText: {
     // --- 12. COMPONENT: ONBOARDING GUIDE ---
     // ========================================================================
     guideOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        zIndex: 100,
+        flex: 1,
+        zIndex: 9999,
     },
-    guideContentContainer: {
-        zIndex: 101,
-        justifyContent: 'flex-end',
+    guideCardWrapper: {
+        position: 'absolute',
+        bottom: height * 0.12, // Positions the card comfortably above the navigation dock
+        width: '100%',
         alignItems: 'center',
-        padding: 30,
-        paddingBottom: height * 0.2,
+        zIndex: 100,
+        paddingHorizontal: 20,
     },
-    guideTextBox: {
-        backgroundColor: COLORS.card,
-        borderRadius: 20,
-        padding: 25,
+    guideCard: {
+        width: '100%',
+        backgroundColor: COLORS.card, // Matching your forest green card color
+        borderRadius: 28,
+        padding: 24,
         borderWidth: 1,
         borderColor: COLORS.border,
+        // Premium Shadow
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 20,
+    },
+    guideHeader: {
+        flexDirection: 'row-reverse', // RTL Alignment
         alignItems: 'center',
-        width: '100%',
+        marginBottom: 15,
+        gap: 12,
+    },
+    guideIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: 'rgba(251, 191, 36, 0.12)', // Subtle gold tint
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(251, 191, 36, 0.2)',
     },
     guideTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 20,
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 19,
         color: COLORS.textPrimary,
-        marginBottom: 10,
+        textAlign: 'right',
     },
     guideText: {
         fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
+        fontSize: 15,
         color: COLORS.textSecondary,
-        textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 20,
+        textAlign: 'right',
+        lineHeight: 24,
+        marginBottom: 25,
     },
-    guideButton: {
+    guideFooter: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    guideNextBtn: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 10,
         backgroundColor: COLORS.accentGreen,
-        paddingHorizontal: 30,
         paddingVertical: 12,
-        borderRadius: 12,
+        paddingHorizontal: 26,
+        borderRadius: 16,
+        // Button Shadow
+        shadowColor: COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    guideButtonText: {
+    guideNextText: {
         fontFamily: 'Tajawal-Bold',
-        fontSize: 16,
-        color: COLORS.textOnAccent,
+        color: COLORS.textOnAccent, // Dark green text on mint button
+        fontSize: 15,
     },
-  
+    guideSkip: {
+        fontFamily: 'Tajawal-Bold',
+        color: COLORS.textDim,
+        fontSize: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+    },
     // ========================================================================
     // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
     // ========================================================================
@@ -6446,6 +6592,39 @@ selectionRow: {
     paddingHorizontal: 12,
     width: '100%',
 },
-
+productImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 24,
+    marginBottom: 15,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    position: 'relative'
+},
+productRealImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+},
+scoreBadgeFloat: {
+    position: 'absolute',
+    bottom: -10,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.card
+},
+scoreBadgeText: {
+    fontFamily: 'Tajawal-ExtraBold',
+    color: '#1A2D27', // Dark text on the colored badge
+    fontSize: 14
+},
 
   });

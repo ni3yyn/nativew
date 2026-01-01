@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { 
-  View, Text, TouchableOpacity, Dimensions, 
+  View, Text, TouchableOpacity, Dimensions, Image,
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, SafeAreaView, FlatList, PanResponder, Vibration, StyleSheet
+  RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +23,10 @@ import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
 // ... other imports
 import { PremiumShareButton } from './ShareComponent'; // Adjust path if needed
+import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService'; 
+import { AlertService } from '../../src/services/alertService';
+import { uriToBase64 } from '../../src/utils/formatters';
+import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -47,18 +51,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
 
-const PRODUCT_TYPES = [
-    { id: 'shampoo', label: 'شامبو / بلسم', icon: 'spa' },
-    { id: 'hair_mask', label: 'قناع شعر', icon: 'hand-sparkles' },
-    { id: 'serum', label: 'سيروم', icon: 'flask' },
-    { id: 'oil_blend', label: 'زيت', icon: 'leaf' },
-    { id: 'lotion_cream', label: 'مرطب', icon: 'hand-holding-water' },
-    { id: 'sunscreen', label: 'واقي شمس', icon: 'sun' },
-    { id: 'cleanser', label: 'غسول', icon: 'soap' },
-    { id: 'mask', label: 'قناع وجه', icon: 'mask' },
-    { id: 'toner', label: 'تونر', icon: 'tint' },
-    { id: 'other', label: 'آخر', icon: 'shopping-bag' },
-];
+
 
 // --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
@@ -71,38 +64,8 @@ const normalizeForMatching = (name) => {
     .trim();
 };
 
-const uriToBase64 = async (uri) => {
-  try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => { const rawBase64 = reader.result.split(',')[1]; resolve(rawBase64); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (e) { throw new Error("Failed to process image file."); }
-};
 
 // --- LOGIC MOVED TO SERVER: These functions were removed to protect IP ---
-
-// We still need claims list for the UI selection
-const getClaimsByProductType = (productType) => {
-    const claimsByProduct = {
-        shampoo: [ "تنقية فروة الرأس", "مضاد للقشرة", "مخصص للشعر الدهني", "مخصص للشعر الجاف", "مضاد لتساقط الشعر", "تعزيز النمو", "تكثيف الشعر", "مرطب للشعر", "تغذية الشعر", "إصلاح التلف", "تلميع ولمعان", "مكافحة التجعد", "حماية اللون", "حماية من الحرارة", "مهدئ", "مضاد للالتهابات" ],
-        hair_mask: [ "تغذية عميقة", "إصلاح التلف", "ترطيب مكثف", "تنعيم الشعر", "مكافحة التجعد", "تقوية الشعر", "حماية اللون", "إضافة لمعان" ],
-        serum: [ "مكافحة التجاعيد", "شد البشرة", "تحفيز الكولاجين", "إصلاح التلف", "مضاد للأكسدة", "تفتيح البشرة", "توحيد لون البشرة", "تفتيح البقع الداكنة", "تفتيح تحت العين", "مرطب للبشرة", "مهدئ", "مضاد للالتهابات", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "تنقية المسام", "توازن الزيوت", "مضاد لحب الشباب", "مضاد للرؤوس السوداء", "تقشير لطيف" ],
-        oil_blend: [ "تعزيز النمو", "تغذية الشعر", "تلميع ولمعان", "إصلاح التلف", "مكافحة التجعد", "مخصص للشعر الدهني", "مخصص للشعر الجاف", "مرطب للشعر", "مرطب للبشرة", "مكافحة التجاعيد", "شد البشرة", "مضاد للأكسدة", "مهدئ", "مضاد للالتهابات", "تفتيح البقع الداكنة" ],
-        lotion_cream: [ "مرطب للبشرة", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "مهدئ", "مضاد للأكسدة", "مكافحة التجاعيد", "شد البشرة", "تحفيز الكولاجين", "تفتيح البشرة", "توحيد لون البشرة", "تفتيح البقع الداكنة", "تفتيح تحت العين", "تنقية المسام", "إزالة السيلوليت", "شد الجسم" ],
-        sunscreen: [ "حماية من الشمس", "حماية واسعة الطيف", "مقاوم للماء", "مرطب للبشرة", "مهدئ", "مضاد للأكسدة", "توحيد لون البشرة", "للبشرة الحساسة", "للبشرة الدهنية", "للبشرة الجافة" ],
-        cleanser: [ "تنظيف عميق", "تنظيف لطيف", "إزالة المكياج", "للبشرة الدهنية", "للبشرة الجافة", "للبشرة الحساسة", "تنقية المسام", "مضاد لحب الشباب", "مرطب للشعر" ],
-        toner: [ "مرطب للبشرة", "تهدئة البشرة", "توازن الحموضة", "تقشير لطيف", "تنقية المسام", "قابض للمسام" ],
-        mask: [ "تنقية عميقة", "ترطيب مكثف", "تفتيح البشرة", "شد البشرة", "تهدئة البشرة", "تقشير" ],
-        other: [ "مرطب للشعر", "مرطب للبشرة", "مهدئ", "مضاد للأكسدة", "مضاد للالتهابات", "تفتيح البشرة", "توحيد لون البشرة", "مكافحة التجاعيد", "تنقية المسام", "مضاد لحب الشباب" ]
-    };
-    return claimsByProduct[productType] || claimsByProduct.other;
-};
-
 
 // ============================================================================
 //                       ANIMATION & UI COMPONENTS
@@ -1173,6 +1136,7 @@ export default function OilGuardEngine() {
   const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [cropperVisible, setCropperVisible] = useState(false);
   const [tempImageUri, setTempImageUri] = useState(null);
+  const [frontImageUri, setFrontImageUri] = useState(null); 
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef(null);
@@ -1487,21 +1451,50 @@ const extractIngredientsFromAIText = async (inputData) => {
   };
   
   const handleSaveProduct = async () => {
-    if (!productName.trim() || !user || !finalAnalysis) { Alert.alert("Error", "Please enter a product name."); return; }
+    if (!productName.trim()) { 
+        AlertService.error("تنبيه", "يرجى كتابة اسم المنتج."); 
+        return; 
+    }
+    
+    // Optional: Force image
+    if (!frontImageUri) {
+        AlertService.error("تنبيه", "يرجى إضافة صورة لواجهة المنتج لسهولة التعرف عليه.");
+        return;
+    }
+    
     setIsSaving(true);
+    
     try {
+        // 1. Upload Front Image
+        let productImageUrl = null;
+        if (frontImageUri) {
+            productImageUrl = await uploadImageToCloudinary(frontImageUri);
+        }
+
+        // 2. Save
         await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), {
             userId: user.uid,
             productName: productName.trim(),
+            productImage: productImageUrl,
+            marketingClaims: selectedClaims, 
+            productType: productType, 
             analysisData: finalAnalysis, 
             createdAt: Timestamp.now()
         });
-        Alert.alert("Saved", "Product has been added to your shelf!");
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setIsSaving(false);
         setSaveModalVisible(false);
-        router.replace('/(main)/profile');
+        
+        AlertService.success(
+            "تم الحفظ", 
+            "تمت إضافة المنتج إلى رفّك.", 
+            () => router.replace('/(main)/profile')
+        );
+
     } catch (error) {
-        Alert.alert("Save Failed", "Could not save product. Please try again.");
+        console.error(error);
+        AlertService.error("خطأ", "تعذر حفظ المنتج.");
         setIsSaving(false);
     }
   };
@@ -1514,7 +1507,63 @@ const extractIngredientsFromAIText = async (inputData) => {
       setSearchQuery('');
       setProductName(''); setShowManualTypeGrid(false); setManualIngredients('');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setFrontImageUri(null);
   };
+
+  const openSaveModal = () => {
+    setProductName('');
+    setFrontImageUri(null); // Force user to take a new pic of the front
+    setSaveModalVisible(true);
+};
+
+// 3. Pick Front Image (For Shelf)
+const pickFrontImage = () => {
+  AlertService.show({
+      title: "صورة المنتج",
+      message: "كيف تريد التقاط صورة المنتج؟",
+      type: 'info', // Uses the blue/neutral theme
+      buttons: [
+          {
+              text: 'المعرض',
+              style: 'secondary',
+              onPress: async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1], // Square for perfect shelf display
+                      quality: 0.8,
+                  });
+                  if (!result.canceled) {
+                      const compressed = await compressImage(result.assets[0].uri);
+                      setFrontImageUri(compressed);
+                  }
+              }
+          },
+          {
+              text: 'الكاميرا',
+              style: 'primary',
+              onPress: async () => {
+                  // Request permission implicitly handled by Expo, but good to check
+                  const result = await ImagePicker.launchCameraAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                  });
+                  if (!result.canceled) {
+                      const compressed = await compressImage(result.assets[0].uri);
+                      setFrontImageUri(compressed);
+                  }
+              }
+          },
+          {
+              text: 'إلغاء',
+              style: 'destructive',
+              onPress: () => {} // Close modal
+          }
+      ]
+  });
+};
 
   const renderGeminiLoading = () => {
     const textOpacity = loadingTextOpacityAnim;
@@ -2107,23 +2156,53 @@ const extractIngredientsFromAIText = async (inputData) => {
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
             <View style={styles.modalOverlay}>
-               <Pressable style={StyleSheet.absoluteFill} blurRadius={step === 0 ? 10 : 0}  onPress={() => setSaveModalVisible(false)} />
+               <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
                   <Animated.View style={styles.modalContent}>
-                      <Text style={styles.modalTitle}>حفظ المنتج</Text>
-                      <TextInput 
-                          style={styles.modalInput} 
-                          placeholder="مثال: سيروم فيتامين سي XYZ" 
-                          placeholderTextColor={COLORS.textSecondary} 
-                          value={productName} 
-                          onChangeText={setProductName} 
-                      />
-                      <PressableScale onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
-                          {isSaving ? (
-                              <ActivityIndicator color={COLORS.background} />
+                      <View style={{alignItems:'center', marginBottom: 15}}>
+                          <Text style={styles.modalTitle}>حفظ النتيجة</Text>
+                          <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
+                      </View>
+                      
+                      <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
+                          {frontImageUri ? (
+                              <>
+                                <Image source={{uri: frontImageUri}} style={styles.frontImagePreview} />
+                                <View style={styles.editBadge}>
+                                    <Feather name="edit-2" size={12} color="#FFF" />
+                                </View>
+                              </>
                           ) : (
-                              <Text style={styles.modalSaveButtonText}>حفظ في رفّي</Text>
+                              <View style={{alignItems:'center', gap: 8}}>
+                                  <View style={styles.cameraIconCircle}>
+                                      <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                  </View>
+                                  <Text style={styles.pickerText}>صورة المنتج</Text>
+                              </View>
                           )}
-                      </PressableScale>
+                      </TouchableOpacity>
+
+                      <View style={styles.inputWrapper}>
+                          <Text style={styles.inputLabel}>اسم المنتج</Text>
+                          <TextInput 
+                              style={styles.modalInput} 
+                              placeholder="مثال: غسول CeraVe الرغوي" 
+                              placeholderTextColor={COLORS.textSecondary} 
+                              value={productName} 
+                              onChangeText={setProductName} 
+                              textAlign="right"
+                          />
+                      </View>
+                      
+                      <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
+                          {isSaving ? (
+                              <ActivityIndicator color={COLORS.textOnAccent} />
+                          ) : (
+                              <View style={{flexDirection:'row', alignItems:'center', gap: 8}}>
+                                  <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
+                                  <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
+                              </View>
+                          )}
+                      </Pressable>
                   </Animated.View>
             </View>
         </Modal>
