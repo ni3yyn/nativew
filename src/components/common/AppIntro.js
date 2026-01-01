@@ -1,5 +1,3 @@
---- START OF FILE AppIntro.js ---
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Modal, View, Text, StyleSheet, TouchableOpacity, Dimensions, 
