@@ -48,7 +48,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 // 🔴 DEBUG FLAG: Set to 'false' for production behavior
-const ALWAYS_SHOW_INTRO_DEBUG = true; 
+const ALWAYS_SHOW_INTRO_DEBUG = false; 
 
 // --- SUB-COMPONENT: NEW POSTS TOAST ---
 const NewPostsToast = ({ visible, onPress }) => {

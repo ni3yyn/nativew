@@ -11,6 +11,7 @@ export const COLORS = {
   textPrimary: '#F1F3F2',
   textSecondary: '#A3B1AC',
   textOnAccent: '#1A2D27',
+  success: '#10B981',
   danger: '#ef4444', 
   gold: '#F59E0B',
   blue: '#3B82F6',

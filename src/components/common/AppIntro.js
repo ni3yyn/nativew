@@ -1,7 +1,9 @@
+--- START OF FILE AppIntro.js ---
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Modal, View, Text, StyleSheet, TouchableOpacity, Dimensions, 
-    Animated, Easing, StatusBar, FlatList, Platform 
+    Animated, Easing, StatusBar, Platform 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-// 🔴 DEBUG FLAG: Set to 'false' when releasing the app
+// 🔴 DEBUG FLAG: Set to 'false' for production
 const ALWAYS_SHOW_INTRO_DEBUG = false; 
 
 // --- THEME ---
@@ -33,7 +35,7 @@ const COLORS = {
   gold: '#fbbf24'
 };
 
-// --- 1. DATA (Green Identity) ---
+// --- 1. DATA ---
 const SLIDES = [
     {
         id: 'welcome',
@@ -42,7 +44,7 @@ const SLIDES = [
         desc: "تجاوزي وعود الإعلانات واكتشفي الحقيقة العلمية لكل منتج. نحن هنا لتمكينك بالمعرفة وليس لبيع الأوهام.",
         icon: "shield-alt",
         color: COLORS.accentGreen, 
-        bgGradient: [COLORS.background, '#064E3B'] // Deep Forest
+        bgGradient: [COLORS.background, '#064E3B']
     },
     {
         id: 'oilguard',
@@ -51,7 +53,7 @@ const SLIDES = [
         desc: "صوري المكونات واحصلي فوراً على تحليل كيميائي دقيق. نكشف لكِ السموم الخفية، المواد الحافظة، والفعالية الحقيقية.",
         icon: "search-plus",
         color: COLORS.gold, 
-        bgGradient: [COLORS.background, '#14532D'] // Pine Green
+        bgGradient: [COLORS.background, '#14532D']
     },
     {
         id: 'shelf',
@@ -60,7 +62,7 @@ const SLIDES = [
         desc: "رتبي منتجاتك رقمياً، وسنقوم بتحليل التناغم بينها. هل تتعارض مكونات روتينك؟ وثيق سيخبرك قبل أن تضعيها على بشرتك.",
         icon: "flask",
         color: COLORS.primary, 
-        bgGradient: [COLORS.background, '#065F46'] // Jungle Green
+        bgGradient: [COLORS.background, '#065F46']
     },
     {
         id: 'community',
@@ -69,7 +71,7 @@ const SLIDES = [
         desc: "انضمي لمجتمع يعتمد على 'التطابق الحيوي'. شاركي تجاربك واقرئي تقييمات أشخاص يملكون نفس نوع بشرتك تماماً.",
         icon: "users",
         color: '#6EE7B7', 
-        bgGradient: [COLORS.background, '#047857'] // Emerald
+        bgGradient: [COLORS.background, '#047857']
     },
     {
         id: 'comparison',
@@ -78,7 +80,7 @@ const SLIDES = [
         desc: "محتارة بين منتجين؟ ضعيهما وجهاً لوجه في مقارنة علمية دقيقة تكشف الأفضل لكِ بناءً على السعر، الأمان، والفعالية.",
         icon: "balance-scale",
         color: COLORS.textPrimary,
-        bgGradient: [COLORS.background, '#111827'] // Almost Black Green
+        bgGradient: [COLORS.background, '#111827']
     }
 ];
 
@@ -141,7 +143,6 @@ const Particle = ({ delay, duration, startX, size, color }) => {
     );
 };
 
-// RTL Swipe Hint (Arrow points Left to indicate swiping Right-to-Left creates forward motion visually)
 const SwipeHint = () => {
     const translateX = useRef(new Animated.Value(0)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -149,14 +150,10 @@ const SwipeHint = () => {
     useEffect(() => {
         const animate = Animated.loop(
             Animated.sequence([
-                Animated.parallel([
-                    Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-                    Animated.timing(translateX, { toValue: -20, duration: 1000, easing: Easing.out(Easing.quad), useNativeDriver: true })
-                ]),
-                Animated.parallel([
-                    Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-                    Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }) 
-                ])
+                Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+                Animated.timing(translateX, { toValue: -20, duration: 1000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+                Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true })
             ])
         );
         animate.start();
@@ -173,7 +170,6 @@ const SwipeHint = () => {
     );
 };
 
-// Custom Switch for "Don't Show Again"
 const CustomSwitch = ({ value, onToggle, activeColor }) => (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={styles.switchContainer}>
         <View style={[styles.checkboxBase, value && { borderColor: activeColor, backgroundColor: activeColor }]}>
@@ -189,6 +185,7 @@ const AppIntro = ({ visible, onClose }) => {
     const flatListRef = useRef(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [dontShowAgain, setDontShowAgain] = useState(false);
+    const [shouldRender, setShouldRender] = useState(false);
 
     // Orbit Animation
     const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -198,14 +195,10 @@ const AppIntro = ({ visible, onClose }) => {
         ).start();
     }, []);
 
-    // Check Logic (Only run if visible prop is passed, but manage debug override internally)
-    const [shouldRender, setShouldRender] = useState(false);
-
     useEffect(() => {
         if (visible) {
             setShouldRender(true);
         } else if (ALWAYS_SHOW_INTRO_DEBUG) {
-            // Force show for debug
             setShouldRender(true);
         } else {
             setShouldRender(false);
@@ -231,14 +224,6 @@ const AppIntro = ({ visible, onClose }) => {
         if (onClose) onClose();
     };
 
-    const handleNext = () => {
-        if (currentIndex < SLIDES.length - 1) {
-            flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-        } else {
-            handleFinish();
-        }
-    };
-
     const renderItem = ({ item, index }) => {
         const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
         
@@ -250,7 +235,7 @@ const AppIntro = ({ visible, onClose }) => {
         
         const translateX = scrollX.interpolate({
             inputRange,
-            outputRange: [-width * 0.3, 0, width * 0.3], // Parallax adjusted for Inverted
+            outputRange: [-width * 0.3, 0, width * 0.3],
             extrapolate: 'clamp'
         });
 
@@ -261,7 +246,7 @@ const AppIntro = ({ visible, onClose }) => {
         });
 
         return (
-            <View style={{ width, alignItems: 'center', paddingHorizontal: 40 }}> {/* Increased Padding */}
+            <View style={{ width, alignItems: 'center', paddingHorizontal: 30 }}>
                 {/* Visual */}
                 <View style={styles.visualContainer}>
                     <Animated.View style={[styles.orbitRing, { borderColor: 'rgba(255,255,255,0.08)', transform: [{ rotate: spin }, { scale }] }]}>
@@ -298,7 +283,6 @@ const AppIntro = ({ visible, onClose }) => {
         );
     };
 
-    // Fade in Button
     const lastIndex = SLIDES.length - 1;
     const buttonOpacity = scrollX.interpolate({
         inputRange: [(lastIndex - 1) * width, lastIndex * width],
@@ -338,7 +322,7 @@ const AppIntro = ({ visible, onClose }) => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Content List: INVERTED for RTL Feel */}
+                    {/* Content List */}
                     <Animated.FlatList
                         ref={flatListRef}
                         data={SLIDES}
@@ -346,7 +330,6 @@ const AppIntro = ({ visible, onClose }) => {
                         renderItem={renderItem}
                         horizontal
                         pagingEnabled
-                        inverted={true} // <--- Key for Arabic RTL swipe feel
                         showsHorizontalScrollIndicator={false}
                         bounces={false}
                         onScroll={Animated.event(
@@ -387,7 +370,7 @@ const AppIntro = ({ visible, onClose }) => {
                         {/* Controls */}
                         <View style={styles.controlsContainer}>
                             
-                            {/* "Don't Show Again" Switch */}
+                            {/* Switch */}
                             <View style={styles.switchWrapper}>
                                 <CustomSwitch 
                                     value={dontShowAgain} 
@@ -407,8 +390,9 @@ const AppIntro = ({ visible, onClose }) => {
                                     { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }
                                 ]} pointerEvents={currentIndex === lastIndex ? 'auto' : 'none'}>
                                     <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.9}>
-                                        <LinearGradient colors={[COLORS.accentGreen, '#047857']} style={styles.startBtnGradient}>
-                                            <Text style={styles.startBtnText}>انطلاق</Text>
+                                        <LinearGradient colors={[COLORS.primary, COLORS.accentGreen]} style={styles.startBtnGradient}>
+                                            {/* Fixed: Removed extra whitespace that caused crashes */}
+                                            <Text style={[styles.startBtnText, { color: COLORS.textOnAccent }]}>انطلاق</Text>
                                             <Ionicons name="rocket-outline" size={24} color={COLORS.textOnAccent} />
                                         </LinearGradient>
                                     </TouchableOpacity>
@@ -433,7 +417,7 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'flex-start', // Left align skip button
+        justifyContent: 'flex-start',
         padding: 20,
     },
     skipBtn: {
@@ -449,8 +433,6 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 14,
     },
-    
-    // VISUAL
     visualContainer: {
         height: height * 0.40,
         justifyContent: 'center',
@@ -491,8 +473,6 @@ const styles = StyleSheet.create({
         shadowRadius: 30,
         elevation: 25,
     },
-
-    // TEXT
     textWrapper: {
         alignItems: 'center',
         height: height * 0.35,
@@ -536,8 +516,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 26,
     },
-
-    // FOOTER
     footer: {
         height: 90,
         justifyContent: 'space-between',
@@ -555,8 +533,6 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         backgroundColor: '#FFF',
     },
-    
-    // CONTROLS
     controlsContainer: {
         width: '100%',
         paddingHorizontal: 30,
@@ -566,21 +542,19 @@ const styles = StyleSheet.create({
     },
     switchWrapper: {
         flex: 1,
-        alignItems: 'flex-start', // Left align
+        alignItems: 'flex-start',
     },
     actionArea: {
         flex: 1,
         height: 60,
-        alignItems: 'flex-end', // Right align
+        alignItems: 'flex-end',
         justifyContent: 'center',
     },
     absoluteCenter: {
         position: 'absolute',
-        right: 0, // Align to right side
+        right: 0,
         alignItems: 'center',
     },
-
-    // SWITCH UI
     switchContainer: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -601,8 +575,6 @@ const styles = StyleSheet.create({
         color: COLORS.textDim,
         fontSize: 12,
     },
-
-    // SWIPE HINT
     swipeHintContainer: {
         alignItems: 'center',
         gap: 5,
@@ -612,8 +584,6 @@ const styles = StyleSheet.create({
         color: COLORS.textDim,
         fontSize: 12,
     },
-
-    // START BTN
     startBtn: {
         borderRadius: 30,
         shadowColor: COLORS.accentGreen,

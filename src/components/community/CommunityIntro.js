@@ -130,6 +130,7 @@ const SwipeHint = () => {
 const CommunityIntro = ({ visible, onClose }) => {
     const scrollX = useRef(new Animated.Value(0)).current;
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [dontShowAgain, setDontShowAgain] = useState(true); // Default to hiding it in the future
 
     // Orbit Animation
     const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -144,7 +145,9 @@ const CommunityIntro = ({ visible, onClose }) => {
 
     const handleFinish = async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await AsyncStorage.setItem('has_seen_community_intro', 'true');
+        if (dontShowAgain) {
+            await AsyncStorage.setItem('has_seen_community_intro', 'true');
+        }
         onClose();
     };
 
@@ -336,6 +339,22 @@ const CommunityIntro = ({ visible, onClose }) => {
                                         <Ionicons name="checkmark-circle" size={24} color={COLORS.background} />
                                     </LinearGradient>
                                 </TouchableOpacity>
+                                {/* Don't Show Again Toggle */}
+                                <TouchableOpacity 
+                                    style={styles.dontShowContainer} 
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setDontShowAgain(!dontShowAgain);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <MaterialCommunityIcons 
+                                        name={dontShowAgain ? "checkbox-marked" : "checkbox-blank-outline"} 
+                                        size={20} 
+                                        color="rgba(255,255,255,0.5)" 
+                                    />
+                                    <Text style={styles.dontShowText}>عدم العرض مرة أخرى</Text>
+                                </TouchableOpacity>
                             </Animated.View>
 
                         </View>
@@ -514,6 +533,18 @@ const styles = StyleSheet.create({
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 18,
         color: COLORS.background
+    },
+    dontShowContainer: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        marginTop: 15,
+        gap: 8,
+        padding: 5
+    },
+    dontShowText: {
+        fontFamily: 'Tajawal-Regular',
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: 12,
     }
 });
 
