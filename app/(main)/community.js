@@ -136,18 +136,28 @@ export default function CommunityScreen() {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
+    const lastCheckTime = useRef(0);
     // --- DATA FETCHING (SMART HYBRID) ---
     useEffect(() => {
         const checkForNewPosts = async () => {
+            // --- THROTTLE START ---
+            // Only check every 5 minutes (300,000ms) to save reads when switching apps
+            const now = Date.now();
+            if (now - lastCheckTime.current < 300000) return;
+            lastCheckTime.current = now; 
+            // --- THROTTLE END ---
+        
             const { lastFetchTimestamp } = await getPostsCache();
             if (!lastFetchTimestamp) return;
-
-            const lastDate = new Date(lastFetchTimestamp);
+        
+            // 🟢 THIS WAS MISSING OR DELETED
+            const lastDate = new Date(lastFetchTimestamp); 
+            
             if (isNaN(lastDate.getTime())) return;
-
+        
             // Safe Buffer: Add 1 second to avoid counting the same post
             const safeDate = new Date(lastDate.getTime() + 1000);
-
+        
             const q = query(
                 collection(db, 'posts'),
                 where('createdAt', '>', Timestamp.fromDate(safeDate))
@@ -406,19 +416,23 @@ export default function CommunityScreen() {
             const q = query(
                 collection(db, 'posts'),
                 where('createdAt', '>', Timestamp.fromDate(newestDate)),
-                orderBy('createdAt', 'desc')
+                orderBy('createdAt', 'desc'),
+                limit(20)
             );
 
             const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-                const freshItems = normalizePosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                const merged = [...freshItems, ...allPosts].slice(0, 100);
-                setAllPosts(merged);
-                await setPostsCache(merged);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-            setNewPostsCount(0);
-        } catch (error) { 
+        // If snapshot.size === 20, it implies there are MORE posts we didn't fetch.
+        // You might want to show a "Load more" indicator or just accept the gap.
+        
+        if (!snapshot.empty) {
+            const freshItems = normalizePosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const merged = [...freshItems, ...allPosts].slice(0, 100); // Keep memory sane
+            setAllPosts(merged);
+            await setPostsCache(merged);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        setNewPostsCount(0);
+    } catch (error) { 
             console.error("Refresh Error", error); 
         } finally { 
             setRefreshing(false); 

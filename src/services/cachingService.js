@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const POSTS_CACHE_KEY = 'community_posts_cache_v1';
 const PROFILES_CACHE_KEY = 'user_profiles_cache_v1';
-const PROFILE_TTL = 60 * 60 * 1000; // 60 Minutes
+const PROFILE_TTL = 24 * 60 * 60 * 1000; 
 
 
 /**
@@ -92,7 +92,8 @@ export const getCachedUserProfile = async (userId) => {
 
         return {
             profile: userData.profile,
-            shelf: userData.shelf || []
+            shelf: userData.shelf || [],
+            timestamp: userData.timestamp // 🟢 FIX 2: THIS WAS MISSING
         };
     } catch (error) {
         console.error("Error getting cached profile:", error);

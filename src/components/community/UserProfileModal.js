@@ -94,17 +94,9 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
 
                 // 2. FETCH FRESH (Only if cache expired or missing)
                 console.log("🟠 Cache Expired/Missing - Fetching from Firestore (2 Reads)");
-                
-                // A. Fetch Profile
-                const userDoc = await getDoc(doc(db, 'profiles', userIdString));
-                let freshProfile = null;
-                
-                if (userDoc.exists()) {
-                    freshProfile = userDoc.data();
-                    setProfile(freshProfile);
-                }
+                           
 
-                // B. Fetch Shelf (Limit 5)
+                // A. Fetch Shelf (Limit 5)
                 const q = query(
                     collection(db, 'profiles', userIdString, 'savedProducts'),
                     orderBy('createdAt', 'desc'),
@@ -115,14 +107,9 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                 setPublicShelf(freshShelf);
 
                 // C. Update Cache with new Timestamp
-                if (freshProfile) {
-                    await cacheUserProfile(userIdString, freshProfile, freshShelf);
-                    
-                    if (currentUser?.settings) {
-                        setMatchInfo(calculateBioMatch(currentUser.settings, freshProfile.settings));
-                    }
-                }
-
+                const profileToCache = profile || { settings: initialData };
+                await cacheUserProfile(userIdString, profileToCache, freshShelf);
+        
             } catch (e) {
                 console.error("Profile Fetch Error", e);
             } finally {
