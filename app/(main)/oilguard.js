@@ -27,6 +27,8 @@ import { uploadImageToCloudinary, compressImage } from '../../src/services/image
 import { AlertService } from '../../src/services/alertService';
 import { uriToBase64 } from '../../src/utils/formatters';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
+import CustomCameraModal from '../../src/components/oilguard/CustomCameraModal'; // <--- NEW IMPORT
+import ImageCropperModal from '../../src/components/oilguard/ImageCropperModal';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -478,221 +480,6 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
   );
 };
 
-const CustomCameraModal = ({ isVisible, onClose, onPictureTaken }) => {
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraViewRef = useRef(null);
-  
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-  const VIEWPORT_WIDTH = SCREEN_WIDTH * 0.85;
-  const VIEWPORT_HEIGHT = SCREEN_HEIGHT * 0.50; 
-  const VIEWPORT_X = (SCREEN_WIDTH - VIEWPORT_WIDTH) / 2;
-  const VIEWPORT_Y = (SCREEN_HEIGHT - VIEWPORT_HEIGHT) / 2 - 50; 
-  
-  const SLIDER_WIDTH = SCREEN_WIDTH * 0.8; 
-  const SLIDER_START_X = (SCREEN_WIDTH - SLIDER_WIDTH) / 2;
-  const MAX_ZOOM_FACTOR = 0.15; 
-
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isCameraReady, setCameraReady] = useState(false);
-  const [flashMode, setFlashMode] = useState('off');
-  const [zoomLevel, setZoomLevel] = useState(0); 
-  const [displayZoom, setDisplayZoom] = useState(1.0); 
-
-  const uiAnim = useRef(new Animated.Value(0)).current; 
-  const scanAnim = useRef(new Animated.Value(0)).current; 
-  const shutterFlashAnim = useRef(new Animated.Value(0)).current; 
-  const knobScale = useRef(new Animated.Value(1)).current; 
-  const tooltipOpacity = useRef(new Animated.Value(0)).current; 
-
-  const updateZoom = (gestureX) => {
-    let relativeX = gestureX - SLIDER_START_X;
-    if (relativeX < 0) relativeX = 0;
-    if (relativeX > SLIDER_WIDTH) relativeX = SLIDER_WIDTH;
-
-    const percentage = relativeX / SLIDER_WIDTH;
-    
-    setZoomLevel(percentage * MAX_ZOOM_FACTOR);
-    setDisplayZoom(1 + (percentage * 3)); 
-  };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt, gestureState) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        Animated.parallel([
-            Animated.spring(knobScale, { toValue: 1.3, useNativeDriver: true }),
-            Animated.timing(tooltipOpacity, { toValue: 1, duration: 150, useNativeDriver: true })
-        ]).start();
-        updateZoom(evt.nativeEvent.pageX);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        updateZoom(gestureState.moveX);
-      },
-      onPanResponderRelease: () => {
-        Animated.parallel([
-            Animated.spring(knobScale, { toValue: 1, useNativeDriver: true }),
-            Animated.timing(tooltipOpacity, { toValue: 0, duration: 200, useNativeDriver: true })
-        ]).start();
-      }
-    })
-  ).current;
-
-  useEffect(() => {
-    if (Platform.OS === 'android' && isVisible) NavigationBar.setBackgroundColorAsync('#00000000');
-  }, [isVisible]);
-
-  useEffect(() => {
-    let scanLoop;
-    if (isVisible) {
-      if (!permission?.granted) requestPermission();
-      
-      Animated.spring(uiAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true, delay: 100 }).start();
-
-      scanLoop = Animated.loop(
-        Animated.sequence([
-            Animated.timing(scanAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-            Animated.timing(scanAnim, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        ])
-      );
-      scanLoop.start();
-    } else {
-      uiAnim.setValue(0);
-    }
-    return () => scanLoop?.stop();
-  }, [isVisible, permission]);
-
-  const handleCapture = async () => {
-    if (!cameraViewRef.current || isCapturing || !isCameraReady) return;
-    setIsCapturing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-    Animated.sequence([
-        Animated.timing(shutterFlashAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
-        Animated.timing(shutterFlashAnim, { toValue: 0, duration: 200, useNativeDriver: true })
-    ]).start();
-
-    try {
-      const photo = await cameraViewRef.current.takePictureAsync({ quality: 0.8, base64: true });
-      const manipulated = await ImageManipulator.manipulateAsync(photo.uri, [{ resize: { width: 1080 } }], { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
-      onPictureTaken(manipulated);
-    } catch (e) {
-      setIsCapturing(false);
-    }
-  };
-
-  const toggleFlash = () => {
-      Haptics.selectionAsync();
-      setFlashMode(prev => prev === 'off' ? 'on' : 'off');
-  };
-
-  if (!permission || !permission.granted) return null;
-
-  const laserY = scanAnim.interpolate({ inputRange: [0, 1], outputRange: [VIEWPORT_Y, VIEWPORT_Y + VIEWPORT_HEIGHT] });
-  const controlsY = uiAnim.interpolate({ inputRange: [0, 1], outputRange: [150, 0] });
-  
-  const knobPosition = (zoomLevel / MAX_ZOOM_FACTOR) * SLIDER_WIDTH;
-
-  return (
-    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
-        <CameraView
-          style={StyleSheet.absoluteFill}
-          ref={cameraViewRef}
-          facing="back"
-          flash={flashMode}
-          zoom={zoomLevel}
-          onCameraReady={() => setCameraReady(true)}
-          mode="picture"
-        >
-          <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-            <Defs>
-              <Mask id="mask" x="0" y="0" height="100%" width="100%">
-                <Rect height="100%" width="100%" fill="#fff" />
-                <Rect x={VIEWPORT_X} y={VIEWPORT_Y} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} rx="30" fill="#000" />
-              </Mask>
-            </Defs>
-            <Rect height="100%" width="100%" fill="rgba(0,0,0,0.8)" mask="url(#mask)" />
-            <Rect x={VIEWPORT_X} y={VIEWPORT_Y} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} rx="30" stroke="rgba(255,255,255,0.15)" strokeWidth="1" fill="transparent"/>
-            
-            <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
-            <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + 30} V${VIEWPORT_Y} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
-            <Path d={`M${VIEWPORT_X} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
-            <Path d={`M${VIEWPORT_X + VIEWPORT_WIDTH} ${VIEWPORT_Y + VIEWPORT_HEIGHT - 30} V${VIEWPORT_Y + VIEWPORT_HEIGHT} H${VIEWPORT_X + VIEWPORT_WIDTH - 30}`} stroke={COLORS.accentGreen} strokeWidth={4} fill="none"/>
-          </Svg>
-
-          <Animated.View style={[styles.laserLine, { width: VIEWPORT_WIDTH, left: VIEWPORT_X, transform: [{ translateY: laserY }] }]}>
-            <LinearGradient colors={['transparent', COLORS.accentGreen, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, opacity: 0.8 }} />
-          </Animated.View>
-
-          <SafeAreaView style={styles.topStatusContainer}>
-             <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>الذكاء الاصطناعي نشط</Text>
-             </View>
-             <Text style={styles.hintText}>التقط صورة واضحة للمكونات</Text>
-          </SafeAreaView>
-
-          <Animated.View style={[styles.bottomControlDeck, { transform: [{translateY: controlsY}], opacity: uiAnim }]}>
-            
-            <View style={{ width: SLIDER_WIDTH, marginBottom: 25 }}>
-                
-                <Animated.View style={[
-                    styles.zoomTooltip, 
-                    { 
-                        opacity: tooltipOpacity,
-                        left: knobPosition - 20, 
-                    }
-                ]}>
-                    <Text style={styles.zoomTooltipText}>{displayZoom.toFixed(1)}x</Text>
-                    <View style={styles.zoomTooltipArrow} />
-                </Animated.View>
-
-                <View 
-                    style={styles.sliderContainer}
-                    {...panResponder.panHandlers}
-                >
-                    <View style={styles.sliderTrackBg} />
-                    <View style={[styles.sliderTrackFill, { width: knobPosition }]} />
-                    <Animated.View style={[styles.sliderKnob, { left: knobPosition, transform: [{ scale: knobScale }, { translateX: -14 }] }]}>
-                         <View style={styles.sliderKnobDot} />
-                    </Animated.View>
-                </View>
-
-                <View style={styles.sliderLabels}>
-                    <Text style={styles.sliderLabelText}>1x</Text>
-                    <Text style={styles.sliderLabelText}>4x</Text>
-                </View>
-            </View>
-
-            <View style={styles.mainControlsRow}>
-                
-                <PressableScale onPress={toggleFlash} style={[styles.sideControlBtn, flashMode === 'on' && styles.sideControlBtnActive]}>
-                    <Ionicons name={flashMode === 'on' ? "flash" : "flash-off"} size={24} color={flashMode === 'on' ? "#000" : "#FFF"} />
-                </PressableScale>
-
-                <Pressable onPress={handleCapture} disabled={isCapturing}>
-                    <View style={styles.shutterOuter}>
-                        {isCapturing ? <ActivityIndicator size="large" color={COLORS.accentGreen} /> : <View style={styles.shutterInner} />}
-                    </View>
-                </Pressable>
-
-                <PressableScale onPress={onClose} style={[styles.sideControlBtn, { backgroundColor: 'rgba(255, 50, 50, 0.2)', borderColor: 'rgba(255, 50, 50, 0.4)' }]}>
-                    <Ionicons name="close" size={28} color="#FFF" />
-                </PressableScale>
-
-            </View>
-
-          </Animated.View>
-
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: shutterFlashAnim, pointerEvents: 'none' }]} />
-        </CameraView>
-      </View>
-    </Modal>
-  );
-};
-
 const AnimatedCheckbox = ({ isSelected }) => {
   const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
   const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
@@ -885,225 +672,131 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
   );
 };
 
-const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
-  const SCREEN_WIDTH = width;
-  const SCREEN_HEIGHT = height;
-  const MASK_WIDTH = width * 0.85; 
-  const MASK_HEIGHT = height * 0.5; 
-  const MASK_X = (SCREEN_WIDTH - MASK_WIDTH) / 2;
-  const MASK_Y = (SCREEN_HEIGHT - MASK_HEIGHT) / 2 - 40;
+const extractIngredientsFromAIText = async (inputData) => {
+  let candidates = [];
+  if (Array.isArray(inputData)) {
+    candidates = inputData;
+  } else if (typeof inputData === 'string') {
+    candidates = inputData.split('\n');
+  }
 
-  const [imageLayout, setImageLayout] = useState(null); 
-  const [viewSize, setViewSize] = useState(null); 
-  
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState(0); 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const simpleIngredients = candidates.map((name, index) => ({
+      id: `temp-${index}`, 
+      name: name.trim(),
+      functionalCategory: 'جاري التحليل...', 
+      chemicalType: ''
+  })).filter(i => i.name.length > 1);
 
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const panAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (imageUri) {
-      RNImage.getSize(imageUri, (w, h) => {
-        setImageLayout({ width: w, height: h });
-        const ratio = Math.min(SCREEN_WIDTH / w, SCREEN_HEIGHT / h);
-        setViewSize({ width: w * ratio, height: h * ratio, ratio });
-      });
-      setScale(1);
-      setPan({ x: 0, y: 0 });
-      setRotation(0);
-      scaleAnim.setValue(1);
-      panAnim.setValue({ x: 0, y: 0 });
-      rotateAnim.setValue(0);
-    }
-  }, [imageUri]);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        panAnim.setOffset({ x: pan.x, y: pan.y });
-        panAnim.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: Animated.event(
-        [null, { dx: panAnim.x, dy: panAnim.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: (e, gestureState) => {
-        panAnim.flattenOffset();
-        setPan({ x: pan.x + gestureState.dx, y: pan.y + gestureState.dy });
-      },
-    })
-  ).current;
-
-  const handleZoom = (val) => {
-    const newScale = 1 + val * 2; 
-    setScale(newScale);
-    scaleAnim.setValue(newScale);
-  };
-
-  const rotate90 = () => {
-    const nextRot = (rotation + 90) % 360;
-    setRotation(nextRot);
-    Animated.spring(rotateAnim, { toValue: nextRot, useNativeDriver: true }).start();
-  };
-
-  const performCrop = async () => {
-    if (!imageLayout || !viewSize) return;
-    setIsProcessing(true);
-
-    try {
-        let processingUri = imageUri;
-        if (rotation !== 0) {
-            const rotResult = await ImageManipulator.manipulateAsync(
-                imageUri,
-                [{ rotate: rotation }],
-                { format: ImageManipulator.SaveFormat.JPEG }
-            );
-            processingUri = rotResult.uri;
-            if (rotation % 180 !== 0) {
-                 setImageLayout({ width: imageLayout.height, height: imageLayout.width });
-            }
-        }
-
-        const centerX = SCREEN_WIDTH / 2;
-        const centerY = SCREEN_HEIGHT / 2;
-        
-        const imgCenterX = centerX + pan.x;
-        const imgCenterY = centerY + pan.y;
-
-        const currentWidth = viewSize.width * scale;
-        const currentHeight = viewSize.height * scale;
-        
-        const imgTopLeftX = imgCenterX - (currentWidth / 2);
-        const imgTopLeftY = imgCenterY - (currentHeight / 2);
-
-        const maskTopLeftX = MASK_X;
-        const maskTopLeftY = MASK_Y;
-
-        const cropStartScreenX = maskTopLeftX - imgTopLeftX;
-        const cropStartScreenY = maskTopLeftY - imgTopLeftY;
-
-        const resolutionRatio = imageLayout.width / currentWidth; 
-
-        let cropX = cropStartScreenX * resolutionRatio;
-        let cropY = cropStartScreenY * resolutionRatio;
-        let cropW = MASK_WIDTH * resolutionRatio;
-        let cropH = MASK_HEIGHT * resolutionRatio;
-
-        cropX = Math.max(0, cropX);
-        cropY = Math.max(0, cropY);
-        if (cropX + cropW > imageLayout.width) cropW = imageLayout.width - cropX;
-        if (cropY + cropH > imageLayout.height) cropH = imageLayout.height - cropY;
-
-        const cropResult = await ImageManipulator.manipulateAsync(
-            processingUri,
-            [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }],
-            { format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 }
-        );
-
-        onCropComplete(cropResult);
-
-    } catch (error) {
-        Alert.alert("Error", "Could not crop image.");
-        console.error(error);
-        setIsProcessing(false);
-    }
-  };
-
-  if (!isVisible || !imageUri) return null;
-
-  return (
-    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.cropperContainer}>
-        
-        <View style={styles.cropperHeader}>
-            <PressableScale onPress={onClose} style={styles.iconButtonBlur}>
-                <Ionicons name="close" size={24} color="#FFF" />
-            </PressableScale>
-            <Text style={styles.cropperTitle}>تحديد المكونات</Text>
-            <PressableScale onPress={rotate90} style={styles.iconButtonBlur}>
-                <MaterialIcons name="rotate-right" size={24} color="#FFF" />
-            </PressableScale>
-        </View>
-
-        <View style={styles.cropperWorkspace} {...panResponder.panHandlers}>
-            {viewSize && (
-                <Animated.Image
-                    source={{ uri: imageUri }}
-                    style={{
-                        width: viewSize.width,
-                        height: viewSize.height,
-                        transform: [
-                            { translateX: panAnim.x },
-                            { translateY: panAnim.y },
-                            { scale: scaleAnim },
-                            { rotate: rotateAnim.interpolate({inputRange: [0, 360], outputRange: ['0deg', '360deg']}) }
-                        ]
-                    }}
-                    resizeMode="contain"
-                />
-            )}
-
-            <View style={styles.cropperOverlay} pointerEvents="none">
-                <View style={{ width: '100%', height: MASK_Y, backgroundColor: 'rgba(0,0,0,0.8)' }} />
-                <View style={{ flexDirection: 'row', height: MASK_HEIGHT }}>
-                    <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
-                    <View style={styles.cropperWindow}>
-                         <View style={[styles.cornerBracket, styles.topLeft]} />
-                         <View style={[styles.cornerBracket, styles.topRight]} />
-                         <View style={[styles.cornerBracket, styles.bottomLeft]} />
-                         <View style={[styles.cornerBracket, styles.bottomRight]} />
-                    </View>
-                    <View style={{ width: MASK_X, backgroundColor: 'rgba(0,0,0,0.8)' }} />
-                </View>
-                <View style={{ width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)' }} />
-            </View>
-        </View>
-
-        <View style={styles.cropperFooter}>
-            <View style={styles.cropperHint}>
-                <Ionicons name="scan-outline" size={16} color={COLORS.accentGreen} />
-                <Text style={styles.cropperHintText}>حرك الصورة لتكون المكونات داخل الإطار</Text>
-            </View>
-
-            <View style={{ width: '80%', height: 40, justifyContent: 'center', marginVertical: 20 }}>
-                <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 }} />
-                <View style={{ 
-                    position: 'absolute', height: 4, backgroundColor: COLORS.accentGreen, borderRadius: 2,
-                    width: `${((scale-1)/2)*100}%` 
-                }} />
-                <Slider
-                    style={{ width: '100%', height: 40, position: 'absolute' }}
-                    minimumValue={0}
-                    maximumValue={1}
-                    minimumTrackTintColor="transparent"
-                    maximumTrackTintColor="transparent"
-                    thumbTintColor="#FFF"
-                    onValueChange={handleZoom}
-                />
-            </View>
-
-            <PressableScale onPress={performCrop} style={styles.mainBtn} disabled={isProcessing}>
-                {isProcessing ? (
-                    <ActivityIndicator color={COLORS.background} />
-                ) : (
-                    <>
-                    <Text style={styles.mainBtnText}>تأكيد القص</Text>
-                    <Ionicons name="checkmark" size={20} color={COLORS.background} />
-                    </>
-                )}
-            </PressableScale>
-        </View>
-
-      </View>
-    </Modal>
-  );
+  return { ingredients: simpleIngredients };
 };
+
+// --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
+const InputStepView = React.memo(({ onImageSelect }) => {
+    const scanBarAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(scanBarAnim, {
+                    toValue: 1,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: Platform.OS !== 'web'
+                }),
+                Animated.timing(scanBarAnim, {
+                    toValue: 0,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: Platform.OS !== 'web'
+                })
+            ])
+        );
+        animation.start();
+        return () => animation.stop();
+    }, []);
+
+    const scanTranslateY = scanBarAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 140]
+    });
+
+    return (
+        <View style={styles.inputStepContainer}>
+            <View style={styles.heroVisualContainer}>
+                <View style={styles.scanFrame}>
+                    <FontAwesome5 name="wine-bottle" size={80} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
+                    <Animated.View style={[
+                        styles.scanLaser,
+                        { transform: [{ translateY: scanTranslateY }] }
+                    ]}>
+                        <LinearGradient
+                            colors={['transparent', COLORS.accentGreen, 'transparent']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={{ flex: 1 }}
+                        />
+                    </Animated.View>
+                    <View style={[styles.scanCorner, styles.scanCornerTL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerTR]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                </View>
+            </View>
+
+            <StaggeredItem index={0} style={styles.bottomDeck}>
+                <LinearGradient
+                    colors={[COLORS.card, '#152520']}
+                    style={styles.bottomDeckGradient}
+                >
+                    <View style={styles.deckHeader}>
+                        <Text style={styles.deckTitle}>فحص المكونات</Text>
+                        <Typewriter
+                            texts={[
+                                "كشف الخبايا الكيميائية...",
+                                "تحليل مدى الأمان...",
+                                "هل يناسب بشرتك؟",
+                            ]}
+                            typingSpeed={60}
+                            style={{
+                                container: { height: 24, justifyContent: 'center' },
+                                text: { fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }
+                            }}
+                        />
+                    </View>
+
+                    <PressableScale onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
+                        <LinearGradient
+                            colors={[COLORS.accentGreen, '#4a8570']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            style={styles.primaryActionGradient}
+                        >
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="camera" size={28} color={COLORS.background} />
+                            </View>
+                            <View>
+                                <Text style={styles.primaryActionTitle}>تصوير المنتج</Text>
+                                <Text style={styles.primaryActionSub}>التقط صورة واضحة للمكونات الخلفية</Text>
+                            </View>
+                            <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
+                        </LinearGradient>
+                    </PressableScale>
+
+                    <View style={styles.secondaryActionsRow}>
+                        <PressableScale onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
+                            <Ionicons name="images" size={22} color={COLORS.textSecondary} />
+                            <Text style={styles.secondaryBtnText}>المعرض</Text>
+                        </PressableScale>
+                        <View style={styles.verticalDivider} />
+                        <PressableScale onPress={() => { /* Add logic */ }} style={styles.secondaryBtn}>
+                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
+                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
+                        </PressableScale>
+                    </View>
+                </LinearGradient>
+            </StaggeredItem>
+        </View>
+    );
+});
+
 
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
@@ -1263,7 +956,7 @@ export default function OilGuardEngine() {
     };
   }, [isAnimatingTransition]);
 
-  const changeStep = (next) => {
+  const changeStep = useCallback((next) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     Animated.timing(contentOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
@@ -1271,44 +964,65 @@ export default function OilGuardEngine() {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       Animated.timing(contentOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
     });
-  };
+  }, [contentOpacity]);
 
-  const handleImageSelection = async (mode) => {
+
+  const handleImageSelection = useCallback(async (mode) => {
     try {
-        Haptics.selectionAsync();
-
         if (mode === 'camera') {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('عذراً', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
+                return;
+            }
             setCameraViewVisible(true);
             return; 
         }
 
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-            Alert.alert('Permission needed', 'Media library access is required.');
-            return;
-        }
+        if (mode === 'gallery') {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('عذراً', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
+                return;
+            }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.8,
-            allowsEditing: true,
-        });
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 1, // High quality for OCR
+                allowsEditing: false, // DISABLE Native Editor
+            });
 
-        if (!result.canceled && result.assets[0].uri) {
-            processImageWithGemini(result.assets[0].uri);
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const selectedUri = result.assets[0].uri;
+                if (selectedUri) {
+                    setTempImageUri(selectedUri);
+                    // Add a small timeout to ensure modal transition is smooth
+                    setTimeout(() => setCropperVisible(true), 100);
+                }
+            }
         }
     } catch (error) {
         console.error("Image selection error:", error);
-        Alert.alert("Error", "Could not select an image. Please try again.");
+        Alert.alert("خطأ", "حدث خطأ أثناء اختيار الصورة. حاول مرة أخرى.");
     }
-};
+  }, []);
 
-const handlePictureTaken = (photo) => {
-  setCameraViewVisible(false);
-  if (photo && photo.uri) {
-      processImageWithGemini(photo.uri);
-  }
-};
+
+  const handlePictureTaken = useCallback((photo) => {
+    setCameraViewVisible(false);
+    
+    if (photo && photo.uri) {
+        // OLD CODE: 
+        // setTempImageUri(photo.uri);
+        // setTimeout(() => setCropperVisible(true), 300);
+
+        // NEW CODE: Skip cropper and go straight to processing
+        // We add a small delay to let the Camera Modal close animation finish smoothly
+        setTimeout(() => {
+            processImageWithGemini(photo.uri);
+        }, 50); 
+    }
+  }, []);
 
 const processImageWithGemini = async (uri) => {
   setLoading(true);
@@ -1358,28 +1072,6 @@ const processImageWithGemini = async (uri) => {
     changeStep(0);
   }
 };
-  
-// --- UPDATED EXTRACTION FUNCTION (Client-Side Dumb Version) ---
-const extractIngredientsFromAIText = async (inputData) => {
-  let candidates = [];
-  if (Array.isArray(inputData)) {
-    candidates = inputData;
-  } else if (typeof inputData === 'string') {
-    candidates = inputData.split('\n');
-  }
-
-  // We no longer match against DB here (security). 
-  // We just create temp objects for display in the "Review" step.
-  const simpleIngredients = candidates.map((name, index) => ({
-      id: `temp-${index}`, // Temp ID, server will match real ID
-      name: name.trim(),
-      functionalCategory: 'جاري التحليل...', // Placeholder
-      chemicalType: ''
-  })).filter(i => i.name.length > 1);
-
-  return { ingredients: simpleIngredients };
-};
-  
 
   const executeAnalysis = () => {
     if (!fabRef.current) return;
@@ -1529,13 +1221,15 @@ const pickFrontImage = () => {
               onPress: async () => {
                   const result = await ImagePicker.launchImageLibraryAsync({
                       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      allowsEditing: true,
-                      aspect: [1, 1], // Square for perfect shelf display
-                      quality: 0.8,
+                      allowsEditing: false,
+                      aspect: [4, 3],
+                      quality: 1,
                   });
                   if (!result.canceled) {
                       const compressed = await compressImage(result.assets[0].uri);
                       setFrontImageUri(compressed);
+                      setCropperVisible(true);
+
                   }
               }
           },
@@ -1547,8 +1241,8 @@ const pickFrontImage = () => {
                   const result = await ImagePicker.launchCameraAsync({
                       mediaTypes: ImagePicker.MediaTypeOptions.Images,
                       allowsEditing: true,
-                      aspect: [1, 1],
-                      quality: 0.8,
+                      aspect: [4, 3],
+                      quality: 1,
                   });
                   if (!result.canceled) {
                       const compressed = await compressImage(result.assets[0].uri);
@@ -1595,111 +1289,6 @@ const pickFrontImage = () => {
     );
   };
 
-  const InputStepView = ({ onImageSelect }) => {
-    const scanBarAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        const animation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(scanBarAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: Platform.OS !== 'web'
-                }),
-                Animated.timing(scanBarAnim, {
-                    toValue: 0,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: Platform.OS !== 'web'
-                })
-            ])
-        );
-        animation.start();
-        return () => animation.stop();
-    }, []);
-
-    const scanTranslateY = scanBarAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 140]
-    });
-
-    return (
-        <View style={styles.inputStepContainer}>
-            <View style={styles.heroVisualContainer}>
-                <View style={styles.scanFrame}>
-                    <FontAwesome5 name="wine-bottle" size={80} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
-                    <Animated.View style={[
-                        styles.scanLaser,
-                        { transform: [{ translateY: scanTranslateY }] }
-                    ]}>
-                        <LinearGradient
-                            colors={['transparent', COLORS.accentGreen, 'transparent']}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={{ flex: 1 }}
-                        />
-                    </Animated.View>
-                    <View style={[styles.scanCorner, styles.scanCornerTL]} />
-                    <View style={[styles.scanCorner, styles.scanCornerTR]} />
-                    <View style={[styles.scanCorner, styles.scanCornerBL]} />
-                    <View style={[styles.scanCorner, styles.scanCornerBR]} />
-                </View>
-            </View>
-
-            <StaggeredItem index={0} style={styles.bottomDeck}>
-                <LinearGradient
-                    colors={[COLORS.card, '#152520']}
-                    style={styles.bottomDeckGradient}
-                >
-                    <View style={styles.deckHeader}>
-                        <Text style={styles.deckTitle}>فحص المكونات</Text>
-                        <Typewriter
-                            texts={[
-                                "كشف الخبايا الكيميائية...",
-                                "تحليل مدى الأمان...",
-                                "هل يناسب بشرتك؟",
-                            ]}
-                            typingSpeed={60}
-                            style={{
-                                container: { height: 24, justifyContent: 'center' },
-                                text: { fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }
-                            }}
-                        />
-                    </View>
-
-                    <PressableScale onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
-                        <LinearGradient
-                            colors={[COLORS.accentGreen, '#4a8570']}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                            style={styles.primaryActionGradient}
-                        >
-                            <View style={styles.iconCircle}>
-                                <Ionicons name="camera" size={28} color={COLORS.background} />
-                            </View>
-                            <View>
-                                <Text style={styles.primaryActionTitle}>تصوير المنتج</Text>
-                                <Text style={styles.primaryActionSub}>التقط صورة واضحة للمكونات الخلفية</Text>
-                            </View>
-                            <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
-                        </LinearGradient>
-                    </PressableScale>
-
-                    <View style={styles.secondaryActionsRow}>
-                        <PressableScale onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
-                            <Ionicons name="images" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>المعرض</Text>
-                        </PressableScale>
-                        <View style={styles.verticalDivider} />
-                        <PressableScale onPress={() => {  }} style={styles.secondaryBtn}>
-                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
-                        </PressableScale>
-                    </View>
-                </LinearGradient>
-            </StaggeredItem>
-        </View>
-    );
-};
 
   const renderReviewStep = () => (
     <ContentCard>
