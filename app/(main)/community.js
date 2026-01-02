@@ -37,7 +37,7 @@ import SearchFilterBar from '../../src/components/community/SearchFilterBar';
 import FullImageViewer from '../../src/components/common/FullImageViewer';
 import UserProfileModal from '../../src/components/community/UserProfileModal';
 import CommunityRefreshHandler from '../../src/components/community/CommunityRefreshHandler'; 
-import SortTabs from '../../src/components/community/SortTabs'; // <--- NEW COMPONENT
+import SortTabs from '../../src/components/community/SortTabs'; 
 import CommunityIntro from '../../src/components/community/CommunityIntro';
 
 // Enable LayoutAnimation for Android
@@ -123,6 +123,8 @@ export default function CommunityScreen() {
     const [viewingProduct, setViewingProduct] = useState(null);
     const [commentingPost, setCommentingPost] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
+    
+    // 🟢 OPTIMIZATION: State now holds Object {id, data} instead of just ID string
     const [viewingUserProfile, setViewingUserProfile] = useState(null);
 
     // Effect to handle debounced search query
@@ -133,6 +135,7 @@ export default function CommunityScreen() {
 
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
     // --- DATA FETCHING (SMART HYBRID) ---
     useEffect(() => {
         const checkForNewPosts = async () => {
@@ -196,14 +199,11 @@ export default function CommunityScreen() {
             }
         });
 
-        // Periodic check every 30s
-        const intervalId = setInterval(() => {
-            checkForNewPosts();
-        }, 30000);
+        // 🟢 OPTIMIZATION: Removed redundant setInterval polling loop
+        // Rely on AppState change and Manual Refresh instead.
 
         return () => {
             subscription.remove();
-            clearInterval(intervalId);
         };
     }, []);
 
@@ -224,14 +224,14 @@ export default function CommunityScreen() {
                     collection(db, 'posts'),
                     orderBy('likesCount', 'desc'),
                     orderBy('createdAt', 'desc'),
-                    limit(50)
+                    limit(20) // 🟢 OPTIMIZATION: Reduced limit from 50 to 20
                 );
             } else {
                 // Default: Recent
                 q = query(
                     collection(db, 'posts'), 
                     orderBy('createdAt', 'desc'), 
-                    limit(50)
+                    limit(20) // 🟢 OPTIMIZATION: Reduced limit from 50 to 20
                 );
             }
 
@@ -303,7 +303,6 @@ export default function CommunityScreen() {
         if (debouncedSearchQuery.trim()) {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(post => 
-                // ... (your existing search fields)
                 (post.content && post.content.toLowerCase().includes(q)) ||
                 (post.userName && post.userName.toLowerCase().includes(q)) ||
                 (post.taggedProduct?.name && post.taggedProduct.name.toLowerCase().includes(q)) ||
@@ -312,6 +311,7 @@ export default function CommunityScreen() {
         }
         return result;
     }, [allPosts, selectedCategory, debouncedSearchQuery, isBioFilterActive, userProfile]);
+    
     // --- ACTION HANDLERS ---
     const handleCreateWrapper = async (payload) => {
         try {
@@ -319,12 +319,9 @@ export default function CommunityScreen() {
                 payload, 
                 user.uid, 
                 userProfile?.settings?.name || 'مستخدم',
-                // 🟢 CHANGE: Pass the FULL settings object (Goals, Conditions, Allergies)
-                // instead of manually picking just skinType/scalpType.
                 userProfile?.settings || {} 
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            // Refresh feed to show new post
             await loadNewPosts(true); 
         } catch (e) { /* Service handles error */ }
     };
@@ -478,7 +475,7 @@ export default function CommunityScreen() {
                 </View>
             </View>
 
-            {/* Filter & Sort Wrapper (Elevated for layering) */}
+            {/* Filter & Sort Wrapper */}
             <View style={{ zIndex: 20, elevation: 20, backgroundColor: COLORS.background }}>
                 <SearchFilterBar 
                     searchQuery={searchQuery}
@@ -488,7 +485,6 @@ export default function CommunityScreen() {
                     userSkinType={userProfile?.settings?.skinType}
                 />
                 
-                {/* SORT TABS Added Here */}
                 <SortTabs 
                     currentSort={sortBy} 
                     onSelect={handleSortChange} 
@@ -506,10 +502,10 @@ export default function CommunityScreen() {
                     loading={loading}
                     keyExtractor={item => item.id}
                     contentContainerStyle={{ paddingBottom: 120, paddingTop: 10 }}
-                    initialNumToRender={5}   // Render only 5 items initially (Fast startup)
-                    maxToRenderPerBatch={5}  // Render 5 more when scrolling
-                    windowSize={5}           // Keep only 5 screens worth of content in memory (Reduces RAM)
-                    removeClippedSubviews={true} // Unmount views off-screen (Critical for Android)
+                    initialNumToRender={5}   
+                    maxToRenderPerBatch={5}  
+                    windowSize={5}           
+                    removeClippedSubviews={true} 
                     renderItem={({ item }) => (
                         <PostCard 
                             post={item} 
@@ -519,7 +515,8 @@ export default function CommunityScreen() {
                             onViewProduct={setViewingProduct}
                             onOpenComments={setCommentingPost}
                             onImagePress={setViewingImage}
-                            onProfilePress={(userId) => setViewingUserProfile(userId)}
+                            // 🟢 OPTIMIZATION: Pass ID and Data object
+                            onProfilePress={(userId, authorSettings) => setViewingUserProfile({ id: userId, data: authorSettings })}
                         />
                     )}
                     ListEmptyComponent={
@@ -544,9 +541,18 @@ export default function CommunityScreen() {
 
             <CreatePostModal visible={isCreateModalVisible} onClose={() => setCreateModalVisible(false)} onSubmit={handleCreateWrapper} savedProducts={savedProducts} userRoutines={userProfile?.routines} defaultType={selectedCategory.id} />
             <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
-            <CommentModal visible={!!commentingPost} onClose={() => setCommentingPost(null)} post={commentingPost} currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} onProfilePress={(userId) => setViewingUserProfile(userId)} />
+            <CommentModal visible={!!commentingPost} onClose={() => setCommentingPost(null)} post={commentingPost} currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} onProfilePress={(userId) => setViewingUserProfile({id: userId})} />
             <FullImageViewer visible={!!viewingImage} imageUrl={viewingImage} onClose={() => setViewingImage(null)} />
-            <UserProfileModal visible={!!viewingUserProfile} onClose={() => setViewingUserProfile(null)} targetUserId={viewingUserProfile} currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} onProductSelect={setViewingProduct} />
+            
+            {/* 🟢 OPTIMIZATION: Pass extracted ID and initialData to Modal */}
+            <UserProfileModal 
+                visible={!!viewingUserProfile} 
+                onClose={() => setViewingUserProfile(null)} 
+                targetUserId={viewingUserProfile?.id} 
+                initialData={viewingUserProfile?.data}
+                currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} 
+                onProductSelect={setViewingProduct} 
+            />
             
             <CommunityIntro visible={showIntro} onClose={() => setShowIntro(false)} />
         </View>

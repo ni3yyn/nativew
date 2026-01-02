@@ -4,7 +4,8 @@ import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { formatRelativeTime } from '../../utils/formatters';
-import { calculateBioMatch } from '../../utils/matchCalculator'; // ✅ Imported
+// 🟢 IMPORT: Match Calculator
+import { calculateBioMatch } from '../../utils/matchCalculator';
 
 // --- SUB-COMPONENT: JOURNEY PRODUCTS ---
 const JourneyProductsList = ({ products, onViewProduct }) => {
@@ -131,22 +132,13 @@ const QAContent = ({ post, onImagePress }) => (
     </View>
 );
 
-// --- COMPONENT: LIGHTWEIGHT ROUTINE PRODUCT PILL ---
 const RoutineProductPill = ({ product, onPress }) => (
-    <TouchableOpacity 
-        style={styles.rpCard} 
-        onPress={onPress} 
-        activeOpacity={0.7}
-    >
+    <TouchableOpacity style={styles.rpCard} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.rpImageContainer}>
             {product.image ? (
                 <Image source={{ uri: product.image }} style={styles.rpImage} />
             ) : (
-                <FontAwesome5 
-                    name={product.type === 'sunscreen' ? 'sun' : 'wine-bottle'} 
-                    size={16} 
-                    color={COLORS.textDim} 
-                />
+                <FontAwesome5 name={product.type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
             )}
         </View>
         <View style={{flex: 1, gap: 2}}>
@@ -161,7 +153,6 @@ const RoutineProductPill = ({ product, onPress }) => (
     </TouchableOpacity>
 );
 
-// --- COMPONENT: ROUTINE RATE DISPLAY ---
 const RoutineRateContent = ({ post, onViewProduct }) => {
     const rawAm = post.routineSnapshot?.am;
     const rawPm = post.routineSnapshot?.pm;
@@ -170,7 +161,7 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
 
     const handleProductPress = (p) => {
         if (!onViewProduct) return;
-        const formattedProduct = {
+        onViewProduct({
             id: p.id,
             productName: p.name,
             productImage: p.image,
@@ -182,8 +173,7 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
                 detected_ingredients: p.ingredients || [],
                 user_specific_alerts: []
             }
-        };
-        onViewProduct(formattedProduct);
+        });
     };
 
     const renderPeriod = (title, icon, color, stepsInput) => {
@@ -228,10 +218,9 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
 // --- MAIN CARD ---
 const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
     const isLiked = post.likes && post.likes.includes(currentUser?.uid);
-    
-    // 1. CALCULATE BIO MATCH
+
+    // 🟢 1. CALCULATE BIO MATCH (Efficiently with useMemo)
     const matchData = useMemo(() => {
-        // We need both settings to calculate
         if (currentUser?.settings && post.authorSettings) {
             return calculateBioMatch(currentUser.settings, post.authorSettings);
         }
@@ -252,7 +241,15 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
     return (
         <View style={styles.cardBase}>
             <View style={styles.cardHeader}>
-                <TouchableOpacity style={styles.userInfo} onPress={() => onProfilePress && onProfilePress(post.userId)} activeOpacity={0.7}>
+                <TouchableOpacity 
+                    style={styles.userInfo} 
+                    // 🟢 FIX: Passing Merged Data (ID + Settings + Name) for instant hydration
+                    onPress={() => onProfilePress && onProfilePress(post.userId, {
+                        ...post.authorSettings,
+                        name: post.userName
+                    })} 
+                    activeOpacity={0.7}
+                >
                     <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{post.userName?.charAt(0) || 'U'}</Text></View>
                     <View>
                         <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 6}}>
@@ -270,7 +267,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 {post.userId === currentUser?.uid && <TouchableOpacity onPress={() => onDelete(post.id)}><Ionicons name="trash-outline" size={18} color={COLORS.danger} /></TouchableOpacity>}
             </View>
 
-            {/* 2. RENDER DYNAMIC MATCH LABEL & PERCENTAGE */}
+            {/* 🟢 2. RENDER MATCH INDICATOR */}
             {matchData && matchData.score > 20 && (
                 <View style={[styles.matchIndicator, { 
                     backgroundColor: matchData.color + '15', 
@@ -278,7 +275,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 }]}>
                     <FontAwesome5 name="check-double" size={10} color={matchData.color} />
                     <Text style={[styles.matchText, { color: matchData.color }]}>
-                        {/* 🟢 PERCENTAGE ADDED HERE */}
                         {matchData.score}% • {matchData.label} 
                         {matchData.matches.length > 0 && ` (${matchData.matches.join(' + ')})`}
                     </Text>
@@ -329,6 +325,7 @@ const styles = StyleSheet.create({
     bioBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     bioBadgeText: { color: COLORS.textSecondary, fontSize: 10, fontFamily: 'Tajawal-Regular' },
     
+    // 🟢 MATCH STYLES
     matchIndicator: { flexDirection: 'row-reverse', gap: 6, backgroundColor: COLORS.accentGreen + '15', paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 0, marginTop: -5, marginBottom: 10, alignSelf: 'flex-end', borderRadius: 6, borderWidth: 1, borderColor: COLORS.accentGreen + '30' },
     matchText: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold' },
 

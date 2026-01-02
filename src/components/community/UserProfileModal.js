@@ -10,7 +10,7 @@ import { db } from '../../config/firebase';
 import { COLORS } from '../../constants/theme';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { calculateBioMatch } from '../../utils/matchCalculator';
-import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService'; // <--- IMPORT CACHE SERVICE
+import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService';
 
 // --- DATA IMPORTS ---
 import { 
@@ -30,12 +30,14 @@ const GOALS_LIST = [
     { id: 'oil_control', label: 'التحكم بالدهون' }
 ];
 
-const { width } = Dimensions.get('window');
+// 🟢 CONFIG: Cache Duration (24 Hours in Milliseconds)
+const SHELF_CACHE_DURATION = 24 * 60 * 60 * 1000; 
 
-const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProductSelect }) => {
-    const [profile, setProfile] = useState(null);
+const UserProfileModal = ({ visible, onClose, targetUserId, initialData, currentUser, onProductSelect }) => {
+    // 1. HYDRATION: Start with snapshot data if available (Instant Name)
+    const [profile, setProfile] = useState(initialData ? { settings: initialData } : null);
     const [publicShelf, setPublicShelf] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialData); 
     const [matchInfo, setMatchInfo] = useState({ score: 0, label: '', color: COLORS.textSecondary });
     
     // Animation Refs
@@ -47,72 +49,97 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
     useEffect(() => {
         if (!visible || !targetUserId) return;
         
-        // Reset State
-        setProfile(null);
+        // Handle case where targetUserId is passed as object or string
+        const userIdString = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
+        if (!userIdString) return;
+
+        // --- RESET UI ---
         setPublicShelf([]);
-        setLoading(true);
         slideAnim.setValue(50);
         fadeAnim.setValue(0);
+        
+        // Show snapshot immediately
+        if (initialData) {
+            setProfile({ settings: initialData });
+            setLoading(false);
+            if (currentUser?.settings) {
+                setMatchInfo(calculateBioMatch(currentUser.settings, initialData));
+            }
+        } else {
+            setProfile(null);
+            setLoading(true);
+        }
 
-        const fetchData = async () => {
+        // --- SMART FETCH (Low Cost Strategy) ---
+        const loadData = async () => {
             try {
-                let profileData = null;
-                let shelfData = [];
+                // 1. CHECK CACHE
+                const cachedData = await getCachedUserProfile(userIdString);
+                const now = Date.now();
 
-                // 1. TRY CACHE FIRST
-                const cachedData = await getCachedUserProfile(targetUserId);
-                
-                if (cachedData) {
-                    console.log("🟢 Loaded Profile from Cache");
-                    profileData = cachedData.profile;
-                    shelfData = cachedData.shelf;
-                } else {
-                    console.log("🟠 Fetching Profile from Firestore");
+                // 🟢 OPTIMIZATION: If cache exists AND is less than 24 hours old
+                if (cachedData && (now - (cachedData.timestamp || 0) < SHELF_CACHE_DURATION)) {
+                    console.log("🟢 Using Cached Profile (0 Reads)");
+                    setProfile(cachedData.profile);
+                    setPublicShelf(cachedData.shelf || []);
                     
-                    // 2. FETCH PROFILE (1 Read)
-                    const userDoc = await getDoc(doc(db, 'profiles', targetUserId));
-                    if (userDoc.exists()) {
-                        profileData = userDoc.data();
-                        
-                        // 3. FETCH SHELF (1 Read via Query)
-                        const q = query(
-                            collection(db, 'profiles', targetUserId, 'savedProducts'),
-                            orderBy('createdAt', 'desc'),
-                            limit(5)
-                        );
-                        const snapshot = await getDocs(q);
-                        shelfData = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-
-                        // 4. SAVE TO CACHE
-                        await cacheUserProfile(targetUserId, profileData, shelfData);
+                    if (cachedData.profile && currentUser?.settings) {
+                        setMatchInfo(calculateBioMatch(currentUser.settings, cachedData.profile.settings));
                     }
+                    
+                    setLoading(false);
+                    startAnimation();
+                    return; // 🛑 STOP HERE - SAVE READS
                 }
 
-                // 5. UPDATE STATE
-                if (profileData) {
-                    setProfile(profileData);
-                    setPublicShelf(shelfData);
+                // 2. FETCH FRESH (Only if cache expired or missing)
+                console.log("🟠 Cache Expired/Missing - Fetching from Firestore (2 Reads)");
+                
+                // A. Fetch Profile
+                const userDoc = await getDoc(doc(db, 'profiles', userIdString));
+                let freshProfile = null;
+                
+                if (userDoc.exists()) {
+                    freshProfile = userDoc.data();
+                    setProfile(freshProfile);
+                }
 
-                    // Calculate Match
+                // B. Fetch Shelf (Limit 5)
+                const q = query(
+                    collection(db, 'profiles', userIdString, 'savedProducts'),
+                    orderBy('createdAt', 'desc'),
+                    limit(5)
+                );
+                const snapshot = await getDocs(q);
+                const freshShelf = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                setPublicShelf(freshShelf);
+
+                // C. Update Cache with new Timestamp
+                if (freshProfile) {
+                    await cacheUserProfile(userIdString, freshProfile, freshShelf);
+                    
                     if (currentUser?.settings) {
-                        setMatchInfo(calculateBioMatch(currentUser.settings, profileData.settings));
+                        setMatchInfo(calculateBioMatch(currentUser.settings, freshProfile.settings));
                     }
-
-                    // Run Entry Animation
-                    Animated.parallel([
-                        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 8 }),
-                        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true })
-                    ]).start();
                 }
 
             } catch (e) {
                 console.error("Profile Fetch Error", e);
             } finally {
                 setLoading(false);
+                startAnimation();
             }
         };
-        fetchData();
-    }, [visible, targetUserId]);
+
+        loadData();
+    }, [visible, targetUserId, initialData]);
+
+    const startAnimation = () => {
+        Animated.parallel([
+            Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 8 }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true })
+        ]).start();
+    };
 
     const getLabel = (id, list) => {
         const item = list.find(i => i.id === id);
@@ -156,6 +183,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
                                 <View style={[styles.matchRing, !isMe && { borderColor: matchInfo.color }]}>
                                     <View style={styles.avatarLarge}>
                                         <Text style={styles.avatarText}>
+                                            {/* Shows snapshot name first, then updates if fresh data loads */}
                                             {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
                                         </Text>
                                     </View>
@@ -168,12 +196,13 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
                                 
                                 <Text style={styles.userName}>{profile?.settings?.name || 'مستخدم وثيق'}</Text>
                                 
+                                {/* Bio Match Indicator */}
                                 <Text style={[styles.matchLabel, { color: isMe ? COLORS.accentGreen : matchInfo.color }]}>
-                                    {isMe ? 'هذا ملفك الشخصي' : matchInfo.label}
+                                    {isMe ? 'هذا ملفك الشخصي' : matchInfo.label || 'تحليل التوافق...'}
                                 </Text>
                             </LinearGradient>
 
-                            {/* 2. Bio Stats */}
+                            {/* 2. Bio Stats (Skin & Hair) */}
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>السمات الحيوية</Text>
                                 <View style={styles.statsGrid}>
@@ -194,7 +223,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
                                 </View>
                             </View>
 
-                            {/* 3. Detailed Tags */}
+                            {/* 3. Detailed Tags (Conditions, Goals, Allergies) */}
                             <View style={styles.tagsContainer}>
                                 {profile?.settings?.goals?.length > 0 && (
                                     <View style={styles.tagGroup}>
