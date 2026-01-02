@@ -2,20 +2,14 @@ plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
     id "com.facebook.react"
-    id "expo-module-gradle-plugin" // This is crucial for Expo's new system
-    id "com.google.gms.google-services" // Move google services here
+    id "expo-module-gradle-plugin"
+    id "com.google.gms.google-services"
 }
-def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
-
-/**
- * This is the configuration block to customize your React Native Android app.
- * By default you don't need to apply any configuration, just uncomment the lines you need.
- */
 
 /**
  * Set this to true in release builds to optimize the app using [R8](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization).
  */
-def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: true).toBoolean()
+def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: false).toBoolean()
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -45,8 +39,8 @@ android {
         versionName "1.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-    ndk {
-            // This forces the final APK to ONLY contain arm64-v8a binaries
+        ndk {
+            // This forces the final APK to ONLY contain these binaries
             abiFilters "arm64-v8a", "armeabi-v7a"
         }
     }
@@ -133,5 +127,3 @@ dependencies {
         implementation jscFlavor
     }
 }
-
-apply plugin: 'com.google.gms.google-services'
