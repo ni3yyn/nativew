@@ -29,6 +29,13 @@ import {
 import { PRODUCT_TYPES } from '../../src/constants/productData';
 import { AlertService } from '../../src/services/alertService';
 import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge'; // Ensure correct path
+import { 
+    ShelfEmptyState, 
+    AnalysisEmptyState, 
+    RoutineEmptyState, 
+    IngredientsEmptyState, 
+    MigrationSuccessState 
+} from '../../src/components/profile/EmptyStates';
 
 // --- 1. SYSTEM CONFIG ---
 
@@ -1008,15 +1015,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
         </ContentCard>
   
         {empty ? (
-          <ContentCard style={styles.emptyState}>
-            <MaterialCommunityIcons name="bottle-tonic-outline" size={60} color={COLORS.textDim} style={{ opacity:0.5, marginBottom:15 }} />
-            <Text style={styles.emptyText}>رفك فارغ تماماً</Text>
-            <Text style={styles.emptySub}>امسح الباركود أو صوّر المكونات لبدء رحلتك نحو العناية الطبيعية.</Text>
-            <PressableScale style={styles.emptyStateButton} onPress={() => router.push('/oilguard')}>
-                <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
-                <Text style={styles.emptyStateButtonText}>أضف أول منتج</Text>
-            </PressableScale>
-          </ContentCard>
+          <ShelfEmptyState onPress={() => router.push('/oilguard')} />
         ) : (
           <FlatList
             data={products}
@@ -1521,7 +1520,7 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
 
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
 // --- THE MAIN ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry, onShowPermissionAlert }) => {
+const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry, onShowPermissionAlert, router }) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
   
@@ -1530,33 +1529,28 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
       setSelectedInsight(insight);
     }, []);
   
-    // 1. Loading State
+    // 1. EMPTY STATE (Highest Priority)
+    if (!savedProducts || savedProducts.length === 0) {
+        return <AnalysisEmptyState onPress={() => router.push('/oilguard')} />;
+    }
+
+    // 2. Loading State (Only if we have products but no data yet)
     if (loading || !analysisResults) {
         return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
     }
-  
-    // 2. Empty State
-    if (savedProducts.length === 0) {
-        return (
-            <ContentCard style={styles.emptyState} animated={false}>
-                <MaterialCommunityIcons name="brain" size={60} color={COLORS.textDim} style={{ opacity: 0.5, marginBottom: 15 }} />
-                <Text style={styles.emptyText}>ابدئي التحليل</Text>
-                <Text style={styles.emptySub}>أضيفي منتجات إلى رفّكِ أولا ليقوم المدرب الذكي بتحليل روتينكِ.</Text>
-            </ContentCard>
-        );
-    }
     
-    // ... logic for insights processing ...
+    // --- INSIGHTS PROCESSING ---
+    
     // A. Filter out dismissed insights from the raw server result
     let visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
 
-    // FIX: Check for BOTH types of weather data
+    // Check for BOTH types of weather data to determine if we need to inject error cards
     const hasServerWeather = visibleInsights.some(i => 
         i.customData?.type === 'weather_advice' || 
         i.customData?.type === 'weather_dashboard'
     );
 
-    // B. Inject Weather Status Cards
+    // B. Inject Weather Status Cards (Client-Side Logic)
     if (locationPermission !== 'granted') {
         const permissionInsight = {
             id: 'weather-permission-denied',
@@ -1580,7 +1574,8 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
         visibleInsights = [unavailableInsight, ...visibleInsights];
     }
 
-    // C. Determine Hero Card
+    // C. Determine Hero Card (The large one at the top)
+    // Priority: Weather > Critical > Warning
     const focusInsight = visibleInsights.find(i => 
         i.customData?.type === 'weather_advice' ||
         i.customData?.type === 'weather_dashboard' ||
@@ -1601,19 +1596,26 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
     return (
         <View style={{flex: 1}}>
             <View style={{ paddingBottom: 150 }}> 
+                
                 {/* 1. Hero Section */}
                 {focusInsight ? (
-                    // Conditional Rendering based on Type
+                    // Conditional Rendering based on Type: Weather Widget vs Standard Focus Card
                     focusInsight.customData?.type === 'weather_advice' ? (
-                        <WeatherCompactWidget insight={focusInsight} onPress={handleSelectInsight} onRetry={onRetry} onPermissionBlocked={onShowPermissionAlert} />
+                        <WeatherCompactWidget 
+                            insight={focusInsight} 
+                            onPress={handleSelectInsight} 
+                            onRetry={onRetry} 
+                            onPermissionBlocked={onShowPermissionAlert} 
+                        />
                     ) : (
                         <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
                     )
                 ) : (
+                    // Celebration state if no major issues found
                     <AllClearState />
                 )}
   
-                {/* 2. Insight Carousel */}
+                {/* 2. Insight Carousel (Secondary Insights) */}
                 {carouselInsights.length > 0 && <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />}
   
                 {/* 3. BARRIER HEALTH CARD */}
@@ -1650,8 +1652,10 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                     </ContentCard>
                 </PressableScale>
 
-                {/* 4. Overview Dashboard */}
+                {/* 4. Overview Dashboard (Routine & Sun Protection) */}
                 <View style={styles.overviewContainer}>
+                    
+                    {/* Routine Overview Card */}
                     <View style={styles.overviewCard}>
                         <ContentCard style={{flex: 1}} animated={false}>
                             <View style={styles.analysisCardHeader}>
@@ -1702,6 +1706,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                         </ContentCard>
                     </View>
 
+                    {/* Sun Protection Card */}
                     <View style={styles.overviewCard}>
                          <ContentCard style={{flex: 1}} animated={false}>
                             <View style={styles.analysisCardHeader}>
@@ -1730,10 +1735,12 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 </View>
             </View>
   
+            {/* Modal: Detailed Insight View */}
             {selectedInsight && (
                 <InsightDetailsModal visible={!!selectedInsight} insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
             )}
 
+            {/* Modal: Barrier Health Ledger */}
             <BarrierDetailsModal visible={showBarrierDetails} onClose={() => setShowBarrierDetails(false)} data={barrier} />
         </View>
     );
@@ -1893,8 +1900,8 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
         },
         {
             id: 'auto_build',
-            title: "المعمار الرقمي",
-            text: "دعي الذكاء الاصطناعي يبني لكِ روتيناً مثالياً بضغطة زر.",
+            title: "روتين وثيق",
+            text: "دعي وثيق يبني لكِ روتيناً مثالياً بضغطة زر.",
             // Position: Top Left (AutoBuild is on the left in row-reverse)
             x: 45, 
             y: insets.top + 145, 
@@ -2503,12 +2510,8 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
               contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
               scrollEnabled={false}
               ListEmptyComponent={() => (
-                  <View style={styles.routineEmptyState}>
-                      <MaterialCommunityIcons name="playlist-edit" size={60} color={COLORS.textDim} style={{opacity: 0.5}}/>
-                      <Text style={styles.routineEmptyTitle}>الروتين فارغ</Text>
-                      <Text style={styles.routineEmptySub}>استخدم زر "+" في الأسفل لبناء روتينك المخصص.</Text>
-                  </View>
-              )}
+                <RoutineEmptyState onPress={() => onOpenAddStepModal(handleAddStep)} />
+            )}
           />
           
           <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
@@ -2730,11 +2733,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
                     )} 
                     scrollEnabled={false} 
                     contentContainerStyle={{ paddingBottom: 50 }} 
-                    ListEmptyComponent={
-                        <Text style={{ textAlign: 'center', color: COLORS.textDim, marginTop: 20 }}>
-                            {allIngredients.length === 0 ? "لا توجد مكونات" : "لا توجد نتائج"}
-                        </Text>
-                    }
+                    ListEmptyComponent={<IngredientsEmptyState />}
                 />
             )}
 
@@ -2985,15 +2984,7 @@ const MigrationSection = ({ products }) => {
     };
 
     if (flagged.length === 0) {
-        return (
-            <View style={{ flex: 1 }}>
-                <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
-                    <FontAwesome5 name="leaf" size={60} color={COLORS.success} />
-                    <Text style={styles.emptyText}>منتجاتك نظيفة تماماً!</Text>
-                    <Text style={styles.emptySub}>لا توجد مكونات صناعية</Text>
-                </Animated.View>
-            </View>
-        );
+        return <MigrationSuccessState />;
     }
 
     return (
@@ -4242,6 +4233,7 @@ useEffect(() => {
                           locationPermission={locationPermission} 
                           onRetry={() => runAnalysis(false)} 
                           onShowPermissionAlert={() => setPermissionModalVisible(true)} // <--- PASS DOWN
+                          router={router}
                       />
                   )}
                   
@@ -4405,28 +4397,7 @@ useEffect(() => {
         padding: 20,
         marginBottom: 15,
     },
-    emptyState: {
-        alignItems: 'center',
-        marginTop: 40,
-        padding: 30,
-        borderRadius: 20,
-        backgroundColor: COLORS.card,
-    },
-    emptyText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 18,
-        color: COLORS.textPrimary,
-        marginTop: 15,
-        textAlign: 'center',
-    },
-    emptySub: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginTop: 5,
-        lineHeight: 20,
-    },
+    
     iconBoxSm: {
         width: 32,
         height: 32,
@@ -4687,22 +4658,6 @@ listImagePlaceholder: {
       alignItems: 'center',
   },
   
-  emptyStateButton: {
-      flexDirection: 'row-reverse',
-      gap: 10,
-      marginTop: 20,
-      backgroundColor: COLORS.accentGreen,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 14,
-      alignItems: 'center',
-  },
-  emptyStateButtonText: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 15,
-      color: COLORS.textOnAccent,
-  },
-  
   // --- Product Details Bottom Sheet ---
   sheetContent: {
       flex: 1,
@@ -4961,12 +4916,6 @@ listImagePlaceholder: {
         paddingVertical: 4,
         borderRadius: 8,
         overflow: 'hidden',
-    },
-    routineEmptyText: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 12,
-        color: COLORS.textDim,
-        textAlign: 'right',
     },
     routineDivider: {
         height: 1,
@@ -6626,5 +6575,62 @@ scoreBadgeText: {
     color: '#1A2D27', // Dark text on the colored badge
     fontSize: 14
 },
-
+emptyStateCard: {
+    alignItems: 'center',
+    padding: 30,
+    paddingVertical: 40,
+    marginTop: 20,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: 'rgba(90, 156, 132, 0.2)',
+    overflow: 'hidden', // Ensures inner gradient respects radius
+},
+emptyStateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(90, 156, 132, 0.3)',
+    overflow: 'hidden',
+    shadowColor: COLORS.accentGreen,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 10,
+},
+emptyStateTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 20,
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+    textAlign: 'center',
+},
+emptyStateSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 25,
+    paddingHorizontal: 10,
+},
+emptyStateHint: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(251, 191, 36, 0.1)', // Gold tint
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.2)',
+},
+emptyStateHintText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    color: COLORS.gold,
+},
   });

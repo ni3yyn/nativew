@@ -1989,6 +1989,7 @@ const pickFrontImage = () => {
             </StaggeredItem>
 
             {/* --- UPDATED HERO ACTION ROW --- */}
+            {/* --- UPDATED HERO ACTION ROW --- */}
             <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -2000,42 +2001,42 @@ const pickFrontImage = () => {
             }}>
                 
                 {/* 1. HERO SAVE BUTTON */}
-                {/* Icon moved to the RIGHT of text */}
-                <StaggeredItem index={2} style={{flex: 0.9}}>
+                <StaggeredItem index={2} style={{flex: 1}}>
                     <BreathingGlow color={COLORS.accentGreen} delay={0}>
-                        <PressableScale onPress={() => setSaveModalVisible(true)} style={{flex: 1}}>
+                        <PressableScale onPress={() => setSaveModalVisible(true)} style={{ width: '100%' }}>
                             <LinearGradient
                                 colors={[COLORS.card, '#2C4A42']} 
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                                 style={{
-                                    flex: 1,
-                                    height: 56, 
-                                    borderRadius: 16,
+                                    // CHANGED: Used paddingVertical instead of fixed height to match Share button's bulk
+                                    paddingVertical: 14, 
+                                    borderRadius: 15, 
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: 8, // Identical gap to Share button target
+                                    gap: 12, 
                                     borderWidth: 1,
                                     borderColor: COLORS.accentGreen,
+                                    width: '100%',
                                 }}
                             >
                                 <Text style={{
                                     fontFamily: 'Tajawal-Bold',
-                                    fontSize: 15, 
+                                    fontSize: 16, 
                                     color: COLORS.textPrimary,
-                                    paddingBottom: 2, // Fine-tune text alignment
                                 }}>حفظ</Text>
-                                <FontAwesome5 name="bookmark" color={COLORS.textPrimary} size={16} />
+                                <FontAwesome5 name="bookmark" color={COLORS.textPrimary} size={18} />
                             </LinearGradient>
                         </PressableScale>
                     </BreathingGlow>
                 </StaggeredItem>
 
                 {/* 2. HERO SHARE BUTTON (Premium) */}
-                {/* Tighter flex to reduce white space, wrapper overflow hidden */}
-                <StaggeredItem index={3} style={{flex: 1.3}}> 
+                <StaggeredItem index={3} style={{flex: 1}}> 
                     <BreathingGlow color={COLORS.gold} delay={1000}>
-                        <View style={{ height: 56, borderRadius: 16, overflow: 'hidden' }}>
+                        {/* Ensure wrapper allows the button's internal padding to dictate size if needed, 
+                            but keeping min-height/overflow for shape consistency */}
+                        <View style={{ borderRadius: 15, overflow: 'hidden', width: '100%' }}>
                             <PremiumShareButton 
                                 analysis={finalAnalysis} 
                                 typeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج تجميلي'}
@@ -2046,8 +2047,10 @@ const pickFrontImage = () => {
 
                 {/* 3. RESET BUTTON */}
                 <StaggeredItem index={4}>
+                    {/* Updated height to 'auto' with padding to match the new buttons, or kept fixed if icon-only */}
                     <PressableScale onPress={resetFlow} style={{
                         width: 50, 
+                        // Matched vertical padding logic roughly to align (approx 56px total height)
                         height: 56,
                         alignItems: 'center',
                         justifyContent: 'center',

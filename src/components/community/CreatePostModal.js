@@ -302,13 +302,20 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
         setLoading(true);
         
-        // 1. Upload Main Image (If User added one manually)
-        let uploadedMain = await uploadImageToCloudinary(images.main);
-
-        // 2. FALLBACK: Use Product Shelf Image if no new image uploaded and it's a Review
-        if (!uploadedMain && type === 'review' && selectedProduct?.productImage) {
-            uploadedMain = selectedProduct.productImage;
+        let uploadedMainUrl = null; // Initialize to null
+        
+        // 🔴 MODIFICATION START
+        // Only attempt to upload image if it's NOT a routine_rate post
+        if (type !== 'routine_rate' && images.main) {
+            uploadedMainUrl = await uploadImageToCloudinary(images.main);
         }
+
+        // Fallback for review type if no main image was uploaded manually.
+        // This should also be skipped for routine_rate.
+        if (type === 'review' && !uploadedMainUrl && selectedProduct?.productImage) {
+            uploadedMainUrl = selectedProduct.productImage;
+        }
+        // 🔴 MODIFICATION END
         
         // 3. Upload Milestones
         let processedMilestones = [];
@@ -338,11 +345,14 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 id: selectedProduct.id, 
                 name: selectedProduct.productName, 
                 score: selectedProduct.analysisData?.oilGuardScore || 0, 
-                imageUrl: selectedProduct.productImage // Pass shelf image to post data
+                imageUrl: selectedProduct.productImage 
             } : null,
             journeyProducts: type === 'journey' ? journeyProducts : null,
             
-            imageUrl: uploadedMain, 
+            // 🔴 MODIFICATION START
+            // Use the uploadedMainUrl, which will be null if type is 'routine_rate'
+            imageUrl: uploadedMainUrl, 
+            // 🔴 MODIFICATION END
             
             milestones: processedMilestones,
             duration: type === 'journey' ? `بعد ${durValue} ${durUnit}` : null,
