@@ -14,6 +14,7 @@ import { addComment, deleteComment, likeComment, unlikeComment } from '../../ser
 import { AlertService } from '../../services/alertService';
 import * as Haptics from 'expo-haptics';
 
+// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   if (!global?.nativeFabricUIManager) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -26,6 +27,16 @@ const getRandomColor = (name) => {
     const charCode = name.charCodeAt(0) || 0;
     return colors[charCode % colors.length];
 };
+
+// --- QUICK REPLIES DATA ---
+const QUICK_REPLIES = [
+    "روتين هايل! 😍",
+    "شكراً على المشاركة ✨",
+    "وين لقيتيه؟",
+    "اواه ماشي سومتو",
+    "ما شاء الله ! 👏",
+    "البركوكس بنين"
+];
 
 // --- SUB-COMPONENT: INTERACTIVE COMMENT ITEM ---
 const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfilePress }) => {
@@ -178,12 +189,16 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         return () => unsubscribe();
     }, [post?.id, visible]);
 
-    const handleSend = async () => {
-        if (!comment.trim()) return;
-        const text = comment.trim();
+    const handleSend = async (textToSend = null) => {
+        const finalComment = textToSend || comment;
+        if (!finalComment.trim()) return;
+        
+        const tempText = finalComment.trim();
         setComment(''); 
+        Keyboard.dismiss(); // Dismiss keyboard when sending
+
         try {
-            await addComment(post.id, text, currentUser);
+            await addComment(post.id, tempText, currentUser);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         } catch (error) { 
@@ -197,6 +212,16 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) { console.error(error); }
     };
+    
+    // Quick Reply Chip Component
+    const QuickReplyChip = ({ text }) => (
+        <TouchableOpacity 
+            style={styles.quickReplyChip} 
+            onPress={() => handleSend(text)}
+        >
+            <Text style={styles.quickReplyText}>{text}</Text>
+        </TouchableOpacity>
+    );
 
     if (!post) return null;
 
@@ -204,6 +229,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <View style={styles.modalContainer}>
                 
+                {/* Header */}
                 <View style={styles.modalHeader}>
                     <View style={styles.handleBar} />
                     <View style={styles.headerRow}>
@@ -219,43 +245,63 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     </View>
                 </View>
                 
-                {loading ? (
-                    <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
-                ) : (
-                    <FlatList
-                        ref={flatListRef}
-                        data={commentsList}
-                        keyExtractor={item => item.id}
-                        contentContainerStyle={styles.listContent}
-                        renderItem={({ item }) => (
-                            <CommentItem 
-                                item={item} 
-                                currentUser={currentUser} 
-                                postId={post.id} 
-                                onDelete={handleDelete}
-                                onProfilePress={onProfilePress} // <--- Pass prop
-                            />
-                        )}
-                        ListEmptyComponent={
-                            <View style={styles.emptyState}>
-                                <View style={styles.emptyIconBox}>
-                                    <Feather name="message-circle" size={32} color={COLORS.textDim} />
+                {/* Main Content Area (Tap to dismiss keyboard) */}
+                <View style={{flex: 1}} onStartShouldSetResponder={() => true} onResponderRelease={Keyboard.dismiss}>
+                    {loading ? (
+                        <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={commentsList}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={styles.listContent}
+                            renderItem={({ item }) => (
+                                <CommentItem 
+                                    item={item} 
+                                    currentUser={currentUser} 
+                                    postId={post.id} 
+                                    onDelete={handleDelete}
+                                    onProfilePress={onProfilePress} 
+                                />
+                            )}
+                            ListEmptyComponent={
+                                <View style={styles.emptyState}>
+                                    <View style={styles.emptyIconBox}>
+                                        <Feather name="message-circle" size={32} color={COLORS.textDim} />
+                                    </View>
+                                    <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
+                                    <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
                                 </View>
-                                <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
-                                <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
-                            </View>
-                        }
-                    />
-                )}
+                            }
+                        />
+                    )}
+                </View>
 
+                {/* Input Area + Quick Replies (Pushed up by Keyboard) */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+                    style={styles.keyboardAvoid}
                 >
                     <View style={styles.inputWrapper}>
+                        
+                        {/* Quick Replies Horizontal Scroll */}
+                        <View style={{height: 40, marginBottom: 8}}>
+                             <FlatList 
+                                horizontal 
+                                data={QUICK_REPLIES}
+                                keyExtractor={(item) => item}
+                                renderItem={({item}) => <QuickReplyChip text={item} />}
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{paddingHorizontal: 10, gap: 8}}
+                                keyboardShouldPersistTaps="handled"
+                             />
+                        </View>
+
+                        {/* Text Input Container */}
                         <View style={styles.inputContainer}>
                             <TouchableOpacity 
-                                onPress={handleSend} 
+                                onPress={() => handleSend()} 
                                 style={[styles.sendBtn, !comment.trim() && styles.sendBtnDisabled]} 
                                 disabled={!comment.trim()}
                             >
@@ -407,10 +453,17 @@ const styles = StyleSheet.create({
         padding: 10,
         marginTop: 10,
     },
+    
+    // --- KEYBOARD & INPUT STYLES ---
+    keyboardAvoid: { 
+        width: '100%',
+        backgroundColor: COLORS.card, 
+    },
     inputWrapper: {
         backgroundColor: COLORS.card,
         paddingHorizontal: 15,
         paddingVertical: 12,
+        paddingBottom: Platform.OS === 'ios' ? 30 : 15, // Extra padding for iPhone home bar
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.05)',
     },
@@ -461,6 +514,23 @@ const styles = StyleSheet.create({
     sendBtnDisabled: {
         backgroundColor: 'rgba(255,255,255,0.1)',
     },
+    
+    // --- QUICK REPLY CHIPS ---
+    quickReplyChip: {
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center'
+    },
+    quickReplyText: {
+        color: COLORS.textSecondary,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+    },
+
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',

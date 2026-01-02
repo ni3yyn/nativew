@@ -319,7 +319,9 @@ export default function CommunityScreen() {
                 payload, 
                 user.uid, 
                 userProfile?.settings?.name || 'مستخدم',
-                { skinType: userProfile?.settings?.skinType, scalpType: userProfile?.settings?.scalpType }
+                // 🟢 CHANGE: Pass the FULL settings object (Goals, Conditions, Allergies)
+                // instead of manually picking just skinType/scalpType.
+                userProfile?.settings || {} 
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             // Refresh feed to show new post

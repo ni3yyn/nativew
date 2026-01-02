@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, Modal, StyleSheet, ScrollView, 
-  TouchableOpacity, ActivityIndicator, Dimensions, Animated, Easing 
+  TouchableOpacity, ActivityIndicator, Dimensions, Animated 
 } from 'react-native';
 import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,7 @@ import { db } from '../../config/firebase';
 import { COLORS } from '../../constants/theme';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { calculateBioMatch } from '../../utils/matchCalculator';
-import * as Haptics from 'expo-haptics';
+import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService'; // <--- IMPORT CACHE SERVICE
 
 // --- DATA IMPORTS ---
 import { 
@@ -56,34 +56,55 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
 
         const fetchData = async () => {
             try {
-                // 1. Get User Profile (1 Read)
-                const userDoc = await getDoc(doc(db, 'profiles', targetUserId));
+                let profileData = null;
+                let shelfData = [];
+
+                // 1. TRY CACHE FIRST
+                const cachedData = await getCachedUserProfile(targetUserId);
                 
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    setProfile(data);
+                if (cachedData) {
+                    console.log("🟢 Loaded Profile from Cache");
+                    profileData = cachedData.profile;
+                    shelfData = cachedData.shelf;
+                } else {
+                    console.log("🟠 Fetching Profile from Firestore");
                     
+                    // 2. FETCH PROFILE (1 Read)
+                    const userDoc = await getDoc(doc(db, 'profiles', targetUserId));
+                    if (userDoc.exists()) {
+                        profileData = userDoc.data();
+                        
+                        // 3. FETCH SHELF (1 Read via Query)
+                        const q = query(
+                            collection(db, 'profiles', targetUserId, 'savedProducts'),
+                            orderBy('createdAt', 'desc'),
+                            limit(5)
+                        );
+                        const snapshot = await getDocs(q);
+                        shelfData = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+
+                        // 4. SAVE TO CACHE
+                        await cacheUserProfile(targetUserId, profileData, shelfData);
+                    }
+                }
+
+                // 5. UPDATE STATE
+                if (profileData) {
+                    setProfile(profileData);
+                    setPublicShelf(shelfData);
+
                     // Calculate Match
                     if (currentUser?.settings) {
-                        setMatchInfo(calculateBioMatch(currentUser.settings, data.settings));
+                        setMatchInfo(calculateBioMatch(currentUser.settings, profileData.settings));
                     }
 
-                    // 2. Get Public Shelf (Max 1 Read via Query, or N reads depending on data structure)
-                    // Optimization: We limit to 5 items to keep reads low.
-                    const q = query(
-                        collection(db, 'profiles', targetUserId, 'savedProducts'),
-                        orderBy('createdAt', 'desc'),
-                        limit(5)
-                    );
-                    const snapshot = await getDocs(q);
-                    setPublicShelf(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
-                    
                     // Run Entry Animation
                     Animated.parallel([
                         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 8 }),
                         Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true })
                     ]).start();
                 }
+
             } catch (e) {
                 console.error("Profile Fetch Error", e);
             } finally {
@@ -99,13 +120,10 @@ const UserProfileModal = ({ visible, onClose, targetUserId, currentUser, onProdu
     };
 
     const handleProductPress = (item) => {
-        // Allows saving product from another user's profile
         if (onProductSelect) {
-            onClose(); // Close profile first
-            // Pass necessary data for ActionSheet
+            onClose(); 
             onProductSelect({
                 ...item,
-                // Ensure imageUrl is available if saved, otherwise it falls back to icon
                 imageUrl: item.productImage 
             });
         }

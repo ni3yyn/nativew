@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { formatRelativeTime } from '../../utils/formatters';
-import { getOptimizedImageUrl } from '../../utils/imageOptimizer'; // Ensure you have this, or remove if not using yet. 
-// If you don't have imageOptimizer yet, remove the getOptimizedImageUrl wrapper and just use the URI directly.
+import { calculateBioMatch } from '../../utils/matchCalculator'; // ✅ Imported
 
 // --- SUB-COMPONENT: JOURNEY PRODUCTS ---
 const JourneyProductsList = ({ products, onViewProduct }) => {
@@ -119,7 +118,6 @@ const JourneyContent = ({ post, onImagePress, onViewProduct }) => (
     </View>
 );
 
-// ✅ FIXED: Added onImagePress and Image Rendering logic
 const QAContent = ({ post, onImagePress }) => (
     <View>
         <Text style={styles.qaTitle}>{post.title}</Text>
@@ -133,28 +131,113 @@ const QAContent = ({ post, onImagePress }) => (
     </View>
 );
 
-const RoutineRateContent = ({ post }) => (
-    <View>
-        <Text style={styles.postContent}>{post.content}</Text>
-        <View style={styles.routineVisualContainer}>
-            <View style={styles.routineColumn}>
-                <View style={styles.routineHeader}><Feather name="sun" size={14} color={COLORS.gold} /><Text style={styles.routineHeaderText}>الصباح</Text></View>
-                {post.routineSnapshot?.am?.map((p, i) => <View key={i} style={styles.miniProductPill}><Text style={styles.miniProductText}>{p.name}</Text></View>)}
+// --- COMPONENT: LIGHTWEIGHT ROUTINE PRODUCT PILL ---
+const RoutineProductPill = ({ product, onPress }) => (
+    <TouchableOpacity 
+        style={styles.rpCard} 
+        onPress={onPress} 
+        activeOpacity={0.7}
+    >
+        <View style={styles.rpImageContainer}>
+            {product.image ? (
+                <Image source={{ uri: product.image }} style={styles.rpImage} />
+            ) : (
+                <FontAwesome5 
+                    name={product.type === 'sunscreen' ? 'sun' : 'wine-bottle'} 
+                    size={16} 
+                    color={COLORS.textDim} 
+                />
+            )}
+        </View>
+        <View style={{flex: 1, gap: 2}}>
+             <Text style={styles.rpName} numberOfLines={1}>{product.name}</Text>
+             {product.score > 0 && (
+                 <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 4}}>
+                     <View style={[styles.rpScoreDot, { backgroundColor: product.score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                     <Text style={styles.rpScoreText}>{product.score}%</Text>
+                 </View>
+             )}
+        </View>
+    </TouchableOpacity>
+);
+
+// --- COMPONENT: ROUTINE RATE DISPLAY ---
+const RoutineRateContent = ({ post, onViewProduct }) => {
+    const rawAm = post.routineSnapshot?.am;
+    const rawPm = post.routineSnapshot?.pm;
+    const amRoutine = Array.isArray(rawAm) ? rawAm : [];
+    const pmRoutine = Array.isArray(rawPm) ? rawPm : [];
+
+    const handleProductPress = (p) => {
+        if (!onViewProduct) return;
+        const formattedProduct = {
+            id: p.id,
+            productName: p.name,
+            productImage: p.image,
+            imageUrl: p.image,
+            marketingClaims: p.marketingClaims || [],
+            analysisData: {
+                oilGuardScore: p.score,
+                product_type: p.type,
+                detected_ingredients: p.ingredients || [],
+                user_specific_alerts: []
+            }
+        };
+        onViewProduct(formattedProduct);
+    };
+
+    const renderPeriod = (title, icon, color, stepsInput) => {
+        const steps = Array.isArray(stepsInput) ? stepsInput : [];
+        return (
+            <View style={[styles.routinePeriodContainer, { borderColor: color + '30', backgroundColor: color + '05' }]}>
+                <View style={styles.routinePeriodHeader}>
+                    <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 6}}>
+                        <Feather name={icon} size={14} color={color} />
+                        <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
+                    </View>
+                    <Text style={styles.routineStepCount}>{steps.length} خطوات</Text>
+                </View>
+                {steps.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingRight: 10, gap: 8}}>
+                        {steps.map((step, i) => (
+                            <View key={i} style={{alignItems: 'center', flexDirection: 'row-reverse'}}>
+                                {Array.isArray(step?.products) && step.products.map((p, j) => (
+                                    <RoutineProductPill key={`${i}-${j}`} product={p} onPress={() => handleProductPress(p)} />
+                                ))}
+                            </View>
+                        ))}
+                    </ScrollView>
+                ) : (
+                    <Text style={styles.routineEmptyText}>لا توجد منتجات مسجلة</Text>
+                )}
             </View>
-            <View style={{width: 1, backgroundColor: COLORS.border}} />
-            <View style={styles.routineColumn}>
-                <View style={styles.routineHeader}><Feather name="moon" size={14} color={COLORS.blue} /><Text style={styles.routineHeaderText}>المساء</Text></View>
-                {post.routineSnapshot?.pm?.map((p, i) => <View key={i} style={styles.miniProductPill}><Text style={styles.miniProductText}>{p.name}</Text></View>)}
+        );
+    };
+
+    return (
+        <View>
+            <Text style={styles.postContent}>{post.content}</Text>
+            <View style={{ gap: 10, marginTop: 5 }}>
+                {renderPeriod('الصباح', 'sun', COLORS.gold, amRoutine)}
+                {renderPeriod('المساء', 'moon', '#818cf8', pmRoutine)}
             </View>
         </View>
-    </View>
-);
+    );
+};
 
 // --- MAIN CARD ---
 const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
     const isLiked = post.likes && post.likes.includes(currentUser?.uid);
-    const matchLabel = currentUser?.settings && post.authorSettings?.skinType === currentUser.settings.skinType ? 'بشرة مشابهة لكِ' : null;
     
+    // 1. CALCULATE BIO MATCH
+    const matchData = useMemo(() => {
+        // We need both settings to calculate
+        if (currentUser?.settings && post.authorSettings) {
+            return calculateBioMatch(currentUser.settings, post.authorSettings);
+        }
+        return null;
+    }, [currentUser?.settings, post.authorSettings]);
+
     const getTypeConfig = () => {
         switch(post.type) {
             case 'review': return { icon: 'star', color: COLORS.accentGreen, label: 'تجربة' };
@@ -187,16 +270,26 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 {post.userId === currentUser?.uid && <TouchableOpacity onPress={() => onDelete(post.id)}><Ionicons name="trash-outline" size={18} color={COLORS.danger} /></TouchableOpacity>}
             </View>
 
-            {matchLabel && <View style={styles.matchIndicator}><FontAwesome5 name="check-double" size={10} color={COLORS.accentGreen} /><Text style={styles.matchText}>{matchLabel}</Text></View>}
+            {/* 2. RENDER DYNAMIC MATCH LABEL & PERCENTAGE */}
+            {matchData && matchData.score > 20 && (
+                <View style={[styles.matchIndicator, { 
+                    backgroundColor: matchData.color + '15', 
+                    borderColor: matchData.color + '30' 
+                }]}>
+                    <FontAwesome5 name="check-double" size={10} color={matchData.color} />
+                    <Text style={[styles.matchText, { color: matchData.color }]}>
+                        {/* 🟢 PERCENTAGE ADDED HERE */}
+                        {matchData.score}% • {matchData.label} 
+                        {matchData.matches.length > 0 && ` (${matchData.matches.join(' + ')})`}
+                    </Text>
+                </View>
+            )}
 
             <View style={{marginBottom: 10}}>
                 {post.type === 'review' && <ReviewContent post={post} onViewProduct={onViewProduct} onImagePress={onImagePress} />}
                 {post.type === 'journey' && <JourneyContent post={post} onImagePress={onImagePress} onViewProduct={onViewProduct} />}
-                
-                {/* ✅ FIXED: Pass onImagePress here */}
                 {post.type === 'qa' && <QAContent post={post} onImagePress={onImagePress} />}
-                
-                {post.type === 'routine_rate' && <RoutineRateContent post={post} />}
+                {post.type === 'routine_rate' && <RoutineRateContent post={post} onViewProduct={onViewProduct} />}
             </View>
 
             <View style={styles.cardFooter}>
@@ -235,6 +328,7 @@ const styles = StyleSheet.create({
     
     bioBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     bioBadgeText: { color: COLORS.textSecondary, fontSize: 10, fontFamily: 'Tajawal-Regular' },
+    
     matchIndicator: { flexDirection: 'row-reverse', gap: 6, backgroundColor: COLORS.accentGreen + '15', paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 0, marginTop: -5, marginBottom: 10, alignSelf: 'flex-end', borderRadius: 6, borderWidth: 1, borderColor: COLORS.accentGreen + '30' },
     matchText: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold' },
 
@@ -266,13 +360,21 @@ const styles = StyleSheet.create({
     baPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     baLabel: { position: 'absolute', bottom: 5, right: 5, backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, padding: 4, borderRadius: 4, overflow: 'hidden', fontFamily: 'Tajawal-Bold', zIndex: 1 },
     baDivider: { width: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card },
-    routineVisualContainer: { flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 12, padding: 10, marginTop: 10 },
-    routineColumn: { flex: 1, gap: 6 },
-    routineHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginBottom: 4 },
-    routineHeaderText: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Bold' },
-    miniProductPill: { backgroundColor: COLORS.card, padding: 6, borderRadius: 6 },
-    miniProductText: { color: COLORS.textPrimary, fontSize: 10, textAlign: 'right' },
+    
     postImage: { width: '100%', height: 200, borderRadius: 12, marginTop: 10 },
+
+    // --- ROUTINE STYLES ---
+    routinePeriodContainer: { borderRadius: 12, borderWidth: 1, padding: 10, marginBottom: 4 },
+    routinePeriodHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 },
+    routinePeriodTitle: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    routineStepCount: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim },
+    rpCard: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, padding: 6, paddingRight: 8, width: 160, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 0, marginLeft: 8 },
+    rpImageContainer: { width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', marginLeft: 8, overflow: 'hidden' },
+    rpImage: { width: '100%', height: '100%' },
+    rpName: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textPrimary, textAlign: 'right' },
+    rpScoreDot: { width: 6, height: 6, borderRadius: 3 },
+    rpScoreText: { fontSize: 9, color: COLORS.textSecondary, fontFamily: 'Tajawal-Regular' },
+    routineEmptyText: { textAlign: 'center', color: COLORS.textDim, fontSize: 11, fontStyle: 'italic', padding: 10 },
 });
 
 export default React.memo(PostCard);

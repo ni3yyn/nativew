@@ -240,6 +240,38 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
         setJourneyProducts(prev => prev.map(p => p.id === id ? { ...p, price } : p));
     };
 
+    // --- 🟢 LIGHTWEIGHT ROUTINE DATA RESOLVER ---
+    const resolveRoutineData = (routinePeriod) => {
+        if (!routinePeriod || !Array.isArray(routinePeriod)) return [];
+        
+        return routinePeriod.map(step => {
+            // Map IDs to actual Product Objects from savedProducts
+            const resolvedProducts = step.productIds.map(id => {
+                const product = savedProducts.find(p => p.id === id);
+                if (!product) return null;
+                
+                return {
+                    id: product.id,
+                    name: product.productName,
+                    image: product.productImage, 
+                    score: product.analysisData?.oilGuardScore || 0,
+                    type: product.analysisData?.product_type || 'other',
+                    
+                    // 🟢 ADD THESE TWO LINES:
+                    ingredients: product.analysisData?.detected_ingredients || [], 
+                    marketingClaims: product.marketingClaims || [] 
+                };
+            }).filter(Boolean);
+
+            if (resolvedProducts.length === 0) return null; 
+
+            return {
+                stepName: step.name,
+                products: resolvedProducts
+            };
+        }).filter(Boolean);
+    };
+
     // --- SUBMIT LOGIC ---
     const handleSubmit = async () => {
         if (!content.trim()) { AlertService.error("حقل فارغ", "يرجى كتابة المحتوى."); return; }
@@ -247,7 +279,6 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
         if (type === 'review') {
             if (!selectedProduct) { AlertService.error("ناقص", "يرجى اختيار المنتج."); return; }
             if (rating === 0) { AlertService.error("ناقص", "يرجى تحديد التقييم."); return; }
-            // Note: Image is now optional for reviews
         }
 
         if (type === 'journey') {
@@ -259,6 +290,14 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
         if (type === 'qa' && !title.trim()) { 
             AlertService.error("ناقص", "يرجى كتابة عنوان للسؤال."); 
             return; 
+        }
+
+        if (type === 'routine_rate') {
+             // Check if routine is empty
+             if ((!userRoutines?.am || userRoutines.am.length === 0) && (!userRoutines?.pm || userRoutines.pm.length === 0)) {
+                 AlertService.error("الروتين فارغ", "يرجى بناء روتينك في الملف الشخصي أولاً.");
+                 return;
+             }
         }
 
         setLoading(true);
@@ -282,6 +321,15 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             processedMilestones = (await Promise.all(promises)).filter(Boolean);
         }
 
+        // 4. PROCESS ROUTINE SNAPSHOT (Lightweight)
+        let routineSnapshot = null;
+        if (type === 'routine_rate') {
+            routineSnapshot = {
+                am: resolveRoutineData(userRoutines?.am),
+                pm: resolveRoutineData(userRoutines?.pm)
+            };
+        }
+
         const payload = {
             type, content,
             title: (type === 'qa' && title) ? title : null,
@@ -290,7 +338,6 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 id: selectedProduct.id, 
                 name: selectedProduct.productName, 
                 score: selectedProduct.analysisData?.oilGuardScore || 0, 
-                analysisData: selectedProduct.analysisData,
                 imageUrl: selectedProduct.productImage // Pass shelf image to post data
             } : null,
             journeyProducts: type === 'journey' ? journeyProducts : null,
@@ -299,7 +346,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             
             milestones: processedMilestones,
             duration: type === 'journey' ? `بعد ${durValue} ${durUnit}` : null,
-            routineSnapshot: (type === 'routine_rate') ? { am: userRoutines?.am || [], pm: userRoutines?.pm || [] } : null
+            routineSnapshot
         };
         
         await onSubmit(payload);
@@ -350,11 +397,32 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                             </View>
                         )}
 
+                        {/* --- ROUTINE RATE PREVIEW --- */}
+                        {type === 'routine_rate' && (
+                            <View style={styles.routinePreview}>
+                                <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10}}>
+                                    <FontAwesome5 name="clipboard-check" size={20} color={COLORS.purple} />
+                                    <Text style={[styles.label, {marginBottom: 0, color: COLORS.purple}]}>سيتم مشاركة روتينك الحالي</Text>
+                                </View>
+                                <Text style={styles.routineInfo}>
+                                    • الصباح: {userRoutines?.am?.length || 0} خطوات
+                                </Text>
+                                <Text style={styles.routineInfo}>
+                                    • المساء: {userRoutines?.pm?.length || 0} خطوات
+                                </Text>
+                                <Text style={[styles.tinyLabel, {textAlign:'right', marginTop: 8}]}>
+                                    * سيظهر للمستخدمين المنتجات والصور كما هي في رفك.
+                                </Text>
+                            </View>
+                        )}
+
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>التفاصيل</Text>
+                            <Text style={styles.label}>
+                                {type === 'qa' ? 'تفاصيل السؤال' : type === 'routine_rate' ? 'رأيك / استفسارك عن الروتين' : 'التفاصيل'}
+                            </Text>
                             <TextInput 
                                 style={styles.inputContent} 
-                                placeholder={type === 'journey' ? "صف رحلتك والنتائج..." : "التفاصيل..."} 
+                                placeholder={type === 'journey' ? "صف رحلتك والنتائج..." : type === 'routine_rate' ? "مثال: هل ترتيب المنتجات صحيح؟ هل أحتاج سيروم فيتامين سي؟" : "التفاصيل..."} 
                                 placeholderTextColor={COLORS.textDim} 
                                 multiline 
                                 value={content} 
