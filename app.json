@@ -2,7 +2,7 @@
   "expo": {
     "name": "وثيق",
     "slug": "nativew",
-    "scheme": "وثيق",
+    "scheme": "whathiq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,7 +23,6 @@
     "android": {
       "package": "com.wathiq.app",
       "googleServicesFile": "./google-services.json",
-      "useNextNotificationsApi": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A2D27"
