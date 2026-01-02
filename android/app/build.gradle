@@ -90,7 +90,7 @@ android {
     namespace 'com.wathiq.app'
     defaultConfig {
         applicationId 'com.wathiq.app'
-        minSdkVersion 23  
+        minSdkVersion 24  
         targetSdkVersion 34
         versionCode 1
         versionName "1.0.0"
