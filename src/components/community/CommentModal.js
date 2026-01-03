@@ -24,7 +24,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const getRandomColor = (name) => {
     if (!name) return COLORS.card;
     const colors = [COLORS.accentGreen, '#D97706', '#059669', '#0891B2', '#7C3AED', '#BE123C'];
-    const charCode = name.charCodeAt(0) || 0;
+    // Sum all character codes for better distribution
+    const charCode = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[charCode % colors.length];
 };
 
@@ -111,10 +112,15 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
         );
     };
 
+    // Safe date handling
+    const timeAgo = item.createdAt?.toDate 
+        ? formatDistanceToNow(item.createdAt.toDate(), { locale: ar, addSuffix: false })
+        : 'الآن';
+
     return (
         <View style={styles.commentRow}>
             
-            {/* 1. AVATAR (Clickable now) */}
+            {/* 1. AVATAR */}
             <TouchableOpacity 
                 onPress={() => onProfilePress && onProfilePress(item.userId)}
                 activeOpacity={0.8}
@@ -141,9 +147,7 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
                 </View>
 
                 <View style={styles.metaRow}>
-                    <Text style={styles.metaText}>
-                        {item.createdAt ? formatDistanceToNow(item.createdAt.toDate(), { locale: ar, addSuffix: false }) : 'الآن'}
-                    </Text>
+                    <Text style={styles.metaText}>{timeAgo}</Text>
                     
                     {likesCount > 0 && (
                         <Text style={[styles.metaText, {color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold'}]}>
@@ -178,11 +182,17 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     useEffect(() => {
         if (!post?.id || !visible) return;
         setLoading(true);
+        // Assuming 'comments' is a subcollection. 
         const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('createdAt', 'asc'));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            
+            // Only animate if data length changes significantly to avoid jitter
+            if(data.length !== commentsList.length) {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
+            
             setCommentsList(data);
             setLoading(false);
         });
@@ -195,14 +205,19 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         
         const tempText = finalComment.trim();
         setComment(''); 
-        Keyboard.dismiss(); // Dismiss keyboard when sending
+        
+        // Optional: Keep keyboard open for faster chatting, 
+        // uncomment next line if you want to close it.
+        // Keyboard.dismiss(); 
 
         try {
             await addComment(post.id, tempText, currentUser);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            // Scroll to end happens via onContentSizeChange usually, but we force it here too
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         } catch (error) { 
             AlertService.error("خطأ", "لم يتم إرسال التعليق.");
+            console.error(error);
         }
     };
 
@@ -226,10 +241,15 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     if (!post) return null;
 
     return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+        <Modal 
+            visible={visible} 
+            animationType="slide" 
+            presentationStyle="pageSheet" 
+            onRequestClose={onClose}
+        >
             <View style={styles.modalContainer}>
                 
-                {/* Header */}
+                {/* Header - Outside KAV so it stays fixed at top */}
                 <View style={styles.modalHeader}>
                     <View style={styles.handleBar} />
                     <View style={styles.headerRow}>
@@ -244,45 +264,51 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         </TouchableOpacity>
                     </View>
                 </View>
-                
-                {/* Main Content Area (Tap to dismiss keyboard) */}
-                <View style={{flex: 1}} onStartShouldSetResponder={() => true} onResponderRelease={Keyboard.dismiss}>
-                    {loading ? (
-                        <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
-                    ) : (
-                        <FlatList
-                            ref={flatListRef}
-                            data={commentsList}
-                            keyExtractor={item => item.id}
-                            contentContainerStyle={styles.listContent}
-                            renderItem={({ item }) => (
-                                <CommentItem 
-                                    item={item} 
-                                    currentUser={currentUser} 
-                                    postId={post.id} 
-                                    onDelete={handleDelete}
-                                    onProfilePress={onProfilePress} 
-                                />
-                            )}
-                            ListEmptyComponent={
-                                <View style={styles.emptyState}>
-                                    <View style={styles.emptyIconBox}>
-                                        <Feather name="message-circle" size={32} color={COLORS.textDim} />
-                                    </View>
-                                    <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
-                                    <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
-                                </View>
-                            }
-                        />
-                    )}
-                </View>
 
-                {/* Input Area + Quick Replies (Pushed up by Keyboard) */}
+                {/* KEYBOARD FIX: KAV wraps BOTH List and Input */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-                    style={styles.keyboardAvoid}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+                    style={{ flex: 1 }}
+                    // Offset depends on your specific header height, usually 0 inside pageSheet works
+                    // or small amount to account for safe area
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 >
+                    <View style={{flex: 1}}>
+                        {loading ? (
+                            <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
+                        ) : (
+                            <FlatList
+                                ref={flatListRef}
+                                data={commentsList}
+                                keyExtractor={item => item.id}
+                                contentContainerStyle={styles.listContent}
+                                renderItem={({ item }) => (
+                                    <CommentItem 
+                                        item={item} 
+                                        currentUser={currentUser} 
+                                        postId={post.id} 
+                                        onDelete={handleDelete}
+                                        onProfilePress={onProfilePress} 
+                                    />
+                                )}
+                                // Allow interacting with list without dismissing keyboard immediately
+                                keyboardShouldPersistTaps="handled" 
+                                onContentSizeChange={() => flatListRef.current?.scrollToEnd({animated: true})}
+                                onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyState}>
+                                        <View style={styles.emptyIconBox}>
+                                            <Feather name="message-circle" size={32} color={COLORS.textDim} />
+                                        </View>
+                                        <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
+                                        <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
+                                    </View>
+                                }
+                            />
+                        )}
+                    </View>
+
+                    {/* Input Area + Quick Replies */}
                     <View style={styles.inputWrapper}>
                         
                         {/* Quick Replies Horizontal Scroll */}
@@ -338,10 +364,9 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.card,
         paddingBottom: 15,
         paddingTop: 10,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.05)',
+        zIndex: 10,
     },
     handleBar: {
         width: 40,
@@ -381,7 +406,8 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: 20,
         paddingTop: 20,
-        paddingBottom: 40,
+        paddingBottom: 20, 
+        flexGrow: 1, // Ensures empty state centers correctly
     },
     commentRow: {
         flexDirection: 'row-reverse',
@@ -455,15 +481,11 @@ const styles = StyleSheet.create({
     },
     
     // --- KEYBOARD & INPUT STYLES ---
-    keyboardAvoid: { 
-        width: '100%',
-        backgroundColor: COLORS.card, 
-    },
     inputWrapper: {
         backgroundColor: COLORS.card,
         paddingHorizontal: 15,
         paddingVertical: 12,
-        paddingBottom: Platform.OS === 'ios' ? 30 : 15, // Extra padding for iPhone home bar
+        paddingBottom: Platform.OS === 'ios' ? 40 : 15, // Extra padding for iPhone home bar
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.05)',
     },

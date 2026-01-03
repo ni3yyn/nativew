@@ -39,7 +39,8 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     const [publicShelf, setPublicShelf] = useState([]);
     const [loading, setLoading] = useState(!initialData); 
     const [matchInfo, setMatchInfo] = useState({ score: 0, label: '', color: COLORS.textSecondary });
-    
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     // Animation Refs
     const slideAnim = useRef(new Animated.Value(50)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -49,26 +50,28 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     useEffect(() => {
         if (!visible || !targetUserId) return;
         
-        // Handle case where targetUserId is passed as object or string
+        // Handle ID string/object
         const userIdString = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
-        if (!userIdString) return;
-
-        // --- RESET UI ---
+    
+        // Reset UI
         setPublicShelf([]);
         slideAnim.setValue(50);
         fadeAnim.setValue(0);
         
-        // Show snapshot immediately
-        if (initialData) {
-            setProfile({ settings: initialData });
-            setLoading(false);
-            if (currentUser?.settings) {
-                setMatchInfo(calculateBioMatch(currentUser.settings, initialData));
-            }
-        } else {
-            setProfile(null);
-            setLoading(true);
+        // 🟢 1. INSTANT LOAD: Use passed data immediately. No Profile Fetch.
+        // Ensure we have a valid object to prevent "undefined" errors later
+        const safeSettings = initialData || {};
+        setProfile({ settings: safeSettings });
+    
+        // Calculate Match if possible
+        if (currentUser?.settings && safeSettings) {
+            setMatchInfo(calculateBioMatch(currentUser.settings, safeSettings));
         }
+        
+        setLoading(true);
+
+        
+        
 
         // --- SMART FETCH (Low Cost Strategy) ---
         const loadData = async () => {
@@ -128,6 +131,55 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
         ]).start();
     };
 
+    const handleManualRefresh = async () => {
+        const uid = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
+        if (!uid) return;
+
+        setIsRefreshing(true);
+        try {
+            console.log("🔄 Manually refreshing profile...");
+            
+            // 1. Fetch Fresh Profile Doc
+            const profileRef = doc(db, 'profiles', uid);
+            const profileSnap = await getDoc(profileRef);
+
+            if (profileSnap.exists()) {
+                const data = profileSnap.data();
+                // Handle structure (settings object vs root)
+                const freshSettings = data.settings || data;
+                
+                // Ensure name exists
+                if (data.name && !freshSettings.name) freshSettings.name = data.name;
+
+                // Update Profile State
+                setProfile({ settings: freshSettings });
+
+                // Recalculate Match
+                if (currentUser?.settings) {
+                    setMatchInfo(calculateBioMatch(currentUser.settings, freshSettings));
+                }
+
+                // 2. Refresh Shelf as well
+                const q = query(
+                    collection(db, 'profiles', uid, 'savedProducts'),
+                    orderBy('createdAt', 'desc'),
+                    limit(5)
+                );
+                const shelfSnap = await getDocs(q);
+                const freshShelf = shelfSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                setPublicShelf(freshShelf);
+                
+                // Update Cache
+                cacheUserProfile(uid, { settings: freshSettings }, freshShelf);
+            }
+        } catch (error) {
+            console.error("Refresh Error:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     const getLabel = (id, list) => {
         const item = list.find(i => i.id === id);
         return item ? (item.label || item.name) : id; 
@@ -156,6 +208,17 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>ملف العضو</Text>
                     <View style={{width: 40}} /> 
+                    <TouchableOpacity 
+        onPress={handleManualRefresh} 
+        disabled={isRefreshing}
+        style={styles.refreshBtn}
+    >
+        {isRefreshing ? (
+            <ActivityIndicator size="small" color={COLORS.accentGreen} />
+        ) : (
+            <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />
+        )}
+    </TouchableOpacity>
                 </View>
 
                 {loading ? (
@@ -348,6 +411,16 @@ const styles = StyleSheet.create({
     
     emptyShelfBox: { alignItems: 'center', padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16 },
     emptyText: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, textAlign: 'center', marginTop: 10 },
+    refreshBtn: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: COLORS.card,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border
+    }
 });
 
 export default UserProfileModal;

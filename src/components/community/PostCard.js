@@ -245,8 +245,8 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     style={styles.userInfo} 
                     // 🟢 FIX: Passing Merged Data (ID + Settings + Name) for instant hydration
                     onPress={() => onProfilePress && onProfilePress(post.userId, {
-                        ...post.authorSettings,
-                        name: post.userName
+                        ...(post.authorSettings || {}), 
+                        name: post.userName || 'مستخدم وثيق'
                     })} 
                     activeOpacity={0.7}
                 >
