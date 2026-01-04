@@ -4,7 +4,6 @@ import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { formatRelativeTime } from '../../utils/formatters';
-// 🟢 IMPORT: Match Calculator
 import { calculateBioMatch } from '../../utils/matchCalculator';
 
 // --- SUB-COMPONENT: JOURNEY PRODUCTS ---
@@ -62,62 +61,75 @@ const JourneyTimeline = ({ milestones, onImagePress }) => {
 
 // --- CONTENT RENDERERS ---
 
-const ReviewContent = ({ post, onViewProduct, onImagePress }) => (
-    <View>
-        <Text style={styles.postContent}>{post.content}</Text>
-        {post.taggedProduct && (
-            <TouchableOpacity 
-                onPress={() => onViewProduct({ ...post.taggedProduct, imageUrl: post.taggedProduct.imageUrl || post.imageUrl })} 
-                activeOpacity={0.9} 
-                style={styles.reviewCard}
-            >
-                <WathiqScoreBadge score={post.taggedProduct.score} />
-                <View style={{flex: 1, marginRight: 15, justifyContent: 'center'}}>
-                    <Text style={styles.taggedProductName}>{post.taggedProduct.name}</Text>
-                    <View style={{flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4}}>
-                        <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
-                        <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{marginRight: 4}} />
+const ReviewContent = ({ post, onViewProduct, onImagePress }) => {
+    // 🔍 DEBUG: Check Review Data
+    // console.log(`[ReviewContent] Post ${post.id} Tagged Product:`, post.taggedProduct);
+
+    return (
+        <View>
+            <Text style={styles.postContent}>{post.content}</Text>
+            {post.taggedProduct && (
+                <TouchableOpacity 
+                    onPress={() => onViewProduct({ 
+                        ...post.taggedProduct, 
+                        imageUrl: post.taggedProduct.imageUrl || post.imageUrl 
+                    })} 
+                    activeOpacity={0.9} 
+                    style={styles.reviewCard}
+                >
+                    <WathiqScoreBadge score={post.taggedProduct.score} />
+                    <View style={{flex: 1, marginRight: 15, justifyContent: 'center'}}>
+                        <Text style={styles.taggedProductName}>{post.taggedProduct.name}</Text>
+                        <View style={{flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4}}>
+                            <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
+                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{marginRight: 4}} />
+                        </View>
+                    </View>
+                    <View style={styles.productIconPlaceholder}>
+                        <FontAwesome5 name="wine-bottle" size={20} color={COLORS.textSecondary} />
+                    </View>
+                </TouchableOpacity>
+            )}
+            {post.imageUrl && (
+                <TouchableOpacity onPress={() => onImagePress(post.imageUrl)}>
+                    <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+                </TouchableOpacity>
+            )}
+        </View>
+    );
+};
+
+const JourneyContent = ({ post, onImagePress, onViewProduct }) => {
+    // 🔍 DEBUG: Check Journey Data
+    // console.log(`[JourneyContent] Post ${post.id} Products:`, post.journeyProducts?.length);
+
+    return (
+        <View>
+            <Text style={styles.postContent}>{post.content}</Text>
+            
+            {post.duration && (
+                <View style={styles.journeyMetaRow}>
+                    <View style={styles.journeyBadge}>
+                        <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
+                        <Text style={styles.journeyBadgeText}>المدة: {post.duration}</Text>
                     </View>
                 </View>
-                <View style={styles.productIconPlaceholder}>
-                    <FontAwesome5 name="wine-bottle" size={20} color={COLORS.textSecondary} />
+            )}
+            
+            {post.milestones && post.milestones.length > 0 ? (
+                <JourneyTimeline milestones={post.milestones} onImagePress={onImagePress} />
+            ) : (
+                <View style={styles.beforeAfterContainer}>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => post.beforeImage && onImagePress(post.beforeImage)}><Text style={styles.baLabel}>قبل</Text><Image source={{ uri: post.beforeImage }} style={styles.baImage} /></TouchableOpacity>
+                    <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => post.afterImage && onImagePress(post.afterImage)}><Text style={styles.baLabel}>بعد</Text><Image source={{ uri: post.afterImage }} style={styles.baImage} /></TouchableOpacity>
                 </View>
-            </TouchableOpacity>
-        )}
-        {post.imageUrl && (
-            <TouchableOpacity onPress={() => onImagePress(post.imageUrl)}>
-                <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
-            </TouchableOpacity>
-        )}
-    </View>
-);
+            )}
 
-const JourneyContent = ({ post, onImagePress, onViewProduct }) => (
-    <View>
-        <Text style={styles.postContent}>{post.content}</Text>
-        
-        {post.duration && (
-            <View style={styles.journeyMetaRow}>
-                <View style={styles.journeyBadge}>
-                    <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
-                    <Text style={styles.journeyBadgeText}>المدة: {post.duration}</Text>
-                </View>
-            </View>
-        )}
-        
-        {post.milestones && post.milestones.length > 0 ? (
-            <JourneyTimeline milestones={post.milestones} onImagePress={onImagePress} />
-        ) : (
-            <View style={styles.beforeAfterContainer}>
-                <TouchableOpacity style={styles.baImageWrapper} onPress={() => post.beforeImage && onImagePress(post.beforeImage)}><Text style={styles.baLabel}>قبل</Text><Image source={{ uri: post.beforeImage }} style={styles.baImage} /></TouchableOpacity>
-                <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
-                <TouchableOpacity style={styles.baImageWrapper} onPress={() => post.afterImage && onImagePress(post.afterImage)}><Text style={styles.baLabel}>بعد</Text><Image source={{ uri: post.afterImage }} style={styles.baImage} /></TouchableOpacity>
-            </View>
-        )}
-
-        <JourneyProductsList products={post.journeyProducts} onViewProduct={onViewProduct} />
-    </View>
-);
+            <JourneyProductsList products={post.journeyProducts || []} onViewProduct={onViewProduct} />
+        </View>
+    );
+};
 
 const QAContent = ({ post, onImagePress }) => (
     <View>
@@ -154,10 +166,11 @@ const RoutineProductPill = ({ product, onPress }) => (
 );
 
 const RoutineRateContent = ({ post, onViewProduct }) => {
-    const rawAm = post.routineSnapshot?.am;
-    const rawPm = post.routineSnapshot?.pm;
-    const amRoutine = Array.isArray(rawAm) ? rawAm : [];
-    const pmRoutine = Array.isArray(rawPm) ? rawPm : [];
+    // 🔍 DEBUG: Check Routine Data
+    // console.log(`[RoutineRateContent] Post ${post.id} Snapshot:`, post.routineSnapshot);
+
+    const rawAm = post.routineSnapshot?.am || [];
+    const rawPm = post.routineSnapshot?.pm || [];
 
     const handleProductPress = (p) => {
         if (!onViewProduct) return;
@@ -189,11 +202,9 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
                 </View>
                 {steps.length > 0 ? (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingRight: 10, gap: 8}}>
-                        {steps.map((step, i) => (
+                        {steps.map((p, i) => (
                             <View key={i} style={{alignItems: 'center', flexDirection: 'row-reverse'}}>
-                                {Array.isArray(step?.products) && step.products.map((p, j) => (
-                                    <RoutineProductPill key={`${i}-${j}`} product={p} onPress={() => handleProductPress(p)} />
-                                ))}
+                                <RoutineProductPill product={p} onPress={() => handleProductPress(p)} />
                             </View>
                         ))}
                     </ScrollView>
@@ -208,8 +219,8 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
         <View>
             <Text style={styles.postContent}>{post.content}</Text>
             <View style={{ gap: 10, marginTop: 5 }}>
-                {renderPeriod('الصباح', 'sun', COLORS.gold, amRoutine)}
-                {renderPeriod('المساء', 'moon', '#818cf8', pmRoutine)}
+                {renderPeriod('الصباح', 'sun', COLORS.gold, rawAm)}
+                {renderPeriod('المساء', 'moon', '#818cf8', rawPm)}
             </View>
         </View>
     );
@@ -217,9 +228,16 @@ const RoutineRateContent = ({ post, onViewProduct }) => {
 
 // --- MAIN CARD ---
 const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
+    
+    // 🔍 DEBUG: Main Post Logger
+    // This logs every time a card renders. Check your terminal!
+    console.log(`[📱 PostCard Render] ID: ${post.id} | Type: ${post.type}`);
+    if (post.type === 'review') console.log(`   > Tagged Product:`, post.taggedProduct ? post.taggedProduct.name : 'NULL');
+    if (post.type === 'journey') console.log(`   > Journey Products:`, post.journeyProducts?.length || 0);
+    if (post.type === 'routine_rate') console.log(`   > Routine Snapshot:`, post.routineSnapshot ? 'Present' : 'MISSING');
+
     const isLiked = post.likes && post.likes.includes(currentUser?.uid);
 
-    // 🟢 1. CALCULATE BIO MATCH (Efficiently with useMemo)
     const matchData = useMemo(() => {
         if (currentUser?.settings && post.authorSettings) {
             return calculateBioMatch(currentUser.settings, post.authorSettings);
@@ -243,7 +261,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             <View style={styles.cardHeader}>
                 <TouchableOpacity 
                     style={styles.userInfo} 
-                    // 🟢 FIX: Passing Merged Data (ID + Settings + Name) for instant hydration
                     onPress={() => onProfilePress && onProfilePress(post.userId, {
                         ...(post.authorSettings || {}), 
                         name: post.userName || 'مستخدم وثيق'
@@ -267,7 +284,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 {post.userId === currentUser?.uid && <TouchableOpacity onPress={() => onDelete(post.id)}><Ionicons name="trash-outline" size={18} color={COLORS.danger} /></TouchableOpacity>}
             </View>
 
-            {/* 🟢 2. RENDER MATCH INDICATOR */}
             {matchData && matchData.score > 20 && (
                 <View style={[styles.matchIndicator, { 
                     backgroundColor: matchData.color + '15', 
@@ -325,7 +341,6 @@ const styles = StyleSheet.create({
     bioBadge: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     bioBadgeText: { color: COLORS.textSecondary, fontSize: 10, fontFamily: 'Tajawal-Regular' },
     
-    // 🟢 MATCH STYLES
     matchIndicator: { flexDirection: 'row-reverse', gap: 6, backgroundColor: COLORS.accentGreen + '15', paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 0, marginTop: -5, marginBottom: 10, alignSelf: 'flex-end', borderRadius: 6, borderWidth: 1, borderColor: COLORS.accentGreen + '30' },
     matchText: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold' },
 

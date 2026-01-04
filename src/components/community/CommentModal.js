@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, 
-  FlatList, KeyboardAvoidingView, Platform, Keyboard, StyleSheet, 
-  Animated, LayoutAnimation, UIManager, Pressable 
+  FlatList, KeyboardAvoidingView, Platform, StyleSheet, 
+  Animated, LayoutAnimation, UIManager, Pressable, Keyboard 
 } from 'react-native';
 import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebase';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { COLORS } from '../../constants/theme';
-import { addComment, deleteComment, likeComment, unlikeComment } from '../../services/communityService';
-import { AlertService } from '../../services/alertService';
 import * as Haptics from 'expo-haptics';
+
+// --- CONFIG & SERVICES ---
+import { supabase } from '../../config/supabase';
+import { COLORS } from '../../constants/theme';
+import { AlertService } from '../../services/alertService';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -24,12 +24,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const getRandomColor = (name) => {
     if (!name) return COLORS.card;
     const colors = [COLORS.accentGreen, '#D97706', '#059669', '#0891B2', '#7C3AED', '#BE123C'];
-    // Sum all character codes for better distribution
     const charCode = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[charCode % colors.length];
 };
 
-// --- QUICK REPLIES DATA ---
 const QUICK_REPLIES = [
     "روتين هايل! 😍",
     "شكراً على المشاركة ✨",
@@ -40,10 +38,10 @@ const QUICK_REPLIES = [
 ];
 
 // --- SUB-COMPONENT: INTERACTIVE COMMENT ITEM ---
-const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfilePress }) => {
+const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress }) => {
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
-    const isLiked = item.likes?.includes(currentUser?.uid);
-    const likesCount = item.likes?.length || 0;
+    const [isLiked, setIsLiked] = useState(false);
+    const [likesCount, setLikesCount] = useState(item.likesCount || 0);
     
     const displayName = item.userName || "مستخدم";
     const initial = displayName.charAt(0).toUpperCase();
@@ -64,16 +62,12 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
             Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 50 })
         ]).start();
 
-        if (isLiked) {
-            unlikeComment(postId, item.id, currentUser.uid);
-        } else {
-            likeComment(postId, item.id, currentUser.uid);
-        }
+        setIsLiked(!isLiked);
+        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     };
 
     const triggerDoubleTapLike = () => {
-        if (!currentUser?.uid) return;
-        if (isLiked) return; 
+        if (!currentUser?.uid || isLiked) return;
         
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
@@ -88,7 +82,7 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
             ])
         ]).start();
 
-        likeComment(postId, item.id, currentUser.uid);
+        handleLike();
     };
 
     const handlePress = () => {
@@ -112,15 +106,12 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
         );
     };
 
-    // Safe date handling
-    const timeAgo = item.createdAt?.toDate 
-        ? formatDistanceToNow(item.createdAt.toDate(), { locale: ar, addSuffix: false })
+    const timeAgo = item.createdAt 
+        ? formatDistanceToNow(new Date(item.createdAt), { locale: ar, addSuffix: false })
         : 'الآن';
 
     return (
         <View style={styles.commentRow}>
-            
-            {/* 1. AVATAR */}
             <TouchableOpacity 
                 onPress={() => onProfilePress && onProfilePress(item.userId)}
                 activeOpacity={0.8}
@@ -129,7 +120,6 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
                 <Text style={styles.avatarText}>{initial}</Text>
             </TouchableOpacity>
 
-            {/* 2. INTERACTIVE CONTENT */}
             <Pressable 
                 onPress={handlePress} 
                 onLongPress={handleLongPress} 
@@ -140,7 +130,6 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
                     <Text style={styles.userName}>{displayName}</Text> 
                     <Text style={styles.commentText}>{item.text}</Text>
                     
-                    {/* POP-UP HEART */}
                     <Animated.View style={[styles.popHeartContainer, { transform: [{ scale: popHeartScale }], opacity: popHeartOpacity }]}>
                         <Ionicons name="heart" size={40} color="rgba(255,255,255,0.9)" />
                     </Animated.View>
@@ -157,7 +146,6 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
                 </View>
             </Pressable>
 
-            {/* 3. SMALL HEART */}
             <TouchableOpacity onPress={handleLike} style={styles.heartBtn} hitSlop={15}>
                 <Animated.View style={{ transform: [{ scale: heartScale }] }}>
                     <Ionicons 
@@ -167,7 +155,6 @@ const CommentItem = React.memo(({ item, currentUser, postId, onDelete, onProfile
                     />
                 </Animated.View>
             </TouchableOpacity>
-
         </View>
     );
 });
@@ -179,25 +166,89 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const [loading, setLoading] = useState(true);
     const flatListRef = useRef();
 
+    // Helper to map DB row to UI object
+    const normalizeComment = (row) => ({
+        id: row.id,
+        text: row.content,
+        createdAt: row.created_at,
+        userId: row.firebase_user_id,
+        userName: row.author_snapshot?.name || 'مستخدم',
+        authorSettings: row.author_snapshot,
+        likesCount: 0 
+    });
+
+    // 🟢 INITIAL LOAD & SUBSCRIPTION
     useEffect(() => {
         if (!post?.id || !visible) return;
-        setLoading(true);
-        // Assuming 'comments' is a subcollection. 
-        const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('createdAt', 'asc'));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Only animate if data length changes significantly to avoid jitter
-            if(data.length !== commentsList.length) {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            }
-            
-            setCommentsList(data);
-            setLoading(false);
-        });
-        return () => unsubscribe();
+        // 1. Initial Fetch
+        fetchComments();
+    
+        // 2. Realtime Subscription
+        // We chain two listeners: one filtered for INSERTs, one unfiltered for DELETEs
+        const channel = supabase.channel(`comments:${post.id}`)
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${post.id}` },
+                (payload) => {
+                    // 🟢 INSERT LOGIC (Filtered by Post ID)
+                    if (payload.new.firebase_user_id === currentUser.uid) return; // Stop Echo
+
+                    const newComment = normalizeComment(payload.new);
+                    setCommentsList((currentComments) => {
+                        if (currentComments.some(c => c.id === newComment.id)) return currentComments;
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        return [...currentComments, newComment];
+                    });
+                    
+                    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'comments' },
+                (payload) => {
+                    // 🟢 DELETE LOGIC (Global Listener -> Local Filter)
+                    // We catch ALL deletes, but only react if the ID exists in our list.
+                    // This bypasses the limitation where DELETE payloads don't include post_id.
+                    const deletedId = payload.old.id;
+                    
+                    setCommentsList((currentComments) => {
+                        const exists = currentComments.some(c => c.id === deletedId);
+                        if (!exists) return currentComments; // Not a comment on this post
+
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        return currentComments.filter(c => c.id !== deletedId);
+                    });
+                }
+            )
+            .subscribe();
+    
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [post?.id, visible]);
+
+    const fetchComments = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .select('*')
+                .eq('post_id', post.id)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            const normalized = data.map(normalizeComment);
+            setCommentsList(normalized);
+            
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSend = async (textToSend = null) => {
         const finalComment = textToSend || comment;
@@ -206,29 +257,87 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         const tempText = finalComment.trim();
         setComment(''); 
         
-        // Optional: Keep keyboard open for faster chatting, 
-        // uncomment next line if you want to close it.
-        // Keyboard.dismiss(); 
+        const authorSnapshot = {
+            name: currentUser.settings?.name || currentUser.name || 'مستخدم',
+            skinType: currentUser.settings?.skinType || null,
+            scalpType: currentUser.settings?.scalpType || null
+        };
+
+        const tempId = Math.random().toString(); 
+
+        // 🟢 Optimistic Update
+        const optimisticComment = {
+            id: tempId,
+            text: tempText,
+            createdAt: new Date().toISOString(),
+            userId: currentUser.uid,
+            userName: authorSnapshot.name,
+            authorSettings: authorSnapshot,
+            likesCount: 0
+        };
+
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setCommentsList(prev => [...prev, optimisticComment]);
+        
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
         try {
-            await addComment(post.id, tempText, currentUser);
+            // Send to Supabase
+            const { data, error } = await supabase
+                .from('comments')
+                .insert([{
+                    post_id: post.id,
+                    firebase_user_id: currentUser.uid,
+                    content: tempText,
+                    author_snapshot: authorSnapshot
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            await supabase.rpc('increment_comments_count', { row_id: post.id });
+
+            // Swap Temp ID -> Real ID silently (No animation needed for swap)
+            setCommentsList(prev => prev.map(c => c.id === tempId ? normalizeComment(data) : c));
+            
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            // Scroll to end happens via onContentSizeChange usually, but we force it here too
-            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
         } catch (error) { 
             AlertService.error("خطأ", "لم يتم إرسال التعليق.");
-            console.error(error);
+            // Revert
+            setCommentsList(prev => prev.filter(c => c.id !== tempId)); 
+            setComment(tempText); 
         }
     };
 
     const handleDelete = async (commentId) => {
+        // 🟢 Optimistic Delete
+        const prevList = [...commentsList];
+        
+        // Remove locally first
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setCommentsList(prev => prev.filter(c => c.id !== commentId));
+
         try {
-            await deleteComment(post.id, commentId);
+            const { error } = await supabase
+                .from('comments')
+                .delete()
+                .eq('id', commentId);
+
+            if (error) throw error;
+
+            await supabase.rpc('decrement_comments_count', { row_id: post.id });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (error) { console.error(error); }
+
+        } catch (error) { 
+            console.error("Delete Error:", error); 
+            AlertService.error("خطأ", "تعذر حذف التعليق");
+            // Revert if API fails
+            setCommentsList(prevList); 
+        }
     };
     
-    // Quick Reply Chip Component
     const QuickReplyChip = ({ text }) => (
         <TouchableOpacity 
             style={styles.quickReplyChip} 
@@ -249,7 +358,6 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         >
             <View style={styles.modalContainer}>
                 
-                {/* Header - Outside KAV so it stays fixed at top */}
                 <View style={styles.modalHeader}>
                     <View style={styles.handleBar} />
                     <View style={styles.headerRow}>
@@ -265,12 +373,9 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     </View>
                 </View>
 
-                {/* KEYBOARD FIX: KAV wraps BOTH List and Input */}
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
                     style={{ flex: 1 }}
-                    // Offset depends on your specific header height, usually 0 inside pageSheet works
-                    // or small amount to account for safe area
                     keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 >
                     <View style={{flex: 1}}>
@@ -286,15 +391,11 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                                     <CommentItem 
                                         item={item} 
                                         currentUser={currentUser} 
-                                        postId={post.id} 
                                         onDelete={handleDelete}
                                         onProfilePress={onProfilePress} 
                                     />
                                 )}
-                                // Allow interacting with list without dismissing keyboard immediately
                                 keyboardShouldPersistTaps="handled" 
-                                onContentSizeChange={() => flatListRef.current?.scrollToEnd({animated: true})}
-                                onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
                                 ListEmptyComponent={
                                     <View style={styles.emptyState}>
                                         <View style={styles.emptyIconBox}>
@@ -308,10 +409,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         )}
                     </View>
 
-                    {/* Input Area + Quick Replies */}
                     <View style={styles.inputWrapper}>
-                        
-                        {/* Quick Replies Horizontal Scroll */}
                         <View style={{height: 40, marginBottom: 8}}>
                              <FlatList 
                                 horizontal 
@@ -324,7 +422,6 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                              />
                         </View>
 
-                        {/* Text Input Container */}
                         <View style={styles.inputContainer}>
                             <TouchableOpacity 
                                 onPress={() => handleSend()} 
@@ -407,7 +504,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 20,
         paddingBottom: 20, 
-        flexGrow: 1, // Ensures empty state centers correctly
+        flexGrow: 1, 
     },
     commentRow: {
         flexDirection: 'row-reverse',
@@ -485,7 +582,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.card,
         paddingHorizontal: 15,
         paddingVertical: 12,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 15, // Extra padding for iPhone home bar
+        paddingBottom: Platform.OS === 'ios' ? 40 : 15, 
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.05)',
     },

@@ -133,6 +133,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
     useEffect(() => { 
         if(visible) {
+            console.log(`[CreatePostModal] Opened for Type: ${defaultType}`);
             setType(defaultType || 'review');
             // Reset form
             setContent(''); setTitle(''); setRating(0); setSelectedProduct(null); 
@@ -257,7 +258,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                     score: product.analysisData?.oilGuardScore || 0,
                     type: product.analysisData?.product_type || 'other',
                     
-                    // 🟢 ADD THESE TWO LINES:
+                    // 🟢 ADD THESE TWO LINES (IMPORTANT FOR RE-EVALUATION):
                     ingredients: product.analysisData?.detected_ingredients || [], 
                     marketingClaims: product.marketingClaims || [] 
                 };
@@ -335,6 +336,8 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 am: resolveRoutineData(userRoutines?.am),
                 pm: resolveRoutineData(userRoutines?.pm)
             };
+            // 🔍 DEBUG
+            console.log(`[CreatePostModal] Resolved Routine Snapshot (AM Steps): ${routineSnapshot.am.length}`);
         }
 
         const payload = {
@@ -345,7 +348,9 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 id: selectedProduct.id, 
                 name: selectedProduct.productName, 
                 score: selectedProduct.analysisData?.oilGuardScore || 0, 
-                imageUrl: selectedProduct.productImage 
+                imageUrl: selectedProduct.productImage,
+                analysisData: selectedProduct.analysisData, // Passed for ingredients extraction in service
+                marketingClaims: selectedProduct.marketingClaims
             } : null,
             journeyProducts: type === 'journey' ? journeyProducts : null,
             
@@ -359,6 +364,11 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             routineSnapshot
         };
         
+        // 🔍 DEBUG
+        console.log(`[CreatePostModal] Submitting Payload Type: ${payload.type}`);
+        if(payload.type === 'review') console.log(`   > Product: ${payload.taggedProduct?.name}`);
+        if(payload.type === 'journey') console.log(`   > Journey Products: ${payload.journeyProducts?.length}`);
+
         await onSubmit(payload);
         setLoading(false);
         onClose();

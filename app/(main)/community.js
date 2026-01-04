@@ -1,34 +1,24 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  View, StyleSheet, ScrollView, FlatList, TouchableOpacity, Text, 
-  ActivityIndicator, BackHandler, LayoutAnimation, Platform, UIManager, StatusBar, AppState, Animated
+  View, StyleSheet, ScrollView, TouchableOpacity, Text, 
+  ActivityIndicator, BackHandler, LayoutAnimation, Platform, UIManager, StatusBar, Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5, Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// --- IMPORTS: CONSTANTS & CONFIG ---
+// --- IMPORTS ---
 import { COLORS } from '../../src/constants/theme';
 import { CATEGORIES } from '../../src/constants/categories';
 import { useAppContext } from '../../src/context/AppContext';
-import { db } from '../../src/config/firebase';
-import { 
-  collection, query, orderBy, where, getDocs, getCountFromServer, Timestamp, limit 
-} from 'firebase/firestore'; 
+import { supabase } from '../../src/config/supabase'; 
 
-// --- IMPORTS: SERVICES ---
-import { 
-  toggleLikePost, 
-  deletePost, 
-  createPost, 
-  saveProductToShelf 
-} from '../../src/services/communityService';
+import { createPost, saveProductToShelf, deletePost, toggleLikePost } from '../../src/services/communityService';
 import { AlertService } from '../../src/services/alertService';
 import { setPostsCache, getPostsCache } from '../../src/services/cachingService';
 
-// --- IMPORTS: COMPONENTS ---
 import PostCard from '../../src/components/community/PostCard';
 import CreatePostModal from '../../src/components/community/CreatePostModal';
 import CommentModal from '../../src/components/community/CommentModal';
@@ -40,28 +30,17 @@ import CommunityRefreshHandler from '../../src/components/community/CommunityRef
 import SortTabs from '../../src/components/community/SortTabs'; 
 import CommunityIntro from '../../src/components/community/CommunityIntro';
 
-// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     if (!global?.nativeFabricUIManager) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
 }
 
-// 🔴 DEBUG FLAG: Set to 'false' for production behavior
-const ALWAYS_SHOW_INTRO_DEBUG = false; 
-
-// --- SUB-COMPONENT: NEW POSTS TOAST ---
 const NewPostsToast = ({ visible, onPress }) => {
     const slideAnim = useRef(new Animated.Value(-100)).current;
-
     useEffect(() => {
-        Animated.spring(slideAnim, {
-            toValue: visible ? 20 : -100,
-            friction: 7,
-            useNativeDriver: true,
-        }).start();
+        Animated.spring(slideAnim, { toValue: visible ? 20 : -100, friction: 7, useNativeDriver: true }).start();
     }, [visible]);
-
     return (
         <Animated.View style={[styles.toastContainer, { transform: [{ translateY: slideAnim }] }]}>
             <TouchableOpacity onPress={onPress} style={styles.toastButton}>
@@ -72,48 +51,23 @@ const NewPostsToast = ({ visible, onPress }) => {
     );
 };
 
-// --- HELPER: DATA NORMALIZER ---
-// Prevents crashes by ensuring createdAt is always a string before rendering
-const normalizePosts = (posts) => {
-    return posts.map(post => {
-        const newPost = { ...post };
-        if (newPost.createdAt && typeof newPost.createdAt.toDate === 'function') {
-            newPost.createdAt = newPost.createdAt.toDate().toISOString();
-        } else if (typeof newPost.createdAt === 'string') {
-            const d = new Date(newPost.createdAt);
-            if (isNaN(d.getTime())) {
-                newPost.createdAt = new Date().toISOString();
-            }
-        } else if (!newPost.createdAt) {
-            newPost.createdAt = new Date().toISOString();
-        }
-        return newPost;
-    });
-};
-
 export default function CommunityScreen() {
     const { user, userProfile, savedProducts } = useAppContext();
     const insets = useSafeAreaInsets();
     
-    // --- STATE MANAGEMENT ---
+    // --- STATE ---
     const [viewMode, setViewMode] = useState('menu');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [allPosts, setAllPosts] = useState([]); 
     const [loading, setLoading] = useState(true); 
     const [refreshing, setRefreshing] = useState(false);
-    const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'popular'
+    const [sortBy, setSortBy] = useState('recent');
     
-    // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(''); // Delayed value for filtering
-
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [isBioFilterActive, setIsBioFilterActive] = useState(false);
     
-    // New Post Notification
     const [newPostsCount, setNewPostsCount] = useState(0);
-    const newPostsAvailable = newPostsCount > 0;
-    
-    // Intro State
     const [showIntro, setShowIntro] = useState(false);
 
     const flatListRef = useRef(null);
@@ -123,143 +77,170 @@ export default function CommunityScreen() {
     const [viewingProduct, setViewingProduct] = useState(null);
     const [commentingPost, setCommentingPost] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
-    
-    // 🟢 OPTIMIZATION: State now holds Object {id, data} instead of just ID string
     const [viewingUserProfile, setViewingUserProfile] = useState(null);
 
-    // Effect to handle debounced search query
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearchQuery(searchQuery);
-        }, 400); // Wait 400ms after typing stops
-
+        const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 400);
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const lastCheckTime = useRef(0);
-    // --- DATA FETCHING (SMART HYBRID) ---
+    // --- 🟢 DATA LOADING & REALTIME SUBSCRIPTION ---
     useEffect(() => {
-        const checkForNewPosts = async () => {
-            // --- THROTTLE START ---
-            // Only check every 5 minutes (300,000ms) to save reads when switching apps
-            const now = Date.now();
-            if (now - lastCheckTime.current < 300000) return;
-            lastCheckTime.current = now; 
-            // --- THROTTLE END ---
-        
-            const { lastFetchTimestamp } = await getPostsCache();
-            if (!lastFetchTimestamp) return;
-        
-            // 🟢 THIS WAS MISSING OR DELETED
-            const lastDate = new Date(lastFetchTimestamp); 
-            
-            if (isNaN(lastDate.getTime())) return;
-        
-            // Safe Buffer: Add 1 second to avoid counting the same post
-            const safeDate = new Date(lastDate.getTime() + 1000);
-        
-            const q = query(
-                collection(db, 'posts'),
-                where('createdAt', '>', Timestamp.fromDate(safeDate))
-            );
-            
-            try {
-                // Cheap count query
-                const snapshot = await getCountFromServer(q);
-                setNewPostsCount(snapshot.data().count);
-            } catch (error) {
-                console.log("Check posts error:", error);
-            }
-        };
+        // Only run this logic if User is logged in
+        if (!user) return;
 
         const loadInitialFeed = async () => {
-            // 1. Try Cache First
             const { posts: cachedPosts } = await getPostsCache();
-            
             if (cachedPosts && cachedPosts.length > 0) {
                 setAllPosts(cachedPosts);
                 setLoading(false);
-                // Check for updates in background
-                checkForNewPosts();
+                // Background fetch to sync
+                loadNewPosts(false, 'recent', true);
             } else {
-                // 2. Fetch Fresh if Cache Empty
                 await loadNewPosts(true); 
             }
         };
 
-        const checkIntroVisibility = async () => {
-            if (ALWAYS_SHOW_INTRO_DEBUG) {
-                setShowIntro(true);
-                return;
-            }
+        const checkIntro = async () => {
             try {
                 const hasSeen = await AsyncStorage.getItem('has_seen_community_intro');
-                if (hasSeen !== 'true') {
-                    setShowIntro(true);
-                }
-            } catch (e) { console.log(e); }
+                if (hasSeen !== 'true') setShowIntro(true);
+            } catch (e) {}
         };
 
         loadInitialFeed();
-        checkIntroVisibility();
+        checkIntro();
 
-        const subscription = AppState.addEventListener('change', (nextAppState) => {
-            if (nextAppState === 'active') {
-                checkForNewPosts();
-            }
-        });
+        // 🚀 REALTIME SUBSCRIPTION START
+         console.log("🔌 Subscribing to public:posts");
+        const channel = supabase.channel('public:posts')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'posts' },
+                (payload) => {
+                    // 1. Handle INSERT (New Post)
+                    if (payload.eventType === 'INSERT') {
+                        console.log("🔥 NEW POST DETECTED:", payload.new.id);
+                        
+                        // Strict check: Only show toast if I didn't write it
+                        if (user && payload.new.firebase_user_id !== user.uid) {
+                            console.log("🔔 Incrementing toast count for new post");
+                            setNewPostsCount(prev => prev + 1);
+                        } else {
+                            console.log("🚫 Ignoring my own post for toast");
+                        }
+                    }
 
-        // 🟢 OPTIMIZATION: Removed redundant setInterval polling loop
-        // Rely on AppState change and Manual Refresh instead.
+                    // 2. Handle UPDATE (Likes/Comments Count changing live)
+                    if (payload.eventType === 'UPDATE') {
+                        setAllPosts(currentPosts => 
+                            currentPosts.map(post => {
+                                if (post.id === payload.new.id) {
+                                    return {
+                                        ...post,
+                                        likesCount: payload.new.likes_count,
+                                        commentsCount: payload.new.comments_count
+                                    };
+                                }
+                                return post;
+                            })
+                        );
+                    }
+
+                    // 3. Handle DELETE
+                    if (payload.eventType === 'DELETE') {
+                        setAllPosts(currentPosts => 
+                            currentPosts.filter(post => post.id !== payload.old.id)
+                        );
+                    }
+                }
+            )
+            .subscribe();
 
         return () => {
-            subscription.remove();
+            supabase.removeChannel(channel);
         };
-    }, []);
+        // 🚀 REALTIME SUBSCRIPTION END
 
-    // --- FETCH LOGIC WITH SORTING ---
-    const loadNewPosts = async (isInitialFetch = false, customSortMode = null) => {
+    }, [user]); // 🟢 FIX: Added [user] dependency to prevent null crash and ensure auth context
+
+    // --- MAIN FETCH FUNCTION (SUPABASE) ---
+    const loadNewPosts = async (isInitialFetch = false, customSortMode = null, isBackground = false) => {
+        // 🟢 FIX: Safeguard against null user during initial boot
+        if (!user) return;
+
         const mode = customSortMode || sortBy;
-        
-        setNewPostsCount(0);
-        if (!isInitialFetch) {
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }
-        
+        if (!isInitialFetch && !isBackground) setLoading(true);
+    
         try {
-            let q;
-            // Sorting Logic
-            if (mode === 'popular') {
-                q = query(
-                    collection(db, 'posts'),
-                    orderBy('likesCount', 'desc'),
-                    orderBy('createdAt', 'desc'),
-                    limit(20) // 🟢 OPTIMIZATION: Reduced limit from 50 to 20
-                );
-            } else {
-                // Default: Recent
-                q = query(
-                    collection(db, 'posts'), 
-                    orderBy('createdAt', 'desc'), 
-                    limit(20) // 🟢 OPTIMIZATION: Reduced limit from 50 to 20
-                );
-            }
-
-            const snapshot = await getDocs(q);
-            const freshPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const normalized = normalizePosts(freshPosts);
-
-            setAllPosts(normalized);
+            // 1. Fetch Posts
+            let query = supabase.from('posts').select('*');
             
-            // Only cache "Recent" feed to maintain chronological consistency for next app open
-            if (mode === 'recent') {
-                await setPostsCache(normalized); 
+            if (mode === 'popular') {
+                query = query.order('likes_count', { ascending: false }).order('created_at', { ascending: false });
+            } else {
+                query = query.order('created_at', { ascending: false });
             }
+    
+            const { data: postsData, error: postsError } = await query.limit(20);
+            if (postsError) throw postsError;
+    
+            // 2. Fetch "My Likes"
+            const postIds = postsData.map(p => p.id);
+            const { data: myLikesData } = await supabase
+                .from('likes')
+                .select('post_id')
+                .eq('firebase_user_id', user.uid)
+                .in('post_id', postIds);
+    
+            const myLikedPostIds = new Set(myLikesData?.map(l => l.post_id));
+    
+            // 3. Normalize & Merge
+            const normalizedPosts = postsData.map(post => {
+                const safeProduct = post.product_snapshot; 
+                
+                const isLikedByMe = myLikedPostIds.has(post.id);
+    
+                return {
+                    id: post.id,
+                    userId: post.firebase_user_id,
+                    userName: post.author_snapshot?.name || 'مستخدم',
+                    authorSettings: post.author_snapshot || {},
+    
+                    type: post.type,
+                    title: post.title || null,
+                    content: post.content,
+                    imageUrl: post.image_url || null,
+                    createdAt: post.created_at,
+                    duration: post.duration || null,
+    
+                    taggedProduct: !Array.isArray(safeProduct) ? safeProduct : null,
+                    journeyProducts: Array.isArray(safeProduct) ? safeProduct : [],
+                    routineSnapshot: post.routine_snapshot || null,
+                    milestones: post.milestones_snapshot || [],
+    
+                    likesCount: post.likes_count || 0,
+                    commentsCount: post.comments_count || 0,
+    
+                    likes: isLikedByMe ? [user.uid] : [] 
+                };
+            });
+    
+            setAllPosts(normalizedPosts);
+            setNewPostsCount(0);
+            
+            if (mode === 'recent') {
+                await setPostsCache(normalizedPosts);
+            }
+    
         } catch (error) {
-            console.error("Fetch Error:", error);
-            AlertService.error("خطأ", "تعذر تحميل المنشورات.");
+            console.error("Feed Error:", error);
+            if (!isBackground) AlertService.error("خطأ", "تعذر تحميل المنشورات.");
         } finally {
-            if (isInitialFetch) setLoading(false);
+            if (!isBackground) {
+                setLoading(false);
+                setRefreshing(false);
+            }
         }
     };
 
@@ -267,7 +248,6 @@ export default function CommunityScreen() {
         if (newMode === sortBy) return;
         Haptics.selectionAsync();
         setSortBy(newMode);
-        setLoading(true);
         loadNewPosts(true, newMode);
     };
 
@@ -300,7 +280,6 @@ export default function CommunityScreen() {
     const filteredPosts = useMemo(() => {
         let result = selectedCategory ? allPosts.filter(p => p.type === selectedCategory.id) : [];
         
-        // 1. Bio Filter
         if (isBioFilterActive && userProfile?.settings) {
             result = result.filter(post => {
                 const author = post.authorSettings || {};
@@ -309,7 +288,6 @@ export default function CommunityScreen() {
             });
         }
         
-        // 2. Search Filter
         if (debouncedSearchQuery.trim()) {
             const q = debouncedSearchQuery.toLowerCase();
             result = result.filter(post => 
@@ -322,7 +300,7 @@ export default function CommunityScreen() {
         return result;
     }, [allPosts, selectedCategory, debouncedSearchQuery, isBioFilterActive, userProfile]);
     
-    // --- ACTION HANDLERS ---
+    // --- ACTIONS ---
     const handleCreateWrapper = async (payload) => {
         try {
             await createPost(
@@ -332,30 +310,27 @@ export default function CommunityScreen() {
                 userProfile?.settings || {} 
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            await loadNewPosts(true); 
-        } catch (e) { /* Service handles error */ }
+            loadNewPosts(true); 
+        } catch (e) { console.error(e); }
     };
 
     const handleInteract = async (postId) => {
         const post = allPosts.find(p => p.id === postId);
         if (!post) return;
         
-        const isLiked = post.likes?.includes(user.uid);
+        const isLiked = post.likes.includes(user.uid);
         
         // Optimistic UI Update
-        const updatedPosts = allPosts.map(p => {
+        setAllPosts(prev => prev.map(p => {
             if (p.id === postId) {
-                const currentLikes = p.likes || [];
-                const likesCount = p.likesCount || 0;
                 return {
                     ...p,
-                    likes: isLiked ? currentLikes.filter(uid => uid !== user.uid) : [...currentLikes, user.uid],
-                    likesCount: isLiked ? Math.max(0, likesCount - 1) : likesCount + 1,
+                    likes: isLiked ? [] : [user.uid],
+                    likesCount: isLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
                 };
             }
             return p;
-        });
-        setAllPosts(updatedPosts);
+        }));
         
         await toggleLikePost(postId, user.uid, isLiked);
     };
@@ -374,7 +349,7 @@ export default function CommunityScreen() {
 
     const handleSaveWrapper = async (product) => {
         const productExists = savedProducts.some(
-            p => p.productName.toLowerCase().trim() === product.name.toLowerCase().trim()
+            p => p.productName.toLowerCase().trim() === (product.name || product.productName).toLowerCase().trim()
         );
 
         if (productExists) {
@@ -387,60 +362,18 @@ export default function CommunityScreen() {
             await saveProductToShelf(user.uid, product);
             setViewingProduct(null);
             AlertService.success("تم الحفظ", "تمت إضافة المنتج إلى رفّك بنجاح.");
-        } catch(e) { /* Service handles error */ }
+        } catch(e) { console.error(e); }
     };
 
-    // --- SMART REFRESH ---
     const handleRefresh = async () => {
-        // If sorting by popular, just reload the list
         if (sortBy === 'popular') {
             await loadNewPosts(false, 'popular');
             return;
         }
-
-        if (!allPosts || allPosts.length === 0) return await loadNewPosts(true);
-
-        setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-        try {
-            const newestPost = allPosts[0];
-            let newestDate;
-            if (newestPost.createdAt && typeof newestPost.createdAt.toDate === 'function') {
-                newestDate = newestPost.createdAt.toDate();
-            } else {
-                newestDate = new Date(newestPost.createdAt);
-            }
-            if (isNaN(newestDate.getTime())) newestDate = new Date();
-
-            const q = query(
-                collection(db, 'posts'),
-                where('createdAt', '>', Timestamp.fromDate(newestDate)),
-                orderBy('createdAt', 'desc'),
-                limit(20)
-            );
-
-            const snapshot = await getDocs(q);
-        // If snapshot.size === 20, it implies there are MORE posts we didn't fetch.
-        // You might want to show a "Load more" indicator or just accept the gap.
-        
-        if (!snapshot.empty) {
-            const freshItems = normalizePosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            const merged = [...freshItems, ...allPosts].slice(0, 100); // Keep memory sane
-            setAllPosts(merged);
-            await setPostsCache(merged);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-        setNewPostsCount(0);
-    } catch (error) { 
-            console.error("Refresh Error", error); 
-        } finally { 
-            setRefreshing(false); 
-        }
+        await loadNewPosts(false, 'recent');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
-
-    // --- RENDER LOGIC ---
     if (viewMode === 'menu') {
         return (
             <View style={styles.container}>
@@ -473,7 +406,6 @@ export default function CommunityScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
             
-            {/* Header */}
             <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 10}}>
                     <TouchableOpacity onPress={goBackToMenu} style={styles.backBtn}>
@@ -489,7 +421,6 @@ export default function CommunityScreen() {
                 </View>
             </View>
 
-            {/* Filter & Sort Wrapper */}
             <View style={{ zIndex: 20, elevation: 20, backgroundColor: COLORS.background }}>
                 <SearchFilterBar 
                     searchQuery={searchQuery}
@@ -498,14 +429,9 @@ export default function CommunityScreen() {
                     onToggleBioFilter={() => { Haptics.selectionAsync(); LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsBioFilterActive(!isBioFilterActive); }}
                     userSkinType={userProfile?.settings?.skinType}
                 />
-                
-                <SortTabs 
-                    currentSort={sortBy} 
-                    onSelect={handleSortChange} 
-                />
+                <SortTabs currentSort={sortBy} onSelect={handleSortChange} />
             </View>
 
-            {/* Feed Content */}
             {loading && allPosts.length === 0 ? (
                 <ActivityIndicator size="large" color={COLORS.accentGreen} style={{marginTop: 50}} />
             ) : (
@@ -529,7 +455,6 @@ export default function CommunityScreen() {
                             onViewProduct={setViewingProduct}
                             onOpenComments={setCommentingPost}
                             onImagePress={setViewingImage}
-                            // 🟢 OPTIMIZATION: Pass ID and Data object
                             onProfilePress={(userId, authorSettings) => setViewingUserProfile({ id: userId, data: authorSettings })}
                         />
                     )}
@@ -558,7 +483,6 @@ export default function CommunityScreen() {
             <CommentModal visible={!!commentingPost} onClose={() => setCommentingPost(null)} post={commentingPost} currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} onProfilePress={(userId) => setViewingUserProfile({id: userId})} />
             <FullImageViewer visible={!!viewingImage} imageUrl={viewingImage} onClose={() => setViewingImage(null)} />
             
-            {/* 🟢 OPTIMIZATION: Pass extracted ID and initialData to Modal */}
             <UserProfileModal 
                 visible={!!viewingUserProfile} 
                 onClose={() => setViewingUserProfile(null)} 

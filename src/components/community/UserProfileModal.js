@@ -21,13 +21,11 @@ import {
 } from '../../data/allergiesandconditions';
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح' },
-    { id: 'acne', label: 'علاج حب الشباب' },
+    { id: 'brightening', label: 'تفتيح البشرة' },
+    { id: 'acne', label: 'مكافحة حب الشباب' },
     { id: 'anti_aging', label: 'مكافحة الشيخوخة' },
-    { id: 'hydration', label: 'ترطيب' },
-    { id: 'hair_growth', label: 'تطويل الشعر' },
-    { id: 'pores', label: 'علاج المسام' },
-    { id: 'oil_control', label: 'التحكم بالدهون' }
+    { id: 'hydration', label: 'ترطيب البشرة' },
+    { id: 'hair_growth', label: 'تكثيف الشعر' }
 ];
 
 // 🟢 CONFIG: Cache Duration (24 Hours in Milliseconds)

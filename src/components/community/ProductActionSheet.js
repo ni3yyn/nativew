@@ -20,6 +20,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const [personalScore, setPersonalScore] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [activeTab, setActiveTab] = useState('original');
+    const [isDataMissing, setIsDataMissing] = useState(false);
     
     // Edit Mode State
     const [isEditingClaims, setIsEditingClaims] = useState(false);
@@ -30,24 +31,57 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
             setPersonalScore(null);
             setActiveTab('original');
             setIsEditingClaims(false);
-            setCurrentClaims(product.marketingClaims || []);
-            calculatePersonalScore(product.marketingClaims || []);
+            
+            // 1. Resolve Claims
+            const initialClaims = product.marketingClaims || product.claims || [];
+            setCurrentClaims(initialClaims);
+            
+            // 2. Resolve Ingredients (Handle Flat vs Nested structure)
+            const ingredients = product.analysisData?.detected_ingredients || product.ingredients || [];
+            
+            // 3. Check Data Availability
+            if (!ingredients || ingredients.length === 0) {
+                setIsDataMissing(true); 
+            } else {
+                setIsDataMissing(false);
+                if (userProfile?.settings) {
+                    calculatePersonalScore(initialClaims);
+                }
+            }
         }
-    }, [visible, product]);
+    }, [visible, product, userProfile]);
 
     const calculatePersonalScore = async (claimsToUse) => {
         setIsCalculating(true);
-        const tempProduct = { ...product, marketingClaims: claimsToUse };
-        const newAnalysis = await reevaluateProductForUser(tempProduct, userProfile);
-        
-        if (newAnalysis) {
-            setPersonalScore(newAnalysis);
-            // Auto-switch only if there's a significant difference or danger
-            if (newAnalysis.personalMatch?.status === 'danger' || activeTab === 'original') {
-                setTimeout(() => setActiveTab('personal'), 500); 
+        try {
+            // Normalize product for the service
+            // We ensure 'detected_ingredients' is present, even if it's just an array of strings
+            const ingredientsRaw = product.analysisData?.detected_ingredients || product.ingredients || [];
+            
+            const tempProduct = { 
+                ...product, 
+                marketingClaims: claimsToUse,
+                analysisData: {
+                    ...(product.analysisData || {}),
+                    detected_ingredients: ingredientsRaw,
+                    product_type: product.productType || product.analysisData?.product_type || 'other'
+                }
+            };
+            
+            const newAnalysis = await reevaluateProductForUser(tempProduct, userProfile);
+            
+            if (newAnalysis) {
+                setPersonalScore(newAnalysis);
+                // Auto-switch to personal tab if result is dangerous or user is viewing original
+                if (newAnalysis.personalMatch?.status === 'danger' || activeTab === 'original') {
+                    setTimeout(() => setActiveTab('personal'), 500); 
+                }
             }
+        } catch (e) {
+            console.log("Re-eval error:", e);
+        } finally {
+            setIsCalculating(false);
         }
-        setIsCalculating(false);
     };
 
     const toggleClaim = (claim) => {
@@ -66,16 +100,25 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     if (!product || !visible) return null;
 
     // --- DATA RESOLUTION ---
-    const displayData = activeTab === 'personal' && personalScore ? personalScore : product.analysisData;
-    const score = displayData?.oilGuardScore || 0;
-    const displayImage = product.productImage || product.imageUrl;
+    const displayName = product.name || product.productName || 'منتج';
+    const displayImage = product.image || product.imageUrl || product.productImage;
     const productType = product.productType || product.analysisData?.product_type || 'other';
     const possibleClaims = getClaimsByProductType(productType);
 
-    // --- SMART VERDICT LOGIC ---
-    // Instead of just Score, we look at the Match Status (Danger/Warning/Success)
-    const matchStatus = displayData?.personalMatch?.status || 'neutral'; // 'danger', 'warning', 'success', 'neutral'
+    // Fallback Analysis Object
+    const originalAnalysis = product.analysisData || {
+        oilGuardScore: product.score || 0,
+        personalMatch: { status: 'neutral', reasons: [] },
+        user_specific_alerts: []
+    };
+
+    // Determine what to show
+    const displayData = (activeTab === 'personal' && personalScore) ? personalScore : originalAnalysis;
     
+    const score = displayData.oilGuardScore || 0;
+    const matchStatus = displayData.personalMatch?.status || 'neutral'; 
+
+    // --- SMART VERDICT LOGIC ---
     let verdictColor = COLORS.accentGreen;
     let verdictText = "آمن ومناسب";
     let verdictIcon = "check-circle";
@@ -89,29 +132,50 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
         verdictText = "استخدميه بحذر ⚠️";
         verdictIcon = "exclamation-triangle";
     } else if (score < 50) {
-        // Fallback to score if no specific match status
         verdictColor = COLORS.danger;
         verdictText = "جودة منخفضة";
         verdictIcon = "thumbs-down";
     }
 
-    // --- ALERT RENDERER ---
     const renderAlerts = () => {
-        // Combine "reasons" from re-evaluation OR "user_specific_alerts" from original
-        const rawAlerts = displayData?.personalMatch?.reasons || displayData?.user_specific_alerts || [];
+        const rawAlerts = displayData.personalMatch?.reasons || displayData.user_specific_alerts || [];
         
-        if (rawAlerts.length === 0) {
+        // Case: User clicked Personal Tab but data is missing
+        if (isDataMissing && activeTab === 'personal') {
             return (
-                <View style={[styles.alertBox, { borderColor: COLORS.accentGreen }]}>
-                    <Text style={[styles.alertText, { color: COLORS.accentGreen }]}>✅ لا توجد تعارضات مع ملفك الشخصي.</Text>
+                <View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                    <FontAwesome5 name="ban" size={14} color={COLORS.textDim} style={{marginTop: 3}} />
+                    <Text style={[styles.alertText, { color: COLORS.textDim }]}>
+                        بيانات المكونات غير متوفرة في هذا المنشور لإجراء تحليل شخصي دقيق.
+                    </Text>
                 </View>
             );
         }
 
+        // Case: No alerts found (Good news)
+        if (rawAlerts.length === 0) {
+            if (!isDataMissing) {
+                return (
+                    <View style={[styles.alertBox, { borderColor: COLORS.accentGreen }]}>
+                        <Text style={[styles.alertText, { color: COLORS.accentGreen }]}>✅ لا توجد تعارضات مع ملفك الشخصي.</Text>
+                    </View>
+                );
+            } else {
+                // Snapshot mode without ingredients
+                return (
+                    <View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                        <Text style={[styles.alertText, { color: COLORS.textDim, textAlign: 'center' }]}>
+                            تفاصيل التحليل الكاملة غير متوفرة في العرض السريع.
+                        </Text>
+                    </View>
+                );
+            }
+        }
+
+        // Render Alerts
         return rawAlerts.map((alert, index) => {
-            // Normalize data structure (handle both string array and object array)
             const text = typeof alert === 'string' ? alert : alert.text;
-            const type = typeof alert === 'object' ? alert.type : 'info'; // 'risk', 'good', 'caution'
+            const type = typeof alert === 'object' ? alert.type : 'info';
             
             let color = COLORS.textSecondary;
             let icon = 'info-circle';
@@ -146,11 +210,11 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                         <View style={styles.imageHeader}>
                             <Image source={{ uri: displayImage }} style={styles.sheetMainImage} resizeMode="cover" />
                             {/* Comparison Badge */}
-                            {personalScore && activeTab === 'original' && (
+                            {personalScore && activeTab === 'original' && !isDataMissing && (
                                 <View style={styles.comparisonBadge}>
                                     <Text style={styles.compText}>
-                                        {personalScore.oilGuardScore > product.analysisData.oilGuardScore ? 'نتيجة أفضل لكِ 🔼' : 
-                                         personalScore.oilGuardScore < product.analysisData.oilGuardScore ? 'انتبهي، النتيجة أقل لكِ 🔽' : 'مطابق للنتيجة الأصلية'}
+                                        {personalScore.oilGuardScore > (originalAnalysis.oilGuardScore || 0) ? 'نتيجة أفضل لكِ 🔼' : 
+                                         personalScore.oilGuardScore < (originalAnalysis.oilGuardScore || 0) ? 'انتبهي، النتيجة أقل لكِ 🔽' : 'مطابق للنتيجة الأصلية'}
                                     </Text>
                                 </View>
                             )}
@@ -164,18 +228,27 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                             <TouchableOpacity style={[styles.tab, activeTab === 'original' && styles.activeTab]} onPress={() => setActiveTab('original')}>
                                 <Text style={[styles.tabText, activeTab === 'original' && {color: COLORS.textPrimary}]}>التقييم الأصلي</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.tab, activeTab === 'personal' && styles.activeTab]} onPress={() => setActiveTab('personal')}>
-                                {isCalculating ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Text style={[styles.tabText, activeTab === 'personal' && {color: COLORS.accentGreen}]}>تقييمي الشخصي ✨</Text>}
+                            
+                            <TouchableOpacity 
+                                style={[styles.tab, activeTab === 'personal' && styles.activeTab, isDataMissing && {opacity: 0.5}]} 
+                                onPress={() => !isDataMissing && setActiveTab('personal')}
+                                disabled={isDataMissing}
+                            >
+                                {isCalculating ? (
+                                    <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                                ) : (
+                                    <Text style={[styles.tabText, activeTab === 'personal' && {color: COLORS.accentGreen}]}>
+                                        {isDataMissing ? "التحليل الشخصي (غير متاح)" : "تقييمي الشخصي ✨"}
+                                    </Text>
+                                )}
                             </TouchableOpacity>
                         </View>
 
-                        {/* Edit Claims Toggle */}
                         <TouchableOpacity style={styles.editClaimsBtn} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsEditingClaims(!isEditingClaims); }}>
                             <Text style={styles.editClaimsText}>{isEditingClaims ? "إغلاق التعديل" : "تعديل بيانات المنتج (لتحسين الدقة)"}</Text>
                             <Feather name={isEditingClaims ? "chevron-up" : "sliders"} size={14} color={COLORS.textSecondary} />
                         </TouchableOpacity>
 
-                        {/* Claims Editor */}
                         {isEditingClaims ? (
                             <View style={styles.claimsEditor}>
                                 <Text style={styles.claimsHint}>حددي الخصائص المكتوبة على العبوة:</Text>
@@ -188,17 +261,18 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                                         ))}
                                     </View>
                                 </ScrollView>
-                                <TouchableOpacity style={styles.applyBtn} onPress={applyNewClaims}><Text style={styles.applyBtnText}>إعادة الحساب</Text></TouchableOpacity>
+                                <TouchableOpacity style={[styles.applyBtn, isDataMissing && {backgroundColor: COLORS.border}]} onPress={!isDataMissing ? applyNewClaims : null} disabled={isDataMissing}>
+                                    <Text style={styles.applyBtnText}>{isDataMissing ? "لا توجد مكونات للتحليل" : "إعادة الحساب"}</Text>
+                                </TouchableOpacity>
                             </View>
                         ) : (
-                            // Main Results View
                             <ScrollView style={{maxHeight: 250}} showsVerticalScrollIndicator={false}>
                                 <View style={styles.sheetHeader}>
                                     <View style={[styles.sheetIconBox, {backgroundColor: verdictColor+'20'}]}>
                                         <FontAwesome5 name={verdictIcon} size={24} color={verdictColor} />
                                     </View>
                                     <View style={{flex: 1, marginRight: 15}}>
-                                        <Text style={styles.sheetTitle} numberOfLines={2}>{product.productName || product.name}</Text>
+                                        <Text style={styles.sheetTitle} numberOfLines={2}>{displayName}</Text>
                                         <Text style={[styles.sheetVerdict, {color: verdictColor}]}>{verdictText}</Text>
                                     </View>
                                     <View style={[styles.bigScoreCircle, {borderColor: verdictColor}]}>
@@ -206,7 +280,6 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                                     </View>
                                 </View>
                                 
-                                {/* Detailed Alerts Section */}
                                 <View style={styles.alertsContainer}>
                                     <Text style={styles.sectionHeader}>تفاصيل التحليل:</Text>
                                     {renderAlerts()}
@@ -216,7 +289,22 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
                         <View style={styles.sheetActions}>
                             <TouchableOpacity style={styles.sheetBtnSecondary} onPress={onClose}><Text style={styles.sheetBtnTextSec}>إغلاق</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.sheetBtnPrimary, {backgroundColor: verdictColor}]} onPress={() => onSave({...product, analysisData: displayData, marketingClaims: currentClaims, productImage: displayImage, imageUrl: displayImage })}>
+                            <TouchableOpacity 
+                                style={[styles.sheetBtnPrimary, {backgroundColor: verdictColor}]} 
+                                onPress={() => onSave({
+                                    ...product, 
+                                    productName: displayName,
+                                    name: displayName,
+                                    // Construct a full object for the Shelf to save
+                                    analysisData: {
+                                        ...displayData,
+                                        detected_ingredients: product.analysisData?.detected_ingredients || product.ingredients || []
+                                    },
+                                    marketingClaims: currentClaims, 
+                                    productImage: displayImage, 
+                                    imageUrl: displayImage
+                                })}
+                            >
                                 <Text style={styles.sheetBtnTextPrim}>حفظ في رفي</Text>
                                 <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{marginLeft: 8}} />
                             </TouchableOpacity>
@@ -250,13 +338,11 @@ const styles = StyleSheet.create({
     bigScoreCircle: { width: 50, height: 50, borderRadius: 25, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
     bigScoreText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
 
-    // Alerts
     alertsContainer: { marginBottom: 20 },
     sectionHeader: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12, textAlign: 'right', marginBottom: 10 },
     alertBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
     alertText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 13, textAlign: 'right', lineHeight: 20 },
 
-    // Claims Editor
     editClaimsBtn: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border, marginBottom: 15 },
     editClaimsText: { color: COLORS.textSecondary, fontFamily: 'Tajawal-Regular', fontSize: 12 },
     claimsEditor: { backgroundColor: COLORS.background, padding: 15, borderRadius: 12, marginBottom: 20 },
