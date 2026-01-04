@@ -1518,9 +1518,55 @@ const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }
     );
 };
 
-// --- THE MAIN ANALYSIS HUB COMPONENT ---
-// --- THE MAIN ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismissedInsightIds, handleDismissPraise, locationPermission, onRetry, onShowPermissionAlert, router }) => {
+const WeatherLoadingCard = () => {
+    const opacity = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <StaggeredItem index={0} animated={false}>
+            <View style={[styles.weatherWidgetCard, { borderColor: 'rgba(90, 156, 132, 0.3)' }]}>
+                {/* Icon Placeholder */}
+                <View style={[styles.weatherIconContainer, { backgroundColor: 'rgba(90, 156, 132, 0.1)', borderColor: 'transparent' }]}>
+                    <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                </View>
+
+                {/* Text Placeholders */}
+                <View style={{ flex: 1, paddingRight: 10, gap: 6 }}>
+                    <Animated.View style={{ width: '60%', height: 14, backgroundColor: 'rgba(90, 156, 132, 0.2)', borderRadius: 4, opacity }} />
+                    <Animated.View style={{ width: '40%', height: 10, backgroundColor: 'rgba(90, 156, 132, 0.1)', borderRadius: 4, opacity }} />
+                </View>
+
+                {/* Action Button Placeholder */}
+                <View style={[styles.weatherActionBtn, { backgroundColor: 'rgba(90, 156, 132, 0.1)' }]}>
+                    <View style={{ width: 24, height: 10 }} />
+                </View>
+            </View>
+        </StaggeredItem>
+    );
+};
+
+// --- UPDATED ANALYSIS HUB COMPONENT ---
+const AnalysisSection = ({ 
+    loadingProfile, 
+    loadingWeather,      // <--- New Prop
+    savedProducts = [], 
+    analysisResults, 
+    weatherResults,      // <--- New Prop (Independent Weather Data)
+    weatherErrorType,    // <--- New Prop ('permission' | 'service' | null)
+    dismissedInsightIds, 
+    handleDismissPraise, 
+    onRetryWeather,      // <--- New Callback
+    onShowPermissionAlert, 
+    router 
+}) => {
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
   
@@ -1529,67 +1575,87 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
       setSelectedInsight(insight);
     }, []);
   
-    // 1. EMPTY STATE (Highest Priority)
+    // 1. EMPTY STATE
     if (!savedProducts || savedProducts.length === 0) {
         return <AnalysisEmptyState onPress={() => router.push('/oilguard')} />;
     }
 
-    // 2. Loading State (Only if we have products but no data yet)
-    if (loading || !analysisResults) {
+    // 2. MAIN LOADING STATE (Only blocks if Profile Analysis is loading)
+    // We do NOT block for weather anymore.
+    if (loadingProfile || !analysisResults) {
         return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
     }
     
-    // --- INSIGHTS PROCESSING ---
+    // --- INSIGHTS MERGING LOGIC ---
     
-    // A. Filter out dismissed insights from the raw server result
+    // A. Start with Profile Insights
     let visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
 
-    // Check for BOTH types of weather data to determine if we need to inject error cards
-    const hasServerWeather = visibleInsights.some(i => 
-        i.customData?.type === 'weather_advice' || 
-        i.customData?.type === 'weather_dashboard'
-    );
+    // B. Inject Weather Logic
+    let weatherInsight = null;
 
-    // B. Inject Weather Status Cards (Client-Side Logic)
-    if (locationPermission !== 'granted') {
-        const permissionInsight = {
+    if (loadingWeather) {
+        // Create a temporary placeholder to identify loading state in the render loop
+        weatherInsight = { id: 'weather-loading-placeholder', isPlaceholder: true };
+    } 
+    else if (weatherErrorType === 'permission') {
+        weatherInsight = {
             id: 'weather-permission-denied',
-            title: 'خدمة الطقس متوقفة',
-            short_summary: 'يرجى تفعيل الموقع.',
+            title: 'الموقع غير مفعل',
+            short_summary: 'يرجى تفعيل الموقع لبيانات الطقس.',
             details: 'نحتاج لمعرفة موقعك لجلب بيانات الحرارة وUV.',
             severity: 'warning',
             customData: { type: 'weather_advice', isPermissionError: true }
         };
-        visibleInsights = [permissionInsight, ...visibleInsights];
-    } 
-    else if (!hasServerWeather) {
-        const unavailableInsight = {
+    }
+    else if (weatherErrorType === 'service') {
+        weatherInsight = {
             id: 'weather-unavailable',
-            title: 'بيانات الطقس غير متاحة',
-            short_summary: 'تعذر الاتصال بالخادم.',
+            title: 'الطقس غير متاح',
+            short_summary: 'تعذر الاتصال بخدمة الطقس.',
             details: 'تأكد من اتصالك بالإنترنت.',
             severity: 'warning',
             customData: { type: 'weather_advice', isServiceError: true }
         };
-        visibleInsights = [unavailableInsight, ...visibleInsights];
+    }
+    else if (weatherResults && weatherResults.length > 0) {
+        // We have actual weather data from the new API
+        weatherInsight = weatherResults[0]; // Usually the API returns one main weather insight
     }
 
-    // C. Determine Hero Card (The large one at the top)
-    // Priority: Weather > Critical > Warning
-    const focusInsight = visibleInsights.find(i => 
+    // C. Merge Weather into Insights List
+    if (weatherInsight) {
+        // If it's critical (e.g. High UV) or it's the loading state, put it first
+        if (weatherInsight.severity === 'critical' || weatherInsight.isPlaceholder || weatherErrorType) {
+            visibleInsights = [weatherInsight, ...visibleInsights];
+        } else {
+            // Otherwise, put it second (after any other critical profile alerts)
+            // Or just put it first for consistency
+            visibleInsights = [weatherInsight, ...visibleInsights];
+        }
+    }
+
+    // D. Determine Hero Card (The large one at the top)
+    // Priority: Loading Placeholder > Weather Widget > Critical Profile Insight
+    let focusInsight = visibleInsights.find(i => 
+        i.isPlaceholder ||
         i.customData?.type === 'weather_advice' ||
         i.customData?.type === 'weather_dashboard' ||
-        i.severity === 'critical' || 
-        i.severity === 'warning'
-    ) || null;
+        i.severity === 'critical'
+    );
+    
+    // Fallback: If no critical/weather, use the first warning
+    if (!focusInsight) {
+        focusInsight = visibleInsights.find(i => i.severity === 'warning');
+    }
 
-    // D. Remaining cards go to carousel
+    // E. Remaining cards go to carousel
     const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
     
-    // E. Barrier Health Fallback
+    // F. Barrier Health
     const barrier = analysisResults.barrierHealth || { 
         score: 0, status: '...', color: COLORS.textSecondary, desc: '', 
-        totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: [] 
+        totalIrritation: 0, totalSoothing: 0 
     };
   
     // --- RENDER ---
@@ -1599,19 +1665,23 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 
                 {/* 1. Hero Section */}
                 {focusInsight ? (
-                    // Conditional Rendering based on Type: Weather Widget vs Standard Focus Card
-                    focusInsight.customData?.type === 'weather_advice' ? (
+                    focusInsight.isPlaceholder ? (
+                        // CASE 1: LOADING WEATHER
+                        <WeatherLoadingCard />
+                    ) : focusInsight.customData?.type === 'weather_advice' || focusInsight.customData?.type === 'weather_dashboard' ? (
+                        // CASE 2: ACTUAL WEATHER WIDGET
                         <WeatherCompactWidget 
                             insight={focusInsight} 
                             onPress={handleSelectInsight} 
-                            onRetry={onRetry} 
+                            onRetry={onRetryWeather} 
                             onPermissionBlocked={onShowPermissionAlert} 
                         />
                     ) : (
+                        // CASE 3: STANDARD PROFILE INSIGHT
                         <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
                     )
                 ) : (
-                    // Celebration state if no major issues found
+                    // CASE 4: ALL CLEAR
                     <AllClearState />
                 )}
   
@@ -1619,6 +1689,7 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                 {carouselInsights.length > 0 && <InsightCarousel insights={carouselInsights} onSelect={handleSelectInsight} />}
   
                 {/* 3. BARRIER HEALTH CARD */}
+                {/* ... [Keep existing Barrier Card code] ... */}
                 <PressableScale onPress={() => setShowBarrierDetails(true)}>
                     <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }} animated={false}>
                         <View style={{ padding: 20, paddingBottom: 10 }}>
@@ -1642,19 +1713,12 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                             <LiquidProgressBar score={barrier.score} max={100} color={barrier.color} />
                             <Text style={styles.barrierDesc} numberOfLines={2}>{barrier.desc}</Text>
                         </View>
-                        
-                        <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
-                                 {(barrier.totalIrritation || 0) > 0 ? `حمل كيميائي: ${(barrier.totalIrritation || 0).toFixed(1)}` : 'لا يوجد إجهاد كيميائي'}
-                             </Text>
-                             <FontAwesome5 name="chevron-left" size={12} color={COLORS.textDim} />
-                        </View>
                     </ContentCard>
                 </PressableScale>
 
-                {/* 4. Overview Dashboard (Routine & Sun Protection) */}
-                <View style={styles.overviewContainer}>
-                    
+                {/* 4. Overview Dashboard */}
+                {/* ... [Keep existing Dashboard code] ... */}
+                 <View style={styles.overviewContainer}>
                     {/* Routine Overview Card */}
                     <View style={styles.overviewCard}>
                         <ContentCard style={{flex: 1}} animated={false}>
@@ -1733,14 +1797,13 @@ const AnalysisSection = ({ loading, savedProducts = [], analysisResults, dismiss
                         </ContentCard>
                     </View>
                 </View>
+
             </View>
   
-            {/* Modal: Detailed Insight View */}
+            {/* Modals */}
             {selectedInsight && (
                 <InsightDetailsModal visible={!!selectedInsight} insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
             )}
-
-            {/* Modal: Barrier Health Ledger */}
             <BarrierDetailsModal visible={showBarrierDetails} onClose={() => setShowBarrierDetails(false)} data={barrier} />
         </View>
     );
@@ -3902,50 +3965,21 @@ const LocationPermissionModal = ({ visible, onClose }) => {
 // ============================================================================
 
 export default function ProfileScreen() {
+    // ========================================================================
+    // --- 1. HOOKS, CONTEXT & NAVIGATION ---
+    // ========================================================================
     const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
     const router = useRouter();
-    const insets = useSafeAreaInsets(); 
-  
-    const HEADER_BASE_HEIGHT = 120; 
+    const insets = useSafeAreaInsets();
+    
+    // ========================================================================
+    // --- 2. CONSTANTS & UI CONFIG ---
+    // ========================================================================
+    const HEADER_BASE_HEIGHT = 120;
     const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
     const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
     const scrollDistance = headerMaxHeight - headerMinHeight;
-    const [activeTab, setActiveTab] = useState('shelf');
-    const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
-    const [addStepHandler, setAddStepHandler] = useState(null);
-    const [locationPermission, setLocationPermission] = useState('undetermined'); // 'granted', 'denied', 'undetermined'
-    const [refreshing, setRefreshing] = useState(false); // For Pull-to-Refresh
-    const appState = useRef(AppState.currentState); // Track App State
 
-    const openAddStepModal = (onAddCallback) => {
-      setAddStepHandler(() => onAddCallback); 
-      setAddStepModalVisible(true);
-    };
-  
-    const scrollY = useRef(new Animated.Value(0)).current;
-    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
-    const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
-    const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
-    const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
-    
-    const contentOpacity = useRef(new Animated.Value(1)).current;
-    const contentTranslate = useRef(new Animated.Value(0)).current;
-    const analysisCache = useRef({ hash: '', data: null });
-    const ingredientsCache = useRef({ hash: '', data: [] }); 
-    const switchTab = (tab) => { if(tab !== activeTab) { Haptics.selectionAsync(); setActiveTab(tab); } };
-  
-    const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
-    
-    const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
-    const handleDismissPraise = (id) => { if (!dismissedInsightIds.includes(id)) setDismissedInsightIds(prev => [...prev, id]); };
-  
-    const handleDelete = async (id) => { 
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      const old = [...savedProducts];
-      setSavedProducts(prev => prev.filter(p => p.id !== id));
-      try { await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id)); } catch (error) { setSavedProducts(old); Alert.alert("خطأ", "تعذر حذف المنتج"); }
-    };
-  
     const TABS = [
         { id: 'shelf', label: 'رفي', icon: 'list' },
         { id: 'routine', label: 'روتيني', icon: 'calendar-check' },
@@ -3954,205 +3988,256 @@ export default function ProfileScreen() {
         { id: 'ingredients', label: 'مكوناتي', icon: 'flask' },
         { id: 'settings', label: 'إعداداتي', icon: 'cog' },
     ];
-  
-    // --- NEW: SERVER SIDE ANALYSIS FETCH ---
-    const [analysisData, setAnalysisData] = useState(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
-  
-    useEffect(() => {
-    let isMounted = true;
 
-    const fetchAnalysis = async () => {
+    // ========================================================================
+    // --- 3. STATE MANAGEMENT ---
+    // ========================================================================
+    // UI State
+    const [activeTab, setActiveTab] = useState('shelf');
+    const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
+    const [addStepHandler, setAddStepHandler] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
+    const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
+    
+    // Permissions
+    const [locationPermission, setLocationPermission] = useState('undetermined');
+    const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
+
+    // API State: Profile (Fast)
+    const [analysisData, setAnalysisData] = useState(null);
+    const [isAnalyzingProfile, setIsAnalyzingProfile] = useState(false);
+    
+    // API State: Weather (Slow/Async)
+    const [weatherData, setWeatherData] = useState(null);
+    const [isAnalyzingWeather, setIsAnalyzingWeather] = useState(false);
+    const [weatherErrorType, setWeatherErrorType] = useState(null); // 'permission' | 'service' | null
+
+    // ========================================================================
+    // --- 4. REFS & ANIMATIONS ---
+    // ========================================================================
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const contentTranslate = useRef(new Animated.Value(0)).current;
+    
+    // Caches
+    const analysisCache = useRef({ hash: '', data: null });
+    const ingredientsCache = useRef({ hash: '', data: [] });
+    
+    // App Lifecycle
+    const appState = useRef(AppState.currentState);
+
+    // Background Particles
+    const particles = useMemo(() => [...Array(15)].map((_, i) => ({ 
+        id: i, 
+        size: Math.random()*5+3, 
+        startX: Math.random()*width, 
+        duration: 8000+Math.random()*7000, 
+        delay: Math.random()*5000 
+    })), []);
+
+    // ========================================================================
+    // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
+    // ========================================================================
+    const runProfileAnalysis = useCallback(async () => {
         if (!savedProducts || savedProducts.length === 0) return;
 
-        // Cache Check
+        // 1. Cache Check
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
         if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
             setAnalysisData(analysisCache.current.data);
             return;
         }
 
-        setIsAnalyzing(true);
+        setIsAnalyzingProfile(true);
 
-        // 1. GET GPS & CITY NAME
-        let locationPayload = null;
-            try {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                setLocationPermission(status);
-
-                if (status === 'granted') {
-                    let loc = await Location.getCurrentPositionAsync({});
-                    
-                    // --- FIX: USE FREE API INSTEAD OF NATIVE GEOCODER ---
-                    let cityName = 'موقعي';
-                    try {
-                        const lat = loc.coords.latitude;
-                        const lon = loc.coords.longitude;
-                        // Free API, No Key, Arabic Support
-                        const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ar`;
-                        
-                        const geoRes = await fetch(geoUrl);
-                        const geoData = await geoRes.json();
-                        
-                        // Extract best available name
-                        cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'موقعي';
-                        console.log("📍 Detected City:", cityName);
-                    } catch (geoError) {
-                        console.log("City fetch failed, using fallback:", geoError);
-                    }
-
-                    locationPayload = {
-                        lat: loc.coords.latitude,
-                        lon: loc.coords.longitude,
-                        city: cityName // <--- Sending Arabic Name
-                    };
-                }
-            } catch (error) {
-                console.log("Location error:", error);
-            }
-
-        // 2. SEND TO BACKEND
         try {
-            const response = await fetch(`${PROFILE_API_URL}/analyze-profile`, { 
+            // 2. Fetch Core Analysis
+            const response = await fetch(`${PROFILE_API_URL}/analyze-profile.js`, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     products: savedProducts,
                     settings: userProfile?.settings || {},
-                    currentRoutine: userProfile?.routines,
-                    location: locationPayload 
+                    currentRoutine: userProfile?.routines
                 })
             });
 
             const data = await response.json();
             
-            if (isMounted && response.ok) {
+            if (response.ok) {
                 setAnalysisData(data);
+                // Update Cache
                 analysisCache.current = { hash: currentHash, data: data };
             }
         } catch (e) {
-            console.error("Analysis Network Error:", e);
+            console.error("Profile Analysis Error:", e);
         } finally {
-            if (isMounted) setIsAnalyzing(false);
+            setIsAnalyzingProfile(false);
         }
-    };
+    }, [savedProducts, userProfile]);
 
-    const timer = setTimeout(() => {
-        fetchAnalysis();
-    }, 600);
-
-    return () => {
-        isMounted = false;
-        clearTimeout(timer);
-    };
-}, [savedProducts, userProfile?.settings]); // Dependencies are correct
-  
-const runAnalysis = useCallback(async (isPullToRefresh = false) => {
-    if (!savedProducts || savedProducts.length === 0) return;
-
-    if (isPullToRefresh) setRefreshing(true);
-    else setIsAnalyzing(true);
-
-    // 1. GET GPS & CITY
-    let locationPayload = null;
-    try {
-        // Check existing status first to avoid popup loops
-        let { status } = await Location.getForegroundPermissionsAsync();
+    // ========================================================================
+    // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
+    // ========================================================================
+    const runWeatherAnalysis = useCallback(async () => {
+        if (!savedProducts || savedProducts.length === 0) return;
         
-        // If undetermined, ask. If denied, we can't ask again easily, just check.
-        if (status === 'undetermined') {
-            const req = await Location.requestForegroundPermissionsAsync();
-            status = req.status;
-        }
-        
-        setLocationPermission(status);
+        setIsAnalyzingWeather(true);
+        setWeatherErrorType(null);
 
-        if (status === 'granted') {
+        try {
+            // A. Check Permissions
+            let { status } = await Location.getForegroundPermissionsAsync();
+            if (status === 'undetermined') {
+                const req = await Location.requestForegroundPermissionsAsync();
+                status = req.status;
+            }
+            
+            setLocationPermission(status); 
+
+            if (status !== 'granted') {
+                setWeatherErrorType('permission');
+                setIsAnalyzingWeather(false);
+                return;
+            }
+
+            // B. Get GPS Coordinates
             let loc = await Location.getCurrentPositionAsync({});
             
-            // Free Reverse Geocoding
+            // C. Get City Name (Free Reverse Geocoding)
             let cityName = 'موقعي';
             try {
                 const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=ar`;
                 const geoRes = await fetch(geoUrl);
                 const geoData = await geoRes.json();
                 cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'موقعي';
-            } catch (e) { console.log('City fetch error', e); }
+            } catch (e) { 
+                console.log('City fetch warning:', e.message); 
+            }
 
-            locationPayload = {
-                lat: loc.coords.latitude,
-                lon: loc.coords.longitude,
-                city: cityName
-            };
+            // D. Fetch Weather Analysis
+            const response = await fetch(`${PROFILE_API_URL}/analyze-weather`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    products: savedProducts,
+                    location: {
+                        lat: loc.coords.latitude,
+                        lon: loc.coords.longitude,
+                        city: cityName
+                    }
+                })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.insights) {
+                setWeatherData(data.insights);
+            } else {
+                setWeatherErrorType('service');
+            }
+
+        } catch (e) {
+            console.error("Weather Analysis Error:", e);
+            setWeatherErrorType('service');
+        } finally {
+            setIsAnalyzingWeather(false);
         }
-    } catch (error) {
-        console.log("Location Error:", error);
-    }
+    }, [savedProducts]);
 
-    // 2. SEND TO BACKEND
-    try {
-        const response = await fetch(`${PROFILE_API_URL}/analyze-profile`, { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                products: savedProducts,
-                settings: userProfile?.settings || {},
-                currentRoutine: userProfile?.routines,
-                location: locationPayload 
-            })
+    // ========================================================================
+    // --- 7. ORCHESTRATOR & LIFECYCLE ---
+    // ========================================================================
+    
+    // Master Runner: Triggers both streams
+    const runFullAnalysis = useCallback((isPullToRefresh = false) => {
+        if (isPullToRefresh) setRefreshing(true);
+        
+        // Run in parallel
+        const profilePromise = runProfileAnalysis();
+        runWeatherAnalysis(); // Fire and forget
+
+        profilePromise.finally(() => {
+            if (isPullToRefresh) setRefreshing(false);
         });
 
-        const data = await response.json();
-        if (response.ok) {
-            setAnalysisData(data);
-            // Update cache
-            const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
-            analysisCache.current = { hash: currentHash, data: data };
+    }, [runProfileAnalysis, runWeatherAnalysis]);
+
+    // Initial Load & App Resume Listener
+    useEffect(() => {
+        runFullAnalysis(); 
+
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                // Refresh weather when user comes back
+                runWeatherAnalysis();
+            }
+            appState.current = nextAppState;
+        });
+
+        return () => subscription.remove();
+    }, [runFullAnalysis, runWeatherAnalysis]);
+
+
+    // ========================================================================
+    // --- 8. HANDLERS ---
+    // ========================================================================
+
+    const openAddStepModal = (onAddCallback) => {
+        setAddStepHandler(() => onAddCallback); 
+        setAddStepModalVisible(true);
+    };
+
+    const handleDelete = async (id) => { 
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        const old = [...savedProducts];
+        setSavedProducts(prev => prev.filter(p => p.id !== id));
+        try { 
+            await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id)); 
+        } catch (error) { 
+            setSavedProducts(old); 
+            Alert.alert("خطأ", "تعذر حذف المنتج"); 
         }
-    } catch (e) {
-        console.error("Analysis Error:", e);
-    } finally {
-        setIsAnalyzing(false);
-        setRefreshing(false);
-    }
-}, [savedProducts, userProfile]);
+    };
 
-// --- 2. INITIAL LOAD & APP RESUME LISTENER ---
-useEffect(() => {
-    // Initial Run
-    runAnalysis();
-
-    // Listen for App Resume (User coming back from Settings)
-    const subscription = AppState.addEventListener('change', nextAppState => {
-        if (
-            appState.current.match(/inactive|background/) && 
-            nextAppState === 'active'
-        ) {
-            console.log('App has come to the foreground! Refreshing Analysis...');
-            // Slight delay to allow Location Services to wake up
-            setTimeout(() => runAnalysis(), 500); 
+    const handleDismissPraise = (id) => { 
+        if (!dismissedInsightIds.includes(id)) {
+            setDismissedInsightIds(prev => [...prev, id]); 
         }
-        appState.current = nextAppState;
-    });
+    };
 
-    return () => subscription.remove();
-}, [runAnalysis]);
+    const switchTab = (tab) => { 
+        if(tab !== activeTab) { 
+            Haptics.selectionAsync(); 
+            setActiveTab(tab); 
+        } 
+    };
 
+    // Animation Interpolations
+    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
+    const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
+    const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
+    const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
+
+    // ========================================================================
+    // --- 9. RENDER ---
+    // ========================================================================
     return (
       <View style={styles.container}>
           <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+          
+          {/* Background Particles */}
           {particles.map((p) => <Spore key={p.id} {...p} />)}
           
+          {/* --- PARALLAX HEADER --- */}
           <Animated.View style={[styles.header, { height: headerHeight }]}>
-              {/* Background Gradient */}
               <LinearGradient 
                   colors={['#1A2D27', 'rgba(26, 45, 39, 0.95)', 'rgba(26, 45, 39, 0)']} 
                   style={StyleSheet.absoluteFill} 
                   start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
               />
 
-              {/* 1. EXPANDED HEADER (Normal) */}
+              {/* Expanded State */}
               <Animated.View style={[
                   styles.headerContentExpanded, 
                   { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }
@@ -4161,7 +4246,6 @@ useEffect(() => {
                       <Text style={styles.welcomeText}>
                           أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
                       </Text>
-                      {/* Authentic Component */}
                       <AuthenticHeader 
                           productCount={savedProducts.length} 
                           userName={userProfile?.settings?.name} 
@@ -4170,17 +4254,13 @@ useEffect(() => {
                   <View style={styles.avatar}><Text style={{fontSize: 28}}>🧖‍♀️</Text></View>
               </Animated.View>
 
-              {/* 2. COLLAPSED HEADER (Clean Context) */}
+              {/* Collapsed State */}
               <Animated.View style={[
                   styles.headerContentCollapsed, 
                   { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }
               ]}>
                   <View style={styles.collapsedContainer}>
-                      
-                      {/* Left Spacer (Invisible) - Balances the Avatar to keep Title centered */}
                       <View style={{ width: 32 }} />
-
-                      {/* Center: Context Title (Dynamic) */}
                       <View style={styles.collapsedTitleRow}>
                            <Text style={styles.collapsedTitle}>
                               {HEADER_TITLES[activeTab]?.title || 'الملف الشخصي'}
@@ -4191,76 +4271,108 @@ useEffect(() => {
                               color={COLORS.textSecondary} 
                            />
                       </View>
-
-                      {/* Right: Mini Avatar */}
-                      <Pressable onPress={() => {
-                          // Optional: Scroll to top logic could go here
-                          Haptics.selectionAsync();
-                      }}>
+                      <Pressable onPress={() => Haptics.selectionAsync()}>
                           <View style={styles.collapsedAvatar}>
                               <Text style={{fontSize: 16}}>🧖‍♀️</Text>
                           </View>
                       </Pressable>
-
                   </View>
               </Animated.View>
           </Animated.View>
   
+          {/* --- SCROLL CONTENT --- */}
           <Animated.ScrollView 
               contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }}
               scrollEventThrottle={16}
               onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
               showsVerticalScrollIndicator={false}
-              // ADD REFRESH CONTROL HERE
               refreshControl={
-                  <RefreshControl refreshing={refreshing} onRefresh={() => runAnalysis(true)} tintColor={COLORS.accentGreen} />
+                  <RefreshControl refreshing={refreshing} onRefresh={() => runFullAnalysis(true)} tintColor={COLORS.accentGreen} />
               }
           >
               <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
                   
-                  {activeTab === 'shelf' && <ShelfSection products={savedProducts} loading={loading} onDelete={handleDelete} router={router} />}
+                  {activeTab === 'shelf' && (
+                    <ShelfSection 
+                        products={savedProducts} 
+                        loading={loading} 
+                        onDelete={handleDelete} 
+                        onRefresh={() => runFullAnalysis(true)} 
+                        router={router} 
+                    />
+                  )}
                   
-                  {activeTab === 'routine' && <RoutineSection savedProducts={savedProducts} userProfile={userProfile} onOpenAddStepModal={openAddStepModal} />}
+                  {activeTab === 'routine' && (
+                    <RoutineSection 
+                        savedProducts={savedProducts} 
+                        userProfile={userProfile} 
+                        onOpenAddStepModal={openAddStepModal} 
+                    />
+                  )}
                   
                   {activeTab === 'analysis' && (
                       <AnalysisSection 
+                          // Core Profile Data
+                          loadingProfile={isAnalyzingProfile} 
+                          analysisResults={analysisData} 
+                          
+                          // Independent Weather Data
+                          loadingWeather={isAnalyzingWeather}
+                          weatherResults={weatherData}
+                          weatherErrorType={weatherErrorType}
+                          onRetryWeather={runWeatherAnalysis}
+                          
+                          // Shared
                           savedProducts={savedProducts} 
-                          loading={isAnalyzing} // Use local loading state for analysis
-                          analysisResults={analysisData} // Pass fetched data
                           dismissedInsightIds={dismissedInsightIds} 
                           handleDismissPraise={handleDismissPraise} 
                           userProfile={userProfile} 
                           locationPermission={locationPermission} 
-                          onRetry={() => runAnalysis(false)} 
-                          onShowPermissionAlert={() => setPermissionModalVisible(true)} // <--- PASS DOWN
+                          onShowPermissionAlert={() => setPermissionModalVisible(true)} 
                           router={router}
                       />
                   )}
                   
                   {activeTab === 'ingredients' && (
-    <IngredientsSection 
-        products={savedProducts} 
-        userProfile={userProfile} 
-        cacheRef={ingredientsCache}
-    />
-)}
-                  {activeTab === 'migration' && <MigrationSection products={savedProducts} />}
+                    <IngredientsSection 
+                        products={savedProducts} 
+                        userProfile={userProfile} 
+                        cacheRef={ingredientsCache}
+                    />
+                  )}
                   
-                  {activeTab === 'settings' && <SettingsSection profile={userProfile} onLogout={() => { logout(); router.replace('/login'); }} />}
+                  {activeTab === 'migration' && (
+                    <MigrationSection products={savedProducts} />
+                  )}
+                  
+                  {activeTab === 'settings' && (
+                    <SettingsSection 
+                        profile={userProfile} 
+                        onLogout={() => { logout(); router.replace('/login'); }} 
+                    />
+                  )}
               
               </Animated.View>
           </Animated.ScrollView>
   
+          {/* --- FLOATING CONTROLS --- */}
           <NatureDock tabs={TABS} activeTab={activeTab} onTabChange={switchTab} />
-          <AddStepModal isVisible={isAddStepModalVisible} onClose={() => setAddStepModalVisible(false)} onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }} />
+          
+          <AddStepModal 
+            isVisible={isAddStepModalVisible} 
+            onClose={() => setAddStepModalVisible(false)} 
+            onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }} 
+          />
+          
           {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
+          
           <LocationPermissionModal 
               visible={isPermissionModalVisible} 
               onClose={() => setPermissionModalVisible(false)} 
           />
       </View>
     );
-  }
+}
 
   const styles = StyleSheet.create({
     // ========================================================================
