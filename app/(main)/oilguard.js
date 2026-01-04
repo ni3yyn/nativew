@@ -1228,8 +1228,6 @@ const pickFrontImage = () => {
                   if (!result.canceled) {
                       const compressed = await compressImage(result.assets[0].uri);
                       setFrontImageUri(compressed);
-                      setCropperVisible(true);
-
                   }
               }
           },
