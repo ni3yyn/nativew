@@ -44,7 +44,8 @@ import {
     LocationPermissionModal 
 } from '../../src/components/profile/WeatherComponents'; 
 // --- 1. SYSTEM CONFIG ---
-
+import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
+import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared'; 
 
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
@@ -232,103 +233,8 @@ const Spore = ({ size, startX, duration, delay }) => {
   
 
 // 2. TACTILE PRESSABLE (Haptics + Shrink)
-const PressableScale = ({ onPress, children, style, disabled, onLongPress, delay = 0 }) => {
-    const scale = useRef(new Animated.Value(0)).current; 
-    const pressScale = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        // Entrance: Smooth, no bounce
-        Animated.timing(scale, { 
-            toValue: 1, 
-            duration: 400, 
-            delay: delay, 
-            easing: Easing.out(Easing.cubic), // Smooth deceleration
-            useNativeDriver: true 
-        }).start();
-    }, []);
-
-    const pressIn = () => {
-        if (disabled) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // Tight spring: Fast response, no wobble
-        Animated.spring(pressScale, { 
-            toValue: 0.97, // Subtle shrink (0.96 was a bit deep)
-            useNativeDriver: true, 
-            speed: 20, 
-            bounciness: 0 // <--- CRITICAL: No bounce
-        }).start();
-    };
-    
-    const pressOut = () => {
-        // Smooth return
-        Animated.spring(pressScale, { 
-            toValue: 1, 
-            useNativeDriver: true, 
-            speed: 20, 
-            bounciness: 0 
-        }).start();
-    };
-
-    return (
-        <Pressable 
-            onPress={() => { 
-              Haptics.selectionAsync(); 
-              if (onPress) onPress(); 
-            }}
-            onLongPress={() => { 
-              if (onLongPress) { 
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); 
-                onLongPress(); 
-              } 
-            }}
-            onPressIn={pressIn} 
-            onPressOut={pressOut} 
-            disabled={disabled} 
-            style={style}
-        >
-            <Animated.View style={[{ transform: [{ scale: Animated.multiply(scale, pressScale) }] }, style?.flex && {flex: style.flex}]}>
-                {children}
-            </Animated.View>
-        </Pressable>
-    );
-};
 
 // RENAMED & REFACTORED ContentCard (formerly ContentCard)
-const ContentCard = ({ children, style, onPress, disabled = false, delay = 0, animated = true }) => {
-    const scale = useRef(new Animated.Value(animated ? 0.95 : 1)).current;
-    const opacity = useRef(new Animated.Value(animated ? 0 : 1)).current;
-  
-    useEffect(() => {
-      if (animated) {
-        Animated.parallel([
-          Animated.spring(scale, { toValue: 1, friction: 12, tension: 40, delay, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 1, duration: 200, delay, useNativeDriver: true })
-        ]).start();
-      }
-    }, []);
-  
-    const handlePressIn = () => !disabled && Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 20, bounciness: 0 }).start();
-    const handlePressOut = () => !disabled && Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }).start();
-  
-    // The content is now a standard View with solid card styles
-    const content = (
-      <View style={[styles.cardBase, style]}>
-        <Animated.View style={{ opacity }}>
-          {children}
-        </Animated.View>
-      </View>
-    );
-  
-    if (onPress) {
-      return (
-        <Pressable onPress={() => { Haptics.selectionAsync(); onPress(); }} onPressIn={handlePressIn} onPressOut={handlePressOut} disabled={disabled}>
-          <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>
-        </Pressable>
-      );
-    }
-  
-    return <Animated.View style={[{ transform: [{ scale }], opacity }, style]}>{content}</Animated.View>;
-  };
 
 // 4. ANIMATED COUNTER
 const AnimatedCount = ({ value, style }) => {
@@ -357,40 +263,6 @@ const AnimatedCount = ({ value, style }) => {
     }, [value]);
 
     return <Text style={style}>{displayValue}</Text>;
-};
-
-// 5. STAGGERED LIST ITEM
-const StaggeredItem = ({ index, children, style, animated = true }) => {
-    // If not animated, start at final position (0) and full opacity (1)
-    const translateY = useRef(new Animated.Value(animated ? 20 : 0)).current; 
-    const opacity = useRef(new Animated.Value(animated ? 0 : 1)).current;
-
-    useEffect(() => {
-        if (animated) {
-            Animated.parallel([
-                Animated.timing(translateY, { 
-                    toValue: 0, 
-                    duration: 200, 
-                    delay: index * 30, 
-                    easing: Easing.out(Easing.quad), 
-                    useNativeDriver: true 
-                }),
-                Animated.timing(opacity, { 
-                    toValue: 1, 
-                    duration: 250, 
-                    delay: index * 30, 
-                    useNativeDriver: true 
-                })
-            ]).start();
-        }
-    }, []);
-
-    // Width is NOT animated to prevent stretching
-    return (
-        <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
-            {children}
-        </Animated.View>
-    );
 };
 
 // 6. NATIVE CHART RING with enhanced animations
@@ -1052,578 +924,8 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     );
 };
 
-const LiquidProgressBar = ({ score, max = 10, color }) => {
-    // 1. Start at width 0
-    const widthAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        // Calculate percentage (0 to 100)
-        const percentage = Math.min((score / max) * 100, 100);
-
-        // 2. Animate: "Viscous Fluid" Physics
-        Animated.timing(widthAnim, {
-            toValue: percentage,
-            duration: 1200, // Slow (1.2s) to feel like thick oil/serum
-            easing: Easing.out(Easing.cubic), // Starts fast, settles very gently
-            useNativeDriver: false // Width cannot use native driver
-        }).start();
-    }, [score]);
-
-    // Interpolate width to string %
-    const widthInterpolated = widthAnim.interpolate({
-        inputRange: [0, 100],
-        outputRange: ['0%', '100%']
-    });
-
-    return (
-        <View style={styles.barrierTrack}>
-            <Animated.View style={[
-                styles.barrierFill, 
-                { 
-                    width: widthInterpolated, 
-                    backgroundColor: color,
-                    // Optional: Add a subtle shadow to make the "liquid" glow
-                    shadowColor: color,
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.5,
-                    shadowRadius: 6,
-                    elevation: 3
-                }
-            ]} />
-        </View>
-    );
-};
-
-
-// --- The Main Analysis Section ---
-const FocusInsight = ({ insight, onSelect }) => {
-    const severityStyles = {
-        critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
-        warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
-    };
-    const style = severityStyles[insight.severity] || severityStyles.warning;
-  
-    return (
-        <StaggeredItem index={0} animated={false}>
-            <PressableScale onPress={() => onSelect(insight)}>
-                <LinearGradient colors={style.colors} style={styles.focusInsightCard}>
-                    <View style={styles.focusInsightHeader}>
-                        <FontAwesome5 name={style.icon} size={20} color={COLORS[insight.severity]} />
-                        <Text style={styles.focusInsightTitle}>{insight.title}</Text>
-                    </View>
-                    <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
-                    <View style={styles.focusInsightAction}>
-                        <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
-                        <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
-                    </View>
-                </LinearGradient>
-            </PressableScale>
-        </StaggeredItem>
-    );
-  };
-  
-  // 2. The celebratory state when there are no issues
-  const AllClearState = () => (
-    <StaggeredItem index={0} animated={false}>
-        <ContentCard style={styles.allClearContainer} animated={false}>
-            <View style={styles.allClearIconWrapper}>
-                 <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
-            </View>
-            <Text style={styles.allClearTitle}>روتينك يبدو رائعاً!</Text>
-            <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
-        </ContentCard>
-    </StaggeredItem>
-  );
-  
-  const StandardInsightCard = ({ insight, onPress, index }) => {
-      // Determine color theme based on severity
-      const getTheme = () => {
-          switch (insight.severity) {
-              case 'critical': return { border: COLORS.danger, icon: 'shield-alt', bg: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)'] };
-              case 'warning': return { border: COLORS.warning, icon: 'exclamation-triangle', bg: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)'] };
-              default: return { border: COLORS.accentGreen, icon: 'lightbulb', bg: ['rgba(90, 156, 132, 0.15)', 'rgba(90, 156, 132, 0.05)'] };
-          }
-      };
-      
-      const theme = getTheme();
-  
-      return (
-          <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
-              <PressableScale onPress={() => onPress(insight)}>
-                  <View style={[styles.modernCardContainer, { borderColor: theme.border }]}>
-                      {/* Background Gradient for depth */}
-                      <LinearGradient 
-                          colors={theme.bg} 
-                          style={StyleSheet.absoluteFill} 
-                          start={{ x: 0, y: 0 }} 
-                          end={{ x: 1, y: 1 }} 
-                      />
-                      
-                      {/* Top Row: Icon & Dot */}
-                      <View style={styles.modernCardHeader}>
-                          <View style={[styles.modernIconBox, { backgroundColor: theme.border }]}>
-                              <FontAwesome5 name={theme.icon} size={12} color={COLORS.textOnAccent} />
-                          </View>
-                          {/* A small dot to balance the header */}
-                          <View style={[styles.statusDot, { backgroundColor: theme.border }]} />
-                      </View>
-  
-                      {/* Middle: Text */}
-                      <View style={{flex: 1, justifyContent: 'center'}}>
-                          <Text style={styles.modernCardTitle} numberOfLines={3}>
-                              {insight.title}
-                          </Text>
-                      </View>
-  
-                      {/* Bottom: 'Read More' Indicator */}
-                      <View style={styles.modernCardFooter}>
-                          <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
-                          <Feather name="chevron-left" size={12} color={theme.border} />
-                      </View>
-                  </View>
-              </PressableScale>
-          </StaggeredItem>
-      );
-  };
-
-// 3. The horizontal carousel for secondary insights
-// --- UPDATED CAROUSEL (Handles Weather Mini Cards) ---
-const InsightCarousel = ({ insights, onSelect }) => (
-    <View style={{ marginBottom: 25 }}>
-        <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15}}>
-             <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
-             {/* Optional: Add a 'See All' button here if you want */}
-        </View>
-        
-        <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carouselContentContainer}
-            style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }} 
-        >
-            {insights.map((insight, index) => {
-                const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
-
-                if (isWeather) {
-                    return (
-                        <WeatherMiniCard 
-                            key={insight.id} 
-                            insight={insight} 
-                            onPress={onSelect} 
-                        />
-                    );
-                }
-
-                return (
-                    <StandardInsightCard 
-                        key={insight.id} 
-                        insight={insight} 
-                        onPress={onSelect}
-                        index={index}
-                    />
-                );
-            })}
-        </ScrollView>
-    </View>
-);
-
-// --- NEW COMPONENT: BARRIER HEALTH LEDGER (Full Unomitted) ---
-const BarrierDetailsModal = ({ visible, onClose, data }) => {
-    const animController = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        if (visible) Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
-    }, [visible]);
-
-    const handleClose = () => {
-        Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
-    };
-
-    if (!visible || !data) return null;
-
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
-
-    const irritation = data.totalIrritation || 0;
-    const soothing = data.totalSoothing || 0;
-    const totalVolume = (irritation + soothing) || 1;
-    const irritationPct = (irritation / totalVolume) * 100;
-    const soothingPct = (soothing / totalVolume) * 100;
-
-    return (
-        <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-            <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-            </Animated.View>
-
-            <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
-                <View style={styles.sheetContent}>
-                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle}/></View>
-
-                    <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-                        <View style={{ alignItems: 'center', marginBottom: 25 }}>
-                            <View style={[styles.barrierScoreBadge, { backgroundColor: (data.color || COLORS.success) + '20', borderColor: data.color || COLORS.success }]}>
-                                <FontAwesome5 name="shield-alt" size={24} color={data.color || COLORS.success} />
-                            </View>
-                            <Text style={[styles.modalTitle, { marginTop: 15 }]}>تقرير الحاجز الجلدي</Text>
-                            <Text style={[styles.modalDescription, { textAlign: 'center', color: data.color, fontFamily: 'Tajawal-Bold' }]}>{data.status} ({data.score}%)</Text>
-                        </View>
-
-                        <View style={styles.educationBox}>
-                            <View style={{flexDirection: 'row-reverse', gap: 10, marginBottom: 8}}>
-                                <FontAwesome5 name="book-open" size={14} color={COLORS.textPrimary} />
-                                <Text style={styles.educationTitle}>كيف يعمل الحاجز؟</Text>
-                            </View>
-                            <Text style={styles.educationText}>
-                                تخيلي بشرتك كجدار من الطوب (الخلايا) والإسمنت (الدهون). 
-                                {"\n"}• <Text style={{color: COLORS.danger, fontFamily: 'Tajawal-Bold'}}>المواد الفعالة</Text> تزيل طبقة من الجدار.
-                                {"\n"}• <Text style={{color: COLORS.success, fontFamily: 'Tajawal-Bold'}}>المرممات</Text> تعيد بناء الإسمنت.
-                            </Text>
-                        </View>
-
-                        <View style={styles.ingSection}>
-                            <Text style={styles.ingSectionTitle}>ميزان الروتين اليومي</Text>
-                            <View style={styles.balanceBarTrack}>
-                                <View style={[styles.balanceBarSegment, { width: `${soothingPct}%`, backgroundColor: COLORS.success, borderTopRightRadius: 10, borderBottomRightRadius: 10 }]} />
-                                <View style={[styles.balanceBarSegment, { width: `${irritationPct}%`, backgroundColor: COLORS.danger, borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }]} />
-                            </View>
-                            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 8 }}>
-                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.success }}>{soothing.toFixed(1)} نقاط بناء 🛡️</Text>
-                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.danger }}>{irritation.toFixed(1)} نقاط إجهاد ⚡</Text>
-                            </View>
-                        </View>
-
-                        <View style={{ flexDirection: 'row-reverse', gap: 15 }}>
-                            {/* OFFENDERS */}
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.colHeader, { color: COLORS.danger }]}>المجهدات</Text>
-                                {(data.offenders || []).length > 0 ? (
-                                    data.offenders.map((p, i) => (
-                                        <View key={i} style={styles.miniProductRow}>
-                                            <View style={{flex: 1}}>
-                                                <Text style={styles.miniProductText} numberOfLines={1}>{p.name}</Text>
-                                                {/* INGREDIENTS SHOWN HERE */}
-                                                <Text style={styles.miniProductIngs}>
-                                                    {p.ingredients.join(' + ')}
-                                                </Text>
-                                            </View>
-                                            <Text style={[styles.miniProductScore, { color: COLORS.danger }]}>-{p.score.toFixed(1)}</Text>
-                                        </View>
-                                    ))
-                                ) : <Text style={styles.noDataText}>لا يوجد</Text>}
-                            </View>
-
-                            <View style={{ width: 1, backgroundColor: COLORS.border }} />
-
-                            {/* DEFENDERS */}
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.colHeader, { color: COLORS.success }]}>البناة</Text>
-                                {(data.defenders || []).length > 0 ? (
-                                    data.defenders.map((p, i) => (
-                                        <View key={i} style={styles.miniProductRow}>
-                                            <View style={{flex: 1}}>
-                                                <Text style={styles.miniProductText} numberOfLines={1}>{p.name}</Text>
-                                                {/* INGREDIENTS SHOWN HERE */}
-                                                <Text style={styles.miniProductIngs}>
-                                                    {p.ingredients.join(' + ')}
-                                                </Text>
-                                            </View>
-                                            <Text style={[styles.miniProductScore, { color: COLORS.success }]}>+{p.score.toFixed(1)}</Text>
-                                        </View>
-                                    ))
-                                ) : <Text style={styles.noDataText}>لا يوجد</Text>}
-                            </View>
-                        </View>
-
-                        <Pressable onPress={handleClose} style={[styles.closeButton, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, marginTop: 30 }]}>
-                            <Text style={[styles.closeButtonText, { color: COLORS.textPrimary }]}>فهمت</Text>
-                        </Pressable>
-                    </ScrollView>
-                </View>
-            </Animated.View>
-        </Modal>
-    );
-};
-
 
 // --- UPDATED ANALYSIS HUB COMPONENT ---
-const AnalysisSection = ({ 
-    loadingProfile, 
-    loadingWeather, 
-    savedProducts = [], 
-    analysisResults, 
-    weatherResults, 
-    weatherErrorType, 
-    dismissedInsightIds, 
-    handleDismissPraise, 
-    onRetryWeather, 
-    onShowPermissionAlert, 
-    router 
-}) => {
-    const [selectedInsight, setSelectedInsight] = useState(null);
-    const [showBarrierDetails, setShowBarrierDetails] = useState(false);
-  
-    const handleSelectInsight = useCallback((insight) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedInsight(insight);
-    }, []);
-  
-    // 1. EMPTY STATE
-    if (!savedProducts || savedProducts.length === 0) {
-        return <AnalysisEmptyState onPress={() => router.push('/oilguard')} />;
-    }
-
-    // 2. MAIN LOADING STATE (Only blocks if Profile Analysis is loading)
-    if (loadingProfile || !analysisResults) {
-        return <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />;
-    }
-    
-    // --- INSIGHTS MERGING LOGIC ---
-    
-    // A. Start with Profile Insights (Filter dismissed)
-    let visibleInsights = analysisResults?.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
-
-    // B. Inject Weather Logic
-    let weatherInsight = null;
-
-    if (loadingWeather) {
-        // Placeholder object to trigger the Loading Card
-        weatherInsight = { id: 'weather-loading-placeholder', isPlaceholder: true, severity: 'critical' };
-    } 
-    else if (weatherErrorType === 'permission') {
-        weatherInsight = {
-            id: 'weather-permission-denied',
-            title: 'الموقع غير مفعل',
-            short_summary: 'يرجى تفعيل الموقع لبيانات الطقس.',
-            details: 'نحتاج لمعرفة موقعك لجلب بيانات الحرارة وUV.',
-            severity: 'warning',
-            customData: { type: 'weather_advice', isPermissionError: true }
-        };
-    }
-    else if (weatherErrorType === 'service') {
-        weatherInsight = {
-            id: 'weather-unavailable',
-            title: 'الطقس غير متاح',
-            short_summary: 'تعذر الاتصال بخدمة الطقس.',
-            details: 'تأكد من اتصالك بالإنترنت.',
-            severity: 'warning',
-            customData: { type: 'weather_advice', isServiceError: true }
-        };
-    }
-    else if (weatherResults && weatherResults.length > 0) {
-        // Use the primary weather insight from the API
-        weatherInsight = weatherResults[0]; 
-    }
-
-    // C. Merge Weather into List (Place at top)
-    if (weatherInsight) {
-        visibleInsights = [weatherInsight, ...visibleInsights];
-    }
-
-    // D. Determine Hero Card (Focus Insight)
-    // Priority: Loading Placeholder > Weather Widget > Critical Profile Insight > Warning
-    let focusInsight = visibleInsights.find(i => 
-        i.isPlaceholder ||
-        i.customData?.type === 'weather_advice' ||
-        i.customData?.type === 'weather_dashboard' ||
-        i.severity === 'critical'
-    );
-    
-    if (!focusInsight) {
-        focusInsight = visibleInsights.find(i => i.severity === 'warning');
-    }
-
-    // E. Remaining cards go to carousel
-    const carouselInsights = visibleInsights.filter(i => i.id !== focusInsight?.id);
-    
-    // F. Barrier Health Data
-    const barrier = analysisResults.barrierHealth || { 
-        score: 0, status: '...', color: COLORS.textSecondary, desc: '', 
-        totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: []
-    };
-  
-    return (
-        <View style={{flex: 1}}>
-            <View style={{ paddingBottom: 150 }}> 
-                
-                {/* 1. HERO SECTION */}
-                {focusInsight ? (
-                    focusInsight.isPlaceholder ? (
-                        // CASE A: WEATHER IS LOADING -> Show Skeleton
-                        <WeatherLoadingCard />
-                    ) : (focusInsight.customData?.type === 'weather_advice' || focusInsight.customData?.type === 'weather_dashboard') ? (
-                        // CASE B: WEATHER IS READY -> Show Widget
-                        <WeatherCompactWidget 
-                            insight={focusInsight} 
-                            onPress={handleSelectInsight} 
-                            onRetry={onRetryWeather} 
-                            onPermissionBlocked={onShowPermissionAlert} 
-                        />
-                    ) : (
-                        // CASE C: STANDARD PROFILE INSIGHT
-                        <FocusInsight insight={focusInsight} onSelect={handleSelectInsight} />
-                    )
-                ) : (
-                    // CASE D: ALL CLEAR (No Issues)
-                    <AllClearState />
-                )}
-  
-                {/* 2. INSIGHT CAROUSEL (Secondary Insights) */}
-                {carouselInsights.length > 0 && (
-                    <View style={{ marginBottom: 25 }}>
-                        <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15}}>
-                             <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
-                        </View>
-                        <ScrollView 
-                            horizontal 
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.carouselContentContainer}
-                            style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }} 
-                        >
-                            {carouselInsights.map((insight, index) => {
-                                const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
-                                if (isWeather) {
-                                    return <WeatherMiniCard key={insight.id} insight={insight} onPress={handleSelectInsight} />;
-                                }
-                                return <StandardInsightCard key={insight.id} insight={insight} onPress={handleSelectInsight} index={index} />;
-                            })}
-                        </ScrollView>
-                    </View>
-                )}
-  
-                {/* 3. BARRIER HEALTH CARD */}
-                <PressableScale onPress={() => setShowBarrierDetails(true)}>
-                    <ContentCard style={{ marginBottom: 15, padding: 0, overflow: 'hidden' }} animated={false}>
-                        <View style={{ padding: 20, paddingBottom: 10 }}>
-                            <View style={styles.analysisCardHeader}>
-                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                                    <FontAwesome5 name="shield-alt" size={16} color={barrier.color} />
-                                    <Text style={[styles.analysisCardTitle, { color: barrier.color }]}>صحة الحاجز (Barrier Integrity)</Text>
-                                </View>
-                                <View style={{ backgroundColor: barrier.color + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: barrier.color }}>اضغط للتفاصيل</Text>
-                                </View>
-                            </View>
-
-                            <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 10, marginBottom: 10 }}>
-                                <Text style={[styles.statValue, {color: barrier.color, fontSize: 36}]}>{barrier.score}%</Text>
-                                <View style={{ flex: 1, paddingBottom: 6 }}>
-                                    <Text style={{ fontFamily: 'Tajawal-Bold', color: barrier.color, textAlign: 'left', fontSize: 16 }}>{barrier.status}</Text>
-                                </View>
-                            </View>
-
-                            <LiquidProgressBar score={barrier.score} max={100} color={barrier.color} />
-                            <Text style={styles.barrierDesc} numberOfLines={2}>{barrier.desc}</Text>
-                        </View>
-                        
-                        <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 12, flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
-                                 {(barrier.totalIrritation || 0) > 0 ? `حمل كيميائي: ${(barrier.totalIrritation || 0).toFixed(1)}` : 'لا يوجد إجهاد كيميائي'}
-                             </Text>
-                             <FontAwesome5 name="chevron-left" size={12} color={COLORS.textDim} />
-                        </View>
-                    </ContentCard>
-                </PressableScale>
-
-                {/* 4. OVERVIEW DASHBOARD (Routine & Sun) */}
-                <View style={styles.overviewContainer}>
-                    {/* Routine Overview Card */}
-                    <View style={styles.overviewCard}>
-                        <ContentCard style={{flex: 1}} animated={false}>
-                            <View style={styles.analysisCardHeader}>
-                               <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 4}}>
-                                    <Feather name="sun" size={14} color={COLORS.warning} />
-                                    <Text style={{color: COLORS.textSecondary}}>/</Text>
-                                    <Feather name="moon" size={14} color={'#a78bfa'} />
-                               </View>
-                               <Text style={styles.analysisCardTitle}>نظرة عامة</Text>
-                           </View>
-                           <View style={styles.routineOverviewGrid}>
-                               <View style={styles.routineColumn}>
-                                   <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
-                                       <Text style={styles.routineColumnTitle}>الصباح</Text>
-                                       {(analysisResults?.amRoutine?.conflicts || 0) > 0 && (
-                                           <View style={{backgroundColor: COLORS.danger + '20', paddingHorizontal:6, borderRadius:4}}>
-                                               <Text style={{color: COLORS.danger, fontSize:10, fontFamily:'Tajawal-Bold'}}>{analysisResults.amRoutine.conflicts} !</Text>
-                                           </View>
-                                       )}
-                                   </View>
-                                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
-                                   {analysisResults?.amRoutine?.products?.length > 0 ? (
-                                       analysisResults.amRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
-                                   ) : ( <Text style={styles.routineEmptyText}>فارغ</Text> )}
-                                   </ScrollView>
-                               </View>
-                                <View style={styles.routineDivider} />
-                                <View style={styles.routineColumn}>
-                                   <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
-                                       <Text style={styles.routineColumnTitle}>المساء</Text>
-                                       {(analysisResults?.pmRoutine?.conflicts || 0) > 0 && (
-                                           <View style={{backgroundColor: COLORS.danger + '20', paddingHorizontal:6, borderRadius:4}}>
-                                               <Text style={{color: COLORS.danger, fontSize:10, fontFamily:'Tajawal-Bold'}}>{analysisResults.pmRoutine.conflicts} !</Text>
-                                           </View>
-                                       )}
-                                   </View>
-                                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row-reverse', gap: 6}}>
-                                   {analysisResults?.pmRoutine?.products?.length > 0 ? (
-                                       analysisResults.pmRoutine.products.map(p => <Text key={p.id} style={styles.routineProductPill}>{p.productName}</Text>)
-                                   ) : ( <Text style={styles.routineEmptyText}>فارغ</Text> )}
-                                   </ScrollView>
-                               </View>
-                           </View>
-                        </ContentCard>
-                    </View>
-
-                    {/* Sun Protection Card */}
-                    <View style={styles.overviewCard}>
-                         <ContentCard style={{flex: 1}} animated={false}>
-                            <View style={styles.analysisCardHeader}>
-                               <FontAwesome5 name="shield-alt" size={14} color={COLORS.textSecondary} />
-                               <Text style={styles.analysisCardTitle}>حماية الشمس</Text>
-                           </View>
-                           <View style={styles.sunProtectionContainer}>
-                               <ChartRing 
-                                   percentage={analysisResults?.sunProtectionGrade?.score || 0} 
-                                   color={(analysisResults?.sunProtectionGrade?.score || 0) > 50 ? COLORS.gold : COLORS.danger}
-                                   radius={35}
-                                   strokeWidth={6}
-                               />
-                               <View style={{flex: 1, marginRight: 15, justifyContent: 'center'}}>
-                                   {(analysisResults?.sunProtectionGrade?.notes || []).length > 0 ? (
-                                       analysisResults.sunProtectionGrade.notes.map((note, i) => (
-                                            <Text key={i} style={styles.sunProtectionNote}>{note}</Text>
-                                       ))
-                                   ) : (
-                                       <Text style={styles.sunProtectionNote}>لا توجد بيانات كافية</Text>
-                                   )}
-                               </View>
-                           </View>
-                        </ContentCard>
-                    </View>
-                </View>
-
-            </View>
-  
-            {/* 5. MODALS (Rich Detail Views) */}
-            
-            {/* Detailed Insight / Weather Sheet */}
-            {selectedInsight && (
-                <InsightDetailsModal 
-                    visible={!!selectedInsight} 
-                    insight={selectedInsight} 
-                    onClose={() => setSelectedInsight(null)} 
-                />
-            )}
-
-            {/* Barrier Health Ledger */}
-            <BarrierDetailsModal 
-                visible={showBarrierDetails} 
-                onClose={() => setShowBarrierDetails(false)} 
-                data={barrier} 
-            />
-        </View>
-    );
-};
 
 /// --- HELPER 1: Add Step Modal (Fixed Z-Index Layering) ---
 const AddStepModal = ({ isVisible, onClose, onAdd }) => {
@@ -2121,6 +1423,7 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
 };
 
 // --- HELPER 3: The New Animated Selection Popup ---
+// --- HELPER 4: Product Selection Modal (Nested inside StepEditor) ---
 const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
     const [search, setSearch] = useState('');
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -2140,7 +1443,13 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
 
     if (!visible) return null;
 
-    const filtered = products.filter(p => p.productName.toLowerCase().includes(search.toLowerCase()));
+    // Ensure products is an array to prevent crashes
+    const safeProducts = Array.isArray(products) ? products : [];
+    
+    // Filter products based on search text
+    const filtered = safeProducts.filter(p => 
+        p.productName.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
         <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
@@ -2171,50 +1480,42 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
                     </View>
 
                     <FlatList 
-    data={filtered}
-    keyExtractor={i => i.id}
-    style={{ maxHeight: 400 }} 
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={{ paddingBottom: 20 }}
-    renderItem={({item}) => (
-        <PressableScale 
-            onPress={() => onSelect(item.id)} 
-            style={styles.selectionCardWrapper} // Outer style for margins/bg
-        >
-            {/* INNER ROW VIEW: Forces the horizontal layout */}
-            <View style={styles.selectionRow}>
-                
-                {/* 1. RIGHT: Product Icon */}
-                <View style={styles.selectionIconBox}>
-                    <FontAwesome5 
-                        name={item.analysisData?.product_type === 'sunscreen' ? 'sun' : 'wine-bottle'} 
-                        size={14} 
-                        color={COLORS.accentGreen} 
+                        data={filtered}
+                        keyExtractor={i => i.id}
+                        style={{ maxHeight: 400 }} 
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 20 }}
+                        renderItem={({item}) => (
+                            <PressableScale 
+                                onPress={() => onSelect(item.id)} 
+                                style={styles.selectionCardWrapper} 
+                            >
+                                <View style={styles.selectionRow}>
+                                    <View style={styles.selectionIconBox}>
+                                        <FontAwesome5 
+                                            name={item.analysisData?.product_type === 'sunscreen' ? 'sun' : 'wine-bottle'} 
+                                            size={14} 
+                                            color={COLORS.accentGreen} 
+                                        />
+                                    </View>
+                                    <Text style={styles.selectionItemText} numberOfLines={1}>
+                                        {item.productName}
+                                    </Text>
+                                    <View style={styles.selectionActionBtn}>
+                                        <FontAwesome5 name="plus" size={12} color={COLORS.textSecondary} />
+                                    </View>
+                                </View>
+                            </PressableScale>
+                        )}
+                        ListEmptyComponent={
+                            <View style={{alignItems: 'center', marginTop: 30}}>
+                                <FontAwesome5 name="search-minus" size={24} color={COLORS.textDim} />
+                                <Text style={{color:COLORS.textDim, marginTop: 10, fontFamily: 'Tajawal-Regular'}}>
+                                    لا توجد نتائج
+                                </Text>
+                            </View>
+                        }
                     />
-                </View>
-
-                {/* 2. MIDDLE: Product Name */}
-                <Text style={styles.selectionItemText} numberOfLines={1}>
-                    {item.productName}
-                </Text>
-
-                {/* 3. LEFT: Plus Action Button */}
-                <View style={styles.selectionActionBtn}>
-                    <FontAwesome5 name="plus" size={12} color={COLORS.textSecondary} />
-                </View>
-            </View>
-            
-        </PressableScale>
-    )}
-    ListEmptyComponent={
-        <View style={{alignItems: 'center', marginTop: 30}}>
-            <FontAwesome5 name="search-minus" size={24} color={COLORS.textDim} />
-            <Text style={{color:COLORS.textDim, marginTop: 10, fontFamily: 'Tajawal-Regular'}}>
-                لا توجد نتائج
-            </Text>
-        </View>
-    }
-/>
                  </Animated.View>
             </View>
         </Modal>
@@ -3602,12 +2903,14 @@ export default function ProfileScreen() {
     // ========================================================================
     // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
     // ========================================================================
-    const runProfileAnalysis = useCallback(async () => {
+    const runProfileAnalysis = useCallback(async (forceRefresh = false) => {
         if (!savedProducts || savedProducts.length === 0) return;
 
         // 1. Cache Check
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
-        if (analysisCache.current.hash === currentHash && analysisCache.current.data) {
+        
+        // CHANGE: Only use cache if NOT forcing a refresh
+        if (!forceRefresh && analysisCache.current.hash === currentHash && analysisCache.current.data) {
             setAnalysisData(analysisCache.current.data);
             return;
         }
@@ -3716,11 +3019,16 @@ export default function ProfileScreen() {
     
     // Master Runner: Triggers both streams
     const runFullAnalysis = useCallback((isPullToRefresh = false) => {
-        if (isPullToRefresh) setRefreshing(true);
+        if (isPullToRefresh) {
+            setRefreshing(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Nice touch feedback
+        }
         
-        // Run in parallel
-        const profilePromise = runProfileAnalysis();
-        runWeatherAnalysis(); // Fire and forget
+        // Pass 'true' to force a fresh fetch
+        const profilePromise = runProfileAnalysis(isPullToRefresh);
+        
+        // Always re-run weather on refresh
+        runWeatherAnalysis(); 
 
         profilePromise.finally(() => {
             if (isPullToRefresh) setRefreshing(false);
@@ -3852,9 +3160,14 @@ export default function ProfileScreen() {
               onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
               showsVerticalScrollIndicator={false}
               refreshControl={
-                  <RefreshControl refreshing={refreshing} onRefresh={() => runFullAnalysis(true)} tintColor={COLORS.accentGreen} />
-              }
-          >
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={() => runFullAnalysis(true)} 
+                  tintColor={COLORS.accentGreen} 
+                  colors={[COLORS.accentGreen]} // For Android
+                />
+            }
+        >
               <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
                   
                   {activeTab === 'shelf' && (
@@ -3879,7 +3192,7 @@ export default function ProfileScreen() {
                       <AnalysisSection 
                           // Core Profile Data
                           loadingProfile={isAnalyzingProfile} 
-                          analysisResults={analysisData} 
+                          analysisData={analysisData} 
                           
                           // Independent Weather Data
                           loadingWeather={isAnalyzingWeather}

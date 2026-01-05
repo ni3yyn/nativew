@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated, ScrollView, Modal, Pressable, Dimensions, Platform, Alert, Easing, Switch } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Animated, TouchableOpacity, ScrollView, Modal, Pressable, Dimensions, Platform, Alert, Easing, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
@@ -8,7 +8,9 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { PressableScale, StaggeredItem } from '../common/Animations';
 import * as Notifications from 'expo-notifications'; // Ensure you have installed expo-notifications
+import * as Location from 'expo-location'; // <--- ADD THIS
 import { useTimerStore } from './timerStore'; // Adjust the path as needed
+import { AlertService } from '../../services/alertService'; // <--- IMPORT THIS
 
 
 // --- THEME CONSTANTS ---
@@ -166,7 +168,6 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
 const SpfTimerWidget = ({ uvIndex = 0, debugMode = false }) => { // We'll remove debugMode in the next step
     const { isActive, endTime, startTimer, stopTimer, notificationId: storedNotificationId } = useTimerStore();
     const [displayTime, setDisplayTime] = useState(0);
-    const [debugSpf, setDebugSpf] = useState(true); // State for the debug toggle
 
     const size = 100;
     const strokeWidth = 9;
@@ -682,62 +683,277 @@ export const WeatherDetailedSheet = ({ insight }) => {
 };
 
 // ============================================================================
-//                       8. LOCATION PERMISSION MODAL
+//                       8. LOCATION PERMISSION MODAL (FIXED)
 // ============================================================================
+
 export const LocationPermissionModal = ({ visible, onClose }) => {
     const [showModal, setShowModal] = useState(visible);
+    
+    const slideAnim = useRef(new Animated.Value(100)).current; 
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
     useEffect(() => {
         if (visible) {
             setShowModal(true);
+            // FIX: Use timing + Easing.out(Easing.cubic) instead of spring.
+            // This looks smooth but finishes deterministically, allowing clicks immediately.
             Animated.parallel([
-                Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-                Animated.spring(scaleAnim, { toValue: 1, friction: 7, useNativeDriver: true })
+                Animated.timing(opacityAnim, { 
+                    toValue: 1, 
+                    duration: 300, 
+                    useNativeDriver: true 
+                }),
+                Animated.timing(slideAnim, { 
+                    toValue: 0, 
+                    duration: 300, 
+                    easing: Easing.out(Easing.cubic), 
+                    useNativeDriver: true 
+                })
             ]).start();
         } else {
             Animated.parallel([
-                Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 0.9, duration: 200, useNativeDriver: true })
-            ]).start(({ finished }) => { if (finished) setShowModal(false); });
+                Animated.timing(opacityAnim, { 
+                    toValue: 0, 
+                    duration: 200, 
+                    useNativeDriver: true 
+                }),
+                Animated.timing(slideAnim, { 
+                    toValue: 150, 
+                    duration: 200, 
+                    useNativeDriver: true 
+                })
+            ]).start(({ finished }) => { 
+                if (finished) setShowModal(false); 
+            });
         }
     }, [visible]);
+
+    const handleGrantPermission = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onClose();
+            } else {
+                AlertService.show({
+                    title: "الإذن مطلوب",
+                    message: "يبدو أنك قمت برفض الإذن سابقاً. يرجى تفعيل الموقع يدوياً من إعدادات الهاتف.",
+                    type: 'warning',
+                    buttons: [
+                        { text: "إلغاء", style: "secondary" },
+                        { 
+                            text: "الإعدادات", 
+                            style: "primary", 
+                            onPress: () => {
+                                Linking.openSettings();
+                                onClose(); 
+                            } 
+                        }
+                    ]
+                });
+            }
+        } catch (e) {
+            Linking.openSettings();
+        }
+    };
 
     if (!showModal) return null;
 
     return (
         <Modal transparent visible={showModal} onRequestClose={onClose} animationType="none" statusBarTranslucent>
-            <View style={styles.modalOverlay}>
+            <View style={styles.modalOverlay} pointerEvents="box-none">
+                {/* Backdrop */}
                 <Animated.View style={[styles.modalBackdrop, { opacity: opacityAnim }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 </Animated.View>
 
-                <Animated.View style={[styles.modalContent, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
+                {/* Content */}
+                <Animated.View style={[
+                    styles.modalContent, 
+                    { 
+                        opacity: opacityAnim, 
+                        transform: [{ translateY: slideAnim }] 
+                    }
+                ]}>
+                    
                     <View style={styles.modalIconFloat}>
                         <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.modalIconGradient}>
-                            <FontAwesome5 name="map-marked-alt" size={32} color="#fff" />
+                            <FontAwesome5 name="cloud-sun" size={32} color="#fff" />
                         </LinearGradient>
                     </View>
 
-                    <Text style={styles.modalTitle}>تحديد الموقع</Text>
+                    <Text style={styles.modalTitle}>اكتشفي مناخ بشرتك</Text>
                     <Text style={styles.modalBody}>
-                        لتحليل الطقس بدقة وحماية بشرتك، نحتاج إلى معرفة ظروف منطقتك الحالية (UV، رطوبة، تلوث).
+                        اسمحي لنا بتحليل طقس منطقتك لتفعيل الميزات الذكية:
                     </Text>
 
+                    <View style={styles.featureListContainer}>
+                        <View style={styles.featureRow}>
+                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
+                                <FontAwesome5 name="clock" size={14} color={COLORS.gold} />
+                            </View>
+                            <Text style={styles.featureText}>مؤقت ذكي لتجديد واقي الشمس</Text>
+                        </View>
+                        <View style={styles.featureRow}>
+                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                                <FontAwesome5 name="sun" size={14} color={COLORS.danger} />
+                            </View>
+                            <Text style={styles.featureText}>تحذيرات فورية من الأشعة UV</Text>
+                        </View>
+                        <View style={styles.featureRow}>
+                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                                <FontAwesome5 name="wind" size={14} color={COLORS.blue} />
+                            </View>
+                            <Text style={styles.featureText}>تحليل التلوث وجودة الهواء</Text>
+                        </View>
+                    </View>
+
                     <View style={styles.modalActions}>
-                        <PressableScale onPress={onClose} style={styles.btnSecondary}>
+                        <TouchableOpacity 
+                            onPress={onClose} 
+                            style={styles.btnSecondary} 
+                            activeOpacity={0.7}
+                            delayPressIn={0} // <--- FIX: Removes tap delay
+                        >
                             <Text style={styles.btnSecondaryText}>لاحقاً</Text>
-                        </PressableScale>
-                        <PressableScale onPress={() => { onClose(); setTimeout(() => Linking.openSettings(), 300); }} style={styles.btnPrimary}>
-                            <Text style={styles.btnPrimaryText}>الإعدادات</Text>
-                        </PressableScale>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                            onPress={handleGrantPermission} 
+                            style={styles.btnPrimary}
+                            activeOpacity={0.8}
+                            delayPressIn={0} // <--- FIX: Removes tap delay
+                        >
+                            <Text style={styles.btnPrimaryText}>تفعيل الميزات</Text>
+                        </TouchableOpacity>
                     </View>
                 </Animated.View>
             </View>
         </Modal>
     );
 };
+
+
+export const NightPrepCard = ({ data, onPress }) => {
+    if (!data) return null;
+
+    return (
+        <StaggeredItem index={1} animated={true}>
+            <PressableScale onPress={onPress}>
+                <View style={styles.nightPrepContainer}>
+                    <LinearGradient 
+                        colors={['#1e1b4b', '#312e81']} 
+                        start={{x:0, y:0}} end={{x:1, y:1}} 
+                        style={StyleSheet.absoluteFill} 
+                    />
+                    
+                    {/* Moon Glow Effect */}
+                    <View style={styles.moonGlow} />
+                    
+                    <View style={styles.nightPrepContent}>
+                        <View style={styles.nightHeader}>
+                            <View style={[styles.iconBox, {backgroundColor: data.color + '30'}]}>
+                                <FontAwesome5 name={data.icon} size={16} color={data.color} />
+                            </View>
+                            <Text style={styles.nightTag}>خطة الليلة لطقس الغد</Text>
+                        </View>
+                        
+                        <Text style={styles.nightTitle}>{data.title}</Text>
+                        <Text style={styles.nightBody}>
+                            {data.reason} <Text style={{fontFamily: 'Tajawal-Bold', color: '#fff'}}>{data.action}</Text>
+                        </Text>
+                        
+                        <View style={styles.nightActionRow}>
+                            <Text style={styles.nightBtnText}>إضافة للروتين المسائي</Text>
+                            <Feather name="plus-circle" size={16} color="#c7d2fe" />
+                        </View>
+                    </View>
+                    
+                    <FontAwesome5 name="moon" size={80} color="#ffffff10" style={styles.bgMoon} />
+                </View>
+            </PressableScale>
+        </StaggeredItem>
+    );
+};
+
+// 2. INTERACTIVE EXPOSURE SLIDER (The Context Switcher)
+export const ExposureSlider = ({ value, onChange }) => {
+    // Value: 0 (Indoors), 1 (Commute), 2 (Outdoors)
+    
+    // We use the prop 'value' to drive the animation, not internal state
+    const widthAnim = useRef(new Animated.Value(value)).current;
+
+    useEffect(() => {
+        Animated.spring(widthAnim, {
+            toValue: value,
+            useNativeDriver: false, // Layout animation requires false
+            friction: 8,
+            tension: 40
+        }).start();
+    }, [value]);
+
+    const options = [
+        { label: 'داخل المنزل', icon: 'home' },   // Index 0
+        { label: 'خروج محدود', icon: 'walking' }, // Index 1
+        { label: 'خارج المنزل', icon: 'sun' },    // Index 2
+    ];
+
+    const handlePress = (index) => {
+        Haptics.selectionAsync();
+        onChange(index); // Notify parent immediately
+    };
+
+    return (
+        <View style={styles.sliderContainer}>
+            <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 5}}>
+                <Text style={styles.sliderTitle}>طبيعة يومك:</Text>
+                <View style={{backgroundColor: 'rgba(90, 156, 132, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6}}>
+                    <Text style={{color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Regular'}}>
+                        {value === 0 ? 'تنبيهات منخفضة' : value === 2 ? 'تنبيهات قصوى' : 'تنبيهات قياسية'}
+                    </Text>
+                </View>
+            </View>
+            
+            <View style={styles.sliderTrack}>
+                {/* 
+                   ANIMATED PILL: 
+                   In RTL (row-reverse), Left: 0 starts at the LEFT side of the screen (Visual End).
+                   But Flex items start at the RIGHT. 
+                   We use 'right' property for interpolation to match RTL logic.
+                */}
+                <Animated.View style={[styles.sliderPill, {
+                    right: widthAnim.interpolate({
+                        inputRange: [0, 1, 2],
+                        outputRange: ['1%', '34%', '67%'] // Moves from Right to Left
+                    })
+                }]} />
+                
+                {options.map((opt, i) => {
+                    const isActive = value === i;
+                    return (
+                        <Pressable key={i} onPress={() => handlePress(i)} style={styles.sliderOption}>
+                            <FontAwesome5 
+                                name={opt.icon} 
+                                size={14} 
+                                color={isActive ? '#1A2D27' : '#B0C4DE'} 
+                            />
+                            <Text style={[
+                                styles.sliderText, 
+                                { 
+                                    color: isActive ? '#1A2D27' : '#B0C4DE', 
+                                    fontFamily: isActive ? 'Tajawal-Bold' : 'Tajawal-Regular'
+                                }
+                            ]}>
+                                {opt.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
+        </View>
+    );
+};
+
 
 // ============================================================================
 //                       STYLES (COMPLETE & FIXED)
@@ -999,24 +1215,194 @@ const styles = StyleSheet.create({
     matchIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 
     // --- Modal ---
-    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' },
-    modalBackdrop: { ...StyleSheet.absoluteFillObject },
+    // --- Promo Modal Styles ---
+    modalOverlay: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: 'transparent' // CHANGED: Was rgba(0,0,0,0.8), now transparent so it doesn't pop
+    },
+    modalBackdrop: { 
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.8)' // CHANGED: Moved color here to animate opacity
+    },
     modalContent: {
-        width: width * 0.85, backgroundColor: '#1f2937', borderRadius: 32, padding: 30, alignItems: 'center',
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 30, elevation: 20
+        width: width * 0.85, 
+        backgroundColor: COLORS.card, 
+        borderRadius: 28, 
+        paddingHorizontal: 24,
+        paddingTop: 45, 
+        paddingBottom: 24,
+        alignItems: 'center',
+        borderWidth: 1, 
+        borderColor: 'rgba(90, 156, 132, 0.3)', 
+        shadowColor: '#000', 
+        shadowOpacity: 0.5, 
+        shadowRadius: 30, 
+        elevation: 20
     },
-    modalIconFloat: { marginTop: -55, marginBottom: 25 },
+    modalIconFloat: { 
+        position: 'absolute',
+        top: -40,
+        alignSelf: 'center',
+        shadowColor: COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10
+    },
     modalIconGradient: {
-        width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 6, borderColor: '#1f2937'
+        width: 80, 
+        height: 80, 
+        borderRadius: 40, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        borderWidth: 6, 
+        borderColor: COLORS.card 
     },
-    modalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, color: '#fff', marginBottom: 12 },
-    modalBody: { fontFamily: 'Tajawal-Regular', fontSize: 16, color: '#9ca3af', textAlign: 'center', lineHeight: 26, marginBottom: 28 },
-    modalActions: { flexDirection: 'row-reverse', gap: 12, width: '100%' },
+    modalTitle: { 
+        fontFamily: 'Tajawal-ExtraBold', 
+        fontSize: 22, 
+        color: COLORS.textPrimary, 
+        marginBottom: 8,
+        textAlign: 'center'
+    },
+    modalBody: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 14, 
+        color: COLORS.textSecondary, 
+        textAlign: 'center', 
+        marginBottom: 20 
+    },
+    featureListContainer: {
+        width: '100%',
+        marginBottom: 25,
+        gap: 12,
+    },
+    featureRow: {
+        flexDirection: 'row-reverse', 
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)', 
+        padding: 10,
+        borderRadius: 12,
+        gap: 12,
+    },
+    featureIconBox: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    featureText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textPrimary,
+        flex: 1,
+        textAlign: 'right', 
+    },
+    modalActions: { 
+        flexDirection: 'row-reverse', 
+        width: '100%',
+        gap: 12
+    },
     btnPrimary: {
-        flex: 1, backgroundColor: COLORS.accentGreen, paddingVertical: 16, borderRadius: 18, alignItems: 'center',
-        shadowColor: COLORS.accentGreen, shadowOpacity: 0.4, shadowOffset: {width: 0, height: 4}
+        flex: 1, 
+        backgroundColor: COLORS.accentGreen, 
+        height: 50, 
+        borderRadius: 16, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        shadowColor: COLORS.accentGreen, 
+        shadowOpacity: 0.3, 
+        shadowOffset: {width: 0, height: 4},
+        elevation: 4
     },
-    btnPrimaryText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#fff' },
-    btnSecondary: { flex: 0.6, paddingVertical: 16, borderRadius: 18, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-    btnSecondaryText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textSecondary },
+    btnPrimaryText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 15, 
+        color: '#ffffff',
+        marginBottom: 2
+    },
+    btnSecondary: { 
+        flex: 0.4, 
+        height: 50,
+        borderRadius: 16, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: 'transparent'
+    },
+    btnSecondaryText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 14, 
+        color: COLORS.textDim,
+        marginBottom: 2
+    },
+    
+    nightPrepContainer: {
+        height: 160, borderRadius: 28, padding: 20, overflow: 'hidden', position: 'relative',
+        marginBottom: 20, borderWidth: 1, borderColor: '#4f46e5'
+    },
+    moonGlow: {
+        position: 'absolute', top: -50, right: -50, width: 150, height: 150,
+        borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)' // Note: filter might need generic View style adjustment in RN
+    },
+    nightPrepContent: { flex: 1, justifyContent: 'space-between' },
+    nightHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+    iconBox: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    nightTag: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#c7d2fe' },
+    nightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: '#fff', textAlign: 'right', marginTop: 4 },
+    nightBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: '#e0e7ff', textAlign: 'right', maxWidth: '85%', lineHeight: 20 },
+    nightActionRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, opacity: 0.8 },
+    nightBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#c7d2fe' },
+    bgMoon: { position: 'absolute', left: -20, bottom: -20, opacity: 0.1, transform: [{ rotate: '15deg' }] },
+
+    // --- Exposure Slider ---
+    sliderContainer: {
+        marginBottom: 20, // More space
+        paddingHorizontal: 4,
+    },
+    sliderTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    sliderTrack: {
+        flexDirection: 'row-reverse', // RTL: Item 0 is on the Right
+        backgroundColor: 'rgba(0,0,0,0.25)', 
+        borderRadius: 16,
+        height: 48,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        position: 'relative',
+        justifyContent: 'space-between',
+    },
+    sliderPill: {
+        position: 'absolute',
+        top: 4,
+        bottom: 4,
+        width: '32%', // Slightly less than 33% for gaps
+        backgroundColor: '#A3E4D7', 
+        borderRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+        zIndex: 1, // Layer 1 (Background)
+    },
+    sliderOption: {
+        flex: 1,
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        zIndex: 10, // Layer 10 (Foreground - Clickable)
+        height: '100%', // Full height to capture clicks
+    },
+    sliderText: {
+        fontSize: 11,
+        paddingBottom: 2
+    },
+
 });

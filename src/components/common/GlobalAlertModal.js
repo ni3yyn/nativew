@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Modal, View, Text, TouchableOpacity, StyleSheet, 
-    Animated, Dimensions, Easing, Platform 
+    Animated, Dimensions, Easing 
 } from 'react-native';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { AlertService } from '../../services/alertService';
 import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const GlobalAlertModal = () => {
     const [visible, setVisible] = useState(false);
@@ -20,7 +20,7 @@ const GlobalAlertModal = () => {
     });
 
     // Animations
-    const slideAnim = useRef(new Animated.Value(100)).current; // Start below screen
+    const slideAnim = useRef(new Animated.Value(100)).current; // Start 100px below
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -31,17 +31,17 @@ const GlobalAlertModal = () => {
                 setVisible(true);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 
-                // Animate In
+                // FIX: Use Timing + Easing instead of Spring for instant clickability
                 Animated.parallel([
-                    Animated.spring(slideAnim, {
+                    Animated.timing(slideAnim, {
                         toValue: 0,
-                        friction: 8,
-                        tension: 60,
+                        duration: 300,
+                        easing: Easing.out(Easing.cubic),
                         useNativeDriver: true
                     }),
                     Animated.timing(opacityAnim, {
                         toValue: 1,
-                        duration: 200,
+                        duration: 300,
                         useNativeDriver: true
                     })
                 ]).start();
@@ -58,7 +58,6 @@ const GlobalAlertModal = () => {
             Animated.timing(slideAnim, {
                 toValue: 150,
                 duration: 200,
-                easing: Easing.in(Easing.ease),
                 useNativeDriver: true
             }),
             Animated.timing(opacityAnim, {
@@ -93,14 +92,18 @@ const GlobalAlertModal = () => {
 
     return (
         <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose} statusBarTranslucent>
-            <View style={styles.overlay}>
+            <View style={styles.overlay} pointerEvents="box-none">
+                
                 {/* Backdrop */}
                 <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
                     <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
                 </Animated.View>
 
                 {/* Modal Card */}
-                <Animated.View style={[styles.alertContainer, { transform: [{ translateY: slideAnim }], opacity: opacityAnim }]}>
+                <Animated.View style={[
+                    styles.alertContainer, 
+                    { transform: [{ translateY: slideAnim }], opacity: opacityAnim }
+                ]}>
                     
                     {/* Icon */}
                     <View style={[styles.iconContainer, { backgroundColor: theme.bg }]}>
@@ -122,7 +125,7 @@ const GlobalAlertModal = () => {
 
                                 if (btn.style === 'primary') {
                                     btnBg = COLORS.accentGreen;
-                                    btnText = COLORS.textOnAccent;
+                                    btnText = '#ffffff'; // Ensure high contrast
                                     btnBorder = COLORS.accentGreen;
                                 } else if (btn.style === 'destructive') {
                                     btnBg = 'rgba(239, 68, 68, 0.2)';
@@ -135,6 +138,8 @@ const GlobalAlertModal = () => {
                                         key={index} 
                                         style={[styles.button, { backgroundColor: btnBg, borderColor: btnBorder }]}
                                         onPress={() => handleButtonPress(btn)}
+                                        activeOpacity={0.7}
+                                        delayPressIn={0} // <--- FIX: Instant response
                                     >
                                         <Text style={[styles.buttonText, { color: btnText }]}>{btn.text}</Text>
                                     </TouchableOpacity>
@@ -142,8 +147,13 @@ const GlobalAlertModal = () => {
                             })
                         ) : (
                             // Default OK button if none provided
-                            <TouchableOpacity style={[styles.button, { backgroundColor: COLORS.accentGreen }]} onPress={handleClose}>
-                                <Text style={[styles.buttonText, { color: COLORS.textOnAccent }]}>حسناً</Text>
+                            <TouchableOpacity 
+                                style={[styles.button, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} 
+                                onPress={handleClose}
+                                activeOpacity={0.8}
+                                delayPressIn={0}
+                            >
+                                <Text style={[styles.buttonText, { color: '#ffffff' }]}>حسناً</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -159,14 +169,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 9999,
+        backgroundColor: 'transparent'
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0,0,0,0.75)',
+        zIndex: 1
     },
     alertContainer: {
         width: width * 0.85,
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.card, // Ensure match with dark theme
         borderRadius: 24,
         padding: 25,
         alignItems: 'center',
@@ -178,6 +190,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 20,
         elevation: 20,
+        zIndex: 2 // Sit on top of backdrop
     },
     iconContainer: {
         width: 70,
@@ -219,6 +232,7 @@ const styles = StyleSheet.create({
     buttonText: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 15,
+        marginBottom: 2 // Font baseline fix
     }
 });
 
