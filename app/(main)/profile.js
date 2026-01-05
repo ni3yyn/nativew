@@ -1635,8 +1635,8 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
       };
   
       AlertService.confirm(
-          "بناء الروتين المتقدم",
-          "تشغيل 'المعمار الرقمي' (Gen 9)؟ سيتم تحليل كثافة المنتجات والـ pH عبر الخادم السحابي.",
+          "بناء الروتين التلقائي",
+          "سيرتب لك وثيق روتينك اليومي .",
           runArchitect
       );
     };
