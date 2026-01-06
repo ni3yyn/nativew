@@ -116,7 +116,7 @@ const GOALS_LIST = [
     { id: 'brightening', label: 'تفتيح ونضارة', icon: 'sun' },
     { id: 'acne', label: 'مكافحة حب الشباب', icon: 'shield-alt' },
     { id: 'anti_aging', label: 'مكافحة الشيخوخة', icon: 'hourglass-half' },
-    { id: 'hydration', label: 'ترطيب البشرة', icon: 'blurType' },
+    { id: 'hydration', label: 'ترطيب عميق', icon: 'blurType' },
     { id: 'texture_pores', label: 'تحسين الملمس والمسام' , icon: 'th-large'},
 
 ];
