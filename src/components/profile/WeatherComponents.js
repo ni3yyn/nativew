@@ -12,7 +12,6 @@ import * as Location from 'expo-location'; // <--- ADD THIS
 import { useTimerStore } from './timerStore'; // Adjust the path as needed
 import { AlertService } from '../../services/alertService'; // <--- IMPORT THIS
 
-
 // --- THEME CONSTANTS ---
 const COLORS = {
     card: '#253D34',
@@ -354,93 +353,139 @@ const SpfTimerWidget = ({ uvIndex = 0, debugMode = false }) => { // We'll remove
 // ============================================================================
 
 // --- 4.1 SUN CYCLE (UV DRIVEN) ---
-const SunCycleWidget = ({ currentHour = new Date().getHours(), uvIndex = 0 }) => {
+const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
     const width = 100;
     const height = 50;
     const cx = 50; const cy = 45; const r = 40;
 
-    // Normalize sun position strictly on time (6am to 6pm)
-    const normalizedHour = Math.max(6, Math.min(18, currentHour));
-    const progress = (normalizedHour - 6) / 12; // 0 to 1
-    const angle = Math.PI * (1 - progress);
-    const sunX = cx + r * Math.cos(angle);
-    const sunY = cy - r * Math.sin(angle);
+    // Visual Logic: If it's night, show moon state. If day, show UV intensity position.
+    // Since we don't have exact sun angle, we simulate "Intensity" as "Position"
+    // Low UV = Low on horizon, High UV = Zenith.
+    
+    let progress = 0; 
+    let sunColor = COLORS.textSecondary;
+    let label = "ليل";
+    let icon = "moon";
 
-    // ACTION LOGIC based on ACTUAL UV, not just time
-    let actionLabel = "آمن: استمتعي";
-    let statusColor = COLORS.success;
-
-    if (uvIndex >= 8) {
-        actionLabel = "خطر: الزمي الظل";
-        statusColor = COLORS.danger;
-    } else if (uvIndex >= 6) {
-        actionLabel = "تحذير: جددي الحماية";
-        statusColor = COLORS.warning;
-    } else if (uvIndex >= 3) {
-        actionLabel = "تنبيه: البسي نظارة";
-        statusColor = COLORS.gold;
+    if (isDay) {
+        icon = "sun";
+        // Map UV 0-11 to position 0.1 - 0.9
+        const normalizedUV = Math.min(uvIndex, 11);
+        progress = 0.1 + (normalizedUV / 11) * 0.8;
+        
+        if (uvIndex >= 8) { label = "خطر"; sunColor = COLORS.danger; }
+        else if (uvIndex >= 6) { label = "عالٍ"; sunColor = COLORS.warning; }
+        else if (uvIndex >= 3) { label = "متوسط"; sunColor = COLORS.gold; }
+        else { label = "منخفض"; sunColor = COLORS.success; }
+    } else {
+        progress = 0.5; // Moon high
+        sunColor = "#60a5fa"; // Moon blue
+        label = "آمن";
     }
+
+    const angle = Math.PI * (1 - progress);
+    const itemX = cx + r * Math.cos(angle);
+    const itemY = cy - r * Math.sin(angle);
 
     return (
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
-                <Text style={styles.featureTitle}>دورة الشمس</Text>
-                <FontAwesome5 name="sun" size={12} color={statusColor} />
+                <Text style={styles.featureTitle}>{isDay ? 'حدة الشمس' : 'الوضع'}</Text>
+                <FontAwesome5 name={icon} size={12} color={sunColor} />
             </View>
             <View style={{ alignItems: 'center', marginTop: 2 }}>
                 <Svg width={width} height={height}>
                     <Path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4, 4" fill="none" />
-                    <Circle cx={sunX} cy={sunY} r="5" fill={statusColor} />
-                    <Circle cx={sunX} cy={sunY} r="10" fill={statusColor} opacity="0.3" />
+                    {/* The Sun/Moon Orb */}
+                    <Circle cx={itemX} cy={itemY} r="6" fill={sunColor} />
+                    <Circle cx={itemX} cy={itemY} r="12" fill={sunColor} opacity="0.25" />
                 </Svg>
-                <Text style={[styles.featureValue, {fontSize: 11, color: statusColor}]}>{actionLabel}</Text>
+                <Text style={[styles.featureValue, {fontSize: 12, color: sunColor, marginTop: -5}]}>{label}</Text>
             </View>
         </View>
     );
 };
 
 // --- 4.2 HYDRO-GAUGE (Skin Hydration) ---
-const HydroGauge = ({ humidity = 50 }) => {
-    // 30% or less = Dry Skin Risk
-    const isDry = humidity < 35;
-    const color = isDry ? COLORS.warning : COLORS.blue;
+const HydroGauge = ({ humidity, dewPoint }) => {
+    const safeHum = humidity !== undefined ? humidity : 50;
+    
+    // Default fallback if dewPoint isn't passed
+    const safeDP = dewPoint !== undefined ? dewPoint : (safeHum > 50 ? 15 : 5);
+
+    let color = COLORS.success;
+    let text = 'مريح';
+
+    // MEDICAL LOGIC FOR STATUS:
+    if (safeDP < 0) {
+        // Very dry air (even if humidity % is high, if it's freezing)
+        color = '#818cf8'; // Icy Blue
+        text = 'جفاف قارس';
+    } else if (safeDP < 10) {
+        // Dry
+        color = COLORS.blue; 
+        text = 'جاف';
+    } else if (safeDP >= 10 && safeDP <= 16) {
+        // Comfortable / Ideal
+        color = COLORS.success;
+        text = 'رطوبة مثالية';
+    } else if (safeDP > 16 && safeDP <= 20) {
+        // Sticky
+        color = COLORS.warning;
+        text = 'لزج/رطب';
+    } else if (safeDP > 20) {
+        // Oppressive / Sauna
+        color = COLORS.danger;
+        text = 'خانق (Sauna)';
+    }
 
     return (
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
-                <Text style={styles.featureTitle}>رطوبة الجو</Text>
-                <FontAwesome5 name="tint" size={12} color={color} />
+                {/* Header specifically mentions Dew Point context indirectly or directly */}
+                <Text style={styles.featureTitle}>مستوى الرطوبة</Text>
+                <FontAwesome5 name={safeDP > 16 ? "tint" : "tint-slash"} size={12} color={color} />
             </View>
             <View style={styles.hydroContainer}>
                 <View style={styles.hydroBarBg}>
-                    <View style={[styles.hydroBarFill, { height: `${humidity}%`, backgroundColor: color }]} />
+                    {/* Visual Bar is RH% because that matches "0-100" mental model */}
+                    <View style={[styles.hydroBarFill, { height: `${Math.min(safeHum, 100)}%`, backgroundColor: color }]} />
                 </View>
                 <View style={{ justifyContent: 'center', gap: 2 }}>
-                    <Text style={styles.featureValue}>{humidity}%</Text>
-                    <Text style={styles.featureSub}>{isDry ? 'جو جاف جداً' : 'رطوبة مثالية'}</Text>
+                    <Text style={styles.featureValue}>{safeHum}%</Text>
+                    {/* The text reveals the REAL feel (Dew Point effect) */}
+                    <Text style={[styles.featureSub, { color: color, fontFamily: 'Tajawal-Bold' }]}>{text}</Text>
                 </View>
             </View>
         </View>
     );
 };
 
-// --- 4.3 PORE CLARITY (Pollution) ---
-const PoreClarityWidget = ({ aqi = 50 }) => {
-    const isClean = aqi < 60;
-    const color = isClean ? COLORS.success : COLORS.danger;
+
+// --- 4.3 PORE CLARITY ---
+const PoreClarityWidget = ({ aqi }) => {
+    const safeAqi = aqi !== undefined ? aqi : 50;
+    const isClean = safeAqi < 60;
+    const isPolluted = safeAqi > 100;
+    
+    let color = COLORS.success;
+    let label = 'هواء نقي';
+    
+    if (isPolluted) { color = COLORS.danger; label = 'خطر تلوث'; }
+    else if (!isClean) { color = COLORS.warning; label = 'متوسط'; }
 
     return (
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
-                <Text style={styles.featureTitle}>نقاء المسام</Text>
+                <Text style={styles.featureTitle}>جودة الهواء</Text>
                 <FontAwesome5 name="lungs" size={12} color={color} />
             </View>
             <View style={{ alignItems: 'center', marginTop: 10 }}>
                 <View style={[styles.radarCircle, { borderColor: color }]}>
-                    <View style={[styles.radarFill, { backgroundColor: color, height: `${Math.min(aqi, 100)}%` }]} />
+                    <View style={[styles.radarFill, { backgroundColor: color, height: `${Math.min((safeAqi/150)*100, 100)}%` }]} />
                     <FontAwesome5 name={isClean ? "smile-beam" : "dizzy"} size={18} color="#fff" style={{ zIndex: 2 }} />
                 </View>
-                <Text style={styles.featureValue}>{isClean ? 'هواء نقي' : 'خطر انسداد'}</Text>
+                <Text style={styles.featureValue}>{label}</Text>
             </View>
         </View>
     );
@@ -536,11 +581,15 @@ export const WeatherDetailedSheet = ({ insight }) => {
     const themeKey = data.theme || 'unknown';
     const theme = THEME_VARIANTS[themeKey] || THEME_VARIANTS.unknown;
 
-    // Metrics
-    const humidity = parseFloat(data.metrics?.humidity || 50);
-    const aqi = parseFloat(data.metrics?.aqi || 50);
-    // Get actual current UV from forecast array if available, or default
-    const currentUV = data.hourlyForecast?.[0]?.uv || 0;
+    // *** FIX: READ RAW DATA FOR INDICATORS ***
+    const raw = data.rawWeather || {};
+    
+    // Read numeric values from raw data (calculated in logic layer)
+    const humidity = raw.humidity !== undefined ? raw.humidity : parseFloat(data.metrics?.humidity || 50);
+    const dewPoint = raw.dewPoint; // Pass this specifically
+    const aqi = raw.aqi !== undefined ? raw.aqi : 50;
+    const uvIndex = raw.uvIndex !== undefined ? raw.uvIndex : 0;
+    const isDay = raw.isDay !== undefined ? raw.isDay : true;
 
     return (
         <View style={styles.sheetContainer}>
@@ -572,17 +621,20 @@ export const WeatherDetailedSheet = ({ insight }) => {
                 </LinearGradient>
             </View>
 
-        
-            <SpfTimerWidget uvIndex={currentUV} />
+            {/* 2. TIMER (Only show if UV is relevant/Daytime) */}
+            {isDay && <SpfTimerWidget uvIndex={uvIndex} />}
 
 
-            {/* 3. NEW SKIN METRICS (Horizontal Scroll) */}
+            {/* 3. METRICS SCROLL (Indicators) */}
             <View style={{ marginTop: 20 }}>
                 <Text style={[styles.sectionTitle, {marginRight: 8, marginBottom: 10}]}>مؤشرات الجو</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, flexDirection: 'row-reverse', gap: 10 }}>
-                    {/* Pass UV to Sun Cycle */}
-                    <SunCycleWidget uvIndex={currentUV} />
-                    <HydroGauge humidity={humidity} />
+                    {/* Pass isDay to SunCycle */}
+                    <SunCycleWidget uvIndex={uvIndex} isDay={isDay} />
+                    
+                    {/* Pass dewPoint to HydroGauge for medical accuracy */}
+                    <HydroGauge humidity={humidity} dewPoint={dewPoint} />
+                    
                     <PoreClarityWidget aqi={aqi} />
                 </ScrollView>
             </View>
@@ -592,7 +644,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
             {/* 5. ACCESSORIES */}
             <AccessoriesSection accessories={data.accessories} />
-
+            
             {/* 6. IMPACT ANALYSIS */}
             {data.impact && (
                 <View style={styles.sectionWrapper}>
@@ -625,62 +677,86 @@ export const WeatherDetailedSheet = ({ insight }) => {
             )}
 
             {/* 7. ROUTINE ADJUSTMENTS */}
-            {data.routine_adjustments && data.routine_adjustments.length > 0 && (
+            {data.routine_adjustments && data.routine_adjustments.length > 0 ? (
                 <View style={styles.sectionWrapper}>
                     <View style={styles.sectionHeaderRow}>
-                        <Text style={styles.sectionTitle}>تعديلات الروتين</Text>
-                        <FontAwesome5 name="sliders-h" size={14} color={COLORS.accentGreen} />
+                        <Text style={styles.sectionTitle}>توصيات الروتين</Text>
+                        <FontAwesome5 name="magic" size={14} color={COLORS.accentGreen} />
                     </View>
-                    {data.routine_adjustments.map((item, index) => {
-                        const isOwned = !!item.product;
-                        return (
-                            <View key={index} style={[
-                                styles.routineCard,
-                                { borderColor: isOwned ? COLORS.success : COLORS.warning }
-                            ]}>
-                                <View style={styles.routineHeader}>
-                                    <View style={styles.stepTag}>
-                                        <Text style={styles.stepTagText}>{item.step}</Text>
-                                    </View>
-                                    <Text style={styles.routineActionText}>{item.action}</Text>
-                                </View>
-
-                                <View style={[
-                                    styles.matchBox,
-                                    { backgroundColor: isOwned ? COLORS.success + '10' : COLORS.warning + '10' }
-                                ]}>
-                                    <View style={{ flex: 1, paddingRight: 8 }}>
-                                        <Text style={[
-                                            styles.matchLabel,
-                                            { color: isOwned ? COLORS.success : COLORS.warning }
-                                        ]}>
-                                            {isOwned ? '✅ متوفر في رفك' : '💡 مقترح للإضافة'}
-                                        </Text>
-                                        <Text style={styles.productName}>
-                                            {isOwned ? item.product : item.missing_suggestion}
-                                        </Text>
-                                    </View>
-                                    <View style={[
-                                        styles.matchIconCircle,
-                                        { backgroundColor: isOwned ? COLORS.success : COLORS.warning }
-                                    ]}>
-                                        <FontAwesome5
-                                            name={isOwned ? "check" : "shopping-bag"}
-                                            size={12}
-                                            color="#fff"
-                                        />
-                                    </View>
-                                </View>
-                            </View>
-                        );
-                    })}
+                    
+                    {/* Container with visual separation but no heavy boxing */}
+                    <View style={styles.cleanListContainer}>
+                        {data.routine_adjustments.map((item, index) => (
+                            <React.Fragment key={index}>
+                                <CleanRoutineItem item={item} />
+                                {/* Add separator line except for the last item */}
+                                {index < data.routine_adjustments.length - 1 && (
+                                    <View style={styles.cleanDivider} />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </View>
                 </View>
-            )}
+            ) : null} 
+            {/* The : null ensures nothing renders if array is empty */}
 
             <View style={{ height: 40 }} />
         </View>
     );
 };
+
+const CleanRoutineItem = ({ item }) => {
+    const isOwned = !!item.product;
+    const isAdviceOnly = !item.product && !item.missing_suggestion; // e.g., "Skip Moisturizer"
+
+    // 1. Determine Status & Color
+    let statusColor = COLORS.textSecondary; // Default
+    let icon = "info-circle";
+    let subText = "";
+
+    if (isOwned) {
+        statusColor = COLORS.success;
+        icon = "check-circle";
+        subText = `${item.product}`; // Show your specific product name
+    } else if (isAdviceOnly) {
+        statusColor = COLORS.blue;
+        icon = "lightbulb";
+        subText = item.missing_suggestion || "نصيحة سلوكية";
+    } else {
+        statusColor = COLORS.warning;
+        icon = "shopping-bag";
+        subText = `مقترح: ${item.missing_suggestion}`; // Generic ingredient
+    }
+
+    return (
+        <View style={styles.cleanRowContainer}>
+            {/* Context Icon (Left) */}
+            <View style={[styles.cleanIconBox, { backgroundColor: statusColor + '15' }]}>
+                <FontAwesome5 name={icon} size={16} color={statusColor} />
+            </View>
+
+            {/* Text Content */}
+            <View style={styles.cleanContent}>
+                <View style={styles.cleanHeader}>
+                    <Text style={styles.cleanAction}>{item.action}</Text>
+                    <Text style={styles.cleanStepTag}>{item.step}</Text>
+                </View>
+                
+                {/* Only render subtext if it exists */}
+                {subText ? (
+                    <Text style={[
+                        styles.cleanProductText, 
+                        { color: isOwned ? COLORS.textPrimary : COLORS.textSecondary }
+                    ]}>
+                        {subText}
+                    </Text>
+                ) : null}
+            </View>
+        </View>
+    );
+};
+
+
 
 // ============================================================================
 //                       8. LOCATION PERMISSION MODAL (FIXED)
@@ -987,7 +1063,7 @@ const styles = StyleSheet.create({
     widgetAction: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18 },
     widgetBgIcon: { position: 'absolute', left: -25, bottom: -25, opacity: 0.08, transform: [{ rotate: '15deg' }] },
 
-    // --- Mini Card (Carousel) ---
+    // --- Mini Card ---
     miniCardContainer: {
         width: 150, height: 160, borderRadius: 24, padding: 16, justifyContent: 'space-between',
         overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6,
@@ -1010,7 +1086,7 @@ const styles = StyleSheet.create({
     glassPillText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
     glassSeparator: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
 
-    // --- SPF Timer (ENHANCED) ---
+    // --- SPF Timer ---
     spfContainer: {
         backgroundColor: COLORS.cardSurface,
         borderRadius: 24,
@@ -1022,93 +1098,25 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     timerRingContainer: {
-        width: 100,
-        height: 100,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: 100, height: 100, alignItems: 'center', justifyContent: 'center',
     },
-    timerTextOverlay: {
-        position: 'absolute',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timerInfoContainer: {
-        flex: 1,
-        paddingRight: 16,
-        justifyContent: 'center',
-    },
-    timerTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 18,
-        color: COLORS.textPrimary,
-        textAlign: 'right',
-        marginBottom: 4,
-    },
-    timerCountdown: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 36,
-        color: COLORS.accentGreen,
-        textAlign: 'right',
-        marginBottom: 4,
-        lineHeight: 44,
-    },
-    timerDescription: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        textAlign: 'right',
-        lineHeight: 20,
-        marginBottom: 12,
-    },
-    timerButton: {
-        paddingVertical: 10,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timerButtonStart: {
-        backgroundColor: COLORS.accentGreen,
-    },
-    timerButtonStop: {
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    },
-    timerButtonText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 14,
-        color: '#fff',
-    },
-    debugToggleContainer: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        marginBottom: 15,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 16,
-        alignSelf: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    debugToggleLabel: {
-        fontFamily: 'Tajawal-Regular',
-        color: COLORS.textSecondary,
-        fontSize: 12,
-    },
-    // ========================================================================
-    // --- EXISTING STYLES (Features, Timeline, Etc) ---
-    // ========================================================================
+    timerTextOverlay: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+    timerInfoContainer: { flex: 1, paddingRight: 16, justifyContent: 'center' },
+    timerTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 4 },
+    timerCountdown: { fontFamily: 'Tajawal-ExtraBold', fontSize: 36, color: COLORS.accentGreen, textAlign: 'right', marginBottom: 4, lineHeight: 44 },
+    timerDescription: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 20, marginBottom: 12 },
+    timerButton: { paddingVertical: 10, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+    timerButtonStart: { backgroundColor: COLORS.accentGreen },
+    timerButtonStop: { backgroundColor: 'rgba(239, 68, 68, 0.2)' },
+    timerButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: '#fff' },
+
+    // --- Features ---
     featureCard: {
         width: 120, height: 120, backgroundColor: COLORS.cardSurface, borderRadius: 20, padding: 12,
         borderWidth: 1, borderColor: COLORS.border, justifyContent: 'space-between'
     },
-    featureHeader: {
-        flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center'
-    },
-    featureTitle: {
-        fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textSecondary
-    },
+    featureHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
+    featureTitle: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textSecondary },
     featureValue: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, marginTop: 5 },
     featureSub: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textSecondary },
 
@@ -1121,7 +1129,7 @@ const styles = StyleSheet.create({
     radarCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 4 },
     radarFill: { position: 'absolute', bottom: 0, left: 0, right: 0, opacity: 0.3 },
 
-    // --- Hourly Timeline ---
+    // --- Timeline ---
     timelineContainer: {
         backgroundColor: COLORS.cardSurface, borderRadius: 24, paddingVertical: 20,
         borderWidth: 1, borderColor: COLORS.border, marginTop: 10
@@ -1149,9 +1157,7 @@ const styles = StyleSheet.create({
         borderRadius: 18, padding: 12, borderWidth: 1, borderColor: COLORS.border,
         flexGrow: 1, maxWidth: '48%', gap: 10
     },
-    accessoryIconBox: {
-        width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center'
-    },
+    accessoryIconBox: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     accessoryText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
 
     // --- Header & General ---
@@ -1214,138 +1220,14 @@ const styles = StyleSheet.create({
     productName: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textPrimary, textAlign: 'right' },
     matchIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 
-    // --- Modal ---
-    // --- Promo Modal Styles ---
-    modalOverlay: { 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        backgroundColor: 'transparent' // CHANGED: Was rgba(0,0,0,0.8), now transparent so it doesn't pop
-    },
-    modalBackdrop: { 
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.8)' // CHANGED: Moved color here to animate opacity
-    },
-    modalContent: {
-        width: width * 0.85, 
-        backgroundColor: COLORS.card, 
-        borderRadius: 28, 
-        paddingHorizontal: 24,
-        paddingTop: 45, 
-        paddingBottom: 24,
-        alignItems: 'center',
-        borderWidth: 1, 
-        borderColor: 'rgba(90, 156, 132, 0.3)', 
-        shadowColor: '#000', 
-        shadowOpacity: 0.5, 
-        shadowRadius: 30, 
-        elevation: 20
-    },
-    modalIconFloat: { 
-        position: 'absolute',
-        top: -40,
-        alignSelf: 'center',
-        shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 10
-    },
-    modalIconGradient: {
-        width: 80, 
-        height: 80, 
-        borderRadius: 40, 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        borderWidth: 6, 
-        borderColor: COLORS.card 
-    },
-    modalTitle: { 
-        fontFamily: 'Tajawal-ExtraBold', 
-        fontSize: 22, 
-        color: COLORS.textPrimary, 
-        marginBottom: 8,
-        textAlign: 'center'
-    },
-    modalBody: { 
-        fontFamily: 'Tajawal-Regular', 
-        fontSize: 14, 
-        color: COLORS.textSecondary, 
-        textAlign: 'center', 
-        marginBottom: 20 
-    },
-    featureListContainer: {
-        width: '100%',
-        marginBottom: 25,
-        gap: 12,
-    },
-    featureRow: {
-        flexDirection: 'row-reverse', 
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)', 
-        padding: 10,
-        borderRadius: 12,
-        gap: 12,
-    },
-    featureIconBox: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    featureText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 13,
-        color: COLORS.textPrimary,
-        flex: 1,
-        textAlign: 'right', 
-    },
-    modalActions: { 
-        flexDirection: 'row-reverse', 
-        width: '100%',
-        gap: 12
-    },
-    btnPrimary: {
-        flex: 1, 
-        backgroundColor: COLORS.accentGreen, 
-        height: 50, 
-        borderRadius: 16, 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        shadowColor: COLORS.accentGreen, 
-        shadowOpacity: 0.3, 
-        shadowOffset: {width: 0, height: 4},
-        elevation: 4
-    },
-    btnPrimaryText: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 15, 
-        color: '#ffffff',
-        marginBottom: 2
-    },
-    btnSecondary: { 
-        flex: 0.4, 
-        height: 50,
-        borderRadius: 16, 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: 'transparent'
-    },
-    btnSecondaryText: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 14, 
-        color: COLORS.textDim,
-        marginBottom: 2
-    },
-    
+    // --- Night Prep ---
     nightPrepContainer: {
         height: 160, borderRadius: 28, padding: 20, overflow: 'hidden', position: 'relative',
         marginBottom: 20, borderWidth: 1, borderColor: '#4f46e5'
     },
     moonGlow: {
         position: 'absolute', top: -50, right: -50, width: 150, height: 150,
-        borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)' // Note: filter might need generic View style adjustment in RN
+        borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)' 
     },
     nightPrepContent: { flex: 1, justifyContent: 'space-between' },
     nightHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
@@ -1357,52 +1239,99 @@ const styles = StyleSheet.create({
     nightBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#c7d2fe' },
     bgMoon: { position: 'absolute', left: -20, bottom: -20, opacity: 0.1, transform: [{ rotate: '15deg' }] },
 
-    // --- Exposure Slider ---
-    sliderContainer: {
-        marginBottom: 20, // More space
-        paddingHorizontal: 4,
-    },
-    sliderTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 14,
-        color: COLORS.textSecondary,
-    },
+    // --- Slider ---
+    sliderContainer: { marginBottom: 20, paddingHorizontal: 4 },
+    sliderTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
     sliderTrack: {
-        flexDirection: 'row-reverse', // RTL: Item 0 is on the Right
-        backgroundColor: 'rgba(0,0,0,0.25)', 
-        borderRadius: 16,
-        height: 48,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        position: 'relative',
-        justifyContent: 'space-between',
+        flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 16, height: 48,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', position: 'relative', justifyContent: 'space-between',
     },
     sliderPill: {
-        position: 'absolute',
-        top: 4,
-        bottom: 4,
-        width: '32%', // Slightly less than 33% for gaps
-        backgroundColor: '#A3E4D7', 
-        borderRadius: 12,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-        elevation: 4,
-        zIndex: 1, // Layer 1 (Background)
+        position: 'absolute', top: 4, bottom: 4, width: '32%', backgroundColor: '#A3E4D7', borderRadius: 12,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4, zIndex: 1,
     },
-    sliderOption: {
-        flex: 1,
+    sliderOption: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 10, height: '100%' },
+    sliderText: { fontSize: 11, paddingBottom: 2 },
+    
+    // --- Modal ---
+    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.8)' },
+    modalContent: {
+        width: width * 0.85, backgroundColor: COLORS.card, borderRadius: 28, paddingHorizontal: 24, paddingTop: 45, paddingBottom: 24,
+        alignItems: 'center', borderWidth: 1, borderColor: 'rgba(90, 156, 132, 0.3)', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 30, elevation: 20
+    },
+    modalIconFloat: { position: 'absolute', top: -40, alignSelf: 'center', shadowColor: COLORS.accentGreen, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
+    modalIconGradient: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 6, borderColor: COLORS.card },
+    modalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, marginBottom: 8, textAlign: 'center' },
+    modalBody: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
+    featureListContainer: { width: '100%', marginBottom: 25, gap: 12 },
+    featureRow: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 12, gap: 12 },
+    featureIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    featureText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
+    modalActions: { flexDirection: 'row-reverse', width: '100%', gap: 12 },
+    btnPrimary: { flex: 1, backgroundColor: COLORS.accentGreen, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowOffset: {width: 0, height: 4}, elevation: 4 },
+    btnPrimaryText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#ffffff', marginBottom: 2 },
+    btnSecondary: { flex: 0.4, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+    btnSecondaryText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textDim, marginBottom: 2 },
+
+    // --- Clean Routine Styles (New) ---
+    cleanListContainer: {
+        backgroundColor: COLORS.cardSurface,
+        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        // No heavy border, just subtle containment
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    cleanRowContainer: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
+        paddingVertical: 12,
+    },
+    cleanIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 20, // Circular
+        alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        zIndex: 10, // Layer 10 (Foreground - Clickable)
-        height: '100%', // Full height to capture clicks
+        marginLeft: 14, // Spacing from text (RTL)
     },
-    sliderText: {
-        fontSize: 11,
-        paddingBottom: 2
+    cleanContent: {
+        flex: 1,
+        justifyContent: 'center',
+        gap: 2,
     },
-
+    cleanHeader: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    cleanAction: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    cleanStepTag: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 10,
+        color: COLORS.textDim,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    cleanProductText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        textAlign: 'right',
+        opacity: 0.9,
+    },
+    cleanDivider: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        width: '100%',
+    },
 });
