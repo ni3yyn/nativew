@@ -43,9 +43,13 @@ import {
     WeatherDetailedSheet,
     LocationPermissionModal 
 } from '../../src/components/profile/WeatherComponents'; 
-// --- 1. SYSTEM CONFIG ---
 import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
 import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared'; 
+import { RoutineLogViewer } from '../../src/components/profile/routine/RoutineLogViewer';
+
+
+
+// --- 1. SYSTEM CONFIG ---
 
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
@@ -1530,7 +1534,8 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const [selectedStep, setSelectedStep] = useState(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
     
-    // New state to track server request status
+    // Server-side Architect State
+    const [routineLogs, setRoutineLogs] = useState([]);
     const [isBuilding, setIsBuilding] = useState(false);
   
     useEffect(() => {
@@ -1554,7 +1559,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
   
     const switchPeriod = (period) => {
       if (period === activePeriod) return;
-      Haptics.selectionAsync(); // Keep the haptic, remove the visual bounce
+      Haptics.selectionAsync(); 
       setActivePeriod(period);
     };
   
@@ -1589,9 +1594,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
         }
     };
   
-    // --- NEW SERVER-SIDE ROUTINE ARCHITECT ---
     const handleAutoBuildRoutine = () => {
-      // 0. Minimum Viable Shelf Check
       if (savedProducts.length < 2) {
           AlertService.show({
               title: "الرف غير كافٍ",
@@ -1603,6 +1606,8 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
   
       const runArchitect = async () => {
         setIsBuilding(true);
+        setRoutineLogs([]); 
+        
         try {
             const response = await fetch(`${PROFILE_API_URL}/generate-routine.js`, {
                 method: 'POST',
@@ -1616,36 +1621,39 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
               const data = await response.json();
               if (!response.ok) throw new Error(data.error || "Server Error");
   
-              // 2. Receive Optimized Routine & Save
               const newRoutines = { am: data.am || [], pm: data.pm || [] };
               await saveRoutines(newRoutines);
-  
-              // 3. Show Doctor's Report
+              
+              if (data.logs && Array.isArray(data.logs)) {
+                  setRoutineLogs(data.logs);
+              }
+
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              setTimeout(() => {
-                  AlertService.success("المعمار الرقمي 🧬", data.logs || "تم بناء الروتين بنجاح");
-              }, 500);
+              AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناءً على تحليل وثيق .");
   
           } catch (error) {
               console.error("Routine Generation Error:", error);
-              AlertService.error("خطأ", "تعذر الاتصال بالخادم الذكي. يرجى المحاولة لاحقاً.");
+              AlertService.error("خطأ", "تعذر الاتصال بروتين وثيق.");
           } finally {
               setIsBuilding(false);
           }
       };
   
       AlertService.confirm(
-          "بناء الروتين التلقائي",
-          "سيرتب لك وثيق روتينك اليومي .",
+          "روتين وثيق التلقائي",
+          "سيتم إعادة ترتيب روتينك بالكامل بناءً على تعارض المكونات وحالة بشرتك. موافق؟",
           runArchitect
       );
     };
   
+    // --- RENDER ---
+    const currentSteps = routines[activePeriod] || [];
+
     return (
       <View style={{ flex: 1 }}>
+          {/* Header Controls */}
           <View style={styles.routineHeaderContainer}>
                <View style={styles.routineSwitchContainer}>
-                  {/* CHANGED: Used standard TouchableOpacity to remove bounce/stretch */}
                   <TouchableOpacity 
                       activeOpacity={0.8} 
                       onPress={() => switchPeriod('pm')} 
@@ -1673,31 +1681,40 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
                </PressableScale>
           </View>
   
-          <FlatList
-              data={routines[activePeriod]}
-              renderItem={({ item, index }) => (
-                  <StaggeredItem index={index}> 
-                      <RoutineStepCard 
-                          step={item} 
-                          index={index} 
-                          onManage={() => setSelectedStep(item)} 
-                          onDelete={() => handleDeleteStep(item.id)}
-                          products={savedProducts} 
-                      />
-                  </StaggeredItem>
+          {/* CONTENT AREA (Replaced FlatList with standard View mapping) */}
+          <View style={{ paddingBottom: 220, paddingTop: 10 }}>
+              
+              {/* 1. Diagnostic Report Header */}
+              <View style={{ marginBottom: 10 }}>
+                  <RoutineLogViewer logs={routineLogs} />
+              </View>
+
+              {/* 2. Steps List */}
+              {currentSteps.length > 0 ? (
+                  currentSteps.map((item, index) => (
+                      <StaggeredItem index={index} key={item.id}> 
+                          <RoutineStepCard 
+                              step={item} 
+                              index={index} 
+                              onManage={() => setSelectedStep(item)} 
+                              onDelete={() => handleDeleteStep(item.id)}
+                              products={savedProducts} 
+                          />
+                      </StaggeredItem>
+                  ))
+              ) : (
+                  <RoutineEmptyState onPress={() => onOpenAddStepModal(handleAddStep)} />
               )}
-              keyExtractor={item => item.id}
-              contentContainerStyle={{ paddingBottom: 220, paddingTop: 10 }}
-              scrollEnabled={false}
-              ListEmptyComponent={() => (
-                <RoutineEmptyState onPress={() => onOpenAddStepModal(handleAddStep)} />
-            )}
-          />
+          </View>
           
+          {/* Floating Action Button */}
           <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
-              <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}><FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} /></LinearGradient>
+              <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}>
+                  <FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} />
+              </LinearGradient>
           </PressableScale>
   
+          {/* Modals */}
           {selectedStep && (
               <StepEditorModal 
                   isVisible={!!selectedStep} 

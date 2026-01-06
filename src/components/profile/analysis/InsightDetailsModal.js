@@ -181,7 +181,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 
                 <IngredientChips 
                     ingredients={data.missingHeroes} 
-                    title="🔍 مكونات ينصح بإضافتها (Missing)" 
+                    title="🔍 مكونات ينصح بإضافتها" 
                     type="bad" // Yellow/Red styling
                 />
                 
@@ -189,7 +189,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
 
                 <IngredientChips 
                     ingredients={data.foundHeroes} 
-                    title="✅ مكونات متوفرة لديكِ (Found)" 
+                    title="✅ مكونات متوفرة لديكِ" 
                     type="good" 
                 />
 

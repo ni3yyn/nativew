@@ -1155,7 +1155,7 @@ const styles = StyleSheet.create({
     accessoryText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
 
     // --- Header & General ---
-    sheetContainer: { paddingHorizontal: 4 },
+    sheetContainer: { paddingHorizontal: 24 },
     sectionWrapper: { marginTop: 30, paddingHorizontal: 4 },
     sectionHeaderRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 12, gap: 8, paddingRight: 4 },
     sectionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 17, color: COLORS.textPrimary, textAlign: 'right' },
@@ -1166,18 +1166,18 @@ const styles = StyleSheet.create({
     },
     headerGradient: { padding: 25, borderRadius: 32, alignItems: 'center' },
     locationTag: {
-        position: 'absolute', top: 22, left: 22, flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
+        position: 'absolute', top:22, flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
         backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
     },
     locationText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
     headerCenter: { alignItems: 'center', marginTop: 15, marginBottom: 20 },
     headerIconRing: {
-        width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center', justifyContent: 'center', marginBottom: 15,
+        width: 65, height: 65, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center', justifyContent: 'center', marginBottom: 15, marginTop: 20,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10
     },
-    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 28, color: '#fff', textAlign: 'center', marginBottom: 6 },
-    headerSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: '85%', lineHeight: 24 },
+    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: '#fff', textAlign: 'center', marginBottom: 6 },
+    headerSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: '85%', lineHeight: 24 },
     metricPill: {
         flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)',
         paddingHorizontal: 18, paddingVertical: 12, borderRadius: 24,
@@ -1191,13 +1191,13 @@ const styles = StyleSheet.create({
     // --- Impact ---
     impactCard: {
         flexDirection: 'row-reverse', backgroundColor: COLORS.cardSurface, borderRadius: 24,
-        padding: 24, borderWidth: 1, borderColor: COLORS.border
+        padding: 24, borderWidth: 1, borderColor: COLORS.border,
     },
     impactSide: { flex: 1, gap: 12 },
     impactHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
     impactIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    impactTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary },
-    impactBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 22 },
+    impactTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary,},
+    impactBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 22, alignSelf: 'center' },
     impactDividerVertical: { width: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20 },
 
     // --- Routine ---

@@ -9,7 +9,6 @@ import { BarrierCard, BarrierDetailsModal } from './analysis/BarrierSection';
 import { OverviewDashboard } from './analysis/OverviewDashboard';
 import { InsightDetailsModal } from './analysis/InsightDetailsModal';
 import { AnalysisEmptyState } from '../../components/profile/EmptyStates'; 
-import { NightPrepCard } from '../../components/profile/WeatherComponents'; 
 
 export const AnalysisSection = ({ 
     loadingProfile, 
@@ -34,23 +33,27 @@ export const AnalysisSection = ({
     // ========================================================================
     // --- INSIGHTS ENGINE ---
     // ========================================================================
-    const { heroInsight, carouselInsights, nightPrepInsight, barrierData } = useMemo(() => {
+    const { heroInsight, carouselInsights, barrierData } = useMemo(() => {
         // 1. Safety Check
         if (!analysisData) return { 
-            heroInsight: null, carouselInsights: [], nightPrepInsight: null, barrierData: null 
+            heroInsight: null, carouselInsights: [], barrierData: null 
         };
 
         // 2. Base Profile Insights (Filter dismissed)
         const rawInsights = analysisData.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
-        let allInsights = [...rawInsights];
+        
+        // 3. Prepare Insights Pool
+        // Start with raw insights
+        let otherInsights = [...rawInsights];
 
-        // 3. Inject Weather Insight (From API)
-        let weatherInsight = null;
+        // 4. Handle Weather Dashboard (Strictly Hero)
+        let weatherDashboard = null;
+
         if (loadingWeather) {
-            weatherInsight = { id: 'weather-loading-placeholder', isPlaceholder: true, severity: 'critical' };
+            weatherDashboard = { id: 'weather-loading-placeholder', isPlaceholder: true, severity: 'critical' };
         } 
         else if (weatherErrorType === 'permission') {
-            weatherInsight = {
+            weatherDashboard = {
                 id: 'weather-permission-denied',
                 title: 'الموقع غير مفعل',
                 short_summary: 'يرجى تفعيل الموقع لبيانات الطقس.',
@@ -59,7 +62,7 @@ export const AnalysisSection = ({
             };
         }
         else if (weatherErrorType === 'service') {
-            weatherInsight = {
+            weatherDashboard = {
                 id: 'weather-unavailable',
                 title: 'الطقس غير متاح',
                 short_summary: 'تعذر الاتصال بخدمة الطقس.',
@@ -68,43 +71,58 @@ export const AnalysisSection = ({
             };
         }
         else if (weatherResults && weatherResults.length > 0) {
-            // The first result is the main weather card
-            weatherInsight = weatherResults[0]; 
+            // FORCE: The first result is ALWAYS the main dashboard
+            weatherDashboard = weatherResults[0];
+            
+            // Any additional weather alerts (indices 1+) go to the carousel pool
+            if (weatherResults.length > 1) {
+                const specificWeatherAlerts = weatherResults.slice(1);
+                otherInsights = [...specificWeatherAlerts, ...otherInsights];
+            }
         }
 
-        // Add Weather to top of list
-        if (weatherInsight) {
-            allInsights = [weatherInsight, ...allInsights];
+        // 5. Handle Night Prep Specifically
+        // Find it in the pool and remove it so we can position it manually
+        const nightPrepInsight = otherInsights.find(i => i.id === 'night-prep-forecast');
+        otherInsights = otherInsights.filter(i => i.id !== 'night-prep-forecast');
+
+        // 6. Determine Final Hero
+        // Priority: Weather Dashboard is KING.
+        let hero = weatherDashboard;
+
+        // Fallback: If weather is completely broken/missing, grab the most critical alert
+        if (!hero) {
+             hero = otherInsights.find(i => i.severity === 'critical') || otherInsights[0];
+             // Remove chosen hero from pool
+             if (hero) {
+                 otherInsights = otherInsights.filter(i => i.id !== hero.id);
+             }
         }
 
-        // 4. Extract Night Prep (Separate Card)
-        const foundNightPrep = allInsights.find(i => i.id === 'night-prep-forecast');
-        if (foundNightPrep) {
-            allInsights = allInsights.filter(i => i.id !== 'night-prep-forecast');
-        }
+        // 7. Construct Carousel
+        // Priority 1: Night Prep
+        // Priority 2: Remaining insights sorted by severity
+        const sortedRemaining = otherInsights.sort((a, b) => {
+            const severityScore = { critical: 3, warning: 2, info: 1, good: 0 };
+            return (severityScore[b.severity] || 0) - (severityScore[a.severity] || 0);
+        });
 
-        // 5. Determine Hero Card
-        // Priority: Loading -> Weather (if critical/warning) -> Critical Product Alert -> Standard Weather
-        let focus = allInsights.find(i => 
-            i.isPlaceholder ||
-            i.severity === 'critical' || // Prioritize Critical alerts (e.g. High UV or Product Clash)
-            (i.customData?.type === 'weather_advice' || i.customData?.type === 'weather_dashboard')
-        );
+        let finalCarousel = [...sortedRemaining];
         
-        // Fallback if no weather/critical issues found
-        if (!focus) focus = allInsights.find(i => i.severity === 'warning');
+        // Inject Night Prep at the START of the carousel
+        if (nightPrepInsight) {
+            finalCarousel = [nightPrepInsight, ...finalCarousel];
+        }
 
-        // 6. Carousel & Barrier
-        const carousel = allInsights.filter(i => i.id !== focus?.id);
+        // 8. Barrier Data
         const barrier = analysisData.barrierHealth || { 
             score: 0, status: '...', color: COLORS.textSecondary, desc: '', 
             totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: []
         };
 
         return { 
-            heroInsight: focus, 
-            carouselInsights: carousel, 
-            nightPrepInsight: foundNightPrep, 
+            heroInsight: hero, 
+            carouselInsights: finalCarousel, 
             barrierData: barrier 
         };
 
@@ -126,7 +144,7 @@ export const AnalysisSection = ({
         <View style={styles.container}>
             <View style={styles.scrollContent}> 
                 
-                {/* 1. HERO SECTION (Weather / Major Alert) */}
+                {/* 1. HERO SECTION (Always Weather Dashboard unless error) */}
                 <AnalysisHero 
                     focusInsight={heroInsight} 
                     onSelect={handleSelectInsight} 
@@ -134,15 +152,7 @@ export const AnalysisSection = ({
                     onShowPermissionAlert={onShowPermissionAlert}
                 />
 
-                {/* 2. NIGHT PREP CARD (Dynamic: Only shows if interesting) */}
-                {nightPrepInsight && (
-                    <NightPrepCard 
-                        data={nightPrepInsight.customData} 
-                        onPress={() => handleSelectInsight(nightPrepInsight)}
-                    />
-                )}
-  
-                {/* 3. INSIGHT CAROUSEL (Secondary tips) */}
+                {/* 2. INSIGHT CAROUSEL (Starts with Night Prep if available) */}
                 {carouselInsights.length > 0 && (
                     <AnalysisCarousel 
                         insights={carouselInsights} 
@@ -150,7 +160,7 @@ export const AnalysisSection = ({
                     />
                 )}
   
-                {/* 4. BARRIER & DASHBOARD */}
+                {/* 3. BARRIER & DASHBOARD */}
                 <BarrierCard 
                     barrier={barrierData} 
                     onPress={() => setShowBarrierDetails(true)} 
