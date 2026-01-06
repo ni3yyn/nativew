@@ -21,7 +21,7 @@ import {
 } from '../../data/allergiesandconditions';
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح البشرة' },
+    { id: 'brightening', label: 'تفتيح و نضارة' },
     { id: 'acne', label: 'مكافحة حب الشباب' },
     { id: 'anti_aging', label: 'مكافحة الشيخوخة' },
     { id: 'hydration', label: 'ترطيب عميق' },
