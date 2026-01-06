@@ -113,11 +113,12 @@ const BASIC_SKIN_TYPES = [
 ];
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح البشرة', icon: 'sun' },
+    { id: 'brightening', label: 'تفتيح ونضارة', icon: 'sun' },
     { id: 'acne', label: 'مكافحة حب الشباب', icon: 'shield-alt' },
     { id: 'anti_aging', label: 'مكافحة الشيخوخة', icon: 'hourglass-half' },
     { id: 'hydration', label: 'ترطيب البشرة', icon: 'blurType' },
-    { id: 'hair_growth', label: 'تكثيف الشعر', icon: 'seedling' }
+    { id: 'texture_pores', label: 'تحسين الملمس والمسام' , icon: 'th-large'},
+
 ];
 
 const INGREDIENT_FILTERS = [

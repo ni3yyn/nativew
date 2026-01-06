@@ -24,8 +24,8 @@ const GOALS_LIST = [
     { id: 'brightening', label: 'تفتيح البشرة' },
     { id: 'acne', label: 'مكافحة حب الشباب' },
     { id: 'anti_aging', label: 'مكافحة الشيخوخة' },
-    { id: 'hydration', label: 'ترطيب البشرة' },
-    { id: 'hair_growth', label: 'تكثيف الشعر' }
+    { id: 'hydration', label: 'ترطيب عميق' },
+    { id: 'texture_pores', label: 'تحسين الملمس والمسام' },
 ];
 
 // 🟢 CONFIG: Cache Duration (24 Hours in Milliseconds)
