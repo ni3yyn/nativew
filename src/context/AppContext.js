@@ -184,13 +184,26 @@ export const AppProvider = ({ children }) => {
         
         const unsubscribeProducts = onSnapshot(productsQuery, 
           (snapshot) => {
-            const products = snapshot.docs.map(doc => ({
+            const newProducts = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
             }));
 
-            setSavedProducts(products);
-            setSavedProductsCache(products); // Sync to cache
+            // OPTIMIZATION: Check against previous state to avoid unnecessary re-renders
+            setSavedProducts(prevProducts => {
+                // 1. Compare the new data from network vs what we currently have (from cache)
+                const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(prevProducts);
+
+                if (isDifferent) {
+                    console.log("🔄 Network data different from cache. Updating...");
+                    // 2. Only update Cache if data actually changed
+                    setSavedProductsCache(newProducts);
+                    return newProducts; // Update state
+                }
+                
+                // 3. If data is identical, keep old state (Prevents the 3rd log message)
+                return prevProducts; 
+            });
             
             setProductsError(null);
             setLoading(false);
