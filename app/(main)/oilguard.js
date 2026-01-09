@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
-import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask } from 'react-native-svg';
+import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
@@ -29,6 +29,8 @@ import { uriToBase64 } from '../../src/utils/formatters';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
 import CustomCameraModal from '../../src/components/oilguard/CustomCameraModal'; // <--- NEW IMPORT
 import ImageCropperModal from '../../src/components/oilguard/ImageCropperModal';
+import ActionRow from './ActionRow'; // Adjust path if needed
+import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -42,12 +44,6 @@ import {
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
 
-// UPDATED: Check for Fabric before enabling LayoutAnimation to prevent warning
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  if (!global?.nativeFabricUIManager) { // Only enable if NOT using New Architecture
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
 
 // ENDPOINTS
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
@@ -93,14 +89,49 @@ const Spore = ({ size, startX, duration, delay }) => {
   return ( <Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} /> );
 };
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 const PressableScale = ({ onPress, children, style, disabled }) => {
-    const scale = useRef(new Animated.Value(1)).current; 
-    const pressIn = () => !disabled && Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 20, bounciness: 0 }).start();
-    const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 10 }).start();
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        if (disabled) return;
+        Haptics.selectionAsync();
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 10,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 10,
+        }).start();
+    };
+
     return (
-        <Pressable onPress={() => { if(onPress && !disabled) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut} disabled={disabled} style={style}>
-            <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>
-        </Pressable>
+        <AnimatedTouchableOpacity
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            disabled={disabled}
+            activeOpacity={1} // Disables the default "fade" opacity
+            style={[
+                style, 
+                { 
+                    transform: [{ scale: scaleAnim }],
+                    // Fixes some Android shadow clipping/glow artifacts
+                    overflow: 'visible' 
+                }
+            ]}
+        >
+            {children}
+        </AnimatedTouchableOpacity>
     );
 };
 
@@ -206,98 +237,176 @@ const ConfidenceRing = ({ confidence }) => {
 };
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const ClaimsGroupedView = ({ results }) => {
-  const groupedResults = useMemo(() => {
-      return results.reduce((acc, result) => {
-          if (result.status.includes('✅') || result.status.includes('🌿')) {
-              acc.proven.push(result);
-          } else if (result.status.includes('⚖️')) {
-              acc.doubtful.push(result);
-          } else {
-              acc.false.push(result);
-          }
-          return acc;
-      }, { proven: [], doubtful: [], false: [] });
-  }, [results]);
+// --- IN FILE: oilguard.js ---
 
-  const ClaimGroup = ({ title, icon, color, claims }) => {
-      if (claims.length === 0) return null;
-      return (
-          <View style={{ marginBottom: 15 }}>
-              <View style={styles.groupHeader}>
-                  <FontAwesome5 name={icon} size={16} color={color} />
-                  <Text style={[styles.groupTitle, { color }]}>{title}</Text>
-              </View>
-              {claims.map((claim, i) => (
-                  <EnhancedTruthCard key={claim.claim} result={claim} index={i} />
-              ))}
-          </View>
-      );
-  };
+// --- IN FILE: oilguard.js ---
 
-  return (
-      <View>
-          <ClaimGroup title="ادعاءات مثبتة" icon="check-circle" color={COLORS.success} claims={groupedResults.proven} />
-          <ClaimGroup title="ادعاءات مشكوك فيها" icon="exclamation-triangle" color={COLORS.warning} claims={groupedResults.doubtful} />
-          <ClaimGroup title="ادعاءات تسويقية بحتة" icon="times-circle" color={COLORS.danger} claims={groupedResults.false} />
-      </View>
-  );
-};
+const MarketingClaimsSection = ({ results }) => {
+    
+    // 1. Helper to Clean Emojis from Backend Text
+    const cleanStatusText = (text) => {
+        if (!text) return '';
+        // Removes specific emojis used in logic.js (✅, 🌿, ⚖️, ❌, 🚫) and trims
+        return text.replace(/[✅🌿⚖️❌🚫]/g, '').trim();
+    };
 
-const EnhancedTruthCard = ({ result, index }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const rotation = useRef(new Animated.Value(0)).current;
+    // 2. Sort Logic
+    const sortedResults = useMemo(() => {
+        return [...results].sort((a, b) => {
+            const getScore = (item) => {
+                const s = item.status ? item.status.toString() : '';
+                // 4 = Worst (Red), 3 = Warning (Yellow), 2 = Traditional (Green), 1 = Best (Blue)
+                if (s.includes('❌') || s.includes('تسويقي')) return 4;
+                if (s.includes('🚫') || s.includes('لا توجد')) return 4; // Grouped with worst for sorting
+                if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) return 3;
+                if (s.includes('🌿') || s.includes('تقليديا')) return 2;
+                return 1;
+            };
+            return getScore(b) - getScore(a);
+        });
+    }, [results]);
 
-  const toggle = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring); 
-      setIsOpen(!isOpen);
-      Animated.timing(rotation, {
-          toValue: isOpen ? 0 : 1,
-          duration: 300,
-          useNativeDriver: true,
-      }).start();
-  };
+    const ClaimRow = ({ result, index }) => {
+        const [expanded, setExpanded] = useState(false);
+        const animRef = useRef(new Animated.Value(0)).current;
 
-  const rotateChevron = rotation.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0deg', '180deg'],
-  });
+        // 3. Status Configuration
+        const getStatusConfig = (statusRaw) => {
+            const s = statusRaw ? statusRaw.toString() : '';
 
-  const allEvidence = [...result.proven, ...result.traditionallyProven, ...result.doubtful, ...result.ineffective];
+            // CASE A: Marketing Lie OR No Ingredients (Same Icon/Color as requested)
+            if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
+                return { 
+                    color: '#FF6B6B', // Soft Red
+                    icon: 'times-circle', 
+                    bg: 'rgba(255, 107, 107, 0.1)' 
+                };
+            }
 
-  return (
-      <StaggeredItem index={index}>
-          <View style={styles.truthCard}>
-              <TouchableOpacity onPress={toggle} activeOpacity={0.8} style={styles.truthTrigger}>
-                  <ConfidenceRing confidence={result.confidence} />
-                  <View style={styles.truthTitleContainer}>
-                      <Text style={styles.truthTitle}>{result.claim}</Text>
-                      <Text style={styles.truthStatus}>{result.status}</Text>
-                  </View>
-                  <Animated.View style={{ transform: [{ rotate: rotateChevron }] }}>
-                      <FontAwesome5 name={"chevron-down"} size={14} color={COLORS.textDim} />
-                  </Animated.View>
-              </TouchableOpacity>
+            // CASE B: Doubtful / Partially True (Yellow)
+            if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) {
+                return { 
+                    color: '#FFD93D', // Bright Yellow
+                    icon: 'exclamation-triangle', 
+                    bg: 'rgba(255, 217, 61, 0.1)' 
+                };
+            }
 
-              {isOpen && (
-                  <View style={styles.truthDetails}>
-                      <Text style={styles.truthExplanation}>{result.explanation}</Text>
-                      {allEvidence.length > 0 && (
-                          <View style={styles.evidenceContainer}>
-                              <Text style={styles.evidenceTitle}>الأدلة:</Text>
-                              <View style={styles.evidencePillsContainer}>
-                                  {result.proven.map(ing => <View key={ing} style={[styles.evidencePill, styles.pillProven]}><Text style={styles.evidencePillText}>{ing}</Text></View>)}
-                                  {result.traditionallyProven.map(ing => <View key={ing} style={[styles.evidencePill, styles.pillTraditional]}><Text style={styles.evidencePillText}>{ing}</Text></View>)}
-                                  {result.doubtful.map(ing => <View key={ing} style={[styles.evidencePill, styles.pillDoubtful]}><Text style={styles.evidencePillText}>{ing}</Text></View>)}
-                                  {result.ineffective.map(ing => <View key={ing} style={[styles.evidencePill, styles.pillIneffective]}><Text style={styles.evidencePillText}>{ing}</Text></View>)}
-                              </View>
-                          </View>
-                      )}
-                  </View>
-              )}
-          </View>
-      </StaggeredItem>
-  );
+            // CASE C: Traditional (Green)
+            if (s.includes('🌿') || s.includes('تقليديا')) {
+                return { 
+                    color: '#6BCB77', // Organic Green
+                    icon: 'leaf', 
+                    bg: 'rgba(107, 203, 119, 0.1)' 
+                };
+            }
+
+            // CASE D: Scientific (Blue) - Default
+            return { 
+                color: '#4D96FF', // Scientific Blue
+                icon: 'check-circle', 
+                bg: 'rgba(77, 150, 255, 0.1)' 
+            };
+        };
+
+        const config = getStatusConfig(result.status);
+        const cleanStatus = cleanStatusText(result.status);
+
+        const allEvidence = [
+            ...(result.proven || []), 
+            ...(result.traditionallyProven || []), 
+            ...(result.doubtful || []), 
+            ...(result.ineffective || [])
+        ];
+
+        const toggle = () => {
+            // --- FIX: DELETE THIS LINE ---
+            // LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            // -----------------------------
+            
+            setExpanded(!expanded);
+            Animated.timing(animRef, { toValue: expanded ? 0 : 1, duration: 300, useNativeDriver: true }).start();
+        };
+
+        const rotateArrow = animRef.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+
+        return (
+            <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
+                <PressableScale onPress={toggle}>
+                    <View style={[styles.claimRowMain, expanded && { backgroundColor: config.bg }]}>
+                        
+                        {/* Icon (Right) */}
+                        <View style={styles.claimIconCol}>
+                            <FontAwesome5 name={config.icon} size={20} color={config.color} />
+                        </View>
+
+                        {/* Text (Middle) */}
+                        <View style={styles.claimTextCol}>
+                            <Text style={[styles.claimTextTitle, { color: expanded ? config.color : COLORS.textPrimary }]}>
+                                {result.claim}
+                            </Text>
+                            {/* Display CLEAN text without emoji */}
+                            <Text style={[styles.claimTextStatus, { color: config.color }]}>
+                                {cleanStatus}
+                            </Text>
+                        </View>
+
+                        {/* Arrow (Left) */}
+                        <View style={styles.claimArrowCol}>
+                            <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
+                                <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
+                            </Animated.View>
+                        </View>
+
+                    </View>
+                </PressableScale>
+
+                {expanded && (
+                    <View style={styles.claimDetails}>
+                        <Text style={styles.claimExplanation}>{result.explanation}</Text>
+                        {allEvidence.length > 0 && (
+                            <View style={styles.miniEvidenceGrid}>
+                                <Text style={styles.miniEvidenceLabel}>المكونات المرتبطة:</Text>
+                                {allEvidence.map((ing, i) => (
+                                    <View key={i} style={styles.miniEvidenceChip}>
+                                        <Text style={styles.miniEvidenceText}>{ing}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    // Calculate Score (Scientific + Traditional = Positive)
+    const total = sortedResults.length;
+    const validCount = sortedResults.filter(r => {
+        const s = r.status.toString();
+        return s.includes('✅') || s.includes('🌿');
+    }).length;
+    
+    const score = total > 0 ? Math.round((validCount / total) * 100) : 0;
+
+    return (
+        <View style={styles.claimsContainer}>
+            <View style={styles.claimsHeader}>
+                <View>
+                    <Text style={styles.claimsTitle}>تحليل الادعاءات</Text>
+                    <Text style={styles.claimsSubtitle}>مدى صحة وعود المنتج</Text>
+                </View>
+                <View style={styles.honestyBadge}>
+                    <Text style={styles.honestyScore}>{score}%</Text>
+                    <Text style={styles.honestyLabel}>مصداقية</Text>
+                </View>
+            </View>
+
+            <View style={styles.claimsBody}>
+                {sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)}
+            </View>
+        </View>
+    );
 };
 
 const SwipeHint = () => {
@@ -797,6 +906,216 @@ const InputStepView = React.memo(({ onImageSelect }) => {
     );
 });
 
+// --- COMPLEX GAUGE COMPONENT (Replaces simple ScoreRing) ---
+const ComplexDashboardGauge = ({ score, size = 220 }) => {
+  const animatedScore = useRef(new Animated.Value(0)).current;
+  const [displayScore, setDisplayScore] = useState(0);
+
+  const center = size / 2;
+  const radius = size * 0.38; // Radius of main ring
+  const circum = 2 * Math.PI * radius;
+  
+  // Determine color based on score
+  const getColor = (s) => {
+      if (s >= 80) return COLORS.success;
+      if (s >= 60) return COLORS.gold;
+      return COLORS.danger;
+  };
+  
+  const activeColor = getColor(displayScore);
+
+  useEffect(() => {
+      const listener = animatedScore.addListener(({ value }) => setDisplayScore(Math.round(value)));
+      Animated.timing(animatedScore, {
+          toValue: score,
+          duration: 2000,
+          easing: Easing.bezier(0.25, 1, 0.5, 1),
+          useNativeDriver: false
+      }).start();
+      return () => animatedScore.removeListener(listener);
+  }, [score]);
+
+  // Calculate Stroke Dash
+  const strokeDashoffset = animatedScore.interpolate({
+      inputRange: [0, 100],
+      outputRange: [circum, 0]
+  });
+
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+      Animated.loop(
+          Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
+      ).start();
+  }, []);
+
+  const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const spinReverse = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
+
+  return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+          {/* 1. Outer Tech Ring (Spinning Slow) */}
+          <Animated.View style={{ position: 'absolute', transform: [{ rotate: spin }] }}>
+               <Svg width={size} height={size}>
+                  <Circle cx={center} cy={center} r={size * 0.48} stroke="rgba(90, 156, 132, 0.1)" strokeWidth="1" strokeDasharray="5, 10" fill="none" />
+               </Svg>
+          </Animated.View>
+
+          
+
+          {/* 3. Main Gauge Track */}
+          <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+              <Defs>
+                   {/* FIX: Use SvgLinearGradient here instead of LinearGradient */}
+                   <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0" stopColor={activeColor} stopOpacity="0.2" />
+                      <Stop offset="1" stopColor={activeColor} stopOpacity="1" />
+                   </SvgLinearGradient>
+              </Defs>
+              {/* Background Track */}
+              <Circle cx={center} cy={center} r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="18" fill="none" strokeLinecap="round"/>
+              
+              {/* Progress Value */}
+              <AnimatedCircle 
+                  cx={center} cy={center} r={radius} 
+                  stroke={`url(#grad)`} strokeWidth="18" fill="none" 
+                  strokeDasharray={circum} strokeDashoffset={strokeDashoffset} 
+                  strokeLinecap="round" 
+              />
+          </Svg>
+
+          {/* 4. Center Number */}
+          <View style={styles.absoluteCenter}>
+              <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 52, color: COLORS.textPrimary }}>
+                  {displayScore}
+              </Text>
+              <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
+                  SCORE
+              </Text>
+          </View>
+      </View>
+  );
+};
+
+// --- STAT BAR COMPONENT ---
+const StatBar = ({ label, score, color, icon }) => {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+      Animated.timing(widthAnim, {
+          toValue: score,
+          duration: 1500,
+          delay: 500,
+          useNativeDriver: false 
+      }).start();
+  }, [score]);
+
+  const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+
+  return (
+      <View style={styles.statBox}>
+          <View style={styles.statHeader}>
+              <Text style={styles.statValue}>{score}/100</Text>
+              <View style={{flexDirection:'row', alignItems:'center', gap:5}}>
+                  <Text style={styles.statLabel}>{label}</Text>
+                  <FontAwesome5 name={icon} size={10} color={COLORS.textDim} />
+              </View>
+          </View>
+          <View style={styles.progressBarBg}>
+              <Animated.View style={[styles.progressBarFill, { width: widthPercent, backgroundColor: color }]} />
+          </View>
+      </View>
+  );
+};
+
+const GlassPillar = ({ label, score, color, icon }) => {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+      Animated.timing(widthAnim, {
+          toValue: score,
+          duration: 1200,
+          delay: 300,
+          easing: Easing.out(Easing.cubic), // Smooth deceleration
+          useNativeDriver: false 
+      }).start();
+  }, [score]);
+
+  const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+
+  return (
+      <View style={styles.pillarContainer}>
+          <View style={styles.pillarHeader}>
+              
+              {/* Right Side: Icon & Label */}
+              <View style={styles.pillarLabelRow}>
+                  <View style={[styles.pillarIconBox, { backgroundColor: `${color}15` }]}>
+                      <FontAwesome5 name={icon} size={10} color={color} />
+                  </View>
+                  <Text style={styles.pillarLabel}>{label}</Text>
+              </View>
+
+              {/* Left Side: Score Number */}
+              <Text style={styles.pillarValue}>{score}%</Text>
+          </View>
+
+          {/* Progress Bar */}
+          <View style={styles.pillarTrack}>
+              <Animated.View 
+                  style={[
+                      styles.pillarFill, 
+                      { 
+                          width: widthPercent, 
+                          backgroundColor: color,
+                          // Dynamic shadow color for glow effect
+                          shadowColor: color 
+                      }
+                  ]} 
+              />
+          </View>
+      </View>
+  );
+};
+
+// --- NEW SPLIT MATCH COMPONENT ---
+const MatchBreakdown = ({ reasons = [] }) => {
+    if (!reasons || reasons.length === 0) return null;
+
+    const processedItems = reasons.map(item => {
+        const isObject = typeof item === 'object';
+        const type = isObject ? item.type : 'warning';
+        const text = isObject ? item.text : item;
+        return { type, text };
+    });
+
+    return (
+        <View style={styles.matchContainer}>
+            <View style={styles.matchHeader}>
+                <View style={styles.matchHeaderIcon}>
+                    <FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} />
+                </View>
+                <Text style={styles.matchHeaderTitle}>ملاحظات شخصية</Text>
+            </View>
+
+            <View style={styles.matchBody}>
+                {processedItems.map((item, i) => {
+                    const isGood = item.type === 'good';
+                    const iconColor = isGood ? COLORS.success : COLORS.warning;
+                    const iconName = isGood ? "check" : "exclamation-triangle";
+                    
+                    return (
+                        <View key={`match-${i}`} style={styles.matchRow}>
+                            {/* Removed background styling logic here */}
+                            <View style={styles.matchIconBox}>
+                                <FontAwesome5 name={iconName} size={12} color={iconColor} />
+                            </View>
+                            <Text style={styles.matchText}>{item.text}</Text>
+                        </View>
+                    );
+                })}
+            </View>
+        </View>
+    );
+};
 
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
@@ -832,6 +1151,7 @@ export default function OilGuardEngine() {
   const [frontImageUri, setFrontImageUri] = useState(null); 
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
+  const contentTranslateX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -957,14 +1277,63 @@ export default function OilGuardEngine() {
   }, [isAnimatingTransition]);
 
   const changeStep = useCallback((next) => {
+    const isForward = next > step;
+    const slideDist = 20; // Reduced distance for subtler movement
+
+    // 1. Immediate Feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    Animated.timing(contentOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
-      setStep(next);
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-      Animated.timing(contentOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+
+    // 2. EXIT ANIMATION (Fast)
+    Animated.parallel([
+        Animated.timing(contentOpacity, { 
+            toValue: 0, 
+            duration: 150, 
+            useNativeDriver: true,
+            easing: Easing.out(Easing.quad)
+        }),
+        Animated.timing(contentTranslateX, { 
+            toValue: isForward ? -slideDist : slideDist, 
+            duration: 150, 
+            useNativeDriver: true 
+        })
+    ]).start(() => {
+        
+        // 3. LOGIC & RESET (While Invisible)
+        setStep(next);
+        
+        // Reset the Y-scroll animation value used in Step 2 (Claims)
+        // This prevents the header from appearing "collapsed" if you return to the step
+        scrollY.setValue(0); 
+
+        // Reset main scrollview if it exists
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({ y: 0, animated: false });
+        }
+
+        // Snap X position to the "entry" side immediately
+        contentTranslateX.setValue(isForward ? slideDist : -slideDist);
+
+        // 4. MICRO-DELAY & ENTRY
+        // We wait 50ms to allow React to mount the new component tree completely
+        // while opacity is still 0. This eliminates the "flash" of the old step.
+        setTimeout(() => {
+            Animated.parallel([
+                Animated.timing(contentOpacity, { 
+                    toValue: 1, 
+                    duration: 300, 
+                    useNativeDriver: true,
+                    easing: Easing.out(Easing.cubic)
+                }),
+                Animated.spring(contentTranslateX, { 
+                    toValue: 0, 
+                    friction: 9, 
+                    tension: 50, 
+                    useNativeDriver: true 
+                })
+            ]).start();
+        }, 50); 
     });
-  }, [contentOpacity]);
+}, [step, contentOpacity, contentTranslateX, scrollY]);
 
 
   const handleImageSelection = useCallback(async (mode) => {
@@ -1048,8 +1417,17 @@ const processImageWithGemini = async (uri) => {
       throw new Error(responseData.error || "An error occurred in the backend.");
     }
 
-    let text = responseData.result.replace(/```json|```/g, '').trim();
-    const jsonResponse = JSON.parse(text);
+    let jsonResponse;
+    
+    if (typeof responseData.result === 'object') {
+        // It is already parsed by the backend
+        jsonResponse = responseData.result;
+    } else {
+        // It is a string, so we need to clean and parse it
+        const text = responseData.result.replace(/```json|```/g, '').trim();
+        jsonResponse = JSON.parse(text);
+    }
+    // ------------------------
     const rawList = jsonResponse.ingredients_list || [];
     
     // Updated: Simplified extraction that DOES NOT rely on local DB
@@ -1073,34 +1451,25 @@ const processImageWithGemini = async (uri) => {
   }
 };
 
-  const executeAnalysis = () => {
-    if (!fabRef.current) return;
+const executeAnalysis = async () => {
+    // 1. Trigger Transition INSTANTLY (Fast Mode: true)
+    // We remove the Haptics call here because PressableScale already handles it
+    changeStep(3, { fast: true });
 
-    fabRef.current.measure((fx, fy, width, height, px, py) => {
-      setFabMetrics({ x: px, y: py, width, height });
-      
-      const destX = (Dimensions.get('window').width / 2) - (width / 2);
-      const destY = (Dimensions.get('window').height / 2) - (height / 2);
-
-      setIsAnimatingTransition(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      Animated.timing(heroTransitionAnim, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.bezier(0.42, 0, 0.58, 1),
-        useNativeDriver: true,
-      }).start(async () => {
-        
-        // --- NEW SERVER CALL ---
+    // 2. Defer the heavy network/logic to the next tick
+    // This allows the UI to paint the Loading Screen immediately without freezing
+    setTimeout(async () => {
         try {
-            // 1. Prepare raw list (just names)
             const rawList = preProcessedIngredients.map(i => i.name);
 
-            // 2. Call your NEW endpoint
             const response = await fetch(VERCEL_EVALUATE_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                },
                 body: JSON.stringify({
                     ingredients_list: rawList,
                     product_type: productType,
@@ -1118,29 +1487,18 @@ const processImageWithGemini = async (uri) => {
             
             const fullAnalysisData = await response.json();
             
-            // 3. Set Data & Transition
             setFinalAnalysis(fullAnalysisData);
-            
-            setIsAnimatingTransition(false);
-            heroTransitionAnim.setValue(0);
+            // Normal transition for results (nice reveal)
             changeStep(4);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
             console.error(error);
             Alert.alert("Analysis Error", "Could not connect to analysis server.");
-            setIsAnimatingTransition(false);
-            heroTransitionAnim.setValue(0);
+            changeStep(2); // Go back to claims
         }
-        // -----------------------
-
-      });
-
-      setTimeout(() => {
-        changeStep(3);
-      }, 200);
-    });
-  };
+    }, 100); // 100ms delay gives the animation enough time to start
+};
   
   const handleSaveProduct = async () => {
     if (!productName.trim()) { 
@@ -1288,60 +1646,176 @@ const pickFrontImage = () => {
   };
 
 
-  const renderReviewStep = () => (
-    <ContentCard>
-      <View style={styles.contentContainer}>
-        <StaggeredItem index={0}>
-            <Text style={styles.sectionTitle}><FontAwesome5 name="robot" /> ما الذي يعتقده الذكاء الاصطناعي؟</Text>
-            <View style={styles.aiPredictionCard}>
-                <View style={styles.aiPredictionIconContainer}>
-                    <FontAwesome5 name={PRODUCT_TYPES.find(t => t.id === productType)?.icon || 'shopping-bag'} size={30} color={COLORS.primary} />
-                </View>
-                <View>
-                    <Text style={styles.aiPredictionLabel}>نوع المنتج المكتشف:</Text>
-                    <Text style={styles.aiPredictionValue}>{PRODUCT_TYPES.find(t => t.id === productType)?.label || 'غير معروف'}</Text>
-                </View>
-            </View>
-            {!showManualTypeGrid && (
-              <PressableScale 
-                onPress={() => {
-                  setShowManualTypeGrid(true);
-                }} 
-                style={styles.changeTypeButton}
-              >
-                <Text style={styles.changeTypeText}>تغيير النوع يدوياً <FontAwesome5 name="edit" /></Text>
-              </PressableScale>
-            )}
-        </StaggeredItem>
+  // --- IN FILE: oilguard.js ---
 
-        {showManualTypeGrid && (
-            <View style={{width: '100%'}}>
-              <StaggeredItem index={1}>
-                 <Text style={[styles.sectionTitle, {marginTop: 25, marginBottom: 20}]}>اختر النوع الصحيح:</Text>
-              </StaggeredItem>
-              <View style={styles.typeGrid}>
-                  {PRODUCT_TYPES.map((t, index) => ( 
-                      <AnimatedTypeChip
-                          key={t.id}
-                          type={t}
-                          isSelected={productType === t.id}
-                          onPress={() => setProductType(t.id)}
-                          index={index}
-                      />
-                  ))}
-              </View>
-            </View>
-        )}
+  const ReviewStep = React.memo(({ productType, setProductType, changeStep }) => {
+    const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [localProductType, setLocalProductType] = useState(productType);
+    
+    const gridOpacity = useRef(new Animated.Value(0)).current;
+    const gridTranslateY = useRef(new Animated.Value(-20)).current;
+
+    useEffect(() => {
+        setLocalProductType(productType);
+    }, [productType]);
+
+    const toggleGrid = (show) => {
+        if (isAnimating) return;
         
-        <StaggeredItem index={showManualTypeGrid ? 2 : 1} style={{width: '100%', marginTop: 30}}>
-            <PressableScale onPress={() => changeStep(2)} style={styles.mainBtn}>
-                <Text style={styles.mainBtnText}>تأكيد والمتابعة للادعاءات</Text>
-                <FontAwesome5 name="arrow-right" color={COLORS.darkGreen} size={18} />
+        setIsAnimating(true);
+        setShowManualTypeGrid(show);
+        
+        Animated.parallel([
+            Animated.timing(gridOpacity, {
+                toValue: show ? 1 : 0,
+                duration: show ? 300 : 200,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic)
+            }),
+            
+            Animated.spring(gridTranslateY, {
+                toValue: show ? 0 : -20,
+                useNativeDriver: true,
+                friction: 8,
+                tension: 40
+            })
+        ]).start(() => {
+            setIsAnimating(false);
+        });
+    };
+
+    const handleTypeSelect = useCallback((typeId) => {
+        if (localProductType === typeId) {
+            toggleGrid(false);
+            return;
+        }
+        
+        setLocalProductType(typeId);
+        setProductType(typeId);
+        Haptics.selectionAsync();
+        toggleGrid(false);
+    }, [localProductType, setProductType]);
+
+    const currentType = useMemo(() => 
+        PRODUCT_TYPES.find(t => t.id === localProductType) || PRODUCT_TYPES[PRODUCT_TYPES.length - 1],
+        [localProductType]
+    );
+
+    const iconName = useMemo(() => {
+        if (localProductType === 'hair_mask') return 'spa';
+        const typeObj = PRODUCT_TYPES.find(t => t.id === localProductType);
+        return typeObj ? typeObj.icon : 'box-open';
+    }, [localProductType]);
+
+    const TitleSection = useMemo(() => (
+        <View style={styles.rs_CenterContent}>
+            <Text style={styles.rs_Title}>التحقق من المنتج</Text>
+            <Text style={styles.rs_Subtitle}>هل هذا التصنيف صحيح؟</Text>
+        </View>
+    ), []);
+
+    const CircleAndLabelSection = useMemo(() => (
+        <View style={styles.rs_CenterContent}>
+            <View style={styles.rs_VisualCircleContainer}>
+                <View style={styles.rs_GlowRing} />
+                <View style={styles.rs_GlassCircle}>
+                    <FontAwesome5 name={iconName} size={48} color={COLORS.accentGreen} />
+                </View>
+            </View>
+
+            <View style={styles.rs_LabelContainer}>
+                <Text style={styles.rs_LabelText}>{currentType.label}</Text>
+                
+                {!showManualTypeGrid && !isAnimating && (
+                    <PressableScale onPress={() => toggleGrid(true)}>
+                        <View style={styles.rs_EditBtn}>
+                            <Text style={styles.rs_EditBtnText}>تغيير التصنيف</Text>
+                            <FontAwesome5 name="chevron-down" size={12} color={COLORS.accentGreen} />
+                        </View>
+                    </PressableScale>
+                )}
+            </View>
+        </View>
+    ), [localProductType, showManualTypeGrid, isAnimating, iconName, currentType.label]);
+
+    const TypeGridSection = useMemo(() => (
+        <Animated.View 
+            style={[
+                styles.rs_GridWrapper, 
+                { 
+                    opacity: gridOpacity,
+                    transform: [{ translateY: gridTranslateY }],
+                    display: (showManualTypeGrid || isAnimating) ? 'flex' : 'none'
+                }
+            ]}
+            pointerEvents={showManualTypeGrid ? 'auto' : 'none'}
+        >
+            <View style={styles.rs_ChipGrid}>
+                {PRODUCT_TYPES.map((type) => {
+                    const isSelected = localProductType === type.id;
+                    return (
+                        <View key={type.id} style={{marginBottom: 8}}>
+                            <PressableScale onPress={() => handleTypeSelect(type.id)}>
+                                <View style={[styles.rs_TypeChip, isSelected && styles.rs_TypeChipActive]}>
+                                    <Text style={[styles.rs_TypeChipText, isSelected && styles.rs_TypeChipTextActive]}>
+                                        {type.label}
+                                    </Text>
+                                    
+                                    {isSelected && (
+                                        <FontAwesome5 name="check" size={12} color={COLORS.background} />
+                                    )}
+                                </View>
+                            </PressableScale>
+                        </View>
+                    );
+                })}
+            </View>
+            <PressableScale onPress={() => toggleGrid(false)} style={styles.rs_CloseGridBtn}>
+                <FontAwesome5 name="chevron-up" size={16} color={COLORS.textDim} />
             </PressableScale>
-        </StaggeredItem>
-      </View>
-      </ContentCard>
-  );
+        </Animated.View>
+    ), [localProductType, showManualTypeGrid, isAnimating, gridOpacity, gridTranslateY, handleTypeSelect]);
+
+    const FooterSection = useMemo(() => {
+        const handleConfirmPress = () => {
+            Haptics.selectionAsync();
+            // Use setTimeout to ensure any pending animations complete
+            setTimeout(() => {
+                changeStep(2);
+            }, 50);
+        };
+        
+        return (
+            <View style={styles.rs_Footer}>
+                <PressableScale 
+                    onPress={handleConfirmPress}
+                    style={styles.rs_ConfirmBtn}
+                >
+                    <LinearGradient
+                        colors={[COLORS.accentGreen, '#4a8570']}
+                        start={{x:0, y:0}} end={{x:1, y:0}}
+                        style={styles.rs_ConfirmGradient}
+                    >
+                        <FontAwesome5 name="arrow-left" color={COLORS.background} size={16} />
+                        <Text style={styles.rs_ConfirmText}>نعم، تابع للتحليل</Text>
+                    </LinearGradient>
+                </PressableScale>
+            </View>
+        );
+    }, [changeStep]);
+
+    return (
+        <View style={styles.rs_Container}>
+            {TitleSection}
+            <View style={styles.rs_HeroWrapper}>
+                {CircleAndLabelSection}
+            </View>
+            {TypeGridSection}
+            {FooterSection}
+        </View>
+    );
+});
   
   const renderClaimsStep = () => {
     const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
@@ -1379,21 +1853,22 @@ const pickFrontImage = () => {
     });
 
     const renderClaimItem = ({ item, index }) => {
-      const isSelected = selectedClaims.includes(item);
-      return (
-        <StaggeredItem index={index}>
-          <PressableScale onPress={() => {
-            Haptics.selectionAsync();
-            setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
-          }}>
-            <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
-              <AnimatedCheckbox isSelected={isSelected} />
-              <Text style={styles.claimItemText}>{item}</Text>
-            </View>
-          </PressableScale>
-        </StaggeredItem>
-      );
-    };
+        const isSelected = selectedClaims.includes(item);
+        
+        // FIX: Removed <StaggeredItem> wrapper. 
+        // Direct rendering prevents the UI thread freeze on Android.
+        return (
+            <PressableScale onPress={() => {
+              // Optional: Haptics.selectionAsync(); 
+              setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
+            }}>
+              <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
+                <AnimatedCheckbox isSelected={isSelected} />
+                <Text style={styles.claimItemText}>{item}</Text>
+              </View>
+            </PressableScale>
+        );
+      };
 
     return (
       <View style={{ flex: 1, width: '100%' }}>
@@ -1402,9 +1877,18 @@ const pickFrontImage = () => {
           renderItem={renderClaimItem}
           keyExtractor={(item) => item}
           showsVerticalScrollIndicator={false}
+          
+          // FIX: Add these performance props to prevent memory spikes and flashing
+          initialNumToRender={10}     // Only render top 10 first
+          maxToRenderPerBatch={10}    // Render more in small batches
+          windowSize={5}              // Keep memory usage low
+          removeClippedSubviews={true} // Unmount items off-screen (Android fix)
+          
           contentContainerStyle={{
             paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
-            paddingBottom: 120, paddingHorizontal: 10, gap: 12
+            paddingBottom: 120, 
+            paddingHorizontal: 10, 
+            gap: 12
           }}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -1450,14 +1934,12 @@ const pickFrontImage = () => {
             </View>
         </Animated.View>
 
-        <View 
-            style={styles.fabContainer}
-        >
+        <View style={styles.fabContainer}>
             <Animated.View
-                ref={fabRef} 
                 style={{
                     transform: [{ translateY: fabTranslateY }],
-                    opacity: isAnimatingTransition ? 0 : 1 
+                    // REMOVED: ref={fabRef}
+                    // REMOVED: opacity: isAnimatingTransition ? 0 : 1
                 }}
             >
                 <Animated.View style={{ transform: [{ scale: fabScale }] }}>
@@ -1543,137 +2025,126 @@ const pickFrontImage = () => {
   // ... inside oilguard.js
 
   const renderResultStep = () => {
-    if(!finalAnalysis) return null;
+    // 1. Basic check
+    if (!finalAnalysis) return null;
+
+    // 2. Safe Data Extraction (Defensive Programming)
+    // We default to empty objects/arrays to prevent "undefined" errors
+    const personalMatch = finalAnalysis.personalMatch || { status: 'unknown', reasons: [] };
+    const safety = finalAnalysis.safety || { score: 0 };
+    const efficacy = finalAnalysis.efficacy || { score: 0 };
+    const marketingResults = finalAnalysis.marketing_results || [];
+    const detectedIngredients = finalAnalysis.detected_ingredients || [];
+
+    // 3. Match Status Logic with Fallback
+    const matchConfig = {
+        good: { color: COLORS.success, icon: 'check-double', text: 'مناسب لك', glow: 'rgba(34, 197, 94, 0.2)' },
+        warning: { color: COLORS.warning, icon: 'exclamation', text: 'انتبه', glow: 'rgba(245, 158, 11, 0.2)' },
+        danger: { color: COLORS.danger, icon: 'times', text: 'غير مناسب', glow: 'rgba(239, 68, 68, 0.2)' },
+        // Fallback for 'unknown' or missing status
+        unknown: { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow }
+    }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow };
+
     return (
-        <View style={{width: '100%', gap: 15}}>
-            {/* Personal Match Card */}
-            {finalAnalysis.personalMatch.reasons.length > 0 && <StaggeredItem index={0}>
-                <ContentCard style={[styles.personalMatchCard, styles[`personalMatch_${finalAnalysis.personalMatch.status}`]]}>
-                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                        <FontAwesome5 name={finalAnalysis.personalMatch.status === 'danger' ? 'times-circle' : finalAnalysis.personalMatch.status === 'warning' ? 'exclamation-triangle' : 'check-circle'} size={24} color={'#FFF'}/>
-                        <Text style={styles.personalMatchTitle}>{finalAnalysis.personalMatch.status === 'danger' ? 'غير موصى به لك' : finalAnalysis.personalMatch.status === 'warning' ? 'استخدمه بحذر' : 'مطابقة ممتازة لملفك'}</Text>
-                    </View>
-                    {finalAnalysis.personalMatch.reasons.map((reason, i) => <Text key={i} style={styles.personalMatchReason}>{reason}</Text>)}
-                </ContentCard>
-            </StaggeredItem>}
+        <View style={{width: '100%', gap: 0}}>
+            
+            {/* --- 1. THE HERO DASHBOARD + ACTIONS FOOTER --- */}
+            <StaggeredItem index={0}>
+                <View style={[styles.dashboardContainer, { borderColor: matchConfig.color }]}>
+                    
+                    {/* Background */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.05)', 'transparent']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    
+                    {/* Corners */}
+                    <View style={[styles.corner, styles.cornerTL]} />
+                    <View style={[styles.corner, styles.cornerTR]} />
+                    <View style={[styles.corner, styles.cornerBL]} />
+                    <View style={[styles.corner, styles.cornerBR]} />
 
-            {/* Score Card */}
-            <StaggeredItem index={1}>
-                <ContentCard style={styles.vScoreCard}>
-                    <Text style={styles.verdictText}>{finalAnalysis.finalVerdict}</Text>
-                    <ScoreRing score={finalAnalysis.oilGuardScore} />
-                    <View style={styles.pillarsRow}>
-                        <View style={styles.pillar}>
-                            <Text style={styles.pillarTitle}><FontAwesome5 name="flask" /> الفعالية</Text>
-                            <Text style={[styles.pillarScore, {color: COLORS.info}]}>{finalAnalysis.efficacy.score}%</Text>
+                    {/* A. CONTENT SECTION */}
+                    <View style={styles.dashboardGlass}>
+                        
+                        {/* Header */}
+                        <View style={styles.dashHeader}>
+                            <View style={[styles.matchBadge, { borderColor: matchConfig.color, backgroundColor: matchConfig.glow }]}>
+                                <Text style={[styles.matchText, { color: matchConfig.color }]}>{matchConfig.text}</Text>
+                                <FontAwesome5 name={matchConfig.icon} size={12} color={matchConfig.color} />
+                            </View>
+                            <Text style={styles.productTypeLabel}>
+                                {PRODUCT_TYPES.find(t => t.id === productType)?.label || 'GENERIC SCAN'}
+                            </Text>
                         </View>
-                        <View style={styles.pillar}>
-                            <Text style={styles.pillarTitle}><FontAwesome5 name="shield-alt" /> السلامة</Text>
-                            <Text style={[styles.pillarScore, {color: COLORS.primary}]}>{finalAnalysis.safety.score}%</Text>
+
+                        {/* Gauge */}
+                        <View style={styles.gaugeSection}>
+                            <ComplexDashboardGauge score={finalAnalysis.oilGuardScore || 0} />
+                            <View style={{ marginTop: -15, alignItems: 'center' }}>
+                                <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || "تم التحليل"}</Text>
+                                <Text style={styles.verdictLabel}>حكم وثيق</Text>
+                            </View>
                         </View>
-                    </View>
-                </ContentCard>
-            </StaggeredItem>
 
-            {/* --- UPDATED HERO ACTION ROW --- */}
-            {/* --- UPDATED HERO ACTION ROW --- */}
-            <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                marginTop: 15,
-                marginBottom: 25,
-                paddingHorizontal: 5,
-            }}>
-                
-                {/* 1. HERO SAVE BUTTON */}
-                <StaggeredItem index={2} style={{flex: 1}}>
-                    <BreathingGlow color={COLORS.accentGreen} delay={0}>
-                        <PressableScale onPress={() => setSaveModalVisible(true)} style={{ width: '100%' }}>
-                            <LinearGradient
-                                colors={[COLORS.card, '#2C4A42']} 
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                                style={{
-                                    // CHANGED: Used paddingVertical instead of fixed height to match Share button's bulk
-                                    paddingVertical: 14, 
-                                    borderRadius: 15, 
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 12, 
-                                    borderWidth: 1,
-                                    borderColor: COLORS.accentGreen,
-                                    width: '100%',
-                                }}
-                            >
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold',
-                                    fontSize: 16, 
-                                    color: COLORS.textPrimary,
-                                }}>حفظ</Text>
-                                <FontAwesome5 name="bookmark" color={COLORS.textPrimary} size={18} />
-                            </LinearGradient>
-                        </PressableScale>
-                    </BreathingGlow>
-                </StaggeredItem>
-
-                {/* 2. HERO SHARE BUTTON (Premium) */}
-                <StaggeredItem index={3} style={{flex: 1}}> 
-                    <BreathingGlow color={COLORS.gold} delay={1000}>
-                        {/* Ensure wrapper allows the button's internal padding to dictate size if needed, 
-                            but keeping min-height/overflow for shape consistency */}
-                        <View style={{ borderRadius: 15, overflow: 'hidden', width: '100%' }}>
-                            <PremiumShareButton 
-                                analysis={finalAnalysis} 
-                                typeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج تجميلي'}
+                        {/* Stats (Safe Access) */}
+                        <View style={styles.statsGrid}>
+                            <GlassPillar 
+                                label="الأمان" 
+                                score={safety.score} 
+                                color={safety.score >= 70 ? COLORS.success : (safety.score >= 40 ? COLORS.warning : COLORS.danger)} 
+                                icon="shield-alt"
+                            />
+                            <GlassPillar 
+                                label="الفعالية" 
+                                score={efficacy.score} 
+                                color={COLORS.info} 
+                                icon="flask"
                             />
                         </View>
-                    </BreathingGlow>
-                </StaggeredItem>
 
-                {/* 3. RESET BUTTON */}
-                <StaggeredItem index={4}>
-                    {/* Updated height to 'auto' with padding to match the new buttons, or kept fixed if icon-only */}
-                    <PressableScale onPress={resetFlow} style={{
-                        width: 50, 
-                        // Matched vertical padding logic roughly to align (approx 56px total height)
-                        height: 56,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                    }}>
-                         <FontAwesome5 name="redo" color={COLORS.textSecondary} size={18} />
-                    </PressableScale>
-                </StaggeredItem>
-            </View>
-            {/* ------------------------- */}
+                        {/* Match Reasons (Safe Access) */}
+                        <MatchBreakdown 
+                            reasons={personalMatch.reasons} 
+                            overallStatus={personalMatch.status} 
+                        />
+                    </View>
 
-            {finalAnalysis.marketing_results.length > 0 && (
-                <StaggeredItem index={4}>
-                    <Text style={styles.resultsSectionTitle}>🔬 كشف حقائق الادعاءات</Text>
-                    <ClaimsGroupedView results={finalAnalysis.marketing_results} />
+                    {/* B. ACTION ROW */}
+                    <ActionRow 
+                        onSave={() => setSaveModalVisible(true)}
+                        onReset={resetFlow}
+                        analysis={finalAnalysis}
+                        productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج'}
+                    />
+
+                </View>
+            </StaggeredItem>
+
+            {/* --- 2. MARKETING CLAIMS --- */}
+            {marketingResults.length > 0 && (
+                <StaggeredItem index={1}>
+                   <MarketingClaimsSection results={marketingResults} />
                 </StaggeredItem>
             )}
 
-            {finalAnalysis.detected_ingredients.length > 0 && (
-                <StaggeredItem index={5}>
-                    <Text style={styles.resultsSectionTitle}>
-                        {`🌿 المكونات المكتشفة (${finalAnalysis.detected_ingredients.length})`}
-                    </Text>
+            {/* --- 3. INGREDIENTS CAROUSEL --- */}
+            {detectedIngredients.length > 0 && (
+                <StaggeredItem index={2}>
+                     <View style={{flexDirection:'row-reverse', alignItems:'center', marginTop: 20, marginBottom: 15, paddingHorizontal: 5}}>
+                         <Text style={styles.resultsSectionTitle}>{`المكونات (${detectedIngredients.length})`}</Text>
+                         <View style={{backgroundColor: 'rgba(255,255,255,0.1)', height:1, flex:1, marginRight: 15}} />
+                    </View>
                     
-                    <Pagination data={finalAnalysis.detected_ingredients} scrollX={scrollX} />
+                    <Pagination data={detectedIngredients} scrollX={scrollX} />
 
                     <View style={{ marginHorizontal: -20 }}>
                         <Animated.FlatList
-                            data={finalAnalysis.detected_ingredients}
+                            data={detectedIngredients}
                             renderItem={({ item, index }) => (
                                 <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
                             )}
-                            keyExtractor={item => item.id}
+                            keyExtractor={item => item.id || `ing-${index}`} // Safe Key
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             snapToInterval={ITEM_WIDTH}
@@ -1687,10 +2158,12 @@ const pickFrontImage = () => {
                             )}
                             scrollEventThrottle={16}
                         />
-                        {showSwipeHint && finalAnalysis.detected_ingredients.length > 1 && <SwipeHint />}
+                        {showSwipeHint && detectedIngredients.length > 1 && <SwipeHint />}
                     </View>
                 </StaggeredItem>
             )}
+            
+            <View style={{height: 40}} />
         </View>
     );
 };
@@ -1716,17 +2189,29 @@ const pickFrontImage = () => {
               </View>
             )}
 
-            {step === 2 ? (
-                <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+{step === 2 ? (
+                // --- CASE 1: Claims Step (Fixed List, No ScrollView Wrapper) ---
+                <Animated.View style={{ 
+                    flex: 1, 
+                    opacity: contentOpacity,
+                    transform: [{ translateX: contentTranslateX }],
+                    width: '100%' 
+                }}>
                     {renderClaimsStep()}
                 </Animated.View>
             ) : step === 0 ? (
+                // --- CASE 2: Input Step (Visual Heavy, No ScrollView) ---
                 <View style={{ flex: 1 }}>
-                     <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+                     <Animated.View style={{ 
+                         flex: 1, 
+                         opacity: contentOpacity,
+                         transform: [{ translateX: contentTranslateX }]
+                     }}>
                         <InputStepView onImageSelect={handleImageSelection} />
                      </Animated.View>
                 </View>
             ) : (
+                // --- CASE 3: Standard Scroll Steps (Review, Loading, Results) ---
                 <ScrollView 
                     ref={scrollRef} 
                     contentContainerStyle={[
@@ -1734,15 +2219,34 @@ const pickFrontImage = () => {
                       { paddingBottom: 100 + insets.bottom }
                     ]} 
                     keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                 >
-                    <Animated.View style={{ opacity: contentOpacity, width: '100%'}}>
-                        {step === 1 && renderReviewStep()}
-                        {step === 3 && (isGeminiLoading ? renderGeminiLoading() : renderLoading())}
+                    <Animated.View style={{ 
+                        opacity: contentOpacity, 
+                        width: '100%',
+                        transform: [{ translateX: contentTranslateX }]
+                    }}>
+                        
+                        {step === 1 && (
+                            <ReviewStep 
+                                productType={productType} 
+                                setProductType={setProductType} 
+                                changeStep={changeStep} 
+                            />
+                        )}
+
+                        {step === 3 && (
+                            <View style={{ height: height * 0.6, justifyContent: 'center' }}>
+                                <LoadingScreen />
+                            </View>
+                        )}
+
                         {step === 4 && renderResultStep()}
+                        
                     </Animated.View>
                 </ScrollView>
             )}
-        </View>
+            </View>
 
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
             <View style={styles.modalOverlay}>
@@ -1813,26 +2317,6 @@ const pickFrontImage = () => {
             }}
         />
 
-        {isAnimatingTransition && (
-          <Animated.View
-            style={[
-              styles.heroFab,
-              {
-                top: fabMetrics.y,
-                left: fabMetrics.x,
-                width: fabMetrics.width,
-                height: fabMetrics.height,
-                transform: [
-                   { translateX: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, (width / 2) - fabMetrics.x - (fabMetrics.width / 2)] }) },
-                   { translateY: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, (height / 2) - fabMetrics.y - (fabMetrics.height / 2)] }) },
-                   { scale: heroTransitionAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 3] }) },
-                ],
-              },
-            ]}
-          >
-            <FontAwesome5 name="flask" color={COLORS.background} size={22} />
-          </Animated.View>
-        )}
     </View>
   );
 }

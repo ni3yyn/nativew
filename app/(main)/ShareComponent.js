@@ -1,25 +1,23 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   View, Text, StyleSheet, Alert, Pressable, ActivityIndicator, 
-  Modal, Animated, Platform, TextInput, KeyboardAvoidingView, ScrollView, Dimensions, Easing
+  Modal, Animated, Platform, TextInput, ScrollView, Dimensions, Easing
 } from 'react-native';
 import ViewShot from "react-native-view-shot";
 import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop, Text as SvgText } from 'react-native-svg';
 
 import { COLORS } from './oilguard.styles';
 
 // --- CONFIGURATION ---
 const GOLD_COLOR = '#D4AF37';
-// Lighter Lush Green Background
 const DEEP_BG = '#142B24'; 
 const TEMPLATE_WIDTH = 600;
 const TEMPLATE_HEIGHT = 1066; // 9:16 Aspect Ratio
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-// Adjusted preview size to fit nicely in the bottom sheet
 const PREVIEW_HEIGHT = SCREEN_HEIGHT * 0.45; 
 const PREVIEW_WIDTH = PREVIEW_HEIGHT * (TEMPLATE_WIDTH / TEMPLATE_HEIGHT);
 const SCALE_FACTOR = PREVIEW_WIDTH / TEMPLATE_WIDTH;
@@ -127,6 +125,16 @@ const ScoreRing = ({ score }) => {
 
 // --- 5. CONTENT: The Main Card ---
 const TemplateContent = ({ analysis, typeLabel, customProductName }) => {
+    
+    // --- DEFENSIVE PROGRAMMING: Prevent Crashes ---
+    // If analysis is missing, or parts of it are missing, use defaults.
+    const safeAnalysis = analysis || {};
+    const safetyScore = safeAnalysis.safety?.score || 0;
+    const efficacyScore = safeAnalysis.efficacy?.score || 0;
+    const oilGuardScore = safeAnalysis.oilGuardScore || 0;
+    const finalVerdict = safeAnalysis.finalVerdict || "جاري التحليل...";
+    const marketingResults = safeAnalysis.marketing_results || [];
+
     return (
         <View style={styles.templateContainer}>
             <LinearGradient colors={['#1F3A33', '#142B24', '#08120F']} style={StyleSheet.absoluteFill} />
@@ -146,24 +154,28 @@ const TemplateContent = ({ analysis, typeLabel, customProductName }) => {
                 </View>
 
                 <View style={styles.analysisRow}>
-                    <ScoreRing score={analysis.oilGuardScore} />
+                    {/* Use safe variable */}
+                    <ScoreRing score={oilGuardScore} />
                     <View style={styles.verdictCol}>
                         <Text style={styles.verdictLabel}>الحكم النهائي</Text>
-                        <Text style={styles.verdictVal}>{analysis.finalVerdict}</Text>
+                        <Text style={styles.verdictVal}>{finalVerdict}</Text>
                         <View style={styles.pillContainer}>
                             <View style={styles.pill}>
-                                <Text style={styles.pillValue}>{analysis.safety.score}%</Text>
+                                {/* Use safe variable */}
+                                <Text style={styles.pillValue}>{safetyScore}%</Text>
                                 <Text style={styles.pillLabel}>أمان</Text>
                             </View>
                             <View style={styles.pill}>
-                                <Text style={styles.pillValue}>{analysis.efficacy.score}%</Text>
+                                {/* Use safe variable */}
+                                <Text style={styles.pillValue}>{efficacyScore}%</Text>
                                 <Text style={styles.pillLabel}>فعالية</Text>
                             </View>
                         </View>
                     </View>
                 </View>
 
-                <ClaimsGrid results={analysis.marketing_results} />
+                {/* Use safe variable */}
+                <ClaimsGrid results={marketingResults} />
             </View>
 
             <View style={styles.footer}>
@@ -184,6 +196,7 @@ const TemplateContent = ({ analysis, typeLabel, customProductName }) => {
     );
 };
 
+
 // --- WRAPPER ---
 const ShareTemplate = React.forwardRef(({ analysis, typeLabel, customProductName }, ref) => {
     return (
@@ -194,7 +207,13 @@ const ShareTemplate = React.forwardRef(({ analysis, typeLabel, customProductName
 });
 
 // --- MAIN CONTROLLER (With Bottom Sheet Logic) ---
-export const PremiumShareButton = ({ analysis, typeLabel, style }) => {
+export const PremiumShareButton = ({ 
+    analysis, 
+    typeLabel, 
+    customStyle = {}, 
+    iconSize = 18, 
+    textColor = COLORS.textPrimary 
+}) => {
     const viewShotRef = useRef();
     const [modalVisible, setModalVisible] = useState(false);
     const [productName, setProductName] = useState('');
@@ -252,12 +271,17 @@ export const PremiumShareButton = ({ analysis, typeLabel, style }) => {
 
     return (
         <>
-            {/* The Trigger Button */}
-            <Pressable onPress={openModal} style={({ pressed }) => [ styles.shareBtn, { transform: [{ scale: pressed ? 0.98 : 1 }] }, style ]}>
-                <LinearGradient colors={[COLORS.accentGreen, '#4a8570']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shareBtnGradient}>
-                    <Text style={styles.shareBtnText}>انشري الوعي</Text>
-                    <FontAwesome5 name="share-alt" color={COLORS.background} size={18} />
-                </LinearGradient>
+            {/* The Trigger Button - Now adapted for the Command Bar */}
+            <Pressable 
+                onPress={openModal} 
+                style={({ pressed }) => [ 
+                    styles.triggerBtn, 
+                    customStyle,
+                    { opacity: pressed ? 0.7 : 1 } 
+                ]}
+            >
+                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} />
+                <Text style={[styles.triggerText, { color: textColor }]}>انشري الوعي</Text>
             </Pressable>
 
             {/* The Bottom Sheet Modal */}
@@ -336,10 +360,19 @@ export const PremiumShareButton = ({ analysis, typeLabel, style }) => {
 };
 
 const styles = StyleSheet.create({
-    // --- Trigger Button ---
-    shareBtn: { borderRadius: 15, overflow: 'hidden', elevation: 4 },
-    shareBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20, gap: 12 },
-    shareBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background },
+    // --- Trigger Button (New minimalist style for Command Bar) ---
+    triggerBtn: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        width: '100%',
+        height: '100%',
+    },
+    triggerText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+    },
 
     // --- Bottom Sheet Styles (Matching Profile.js) ---
     backdrop: {

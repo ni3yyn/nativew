@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const POSTS_CACHE_KEY = 'community_posts_cache_v1';
 const PROFILES_CACHE_KEY = 'user_profiles_cache_v1';
+const OFFLINE_ME_KEY = 'offline_my_profile_v1'; // <--- NEW KEY
+
 const PROFILE_TTL = 24 * 60 * 60 * 1000; 
 
 
@@ -97,6 +99,45 @@ export const getCachedUserProfile = async (userId) => {
         };
     } catch (error) {
         console.error("Error getting cached profile:", error);
+        return null;
+    }
+};
+
+export const saveOfflineProfile = async (userId, data) => {
+    try {
+        if (!userId) return;
+        
+        // We structure the data to hold everything needed to render the profile screen
+        const snapshot = {
+            savedProducts: data.savedProducts || [],
+            userProfile: data.userProfile || {}, // Contains routines & settings
+            analysisData: data.analysisData || null,
+            weatherData: data.weatherData || null,
+            timestamp: Date.now()
+        };
+
+        await AsyncStorage.setItem(`${OFFLINE_ME_KEY}_${userId}`, JSON.stringify(snapshot));
+    } catch (error) {
+        console.error("Error saving offline profile:", error);
+    }
+};
+
+/**
+ * Loads the offline snapshot.
+ */
+export const getOfflineProfile = async (userId) => {
+    try {
+        if (!userId) return null;
+        
+        // --- FIX: Removed the accidental setItem call here ---
+        
+        const rawStore = await AsyncStorage.getItem(`${OFFLINE_ME_KEY}_${userId}`);
+        
+        if (!rawStore) return null;
+        
+        return JSON.parse(rawStore);
+    } catch (error) {
+        console.error("Error loading offline profile:", error);
         return null;
     }
 };

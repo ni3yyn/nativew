@@ -36,8 +36,8 @@ const COLORS = {
 };
 
 const ASPECT_RATIOS = [
-  { label: 'Free', value: null, icon: 'crop-free' },
-  { label: 'Original', value: -1, icon: 'image' },
+  { label: 'حر', value: null, icon: 'crop-free' },
+  { label: 'الأصلي', value: -1, icon: 'image' },
   { label: '1:1', value: 1, icon: 'crop-square' },
   { label: '16:9', value: 16/9, icon: 'crop-16-9' },
 ];
