@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const POSTS_CACHE_KEY = 'community_posts_cache_v1';
 const PROFILES_CACHE_KEY = 'user_profiles_cache_v1';
-const OFFLINE_ME_KEY = 'offline_my_profile_v1'; // <--- NEW KEY
+const SAVED_PRODUCTS_CACHE_KEY = 'saved_products_cache_v1'; // <--- NEW KEY
+const SELF_PROFILE_CACHE_KEY = 'self_profile_cache_v1'; // <--- NEW KEY FOR SETTINGS
 
 const PROFILE_TTL = 24 * 60 * 60 * 1000; 
 
@@ -103,41 +104,47 @@ export const getCachedUserProfile = async (userId) => {
     }
 };
 
-export const saveOfflineProfile = async (userId, data) => {
+export const setSavedProductsCache = async (products) => {
     try {
-        if (!userId) return;
-        
-        // We structure the data to hold everything needed to render the profile screen
-        const snapshot = {
-            savedProducts: data.savedProducts || [],
-            userProfile: data.userProfile || {}, // Contains routines & settings
-            analysisData: data.analysisData || null,
-            weatherData: data.weatherData || null,
-            timestamp: Date.now()
-        };
-
-        await AsyncStorage.setItem(`${OFFLINE_ME_KEY}_${userId}`, JSON.stringify(snapshot));
+        // We stringify the array. Note: Firestore Timestamps will become ISO strings.
+        await AsyncStorage.setItem(SAVED_PRODUCTS_CACHE_KEY, JSON.stringify(products));
     } catch (error) {
-        console.error("Error saving offline profile:", error);
+        console.error("Error setting saved products cache:", error);
+    }
+};
+
+/** 
+ * NEW: Retrieve the user's shelf from local storage 
+ */
+export const getSavedProductsCache = async () => {
+    try {
+        const itemString = await AsyncStorage.getItem(SAVED_PRODUCTS_CACHE_KEY);
+        if (!itemString) return [];
+        return JSON.parse(itemString);
+    } catch (error) {
+        console.error("Error getting saved products cache:", error);
+        return [];
+    }
+};
+
+export const setSelfProfileCache = async (profileData) => {
+    try {
+        await AsyncStorage.setItem(SELF_PROFILE_CACHE_KEY, JSON.stringify(profileData));
+    } catch (error) {
+        console.error("Error setting self profile cache:", error);
     }
 };
 
 /**
- * Loads the offline snapshot.
+ * NEW: Get the CURRENT user's profile
  */
-export const getOfflineProfile = async (userId) => {
+export const getSelfProfileCache = async () => {
     try {
-        if (!userId) return null;
-        
-        // --- FIX: Removed the accidental setItem call here ---
-        
-        const rawStore = await AsyncStorage.getItem(`${OFFLINE_ME_KEY}_${userId}`);
-        
-        if (!rawStore) return null;
-        
-        return JSON.parse(rawStore);
+        const itemString = await AsyncStorage.getItem(SELF_PROFILE_CACHE_KEY);
+        if (!itemString) return null;
+        return JSON.parse(itemString);
     } catch (error) {
-        console.error("Error loading offline profile:", error);
+        console.error("Error getting self profile cache:", error);
         return null;
     }
 };

@@ -6,6 +6,12 @@ import { auth, db } from '../config/firebase';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { 
+  setSavedProductsCache, 
+  getSavedProductsCache,
+  setSelfProfileCache,   // <--- IMPORT THIS
+  getSelfProfileCache    // <--- IMPORT THIS
+} from '../services/cachingService'; 
 
 const AppContext = createContext();
 
@@ -114,23 +120,51 @@ export const AppProvider = ({ children }) => {
     });
 
     // 2. Listen for Auth Changes
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setProfileError(null);
       setProductsError(null);
       
       if (currentUser) {
-        setLoading(true);
+        setLoading(true); // Start loading UI
         
-        // ➤ REGISTER TOKEN ON LOGIN
+        // ➤ REGISTER TOKEN
         registerForPushNotificationsAsync(currentUser.uid);
 
-        // Listen to user profile
+        // ============================================================
+        // 🚀 OFFLINE SUPPORT START
+        // ============================================================
+        
+        // 1. Load User Settings (Skin type, Name, Allergies) from Cache
+        const cachedProfile = await getSelfProfileCache();
+        if (cachedProfile) {
+            setUserProfile(cachedProfile);
+        }
+
+        // 2. Load Products Shelf from Cache
+        const cachedProducts = await getSavedProductsCache();
+        if (cachedProducts && cachedProducts.length > 0) {
+            setSavedProducts(cachedProducts);
+        }
+
+        // If we have cached data, we can unblock the UI immediately
+        if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
+            setLoading(false); 
+        }
+        // ============================================================
+        // 🚀 OFFLINE SUPPORT END
+        // ============================================================
+
+        // ➤ LISTEN: Real-time Profile Updates
         const profileRef = doc(db, 'profiles', currentUser.uid);
         const unsubscribeProfile = onSnapshot(profileRef, 
           (docSnap) => {
             if (docSnap.exists()) {
-              setUserProfile(docSnap.data());
+              const data = docSnap.data();
+              // Update State
+              setUserProfile(data);
+              // Update Cache (So it's available next time offline)
+              setSelfProfileCache(data); 
               setProfileError(null);
             } else {
               setUserProfile(null);
@@ -139,11 +173,12 @@ export const AppProvider = ({ children }) => {
           (err) => {
             console.error("Profile fetch error", err);
             setProfileError(err.message);
-            setUserProfile(null);
+            // On error (offline), we keep the `userProfile` state 
+            // because we already loaded it from cache above!
           }
         );
 
-        // Listen to savedProducts subcollection
+        // ➤ LISTEN: Real-time Products Updates
         const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
         const productsQuery = query(productsRef, orderBy('createdAt', 'desc'));
         
@@ -153,14 +188,16 @@ export const AppProvider = ({ children }) => {
               id: doc.id,
               ...doc.data()
             }));
+
             setSavedProducts(products);
+            setSavedProductsCache(products); // Sync to cache
+            
             setProductsError(null);
             setLoading(false);
           }, 
           (err) => {
             console.error("Products fetch error", err);
             setProductsError(err.message);
-            setSavedProducts([]);
             setLoading(false);
           }
         );
@@ -173,12 +210,13 @@ export const AppProvider = ({ children }) => {
         // No user logged in
         setUserProfile(null);
         setSavedProducts([]);
+        // Clear specific user data from state (optional: clear cache here if strict security needed)
         setLoading(false);
       }
     });
 
     return () => {
-      unsubscribeConfig();
+      // unsubscribeConfig(); // Make sure this is defined in your original code
       unsubscribeAuth();
     };
   }, []);

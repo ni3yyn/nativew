@@ -46,7 +46,8 @@ import {
 import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
 import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared'; 
 import { RoutineLogViewer } from '../../src/components/profile/routine/RoutineLogViewer';
-import { saveOfflineProfile, getOfflineProfile } from '../../src/services/cachingService'; // Adjust path as needed
+
+
 
 // --- 1. SYSTEM CONFIG ---
 
@@ -1527,7 +1528,7 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
 };
 
 // --- The Main Routine Section Component ---
-const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal, analysisData, weatherData }) => {
+const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const { user } = useAppContext();
     const [routines, setRoutines] = useState({ am: [], pm: [] });
     const [activePeriod, setActivePeriod] = useState('am');
@@ -1550,33 +1551,10 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal, analys
         setRoutines(newRoutines);
         try { 
             await updateDoc(doc(db, 'profiles', user.uid), { routines: newRoutines }); 
-            
-            // --- FIX: Now these variables exist from props ---
-            if (user?.uid) {
-                saveOfflineProfile(user.uid, {
-                    savedProducts: savedProducts,
-                    userProfile: { ...userProfile, routines: newRoutines },
-                    analysisData: analysisData || null, // Handle potential nulls
-                    weatherData: weatherData || null
-                });
-            }
-
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
         } catch (error) { 
             console.error("Error saving routines:", error); 
-            // Even if firestore fails (offline), we should try to cache locally so UI stays updated
-            if (user?.uid) {
-                 saveOfflineProfile(user.uid, {
-                    savedProducts: savedProducts,
-                    userProfile: { ...userProfile, routines: newRoutines },
-                    analysisData: analysisData || null,
-                    weatherData: weatherData || null
-                });
-            }
-            // Only show error if we think it's critical, or just let it be optimistic
-            if (!error.message.includes('offline')) {
-                // AlertService.error("خطأ", "تعذر حفظ الروتين.");
-            }
+            AlertService.error("خطأ", "تعذر حفظ الروتين.");
         }
     };
   
@@ -2874,8 +2852,7 @@ export default function ProfileScreen() {
     const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [offlineProducts, setOfflineProducts] = useState([]); 
-    const [isOfflineMode, setIsOfflineMode] = useState(false);
+    const [debugSpf, setDebugSpf] = useState(true); // State for the debug toggle
 
     
     // ========================================================================
@@ -2928,69 +2905,9 @@ export default function ProfileScreen() {
     // Caches
     const analysisCache = useRef({ hash: '', data: null });
     const ingredientsCache = useRef({ hash: '', data: [] });
-    const weatherCache = useRef({ hash: '', lastRun: 0 });
-
     
     // App Lifecycle
     const appState = useRef(AppState.currentState);
-
-     // --- OFFLINE: LOAD CACHE ON MOUNT ---
-    useEffect(() => {
-        const loadOfflineData = async () => {
-            if (!user?.uid) return;
-
-            // 1. Fetch from Disk
-            const cached = await getOfflineProfile(user.uid);
-            
-            if (cached) {
-                // A. Restore Analysis & Weather (These are local state)
-                if (cached.analysisData) {
-                    setAnalysisData(cached.analysisData);
-                    // Hydrate the ref cache too so we don't re-fetch unnecessarily
-                    analysisCache.current = { 
-                        hash: generateFingerprint(cached.savedProducts, cached.userProfile?.settings), 
-                        data: cached.analysisData 
-                    };
-                }
-                
-                if (cached.weatherData) {
-                    setWeatherData(cached.weatherData);
-                }
-
-                // B. Handle Products (Context vs Offline)
-                // If Context is empty (network failed) but Cache has products, use Cache.
-                if (savedProducts.length === 0 && cached.savedProducts?.length > 0) {
-                    console.log("Offline Mode: Using cached products");
-                    setOfflineProducts(cached.savedProducts);
-                    setIsOfflineMode(true);
-                    // Optional: You could force these into Context here if your Context allows it:
-                    // setSavedProducts(cached.savedProducts); 
-                }
-            }
-        };
-
-        loadOfflineData();
-    }, [user?.uid]);
-
-    const effectiveProducts = (savedProducts.length > 0) ? savedProducts : offlineProducts;
-    // Note: You must also pass `userProfile` from cache if context profile is missing, 
-    // but usually Context handles profile object better.
-
-    // ========================================================================
-    // --- OFFLINE: SAVE CACHE ON UPDATES ---
-    // ========================================================================
-    
-    // Update the Cache whenever critical data changes successfully
-    useEffect(() => {
-        if (user?.uid && analysisData && effectiveProducts.length > 0) {
-            saveOfflineProfile(user.uid, {
-                savedProducts: effectiveProducts,
-                userProfile: userProfile, // Contains routines
-                analysisData: analysisData,
-                weatherData: weatherData
-            });
-        }
-    }, [effectiveProducts, analysisData, weatherData, userProfile, user?.uid]);
 
     // Background Particles
     const particles = useMemo(() => [...Array(15)].map((_, i) => ({ 
@@ -3005,8 +2922,8 @@ export default function ProfileScreen() {
     // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
     // ========================================================================
     const runProfileAnalysis = useCallback(async (forceRefresh = false) => {
-        // Use effectiveProducts instead of savedProducts
-        if (!effectiveProducts || effectiveProducts.length === 0) return;
+        if (!savedProducts || savedProducts.length === 0) return;
+
         // 1. Cache Check
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
         
@@ -3034,49 +2951,22 @@ export default function ProfileScreen() {
             
             if (response.ok) {
                 setAnalysisData(data);
+                // Update Cache
                 analysisCache.current = { hash: currentHash, data: data };
-                
-                // NEW: Explicit Save on success
-                saveOfflineProfile(user.uid, {
-                    savedProducts: effectiveProducts,
-                    userProfile: userProfile,
-                    analysisData: data,
-                    weatherData: weatherData
-                });
             }
         } catch (e) {
-            console.error("Profile Analysis Error (Network):", e);
-            // Fallback is already handled by the initial useEffect loading the cache!
+            console.error("Profile Analysis Error:", e);
         } finally {
             setIsAnalyzingProfile(false);
         }
-    }, [effectiveProducts, userProfile, weatherData, user?.uid]);
+    }, [savedProducts, userProfile]);
 
     // ========================================================================
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
     // ========================================================================
-    // ========================================================================
-    // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
-    // ========================================================================
-    const runWeatherAnalysis = useCallback(async (force = false) => {
-        // 1. Safety Checks
-        if (!effectiveProducts || effectiveProducts.length === 0) return;
+    const runWeatherAnalysis = useCallback(async () => {
+        if (!savedProducts || savedProducts.length === 0) return;
         
-        // 2. Loop Prevention: Generate Hash & Time Check
-        const currentHash = generateFingerprint(effectiveProducts, userProfile?.settings);
-        const now = Date.now();
-        const FIVE_MINUTES = 5 * 60 * 1000;
-
-        // CHECK CACHE: 
-        // If NOT forced, AND hash matches last run, AND run recently (or we already have data), STOP.
-        if (!force && 
-            weatherCache.current.hash === currentHash && 
-            weatherData && 
-            (now - weatherCache.current.lastRun < FIVE_MINUTES)
-        ) {
-            return;
-        }
-
         setIsAnalyzingWeather(true);
         setWeatherErrorType(null);
 
@@ -3096,24 +2986,9 @@ export default function ProfileScreen() {
                 return;
             }
 
-            // B. Get GPS Coordinates (Safely)
-            let loc;
-            try {
-                // Timeout: 5000ms ensures it doesn't hang forever if GPS is stuck
-                loc = await Location.getCurrentPositionAsync({ 
-                    accuracy: Location.Accuracy.Balanced, 
-                    timeout: 5000 
-                });
-            } catch (locationError) {
-                console.log("GPS Location failed or timed out, falling back to LastKnown");
-                // Fallback attempt: Get last cached location
-                loc = await Location.getLastKnownPositionAsync({});
-            }
+            // B. Get GPS Coordinates
+            let loc = await Location.getCurrentPositionAsync({});
             
-            if (!loc) {
-                throw new Error("Location services unavailable");
-            }
-
             // C. Get City Name (Free Reverse Geocoding)
             let cityName = 'موقعي';
             try {
@@ -3130,8 +3005,8 @@ export default function ProfileScreen() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    products: effectiveProducts,
-                    settings: userProfile?.settings || {},
+                    products: savedProducts,
+                    settings: userProfile?.settings || {}, // Passing the full settings object
                     location: {
                         lat: loc.coords.latitude,
                         lon: loc.coords.longitude,
@@ -3144,33 +3019,18 @@ export default function ProfileScreen() {
             
             if (response.ok && data.insights) {
                 setWeatherData(data.insights);
-                
-                // UPDATE CACHE REF ON SUCCESS
-                weatherCache.current = { 
-                    hash: currentHash, 
-                    lastRun: Date.now() 
-                };
-
-                // Update Offline Storage
-                if (user?.uid) {
-                    saveOfflineProfile(user.uid, {
-                        savedProducts: effectiveProducts,
-                        userProfile: userProfile,
-                        analysisData: analysisData, // Persist existing analysis
-                        weatherData: data.insights  // Persist new weather
-                    });
-                }
             } else {
                 setWeatherErrorType('service');
             }
 
         } catch (e) {
-            console.log("Weather Analysis Skipped:", e.message);
+            console.error("Weather Analysis Error:", e);
             setWeatherErrorType('service');
         } finally {
             setIsAnalyzingWeather(false);
         }
-    }, [effectiveProducts, userProfile, weatherData, analysisData, user?.uid]);
+    }, [savedProducts, userProfile]);
+
     // ========================================================================
     // --- 7. ORCHESTRATOR & LIFECYCLE ---
     // ========================================================================
@@ -3221,32 +3081,13 @@ export default function ProfileScreen() {
 
     const handleDelete = async (id) => { 
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        
-        // Optimistic Update
-        const old = [...effectiveProducts];
-        const newProducts = effectiveProducts.filter(p => p.id !== id);
-        
-        // Update Local State (for offline mode logic)
-        if(isOfflineMode) setOfflineProducts(newProducts);
-        // Update Context (if online)
-        else setSavedProducts(prev => prev.filter(p => p.id !== id));
-
-        // Update Offline Cache Immediately
-        saveOfflineProfile(user.uid, {
-            savedProducts: newProducts,
-            userProfile: userProfile,
-            analysisData: analysisData,
-            weatherData: weatherData
-        });
-
+        const old = [...savedProducts];
+        setSavedProducts(prev => prev.filter(p => p.id !== id));
         try { 
             await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id)); 
         } catch (error) { 
-            console.error("Delete failed", error);
-            // Revert on error
-            if(isOfflineMode) setOfflineProducts(old);
-            else setSavedProducts(old);
-            Alert.alert("خطأ", "تعذر حذف المنتج (تحقق من الاتصال)"); 
+            setSavedProducts(old); 
+            Alert.alert("خطأ", "تعذر حذف المنتج"); 
         }
     };
 
@@ -3329,14 +3170,7 @@ export default function ProfileScreen() {
                   </View>
               </Animated.View>
           </Animated.View>
-
-          {isOfflineMode && savedProducts.length === 0 && (
-                <View style={{backgroundColor: COLORS.warning, padding: 5, alignItems: 'center', marginTop: insets.top + 60}}>
-                    <Text style={{color: '#000', fontSize: 10, fontFamily: 'Tajawal-Bold'}}>
-                        لا يوجد اتصال - يتم عرض نسخة محفوظة
-                    </Text>
-                </View>
-            )}
+  
           {/* --- SCROLL CONTENT --- */}
           <Animated.ScrollView 
               contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }}
@@ -3355,9 +3189,9 @@ export default function ProfileScreen() {
               <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
                   
                   {activeTab === 'shelf' && (
-                <ShelfSection 
-                    products={effectiveProducts} // <--- UPDATED PROP
-                    loading={loading && !isOfflineMode} // Don't show skeleton if we have offline data
+                    <ShelfSection 
+                        products={savedProducts} 
+                        loading={loading} 
                         onDelete={handleDelete} 
                         onRefresh={() => runFullAnalysis(true)} 
                         router={router} 
@@ -3365,12 +3199,10 @@ export default function ProfileScreen() {
                   )}
                   
                   {activeTab === 'routine' && (
-                <RoutineSection 
-                    savedProducts={effectiveProducts}
+                    <RoutineSection 
+                        savedProducts={savedProducts} 
                         userProfile={userProfile} 
                         onOpenAddStepModal={openAddStepModal} 
-                        analysisData={analysisData}
-                        weatherData={weatherData}
                     />
                   )}
                   
@@ -3387,7 +3219,7 @@ export default function ProfileScreen() {
                           onRetryWeather={runWeatherAnalysis}
                           
                           // Shared
-                          savedProducts={effectiveProducts}
+                          savedProducts={savedProducts} 
                           dismissedInsightIds={dismissedInsightIds} 
                           handleDismissPraise={handleDismissPraise} 
                           userProfile={userProfile} 
