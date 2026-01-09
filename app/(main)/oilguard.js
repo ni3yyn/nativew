@@ -268,42 +268,37 @@ const MarketingClaimsSection = ({ results }) => {
 
     const ClaimRow = ({ result, index }) => {
         const [expanded, setExpanded] = useState(false);
-        const animRef = useRef(new Animated.Value(0)).current;
+        const [contentHeight, setContentHeight] = useState(0);
+        // We use one controller for both rotation (native) and height (non-native)
+        // Note: We set useNativeDriver: false to support height animation
+        const animController = useRef(new Animated.Value(0)).current;
 
-        // 3. Status Configuration
         const getStatusConfig = (statusRaw) => {
             const s = statusRaw ? statusRaw.toString() : '';
 
-            // CASE A: Marketing Lie OR No Ingredients (Same Icon/Color as requested)
             if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
                 return { 
-                    color: '#FF6B6B', // Soft Red
+                    color: '#FF6B6B', 
                     icon: 'times-circle', 
                     bg: 'rgba(255, 107, 107, 0.1)' 
                 };
             }
-
-            // CASE B: Doubtful / Partially True (Yellow)
             if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) {
                 return { 
-                    color: '#FFD93D', // Bright Yellow
+                    color: '#FFD93D', 
                     icon: 'exclamation-triangle', 
                     bg: 'rgba(255, 217, 61, 0.1)' 
                 };
             }
-
-            // CASE C: Traditional (Green)
             if (s.includes('🌿') || s.includes('تقليديا')) {
                 return { 
-                    color: '#6BCB77', // Organic Green
+                    color: '#6BCB77', 
                     icon: 'leaf', 
                     bg: 'rgba(107, 203, 119, 0.1)' 
                 };
             }
-
-            // CASE D: Scientific (Blue) - Default
             return { 
-                color: '#4D96FF', // Scientific Blue
+                color: '#4D96FF', 
                 icon: 'check-circle', 
                 bg: 'rgba(77, 150, 255, 0.1)' 
             };
@@ -320,20 +315,40 @@ const MarketingClaimsSection = ({ results }) => {
         ];
 
         const toggle = () => {
-            // --- FIX: DELETE THIS LINE ---
-            // LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            // -----------------------------
-            
+            const targetValue = expanded ? 0 : 1;
             setExpanded(!expanded);
-            Animated.timing(animRef, { toValue: expanded ? 0 : 1, duration: 300, useNativeDriver: true }).start();
+            
+            Animated.timing(animController, { 
+                toValue: targetValue, 
+                duration: 300, 
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: false // Critical: 'false' is required to animate height
+            }).start();
         };
 
-        const rotateArrow = animRef.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+        const rotateArrow = animController.interpolate({ 
+            inputRange: [0, 1], 
+            outputRange: ['0deg', '180deg'] 
+        });
+
+        // Dynamic Height Interpolation
+        const heightInterpolate = animController.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, contentHeight], // Animates from 0 to measured height
+            extrapolate: 'clamp'
+        });
 
         return (
             <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
                 <PressableScale onPress={toggle}>
-                    <View style={[styles.claimRowMain, expanded && { backgroundColor: config.bg }]}>
+                    <Animated.View style={[
+                        styles.claimRowMain, 
+                        // Smooth background color transition
+                        { backgroundColor: animController.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['transparent', config.bg]
+                        })}
+                    ]}>
                         
                         {/* Icon (Right) */}
                         <View style={styles.claimIconCol}>
@@ -342,10 +357,15 @@ const MarketingClaimsSection = ({ results }) => {
 
                         {/* Text (Middle) */}
                         <View style={styles.claimTextCol}>
-                            <Text style={[styles.claimTextTitle, { color: expanded ? config.color : COLORS.textPrimary }]}>
+                            <Animated.Text style={[
+                                styles.claimTextTitle, 
+                                { color: animController.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [COLORS.textPrimary, config.color]
+                                }) }
+                            ]}>
                                 {result.claim}
-                            </Text>
-                            {/* Display CLEAN text without emoji */}
+                            </Animated.Text>
                             <Text style={[styles.claimTextStatus, { color: config.color }]}>
                                 {cleanStatus}
                             </Text>
@@ -358,11 +378,22 @@ const MarketingClaimsSection = ({ results }) => {
                             </Animated.View>
                         </View>
 
-                    </View>
+                    </Animated.View>
                 </PressableScale>
 
-                {expanded && (
-                    <View style={styles.claimDetails}>
+                {/* ANIMATED CONTENT WRAPPER */}
+                <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
+                    {/* 
+                        We position this absolutely during layout measurement to ensure 
+                        it calculates the correct full size even when hidden.
+                    */}
+                    <View 
+                        style={[styles.claimDetails, { position: 'absolute', width: '100%' }]}
+                        onLayout={(event) => {
+                            const h = event.nativeEvent.layout.height;
+                            if (h > 0 && h !== contentHeight) setContentHeight(h);
+                        }}
+                    >
                         <Text style={styles.claimExplanation}>{result.explanation}</Text>
                         {allEvidence.length > 0 && (
                             <View style={styles.miniEvidenceGrid}>
@@ -375,7 +406,7 @@ const MarketingClaimsSection = ({ results }) => {
                             </View>
                         )}
                     </View>
-                )}
+                </Animated.View>
             </View>
         );
     };
@@ -2168,13 +2199,16 @@ const pickFrontImage = () => {
     );
 };
   
-  return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+return (
+    <View style={styles.container}>
+        {/* 1. StatusBar & Background Elements fill the screen absolutely */}
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-        <View style={styles.container}>
-            <View style={styles.darkOverlay} />
-            {particles.map((p) => <Spore key={p.id} {...p} />)}
+        <View style={styles.darkOverlay} />
+        {particles.map((p) => <Spore key={p.id} {...p} />)}
 
+        {/* 2. Content Wrapper handles the Safe Area Padding */}
+        <View style={{ flex: 1, paddingTop: insets.top }}>
+            
             {step !== 2 && !isAnimatingTransition && (
               <View style={[styles.header, { marginTop: insets.top }]}>
                 {step === 0 && <View style={styles.headerBlur} />}
@@ -2189,8 +2223,8 @@ const pickFrontImage = () => {
               </View>
             )}
 
-{step === 2 ? (
-                // --- CASE 1: Claims Step (Fixed List, No ScrollView Wrapper) ---
+            {step === 2 ? (
+                // --- CASE 1: Claims Step ---
                 <Animated.View style={{ 
                     flex: 1, 
                     opacity: contentOpacity,
@@ -2200,23 +2234,23 @@ const pickFrontImage = () => {
                     {renderClaimsStep()}
                 </Animated.View>
             ) : step === 0 ? (
-                // --- CASE 2: Input Step (Visual Heavy, No ScrollView) ---
-                <View style={{ flex: 1 }}>
-                     <Animated.View style={{ 
-                         flex: 1, 
-                         opacity: contentOpacity,
-                         transform: [{ translateX: contentTranslateX }]
-                     }}>
-                        <InputStepView onImageSelect={handleImageSelection} />
-                     </Animated.View>
-                </View>
+                // --- CASE 2: Input Step ---
+                // FIX: Removed inner <View style={{flex:1}}> wrapper that was causing the layout bug
+                <Animated.View style={{ 
+                    flex: 1, 
+                    opacity: contentOpacity,
+                    transform: [{ translateX: contentTranslateX }]
+                }}>
+                   <InputStepView onImageSelect={handleImageSelection} />
+                </Animated.View>
             ) : (
-                // --- CASE 3: Standard Scroll Steps (Review, Loading, Results) ---
+                // --- CASE 3: Scroll Steps ---
                 <ScrollView 
                     ref={scrollRef} 
                     contentContainerStyle={[
                       styles.scrollContent, 
-                      { paddingBottom: 100 + insets.bottom }
+                      // FIX: Adjusted padding bottom to handle Android navigation bar better
+                      { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
                     ]} 
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -2246,10 +2280,12 @@ const pickFrontImage = () => {
                     </Animated.View>
                 </ScrollView>
             )}
-            </View>
+        </View>
 
+        {/* 3. Modals exist outside the content wrapper */}
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <View style={styles.modalOverlay}>
+            {/* ... Modal Content (No changes needed here) ... */}
+             <View style={styles.modalOverlay}>
                <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
                   <Animated.View style={styles.modalContent}>
                       <View style={{alignItems:'center', marginBottom: 15}}>
