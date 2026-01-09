@@ -126,58 +126,70 @@ export const AppProvider = ({ children }) => {
       setProductsError(null);
       
       if (currentUser) {
-        setLoading(true); // Start loading UI
+        console.log("🟢 User Detected:", currentUser.email);
+        setLoading(true); 
         
         // ➤ REGISTER TOKEN
         registerForPushNotificationsAsync(currentUser.uid);
-
+    
         // ============================================================
-        // 🚀 OFFLINE SUPPORT START
+        // 🚀 OFFLINE STRATEGY (Sequential Loading)
         // ============================================================
-        
-        // 1. Load User Settings (Skin type, Name, Allergies) from Cache
-        const cachedProfile = await getSelfProfileCache();
-        if (cachedProfile) {
-            setUserProfile(cachedProfile);
-        }
-
-        // 2. Load Products Shelf from Cache
-        const cachedProducts = await getSavedProductsCache();
-        if (cachedProducts && cachedProducts.length > 0) {
-            setSavedProducts(cachedProducts);
-        }
-
-        // If we have cached data, we can unblock the UI immediately
-        if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
-            setLoading(false); 
-        }
+        const loadCache = async () => {
+            try {
+                console.log("📂 Attempting to load cache...");
+                
+                // 1. Load Profile Cache
+                const cachedProfile = await getSelfProfileCache();
+                if (cachedProfile) {
+                    console.log("✅ Profile loaded from cache");
+                    setUserProfile(cachedProfile);
+                }
+    
+                // 2. Load Products Cache
+                const cachedProducts = await getSavedProductsCache();
+                if (cachedProducts && cachedProducts.length > 0) {
+                    console.log(`✅ Loaded ${cachedProducts.length} products from cache`);
+                    setSavedProducts(cachedProducts);
+                }
+    
+                // 🛑 CRITICAL FIX:
+                // If we found data in cache, STOP loading immediately.
+                // We do NOT wait for the network to connect.
+                if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
+                    setLoading(false);
+                }
+    
+            } catch (e) {
+                console.error("Cache load error:", e);
+            }
+        };
+    
+        // Run the cache loader
+        loadCache();
+    
+    
         // ============================================================
-        // 🚀 OFFLINE SUPPORT END
+        // 📡 NETWORK STRATEGY (Background Sync)
         // ============================================================
-
+    
         // ➤ LISTEN: Real-time Profile Updates
         const profileRef = doc(db, 'profiles', currentUser.uid);
         const unsubscribeProfile = onSnapshot(profileRef, 
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
-              // Update State
               setUserProfile(data);
-              // Update Cache (So it's available next time offline)
-              setSelfProfileCache(data); 
-              setProfileError(null);
-            } else {
-              setUserProfile(null);
+              setSelfProfileCache(data); // Sync to storage
             }
           }, 
           (err) => {
-            console.error("Profile fetch error", err);
-            setProfileError(err.message);
-            // On error (offline), we keep the `userProfile` state 
-            // because we already loaded it from cache above!
+            // If offline, just log warning. 
+            // DO NOT set userProfile to null, keep the cached version!
+            console.warn("⚠️ Offline: Using cached profile");
           }
         );
-
+    
         // ➤ LISTEN: Real-time Products Updates
         const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
         const productsQuery = query(productsRef, orderBy('createdAt', 'desc'));
@@ -188,38 +200,32 @@ export const AppProvider = ({ children }) => {
               id: doc.id,
               ...doc.data()
             }));
-
-            // OPTIMIZATION: Check against previous state to avoid unnecessary re-renders
+    
             setSavedProducts(prevProducts => {
-                // 1. Compare the new data from network vs what we currently have (from cache)
                 const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(prevProducts);
-
                 if (isDifferent) {
-                    console.log("🔄 Network data different from cache. Updating...");
-                    // 2. Only update Cache if data actually changed
+                    console.log("🔄 Syncing new data from cloud...");
                     setSavedProductsCache(newProducts);
-                    return newProducts; // Update state
+                    return newProducts; 
                 }
-                
-                // 3. If data is identical, keep old state (Prevents the 3rd log message)
                 return prevProducts; 
             });
             
-            setProductsError(null);
+            // Ensure loading is false when network finally returns
             setLoading(false);
           }, 
           (err) => {
-            console.error("Products fetch error", err);
-            setProductsError(err.message);
+            console.warn("⚠️ Offline: Using cached products");
+            // Ensure loading is false even if network fails
             setLoading(false);
           }
         );
-
+    
         return () => {
           unsubscribeProfile();
           unsubscribeProducts();
         };
-      } else {
+    }  else {
         // No user logged in
         setUserProfile(null);
         setSavedProducts([]);
