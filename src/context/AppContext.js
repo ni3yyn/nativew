@@ -200,23 +200,33 @@ export const AppProvider = ({ children }) => {
               id: doc.id,
               ...doc.data()
             }));
-    
-            setSavedProducts(prevProducts => {
-                const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(prevProducts);
+
+            setSavedProducts(currentSavedProducts => {
+                // 🛑 PROTECTION: 
+                // If Firestore returns an empty list from its local cache (metadata.fromCache is true),
+                // BUT we already have data loaded from our AsyncStorage cache (currentSavedProducts > 0),
+                // then Firestore is lying because it hasn't synced yet. IGNORE this update.
+                if (newProducts.length === 0 && snapshot.metadata.fromCache && currentSavedProducts.length > 0) {
+                    console.log("🛡️ Ignoring empty Firestore cache update; keeping AsyncStorage data.");
+                    return currentSavedProducts;
+                }
+
+                // Normal Logic: Update if data changed
+                const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(currentSavedProducts);
                 if (isDifferent) {
-                    console.log("🔄 Syncing new data from cloud...");
+                    console.log("🔄 Syncing new data...");
                     setSavedProductsCache(newProducts);
                     return newProducts; 
                 }
-                return prevProducts; 
+                
+                return currentSavedProducts; 
             });
             
-            // Ensure loading is false when network finally returns
+            // Ensure loading is false
             setLoading(false);
           }, 
           (err) => {
             console.warn("⚠️ Offline: Using cached products");
-            // Ensure loading is false even if network fails
             setLoading(false);
           }
         );
