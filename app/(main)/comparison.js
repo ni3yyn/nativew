@@ -1,20 +1,33 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-    StyleSheet, View, Text, Dimensions,
+    StyleSheet, View, Text,
     ScrollView, Animated, Platform, Alert,
-    UIManager, LayoutAnimation, Pressable, Image, Easing, StatusBar,
-    BackHandler, ActivityIndicator
+    UIManager, Image, StatusBar,
+    Easing, TouchableOpacity, Dimensions
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5, MaterialCommunityIcons, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useAppContext } from '../../src/context/AppContext';
 
+// --- SHARED RESOURCES ---
+import { 
+  styles as globalStyles, 
+  COLORS, 
+  width, 
+  height, 
+  CARD_WIDTH 
+} from '../../src/components/oilguard/oilguard.styles'; 
+import LoadingScreen from '../../src/components/oilguard/LoadingScreen';
+import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
+import { uriToBase64 } from '../../src/utils/formatters'; 
+import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
+
 // ============================================================================
-//                       SYSTEM & THEME CONFIG
+//                       SYSTEM CONFIGURATION
 // ============================================================================
 
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
@@ -24,733 +37,817 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const { width, height } = Dimensions.get('window');
+// Side-Specific Colors for Comparison
+const PROD_COLORS = {
+    A: '#10b981', // Emerald Green (Product A - Right Side in RTL)
+    B: '#3b82f6'  // Royal Blue   (Product B - Left Side in RTL)
+};
 
-const COLORS = {
-  background: '#1A2D27', 
-  card: '#253D34',      
-  border: 'rgba(90, 156, 132, 0.3)', 
-  accentGreen: '#5A9C84', 
-  textPrimary: '#F1F3F2',   
-  textSecondary: '#A3B1AC', 
-  textOnAccent: '#1A2D27',  
-  danger: '#ef4444', 
-  warning: '#f59e0b', 
-  success: '#10b981',
-  gold: '#fbbf24',
+// ============================================================================
+//                       ANIMATED UI COMPONENTS
+// ============================================================================
+
+const Spore = ({ size, duration, delay }) => {
+    const animY = useRef(new Animated.Value(0)).current; 
+    const animX = useRef(new Animated.Value(0)).current; 
+    const opacity = useRef(new Animated.Value(0)).current;
   
-  // Specific Product Colors
-  prodA: '#10b981', // Emerald Green
-  prodB: '#3b82f6', // Royal Blue
-  
-  primaryGlow: 'rgba(90, 156, 132, 0.15)'
-};
-
-const INSTRUCTIONS = {
-    0: "مرحباً بك في ساحة المقارنة العلمية",
-    1: "صور المكونات لكل منتج لبدء التحدي",
-    2: "جاري تحليل التركيبة الكيميائية...",
-    3: "تأكد من نوع المنتج المكتشف تلقائياً",
-    4: "ما هي المعايير التي تهمك أكثر؟",
-    5: "النتيجة النهائية: اكتشف الأفضل علمياً"
-};
-
-// ============================================================================
-//                       HELPER FUNCTIONS
-// ============================================================================
-
-const uriToBase64 = async (uri) => {
-  try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => { const rawBase64 = reader.result.split(',')[1]; resolve(rawBase64); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (e) { throw new Error("Failed to process image file."); }
-};
-
-const getClaimsByProductType = (productType) => {
-    const claimsByProduct = {
-        shampoo: [ "تنقية فروة الرأس", "مضاد للقشرة", "للشعر الدهني", "للشعر الجاف", "مضاد للتساقط", "تعزيز النمو", "تكثيف الشعر", "ترطيب", "إصلاح التلف", "لمعان", "مكافحة التجعد", "حماية اللون", "حماية حرارية", "مهدئ", "مضاد للالتهابات" ],
-        hair_mask: [ "تغذية عميقة", "إصلاح التلف", "ترطيب مكثف", "مكافحة التجعد", "حماية اللون", "لمعان ونعومة" ],
-        serum: [ "مكافحة التجاعيد", "نضارة", "تحفيز الكولاجين", "إصلاح التلف", "مضاد للأكسدة", "تفتيح", "توحيد اللون", "تفتيح البقع", "الهالات السوداء", "ترطيب", "مهدئ", "مضاد للالتهابات", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "تنقية المسام", "مضاد للحبوب" ],
-        oil_blend: [ "تعزيز النمو", "تغذية", "لمعان", "إصلاح التلف", "مكافحة التجعد", "ترطيب", "تفتيح" ],
-        lotion_cream: [ "ترطيب عميق", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "مهدئ", "مضاد للأكسدة", "مكافحة التجاعيد", "شد البشرة", "تفتيح", "توحيد اللون", "إزالة السيلوليت" ],
-        sunscreen: [ "حماية شمسية", "حماية واسعة", "مقاوم للماء", "ترطيب", "مهدئ", "لا يترك أثراً", "للبشرة الدهنية", "للبشرة الجافة" ],
-        cleanser: [ "تنظيف عميق", "تنظيف لطيف", "إزالة المكياج", "للبشرة الدهنية", "للبشرة الجافة", "للبشرة الحساسة", "تنقية المسام", "مضاد للحبوب" ],
-        other: [ "ترطيب", "مهدئ", "مضاد للأكسدة", "تفتيح", "مكافحة الشيخوخة", "علاج الحبوب" ]
-    };
-    return claimsByProduct[productType] || claimsByProduct.other;
-};
-
-// ============================================================================
-//                       UI COMPONENTS
-// ============================================================================
-
-// 1. ANIMATED TRANSITION WRAPPER (Side-Slide)
-const SlideTransition = ({ children, trigger }) => {
-    const slideAnim = useRef(new Animated.Value(20)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-
     useEffect(() => {
-        slideAnim.setValue(30);
-        fadeAnim.setValue(0);
-        Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-            Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
-        ]).start();
-    }, [trigger]);
+      const floatLoop = Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.bezier(0.4, 0, 0.2, 1), useNativeDriver: true }));
+      const driftLoop = Animated.loop(Animated.sequence([ Animated.timing(animX, { toValue: 1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }), Animated.timing(animX, { toValue: -1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }) ]));
+      const opacityPulse = Animated.loop(Animated.sequence([ Animated.timing(opacity, { toValue: 0.6, duration: duration * 0.2, useNativeDriver: true }), Animated.delay(duration * 0.6), Animated.timing(opacity, { toValue: 0.2, duration: duration * 0.2, useNativeDriver: true }) ]));
+      const timeout = setTimeout(() => { floatLoop.start(); driftLoop.start(); opacityPulse.start(); }, delay);
+      return () => { clearTimeout(timeout); };
+    }, []);
+  
+    return ( <Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY: animY.interpolate({ inputRange: [0, 1], outputRange: [height, -100] }) }, { translateX: animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] }) }], opacity }} /> );
+};
 
+const StaggeredItem = ({ index, children, style }) => {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.spring(anim, { toValue: 1, friction: 8, tension: 40, delay: index * 60, useNativeDriver: true }).start();
+    }, []);
     return (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateX: slideAnim }] }}>
+        <Animated.View style={[{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }, style]}>
             {children}
         </Animated.View>
     );
 };
 
-// 2. PRESSABLE SCALE
-const PressableScale = ({ onPress, children, style, disabled, activeScale = 0.95 }) => {
-    const scale = useRef(new Animated.Value(1)).current; 
-    const pressIn = () => !disabled && Animated.spring(scale, { toValue: activeScale, useNativeDriver: true, speed: 20 }).start();
-    const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
-    return (
-        <Pressable onPress={() => { if(onPress && !disabled) { Haptics.selectionAsync(); onPress(); } }} onPressIn={pressIn} onPressOut={pressOut} disabled={disabled} style={style}>
-            <Animated.View style={[{ transform: [{ scale }] }, style?.flex && {flex: style.flex}]}>{children}</Animated.View>
-        </Pressable>
-    );
-};
+// --- CORRECTED METRIC DUEL BAR (Center-Out Growth) ---
+const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
+    const animA = useRef(new Animated.Value(0)).current;
+    const animB = useRef(new Animated.Value(0)).current;
+    
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(animA, { toValue: scoreA || 0, duration: 1500, delay: 200, easing: Easing.out(Easing.exp), useNativeDriver: false }),
+            Animated.timing(animB, { toValue: scoreB || 0, duration: 1500, delay: 200, easing: Easing.out(Easing.exp), useNativeDriver: false })
+        ]).start();
+    }, [scoreA, scoreB]);
 
-// 3. SCORE RING
-const ScoreRing = ({ score, size = 50, color }) => {
-    const strokeWidth = 5;
-    const radius = (size - strokeWidth) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const progress = circumference - (score / 100) * circumference;
+    const widthA = animA.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+    const widthB = animB.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
 
     return (
-        <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-            <Svg width={size} height={size} style={{transform: [{ rotate: '-90deg' }]}}>
-                <Circle cx={size/2} cy={size/2} r={radius} stroke={COLORS.border} strokeWidth={strokeWidth} fill="none" />
-                <Circle 
-                    stroke={color} 
-                    cx={size/2} 
-                    cy={size/2} 
-                    r={radius} 
-                    strokeWidth={strokeWidth} 
-                    strokeDasharray={`${circumference} ${circumference}`} 
-                    strokeDashoffset={progress} 
-                    strokeLinecap="round" 
-                    fill="none" 
-                />
-            </Svg>
-            <Text style={[styles.ringText, { fontSize: size * 0.3, color }]}>{Math.round(score)}</Text>
-        </View>
-    );
-};
-
-// ============================================================================
-//                       STEPS LOGIC
-// ============================================================================
-
-const IntroStep = ({ onStart }) => (
-    <View style={styles.centerContent}>
-        <View style={styles.introHero}>
-            <LinearGradient colors={[COLORS.card, COLORS.background]} style={styles.iconCircle}>
-                <MaterialCommunityIcons name="scale-balance" size={50} color={COLORS.accentGreen} />
-            </LinearGradient>
-            <Text style={styles.titleLarge}>المقارنة الشاملة</Text>
-            <Text style={styles.subtitle}>تحليل علمي دقيق يكشف حقيقة المنتجات</Text>
-        </View>
-        <PressableScale onPress={onStart} style={styles.btnPrimary}>
-            <Text style={styles.btnTextPrimary}>بدء مقارنة جديدة</Text>
-            <FontAwesome5 name="arrow-left" color={COLORS.textOnAccent} size={14} />
-        </PressableScale>
-    </View>
-);
-
-const InputStep = ({ left, setLeft, right, setRight }) => {
-    const pickImage = async (setter) => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-            if (!result.canceled) {
-                setter({ sourceData: result.assets[0].uri, sourceType: 'ocr' });
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-        } catch (e) { Alert.alert("خطأ", "لا يمكن الوصول للصور"); }
-    };
-
-    const ProductSlot = ({ data, setter, label, color }) => (
-        <PressableScale 
-            style={[styles.slotCard, data.sourceData && { borderColor: color, borderWidth: 2 }]} 
-            onPress={() => !data.sourceData && pickImage(setter)}
-        >
-            {data.sourceData ? (
-                <>
-                    <Image source={{ uri: data.sourceData }} style={styles.slotImage} />
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
-                    <Pressable style={styles.removeBtn} onPress={() => setter({ sourceData: null, sourceType: null })}>
-                        <FontAwesome5 name="times" color="#FFF" size={10} />
-                    </Pressable>
-                    <View style={[styles.checkBadge, { backgroundColor: color }]}>
-                        <FontAwesome5 name="check" color="#FFF" size={10} />
-                    </View>
-                </>
-            ) : (
-                <View style={styles.slotPlaceholder}>
-                    <View style={styles.dashedCircle}>
-                        <FontAwesome5 name="camera" size={24} color={COLORS.textSecondary} />
-                    </View>
-                    <Text style={styles.slotLabel}>{label}</Text>
-                </View>
-            )}
-        </PressableScale>
-    );
-
-    return (
-        <View style={styles.stepContainer}>
-            <Text style={styles.headerTitle}>أطراف التحدي</Text>
-            <Text style={styles.headerSub}>قم بتصوير قائمة المكونات الخلفية</Text>
-            
-            <View style={styles.arenaContainer}>
-                <View style={styles.arenaSide}>
-                    <ProductSlot data={left} setter={setLeft} label="المنتج (أ)" color={COLORS.prodA} />
-                </View>
-
-                <View style={styles.vsContainer}>
-                    <View style={styles.vsLine} />
-                    <View style={styles.vsBadge}>
-                        <Text style={styles.vsText}>VS</Text>
-                    </View>
-                    <View style={styles.vsLine} />
-                </View>
-
-                <View style={styles.arenaSide}>
-                    <ProductSlot data={right} setter={setRight} label="المنتج (ب)" color={COLORS.prodB} />
-                </View>
-            </View>
-        </View>
-    );
-};
-
-const LoadingStep = ({ text }) => (
-    <View style={styles.centerContent}>
-        <View style={styles.loaderRingOuter}>
-            <ActivityIndicator size="large" color={COLORS.accentGreen} />
-        </View>
-        <Text style={styles.loadingText}>{text}</Text>
-    </View>
-);
-
-const TypeSelectionStep = ({ current, onSelect }) => {
-    const types = [
-        { id: 'shampoo', label: 'شامبو / غسول شعر', icon: 'spray-can' },
-        { id: 'serum', label: 'سيروم علاجي', icon: 'prescription-bottle' },
-        { id: 'lotion_cream', label: 'كريم / مرطب', icon: 'pump-soap' },
-        { id: 'sunscreen', label: 'واقي شمس', icon: 'sun' },
-        { id: 'cleanser', label: 'غسول وجه', icon: 'water' },
-        { id: 'other', label: 'منتج آخر', icon: 'box-open' },
-    ];
-
-    const detectedType = types.find(t => t.id === current) || types[5];
-    const otherTypes = types.filter(t => t.id !== current);
-
-    return (
-        <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
-            <Text style={styles.headerTitle}>ما نوع هذه المنتجات؟</Text>
-            <Text style={styles.headerSub}>حددنا النوع بناءً على المكونات</Text>
-            
-            {/* AI Selection */}
-            <View style={styles.detectedContainer}>
-                <View style={styles.detectedHeader}>
-                    <FontAwesome5 name="robot" color={COLORS.accentGreen} size={14} />
-                    <Text style={styles.detectedLabel}>اقتراح الذكاء الاصطناعي</Text>
-                </View>
-                <PressableScale style={[styles.typeCard, styles.typeCardActive, { width: '100%', aspectRatio: 2.2 }]} onPress={() => onSelect(current)}>
-                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 15 }}>
-                        <View style={styles.activeIconCircle}>
-                            <FontAwesome5 name={detectedType.icon} size={24} color={COLORS.textOnAccent} />
-                        </View>
-                        <View style={{flex: 1}}>
-                            <Text style={[styles.typeTextActive, { fontSize: 18 }]}>{detectedType.label}</Text>
-                            <Text style={{ color: COLORS.textOnAccent, opacity: 0.8, fontSize: 12, textAlign: 'right' }}>اضغط للتأكيد</Text>
-                        </View>
-                        <View>
-                             <FontAwesome5 name="check-circle" size={24} color={COLORS.textOnAccent} />
-                        </View>
-                    </View>
-                </PressableScale>
-            </View>
-
-            {/* Alternatives */}
-            <Text style={[styles.headerSub, { marginTop: 20 }]}>أو اختر يدوياً:</Text>
-            <View style={styles.gridContainer}>
-                {otherTypes.map((t) => (
-                    <PressableScale key={t.id} style={styles.typeCard} onPress={() => onSelect(t.id)}>
-                        <FontAwesome5 name={t.icon} size={20} color={COLORS.textSecondary} />
-                        <Text style={styles.typeText}>{t.label}</Text>
-                    </PressableScale>
-                ))}
-            </View>
-        </ScrollView>
-    );
-};
-
-const ClaimsSelectionStep = ({ claims, selected, onToggle, onFinish }) => (
-    <View style={{ flex: 1 }}>
-        <Text style={styles.headerTitle}>أهداف المقارنة</Text>
-        <Text style={styles.headerSub}>حدد ما تبحث عنه في هذه المنتجات</Text>
-        
-        <ScrollView contentContainerStyle={styles.chipsContainer} showsVerticalScrollIndicator={false}>
-            {claims.map((claim) => {
-                const isActive = selected.includes(claim);
-                return (
-                    <PressableScale key={claim} onPress={() => onToggle(claim)} style={[styles.chip, isActive && styles.chipActive]}>
-                        <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{claim}</Text>
-                        {isActive && <FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} style={{ marginLeft: 6 }} />}
-                    </PressableScale>
-                );
-            })}
-        </ScrollView>
-
-        <PressableScale onPress={onFinish} disabled={selected.length === 0} style={[styles.btnPrimary, { marginTop: 20 }]}>
-            <Text style={styles.btnTextPrimary}>عرض النتائج</Text>
-            <FontAwesome5 name="chart-pie" color={COLORS.textOnAccent} size={14} />
-        </PressableScale>
-    </View>
-);
-
-// --- RESULTS COMPONENTS ---
-
-const TugOfWarBar = ({ label, valA, valB }) => {
-    // Normalizing values to split the bar from center
-    // A (Green) grows Right, B (Blue) grows Left
-    const widthA = Math.min(valA, 100);
-    const widthB = Math.min(valB, 100);
-
-    return (
-        <View style={{ width: '100%', marginBottom: 15 }}>
-            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 5 }}>
-                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.prodA, fontSize: 12 }}>{Math.round(valA)}</Text>
-                <Text style={styles.compLabel}>{label}</Text>
-                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.prodB, fontSize: 12 }}>{Math.round(valB)}</Text>
-            </View>
-            
-            <View style={styles.tugContainer}>
+        <View style={styles.duelContainer}>
+            {/* Header: Scores on Edges, Label in Center 
+               flexDirection is 'row-reverse', so:
+               - First Child appears on the RIGHT (Product A/Green)
+               - Last Child appears on the LEFT (Product B/Blue)
+            */}
+            <View style={styles.duelHeader}>
                 {/* Right Side (Product A - Green) */}
-                <View style={styles.tugSide}>
-                    <View style={[styles.tugBar, { 
-                        backgroundColor: COLORS.prodA, 
-                        width: `${widthA}%`,
-                        borderTopLeftRadius: 4, borderBottomLeftRadius: 4
-                    }]} />
+                <Text style={[styles.duelScore, { color: PROD_COLORS.A, textAlign: 'right' }]}>{Math.round(scoreA || 0)}%</Text>
+                
+                {/* Center Label */}
+                <View style={styles.duelLabelBox}>
+                    <Text style={styles.duelLabel}>{label}</Text>
+                    <FontAwesome5 name={icon} size={10} color={COLORS.textDim} style={{ marginLeft: 5 }} />
+                </View>
+                
+                {/* Left Side (Product B - Blue) */}
+                <Text style={[styles.duelScore, { color: PROD_COLORS.B, textAlign: 'left' }]}>{Math.round(scoreB || 0)}%</Text>
+            </View>
+
+            {/* Bars Track - Center Out */}
+            <View style={styles.duelTrackContainer}>
+                
+                {/* Product B Bar (Visual Left - Grows Right-to-Left from center) */}
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', paddingRight: 2 }}> 
+                    <Animated.View style={[styles.duelBar, { width: widthB, backgroundColor: PROD_COLORS.B, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
                 </View>
 
                 {/* Center Divider */}
-                <View style={styles.tugDivider} />
+                <View style={styles.duelDivider} />
 
-                {/* Left Side (Product B - Blue) */}
-                <View style={[styles.tugSide, { justifyContent: 'flex-start' }]}> 
-                    <View style={[styles.tugBar, { 
-                        backgroundColor: COLORS.prodB, 
-                        width: `${widthB}%`,
-                        borderTopRightRadius: 4, borderBottomRightRadius: 4
-                    }]} />
+                {/* Product A Bar (Visual Right - Grows Left-to-Right from center) */}
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 2 }}>
+                    <Animated.View style={[styles.duelBar, { width: widthA, backgroundColor: PROD_COLORS.A, borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
                 </View>
             </View>
         </View>
     );
 };
 
-const ResultHeader = ({ left, right, winner }) => (
-    <View style={styles.resultHeader}>
-        <View style={[styles.winnerBanner, { borderColor: winner === 'tie' ? COLORS.border : COLORS.gold }]}>
-            <FontAwesome5 name="trophy" size={12} color={COLORS.gold} />
-            <Text style={styles.winnerText}>
-                {winner === 'tie' ? 'تعادل في المستوى' : `الأفضل: ${winner === 'left' ? 'المنتج (أ)' : 'المنتج (ب)'}`}
-            </Text>
-        </View>
+// ============================================================================
+//                       SUB-COMPONENTS
+// ============================================================================
 
-        <View style={styles.headToHead}>
-            {/* Product A (Green) */}
-            <View style={styles.productCol}>
-                <Image source={{ uri: left.sourceData }} style={[styles.resImg, winner === 'left' && { borderColor: COLORS.prodA, borderWidth: 2 }]} />
-                <ScoreRing score={left.analysisData.oilGuardScore} size={50} color={COLORS.prodA} />
-                <Text style={[styles.resName, { color: COLORS.prodA }]}>المنتج (أ)</Text>
+
+const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
+    const [activeSide, setActiveSide] = useState('A'); 
+    const rawData = activeSide === 'A' ? leftClaims : rightClaims;
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const fabPulseAnim = useRef(new Animated.Value(1)).current;
+    
+    const sortedData = useMemo(() => {
+        if (!rawData) return [];
+        return [...rawData].sort((a, b) => {
+            const getScore = (item) => {
+                const s = item.status ? item.status.toString() : '';
+                if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) return 4;
+                if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) return 3;
+                if (s.includes('🌿') || s.includes('تقليديا')) return 2;
+                return 1;
+            };
+            return getScore(b) - getScore(a);
+        });
+    }, [rawData]);
+
+    const switchSide = (side) => {
+        if(side === activeSide) return;
+        Animated.timing(fadeAnim, {toValue: 0, duration: 150, useNativeDriver: true}).start(() => {
+            setActiveSide(side);
+            Animated.timing(fadeAnim, {toValue: 1, duration: 250, useNativeDriver: true}).start();
+        });
+    };
+
+    const cleanStatusText = (text) => text ? text.replace(/[✅🌿⚖️❌🚫]/g, '').trim() : '';
+
+    const ClaimRow = ({ item, index }) => {
+        const [expanded, setExpanded] = useState(false);
+        const [contentHeight, setContentHeight] = useState(0);
+        const anim = useRef(new Animated.Value(0)).current;
+
+        const toggle = () => {
+            setExpanded(!expanded);
+            Animated.timing(anim, { 
+                toValue: expanded ? 0 : 1, 
+                duration: 300, 
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: false 
+            }).start();
+        };
+
+        const getStatusConfig = (s) => {
+            if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) return { color: COLORS.danger, icon: 'times-circle', bg: 'rgba(239, 68, 68, 0.1)' };
+            if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('⚠️')) return { color: COLORS.warning, icon: 'exclamation-triangle', bg: 'rgba(245, 158, 11, 0.1)' };
+            if (s.includes('🌿')) return { color: '#6BCB77', icon: 'leaf', bg: 'rgba(107, 203, 119, 0.1)' };
+            return { color: COLORS.info, icon: 'check-circle', bg: 'rgba(59, 130, 246, 0.1)' };
+        };
+
+        const config = getStatusConfig(item.status || '');
+
+        return (
+            <View style={[globalStyles.claimRowWrapper, index !== (sortedData.length - 1) && globalStyles.claimRowBorder]}>
+                <TouchableOpacity activeOpacity={0.7} onPress={toggle}>
+                    <Animated.View style={[
+                        globalStyles.claimRowMain, 
+                        { backgroundColor: anim.interpolate({ inputRange: [0, 1], outputRange: ['transparent', config.bg] }) }
+                    ]}>
+                        <View style={globalStyles.claimIconCol}>
+                            <FontAwesome5 name={config.icon} size={20} color={config.color} />
+                        </View>
+                        <View style={globalStyles.claimTextCol}>
+                            <Animated.Text style={[globalStyles.claimTextTitle, { color: anim.interpolate({ inputRange: [0, 1], outputRange: [COLORS.textPrimary, config.color] }) }]}>
+                                {item.claim}
+                            </Animated.Text>
+                            <Text style={[globalStyles.claimTextStatus, { color: config.color }]}>
+                                {cleanStatusText(item.status)}
+                            </Text>
+                        </View>
+                        <View style={globalStyles.claimArrowCol}>
+                            <Animated.View style={{ transform: [{ rotate: anim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}>
+                                <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
+                            </Animated.View>
+                        </View>
+                    </Animated.View>
+                </TouchableOpacity>
+
+                <Animated.View style={{ height: anim.interpolate({ inputRange: [0, 1], outputRange: [0, contentHeight], extrapolate: 'clamp' }), overflow: 'hidden' }}>
+                    <View style={[globalStyles.claimDetails, { position: 'absolute', width: '100%' }]} onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}>
+                        <Text style={globalStyles.claimExplanation}>{item.explanation}</Text>
+                    </View>
+                </Animated.View>
             </View>
-
-            {/* Stats */}
-            <View style={styles.centerStats}>
-                <TugOfWarBar label="الأمان" valA={left.analysisData.safety.score} valB={right.analysisData.safety.score} />
-                <TugOfWarBar label="الفعالية" valA={left.analysisData.efficacy.score} valB={right.analysisData.efficacy.score} />
-            </View>
-
-            {/* Product B (Blue) */}
-            <View style={styles.productCol}>
-                <Image source={{ uri: right.sourceData }} style={[styles.resImg, winner === 'right' && { borderColor: COLORS.prodB, borderWidth: 2 }]} />
-                <ScoreRing score={right.analysisData.oilGuardScore} size={50} color={COLORS.prodB} />
-                <Text style={[styles.resName, { color: COLORS.prodB }]}>المنتج (ب)</Text>
-            </View>
-        </View>
-    </View>
-);
-
-const ResultsStep = ({ left, right, onReset }) => {
-    const [tab, setTab] = useState('overview');
-    const winner = useMemo(() => {
-        const s1 = left.analysisData.oilGuardScore;
-        const s2 = right.analysisData.oilGuardScore;
-        if (Math.abs(s1 - s2) < 5) return 'tie';
-        return s1 > s2 ? 'left' : 'right';
-    }, [left, right]);
+        );
+    };
 
     return (
-        <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
-             <ResultHeader left={left} right={right} winner={winner} />
-             
-             <View style={styles.tabsContainer}>
-                 {['overview', 'safety', 'marketing'].map(t => (
-                     <PressableScale key={t} onPress={() => setTab(t)} style={[styles.tabBtn, tab === t && styles.tabBtnActive]}>
-                         <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                             {t === 'overview' ? 'نظرة عامة' : t === 'safety' ? 'المخاطر' : 'التسويق'}
-                         </Text>
-                     </PressableScale>
-                 ))}
-             </View>
-
-             <SlideTransition trigger={tab}>
-                {tab === 'overview' && (
-                    <>
-                        <View style={styles.cardBase}>
-                            <Text style={styles.cardTitle}>🏆 الحكم النهائي</Text>
-                            <Text style={[styles.verdictText, { color: winner === 'left' ? COLORS.prodA : winner === 'right' ? COLORS.prodB : COLORS.gold }]}>
-                                {winner === 'left' ? left.analysisData.finalVerdict : right.analysisData.finalVerdict}
-                            </Text>
-                            <Text style={styles.verdictSub}>
-                                {winner === 'tie' ? "المنتجان متقاربان جداً." : `يتفوق ${winner === 'left' ? 'المنتج (أ)' : 'المنتج (ب)'} بشكل عام بفضل تركيبته الأفضل.`}
-                            </Text>
-                        </View>
-                        <View style={{ flexDirection: 'row-reverse', gap: 10, marginTop: 10 }}>
-                            <View style={[styles.cardBase, { flex: 1 }]}>
-                                <Text style={[styles.colHeader, { color: COLORS.prodA }]}>مزايا (أ)</Text>
-                                {left.analysisData.scoreBreakdown.filter(x => x.type === 'info').slice(0,3).map((x,i) => (
-                                    <Text key={i} style={styles.bulletPoint}>• {x.text.split(':')[0]}</Text>
-                                ))}
-                            </View>
-                            <View style={[styles.cardBase, { flex: 1 }]}>
-                                <Text style={[styles.colHeader, { color: COLORS.prodB }]}>مزايا (ب)</Text>
-                                {right.analysisData.scoreBreakdown.filter(x => x.type === 'info').slice(0,3).map((x,i) => (
-                                    <Text key={i} style={styles.bulletPoint}>• {x.text.split(':')[0]}</Text>
-                                ))}
-                            </View>
-                        </View>
-                    </>
+        <View style={globalStyles.claimsContainer}>
+            <View style={[globalStyles.claimsHeader, {flexDirection: 'column', alignItems: 'stretch', gap: 15, paddingBottom: 15}]}>
+                <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <Text style={globalStyles.claimsTitle}>تحليل الادعاءات</Text>
+                    <FontAwesome5 name="tag" color={COLORS.textSecondary} />
+                </View>
+                <View style={styles.segmentTrack}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('A')} style={[styles.segmentBtn, activeSide === 'A' && {backgroundColor: PROD_COLORS.A}]}>
+                        <Text style={[styles.segmentText, activeSide === 'A' && {color: '#FFF'}]}>المنتج (أ)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('B')} style={[styles.segmentBtn, activeSide === 'B' && {backgroundColor: PROD_COLORS.B}]}>
+                        <Text style={[styles.segmentText, activeSide === 'B' && {color: '#FFF'}]}>المنتج (ب)</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+            <Animated.View style={[globalStyles.claimsBody, {opacity: fadeAnim}]}>
+                {(!sortedData || sortedData.length === 0) ? (
+                     <Text style={{textAlign:'center', color:COLORS.textSecondary, margin: 20, fontFamily: 'Tajawal-Regular'}}>لا توجد ادعاءات تم تحليلها لهذا المنتج.</Text>
+                ) : (
+                    sortedData.map((res, i) => <ClaimRow key={i} item={res} index={i} />)
                 )}
-
-                {tab === 'safety' && (
-                     <View style={{ gap: 10 }}>
-                        <View style={styles.cardBase}>
-                            <Text style={[styles.cardTitle, {color: COLORS.prodA}]}>مخاطر المنتج (أ)</Text>
-                            {left.analysisData.scoreBreakdown.filter(x => x.type === 'deduction').map((x, i) => (
-                                <View key={i} style={styles.breakdownItem}>
-                                    <Text style={styles.bdText}>{x.text}</Text>
-                                    <Text style={[styles.bdValue, { color: COLORS.danger }]}>{x.value}</Text>
-                                </View>
-                            ))}
-                            {left.analysisData.scoreBreakdown.filter(x => x.type === 'deduction').length === 0 && <Text style={styles.emptyText}>المنتج آمن.</Text>}
-                        </View>
-                        <View style={styles.cardBase}>
-                            <Text style={[styles.cardTitle, {color: COLORS.prodB}]}>مخاطر المنتج (ب)</Text>
-                            {right.analysisData.scoreBreakdown.filter(x => x.type === 'deduction').map((x, i) => (
-                                <View key={i} style={styles.breakdownItem}>
-                                    <Text style={styles.bdText}>{x.text}</Text>
-                                    <Text style={[styles.bdValue, { color: COLORS.danger }]}>{x.value}</Text>
-                                </View>
-                            ))}
-                            {right.analysisData.scoreBreakdown.filter(x => x.type === 'deduction').length === 0 && <Text style={styles.emptyText}>المنتج آمن.</Text>}
-                        </View>
-                     </View>
-                )}
-
-                {tab === 'marketing' && (
-                    <View style={styles.cardBase}>
-                        <Text style={styles.cardTitle}>كشف الادعاءات</Text>
-                        {[{d: left, c: COLORS.prodA, n: '(أ)'}, {d: right, c: COLORS.prodB, n: '(ب)'}].map((prod, idx) => (
-                            <View key={idx} style={{ marginBottom: 15 }}>
-                                <Text style={[styles.colHeader, { color: prod.c }]}>المنتج {prod.n}</Text>
-                                {prod.d.analysisData.marketing_results?.map((m, i) => (
-                                    <View key={i} style={styles.marketingItem}>
-                                        <View style={{flexDirection:'row-reverse', justifyContent:'space-between'}}>
-                                            <Text style={styles.mClaim}>"{m.claim}"</Text>
-                                            <Text style={{ fontFamily:'Tajawal-Bold', fontSize:10, color: m.status.includes('✅')?COLORS.success:COLORS.warning }}>{m.status}</Text>
-                                        </View>
-                                        <Text style={styles.mExp}>{m.explanation}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        ))}
-                    </View>
-                )}
-             </SlideTransition>
-
-             <PressableScale onPress={onReset} style={[styles.btnSecondary, { marginTop: 30 }]}>
-                 <Text style={styles.btnTextSecondary}>مقارنة جديدة</Text>
-                 <FontAwesome5 name="redo" color={COLORS.textSecondary} size={14} />
-             </PressableScale>
-        </ScrollView>
+            </Animated.View>
+        </View>
     );
 };
 
 // ============================================================================
-//                       MAIN PAGE LOGIC
+//                       MAIN SCREEN
 // ============================================================================
 
 export default function ComparisonPage() {
     const { userProfile } = useAppContext();
-    const [step, setStep] = useState(0);
-    const [left, setLeft] = useState({ sourceData: null, ingredientsList: [] });
-    const [right, setRight] = useState({ sourceData: null, ingredientsList: [] });
-    const [productType, setProductType] = useState(null);
-    const [claims, setClaims] = useState([]);
-    const [loadingText, setLoadingText] = useState('');
     const insets = useSafeAreaInsets();
+    
+    // Core State
+    const [step, setStep] = useState(0);
+    const [loadingText, setLoadingText] = useState('');
+    const [particles] = useState([...Array(12)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })));
+    
+    // Product Data
+    const [left, setLeft] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
+    const [right, setRight] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
+    const [productType, setProductType] = useState('other');
+    const [claims, setClaims] = useState([]);
+    
+    // Animations
+    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const contentTranslateX = useRef(new Animated.Value(0)).current;
+    const fabAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const fabPulseAnim = useRef(new Animated.Value(1)).current;
 
+    // Manage FAB Animation for Claims Step
     useEffect(() => {
-        const backAction = () => {
-            if (step > 0) { step === 5 ? resetAll() : setStep(0); return true; }
-            return false;
-        };
-        const bh = BackHandler.addEventListener('hardwareBackPress', backAction);
-        return () => bh.remove();
-    }, [step]);
+        // 1. Slide Up Logic (Existing)
+        Animated.spring(fabAnim, {
+            toValue: claims.length > 0 ? 1 : 0,
+            friction: 6,
+            tension: 40,
+            useNativeDriver: true
+        }).start();
 
-    useEffect(() => {
-        if (step === 1 && left.sourceData && right.sourceData) handleStartAnalysis();
-    }, [step, left.sourceData, right.sourceData]);
+        // 2. Pulse Logic (NEW)
+        const pulseLoop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(fabPulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+                Animated.timing(fabPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+            ])
+        );
 
-    const handleStartAnalysis = async () => {
-        if (step !== 1) return; 
-        transition(2);
-        
-        const analyzeProduct = async (sourceData, label) => {
-             setLoadingText(`جاري تحليل ${label}...`);
-             const base64Data = await uriToBase64(sourceData);
-             const response = await fetch(VERCEL_BACKEND_URL, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ base64Data })
-             });
-             const json = await response.json();
-             if (!response.ok) throw new Error(json.error || 'Failed');
-             const parsed = JSON.parse(json.result.replace(/```json|```/g, '').trim());
-             return { ingredientsList: parsed.ingredients_list || [], type: parsed.detected_type || 'other' };
-        };
-
-        try {
-            const leftResult = await analyzeProduct(left.sourceData, "المنتج الأول");
-            setLeft(prev => ({ ...prev, ingredientsList: leftResult.ingredientsList }));
-            const rightResult = await analyzeProduct(right.sourceData, "المنتج الثاني");
-            setRight(prev => ({ ...prev, ingredientsList: rightResult.ingredientsList }));
-            setProductType((leftResult.type && leftResult.type !== 'other') ? leftResult.type : (rightResult.type || 'other'));
-            transition(3);
-        } catch (error) {
-            Alert.alert("خطأ", "تأكد من وضوح الصور.");
-            transition(1);
+        if (claims.length > 0) {
+            pulseLoop.start();
+        } else {
+            pulseLoop.stop();
+            fabPulseAnim.setValue(1); // Reset size
         }
+
+        return () => pulseLoop.stop();
+    }, [claims.length]);
+
+    // --- LOGIC ---
+    const changeStep = (next) => {
+        const isForward = next > step;
+        const slideDist = 20; // Distance to slide
+
+        // 1. Slide OUT
+        Animated.parallel([
+            Animated.timing(contentOpacity, { 
+                toValue: 0, 
+                duration: 150, 
+                useNativeDriver: true,
+                easing: Easing.out(Easing.quad)
+            }),
+            Animated.timing(contentTranslateX, { 
+                toValue: isForward ? -slideDist : slideDist, 
+                duration: 150, 
+                useNativeDriver: true 
+            })
+        ]).start(() => {
+            // 2. Update State while invisible
+            setStep(next);
+            
+            // 3. Snap to opposite side
+            contentTranslateX.setValue(isForward ? slideDist : -slideDist);
+
+            // 4. Slide IN (with small delay for React render)
+            setTimeout(() => {
+                Animated.parallel([
+                    Animated.timing(contentOpacity, { 
+                        toValue: 1, 
+                        duration: 300, 
+                        useNativeDriver: true,
+                        easing: Easing.out(Easing.cubic)
+                    }),
+                    Animated.spring(contentTranslateX, { 
+                        toValue: 0, 
+                        friction: 9, 
+                        tension: 50, 
+                        useNativeDriver: true 
+                    })
+                ]).start();
+            }, 50); 
+        });
     };
 
-    const handleFinalCalculation = () => {
-        transition(2);
-        setLoadingText('حساب النتائج...');
+    const handleOCR = async () => {
+        setLoadingText('صل على رسول الله');
+        
+        // 1. Animate to Loading Step (Step 1)
+        changeStep(1);
+
+        // 2. Defer logic slightly to allow the "Slide Out" animation to finish cleanly
         setTimeout(async () => {
+            const process = async (uri) => {
+                const base64 = await uriToBase64(uri);
+                const res = await fetch(VERCEL_BACKEND_URL, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ base64Data: base64 })
+                });
+                if (!res.ok) throw new Error();
+                const json = await res.json();
+                const data = typeof json.result === 'object' ? json.result : JSON.parse(json.result.replace(/```json|```/g, '').trim());
+                return { list: data.ingredients_list, type: data.detected_type };
+            };
+
             try {
-                const evaluate = async (p) => {
-                    const res = await fetch(VERCEL_EVALUATE_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            ingredients_list: p.ingredientsList,
-                            product_type: productType,
-                            selected_claims: claims,
-                            user_profile: {
-                                allergies: userProfile?.settings?.allergies || [],
-                                conditions: userProfile?.settings?.conditions || [],
-                                skinType: userProfile?.settings?.skinType,
-                                scalpType: userProfile?.settings?.scalpType
-                            }
-                        })
-                    });
-                    if (!res.ok) throw new Error('Eval failed');
-                    return await res.json();
-                };
-                const lData = await evaluate(left);
-                const rData = await evaluate(right);
-                setLeft(prev => ({ ...prev, analysisData: lData }));
-                setRight(prev => ({ ...prev, analysisData: rData }));
-                transition(5);
-            } catch (e) { Alert.alert("خطأ", "فشل التقييم."); transition(1); }
-        }, 100);
+                const [r1, r2] = await Promise.all([process(left.sourceData), process(right.sourceData)]);
+                
+                // Batch state updates
+                setLeft(p => ({...p, ingredientsList: r1.list}));
+                setRight(p => ({...p, ingredientsList: r2.list}));
+                setProductType(r1.type !== 'other' ? r1.type : r2.type);
+                
+                // Animate to Review Step (Step 2)
+                changeStep(2);
+            } catch (e) {
+                Alert.alert("خطأ", "فشل تحليل الصور. يرجى المحاولة مرة أخرى.");
+                changeStep(0); // Go back to start
+            }
+        }, 300); // 300ms delay matches the fade/slide animation duration
     };
 
-    const transition = (nextStep) => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setStep(nextStep);
+    const handleEval = async () => {
+        setLoadingText('مقارنة المعايير والمخاطر...');
+        
+        // 1. Animate to Loading Step (Step 4)
+        changeStep(4);
+
+        // 2. Defer logic
+        setTimeout(async () => {
+            const evaluate = async (list) => {
+                const res = await fetch(VERCEL_EVALUATE_URL, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ingredients_list: list,
+                        product_type: productType,
+                        selected_claims: claims,
+                        user_profile: {
+                            allergies: userProfile?.settings?.allergies || [],
+                            conditions: userProfile?.settings?.conditions || [],
+                            skinType: userProfile?.settings?.skinType,
+                            scalpType: userProfile?.settings?.scalpType
+                        }
+                    })
+                });
+                return await res.json();
+            };
+
+            try {
+                const [e1, e2] = await Promise.all([evaluate(left.ingredientsList), evaluate(right.ingredientsList)]);
+                setLeft(p => ({...p, analysisData: e1}));
+                setRight(p => ({...p, analysisData: e2}));
+                
+                // Animate to Results (Step 5)
+                changeStep(5);
+            } catch (e) {
+                Alert.alert("خطأ", "فشل التقييم.");
+                changeStep(3); // Go back to claims
+            }
+        }, 300);
     };
 
     const resetAll = () => {
-        setLeft({ sourceData: null, ingredientsList: [] });
-        setRight({ sourceData: null, ingredientsList: [] });
-        setProductType(null);
+        setLeft({sourceData:null, ingredientsList:[], analysisData:null});
+        setRight({sourceData:null, ingredientsList:[], analysisData:null});
+        setProductType('other');
         setClaims([]);
-        transition(0);
+        changeStep(0);
     };
 
-    const renderStep = () => {
-        switch(step) {
-            case 0: return <IntroStep onStart={() => transition(1)} />;
-            case 1: return <InputStep left={left} setLeft={setLeft} right={right} setRight={setRight} />;
-            case 2: return <LoadingStep text={loadingText} />;
-            case 3: return <TypeSelectionStep current={productType} onSelect={(t) => { setProductType(t); transition(4); }} />;
-            case 4: return <ClaimsSelectionStep claims={getClaimsByProductType(productType)} selected={claims} onToggle={(c) => setClaims(p => p.includes(c) ? p.filter(x=>x!==c) : [...p, c])} onFinish={handleFinalCalculation} />;
-            case 5: return <ResultsStep left={left} right={right} onReset={resetAll} />;
-            default: return null;
-        }
+    // --- RENDER CONTENT ---
+    const renderArena = () => (
+        <View style={globalStyles.inputStepContainer}>
+            <View style={globalStyles.heroVisualContainer}>
+                {/* Visual Arena */}
+                <View style={styles.arenaSlotsRow}>
+                    {[{d: left, s: setLeft, c: PROD_COLORS.A, l: 'أ'}, {d: right, s: setRight, c: PROD_COLORS.B, l: 'ب'}].map((slot, i) => (
+                        <TouchableOpacity activeOpacity={0.7} key={i} style={[styles.slotCard, slot.d.sourceData && { borderColor: slot.c, borderWidth: 2 }]} 
+                        onPress={async () => { if (slot.d.sourceData) return; const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }); if (!r.canceled && r.assets && r.assets.length > 0) slot.s(p => ({...p, sourceData: r.assets[0].uri})); }}>
+
+                            {slot.d.sourceData ? (
+                                <>
+                                    <Image source={{uri: slot.d.sourceData}} style={styles.slotImage} resizeMode="cover" />
+                                    <View style={[styles.slotBadge, {backgroundColor: slot.c}]}>
+                                        <Text style={styles.slotBadgeText}>{slot.l}</Text>
+                                    </View>
+                                    <TouchableOpacity style={styles.removeBtn} onPress={() => slot.s(p => ({...p, sourceData:null}))}>
+                                        <FontAwesome5 name="times" color="#FFF" size={10}/>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <View style={styles.slotPlaceholder}>
+                                    <View style={styles.dashedIconCircle}>
+                                        <FontAwesome5 name="plus" size={20} color={COLORS.textSecondary}/>
+                                    </View>
+                                    <Text style={styles.slotLabel}>المنتج {slot.l}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                    <View style={styles.vsBadge}>
+                        <Text style={styles.vsText}>ضد</Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* FIXED BOTTOM DOCK PLACEMENT */}
+            <StaggeredItem index={0} style={[globalStyles.bottomDeck, styles.pinnedBottomDock]}>
+                <LinearGradient 
+                    colors={[COLORS.card, '#152520']} 
+                    style={[
+                        globalStyles.bottomDeckGradient, 
+                        { 
+                            borderBottomLeftRadius: 0, 
+                            borderBottomRightRadius: 0, 
+                            paddingBottom: insets.bottom > 0 ? insets.bottom + 15 : 30 
+                        }
+                    ]}
+                >
+                    <View style={globalStyles.deckHeader}>
+                        <Text style={globalStyles.deckTitle}>المواجهة العلمية</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }}>
+                            قارن بين منتجين لاكتشاف الأفضل لك
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity activeOpacity={0.7} 
+                        onPress={handleOCR} 
+                        disabled={!left.sourceData || !right.sourceData} 
+                        style={[globalStyles.primaryActionBtn, (!left.sourceData || !right.sourceData) && {opacity: 0.5}]}
+                    >
+                        <LinearGradient
+                            colors={[COLORS.accentGreen, '#4a8570']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            style={globalStyles.primaryActionGradient}
+                        >
+                            <View style={globalStyles.iconCircle}>
+                                <Ionicons name="flask" size={28} color={COLORS.background} />
+                            </View>
+                            <View>
+                                <Text style={globalStyles.primaryActionTitle}>بدء المقارنة</Text>
+                                <Text style={globalStyles.primaryActionSub}>تحليل المكونات والادعاءات</Text>
+                            </View>
+                            <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </LinearGradient>
+            </StaggeredItem>
+        </View>
+    );
+
+    const renderClaims = () => (
+        <View style={{flex:1, width: '100%', paddingHorizontal: 20}}>
+            <View style={[globalStyles.headerContent, {marginTop: 20, marginBottom: 20}]}>
+                <Text style={globalStyles.heroTitle}>معايير الحكم</Text>
+                <Text style={globalStyles.heroSub}>ماذا تتوقع من هذه المنتجات؟</Text>
+            </View>
+            
+            {/* New Cleaner Grid Layout */}
+            <ScrollView contentContainerStyle={styles.claimsChipContainer} showsVerticalScrollIndicator={false}>
+                {getClaimsByProductType(productType).map((c, i) => {
+                    const isSelected = claims.includes(c);
+                    return (
+                        <TouchableOpacity activeOpacity={0.7} key={i} onPress={() => { Haptics.selectionAsync(); setClaims(p => isSelected ? p.filter(x=>x!==c) : [...p,c]); }} 
+                            style={[styles.claimChipCompact, isSelected && styles.claimChipCompactActive]}>
+                            
+                            {isSelected && <FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} style={{ marginRight: 6 }} />}
+                            <Text style={[styles.claimChipText, isSelected && styles.claimChipTextActive]}>{c}</Text>
+                        
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+            
+            {/* Animated Sliding FAB */}
+            <Animated.View style={[styles.fabWrapper, { transform: [{ translateY: fabAnim.interpolate({inputRange:[0,1], outputRange:[100,0]}) }, { scale: fabPulseAnim }], opacity: fabAnim }]}>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleEval} style={globalStyles.fab}>
+                     <FontAwesome5 name="balance-scale" color={COLORS.darkGreen} size={28} />
+                </TouchableOpacity>
+            </Animated.View>
+        </View>
+    );
+
+    const renderResults = () => {
+        if (!left.analysisData || !right.analysisData) return null;
+
+        const sA = left.analysisData?.oilGuardScore || 0;
+        const sB = right.analysisData?.oilGuardScore || 0;
+        const winner = Math.abs(sA - sB) < 5 ? 'tie' : (sA > sB ? 'left' : 'right');
+        const winnerColor = winner === 'left' ? PROD_COLORS.A : (winner === 'right' ? PROD_COLORS.B : COLORS.gold);
+
+        return (
+            <ScrollView contentContainerStyle={[globalStyles.scrollContent, {paddingTop: 0}]} showsVerticalScrollIndicator={false}>
+                
+                {/* --- 1. HERO DASHBOARD --- */}
+                <StaggeredItem index={0}>
+                    <View style={[globalStyles.dashboardContainer, { borderColor: winnerColor, marginTop: 20 }]}>
+                        <LinearGradient colors={['rgba(255,255,255,0.05)', 'transparent']} style={StyleSheet.absoluteFill} />
+                        
+                        <View style={globalStyles.dashboardGlass}>
+                            {/* Header / Winner Verdict */}
+                            <View style={[globalStyles.dashHeader, {justifyContent: 'center', marginBottom: 25}]}>
+                                <View style={{alignItems: 'center'}}>
+                                    <Text style={[globalStyles.verdictBig, {color: winnerColor, fontSize: 24}]}>
+                                        {winner === 'tie' ? 'تعادل في الأداء' : `المنتج (${winner === 'left' ? 'أ' : 'ب'}) يتفوق`}
+                                    </Text>
+                                    <Text style={globalStyles.verdictLabel}>{PRODUCT_TYPES.find(t => t.id === productType)?.label}</Text>
+                                </View>
+                            </View>
+
+                            {/* H2H Visuals + Specific Verdicts */}
+                            <View style={styles.h2hRow}>
+                                {/* Product A (Right in RTL) */}
+                                <View style={styles.h2hCol}>
+                                    <Image source={{uri: left.sourceData}} style={[styles.h2hImg, {borderColor: PROD_COLORS.A}]} />
+                                    <View style={styles.verdictPill}>
+                                        <Text style={[styles.h2hScore, {color: PROD_COLORS.A}]}>{Math.round(sA)}%</Text>
+                                        <Text style={[styles.verdictText, {color: sA > 75 ? COLORS.success : COLORS.textSecondary}]}>
+                                            {left.analysisData.finalVerdict || "جيد"}
+                                        </Text>
+                                    </View>
+                                </View>
+                                
+                                {/* VS Center */}
+                                <View style={styles.vsCenter}>
+                                    <View style={styles.vsCircle}><Text style={styles.vsText}>ضد</Text></View>
+                                </View>
+
+                                {/* Product B (Left in RTL) */}
+                                <View style={styles.h2hCol}>
+                                    <Image source={{uri: right.sourceData}} style={[styles.h2hImg, {borderColor: PROD_COLORS.B}]} />
+                                    <View style={styles.verdictPill}>
+                                        <Text style={[styles.h2hScore, {color: PROD_COLORS.B}]}>{Math.round(sB)}%</Text>
+                                        <Text style={[styles.verdictText, {color: sB > 75 ? COLORS.success : COLORS.textSecondary}]}>
+                                            {right.analysisData.finalVerdict || "جيد"}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Metric Duel Bars - Product A (Left Prop/Green) is Right Visually, Product B (Right Prop/Blue) is Left Visually */}
+                            <View style={[globalStyles.statsGrid, {marginTop: 25, flexDirection: 'column', gap: 15}]}>
+                                <MetricDuelRow 
+                                    label="الأمان" icon="shield-alt" 
+                                    scoreA={left.analysisData.safety?.score || 0} // Green / Right Side
+                                    scoreB={right.analysisData.safety?.score || 0} // Blue / Left Side
+                                />
+                                <MetricDuelRow 
+                                    label="الفعالية" icon="flask" 
+                                    scoreA={left.analysisData.efficacy?.score || 0} 
+                                    scoreB={right.analysisData.efficacy?.score || 0} 
+                                />
+                            </View>
+
+                            {/* Personal Match Report */}
+                            <View style={[globalStyles.matchContainer, {marginTop: 15}]}>
+                                <View style={globalStyles.matchHeader}>
+                                    <View style={globalStyles.matchHeaderIcon}><FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} /></View>
+                                    <Text style={globalStyles.matchHeaderTitle}>تقرير الملاءمة الشخصية</Text>
+                                </View>
+                                <View style={{paddingHorizontal: 10, paddingBottom: 10}}>
+                                    {[left, right].map((prod, i) => {
+                                        const reasons = Array.isArray(prod.analysisData.personalMatch?.reasons) ? prod.analysisData.personalMatch.reasons : [];
+                                        const color = i===0 ? PROD_COLORS.A : PROD_COLORS.B;
+                                        const label = i===0 ? 'المنتج (أ)' : 'المنتج (ب)';
+                                        
+                                        return (
+                                            <View key={i} style={{marginTop: 10}}>
+                                                <Text style={{fontFamily:'Tajawal-Bold', color: color, fontSize: 12, marginBottom: 5, textAlign:'right'}}>{label}</Text>
+                                                {reasons.length > 0 ? (
+                                                    reasons.map((r, k) => (
+                                                        <View key={k} style={{flexDirection:'row-reverse', alignItems:'flex-start', gap: 6, marginBottom: 4}}>
+                                                            <FontAwesome5 name={r.type==='danger' ? 'times-circle' : 'exclamation-circle'} color={r.type==='danger'?COLORS.danger:COLORS.warning} size={12} style={{marginTop: 2}}/>
+                                                            <Text style={[globalStyles.matchText, {color: COLORS.textSecondary, fontSize: 12}]}>{r.text}</Text>
+                                                        </View>
+                                                    ))
+                                                ) : (
+                                                    <View style={{flexDirection:'row-reverse', alignItems:'center', gap: 6}}>
+                                                        <FontAwesome5 name="check-circle" color={COLORS.success} size={12}/>
+                                                        <Text style={[globalStyles.matchText, {color: COLORS.textDim, fontSize: 12}]}>لا توجد تعارضات صحية مكتشفة</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </StaggeredItem>
+
+                {/* --- 2. MARKETING CLAIMS --- */}
+                <StaggeredItem index={1}>
+                    <MarketingClaimsSection 
+                        leftClaims={left.analysisData.marketing_results} 
+                        rightClaims={right.analysisData.marketing_results} 
+                    />
+                </StaggeredItem>
+
+                {/* --- 3. RESET --- */}
+                <TouchableOpacity activeOpacity={0.7} onPress={resetAll} style={styles.resetBtn}>
+                    <Text style={styles.resetText}>مقارنة جديدة</Text>
+                    <FontAwesome5 name="redo" color={COLORS.textSecondary}/>
+                </TouchableOpacity>
+
+            </ScrollView>
+        );
     };
 
     return (
-        <View style={styles.container}>
+        <View style={globalStyles.container}>
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-            <View style={[styles.contentArea, { paddingTop: insets.top + 10 }]}>
-                {/* Back Button */}
-                {step > 0 && (
-                    <PressableScale onPress={() => transition(step === 5 ? 0 : step - 1)} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-                    </PressableScale>
-                )}
-                
-                {/* Content Container with Animation */}
-                <SlideTransition trigger={step}>
-                    {renderStep()}
-                </SlideTransition>
-            </View>
+            <View style={styles.darkOverlay} />
+            {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-            {/* Instruction Bubble - Fixed at bottom, content scrolls behind it */}
-            <View style={[styles.fixedBubbleContainer, { paddingBottom: insets.bottom + 10 }]}>
-                <View style={styles.instructionBubble}>
-                    <View style={styles.instructionIcon}>
-                        <FontAwesome5 name="lightbulb" size={12} color={COLORS.gold} />
-                    </View>
-                    <Text style={styles.instructionText}>{INSTRUCTIONS[step]}</Text>
+            {/* HEADER */}
+            {step > 0 && step !== 1 && step !== 4 && (
+                <View style={[globalStyles.header, { paddingTop: insets.top + 10 }]}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => changeStep(step-1)} style={globalStyles.backBtn}>
+                        <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+                    </TouchableOpacity>
+                    <View style={{width:40}} /> 
                 </View>
+            )}
+
+            {/* MAIN CONTENT AREA */}
+            <View style={{flex:1, width: '100%', alignItems: 'center'}}>
+                
+                <Animated.View style={{
+                    flex: 1, 
+                    width: '100%', 
+                    alignItems: 'center',
+                    opacity: contentOpacity, // Apply Fade
+                    transform: [{ translateX: contentTranslateX }] // Apply Slide
+                }}>
+                    
+                    {/* STEP 0: ARENA INPUT */}
+                    {step === 0 && renderArena()}
+
+                    {/* STEP 1 & 4: LOADING SCREENS */}
+                    {(step === 1 || step === 4) && (
+                        <View style={{flex:1, justifyContent:'center', alignItems: 'center', width: '100%'}}>
+                            <LoadingScreen />
+                            <Text style={styles.loadingLabel}>{loadingText}</Text>
+                        </View>
+                    )}
+
+                    {/* STEP 2: REVIEW (Using the shared component) */}
+                    {step === 2 && (
+                        <ReviewStep 
+                            productType={productType} 
+                            setProductType={setProductType} 
+                            onConfirm={() => changeStep(3)} 
+                        />
+                    )}
+
+                    {/* STEP 3: CLAIMS SELECTION */}
+                    {step === 3 && renderClaims()}
+
+                    {/* STEP 5: RESULTS */}
+                    {step === 5 && renderResults()}
+
+                </Animated.View>
             </View>
         </View>
     );
 }
 
 // ============================================================================
-//                       STYLES (MOBILE FIRST)
+//                       STYLES
 // ============================================================================
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
-    contentArea: { flex: 1, paddingHorizontal: 16 },
-    backBtn: { marginBottom: 10, alignSelf: 'flex-start', padding: 5 },
-
-    // INTRO
-    centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    introHero: { alignItems: 'center', marginBottom: 50 },
-    iconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: COLORS.border },
-    titleLarge: { fontFamily: 'Tajawal-ExtraBold', fontSize: 26, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 10 },
-    subtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: 40, lineHeight: 22 },
+    darkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.0)' },
     
-    // INPUTS
-    headerTitle: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, textAlign: 'right', marginTop: 10 },
-    headerSub: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, marginBottom: 20, textAlign: 'right' },
-    arenaContainer: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', height: 180, marginTop: 20 },
-    arenaSide: { flex: 1, height: '100%' },
-    slotCard: { flex: 1, borderRadius: 16, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
-    slotImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-    slotPlaceholder: { alignItems: 'center', gap: 8 },
-    dashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: COLORS.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-    slotLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12 },
-    removeBtn: { position: 'absolute', top: 5, left: 5, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
-    checkBadge: { position: 'absolute', bottom: 5, right: 5, borderRadius: 8, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
-    vsContainer: { width: 40, height: '100%', alignItems: 'center', justifyContent: 'center' },
-    vsLine: { flex: 1, width: 1, backgroundColor: COLORS.border },
-    vsBadge: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.gold, marginVertical: 5 },
-    vsText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.gold, fontSize: 12 },
+    // Step 0: Arena
+    arenaSlotsRow: { 
+        flexDirection: 'row-reverse', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        width: CARD_WIDTH,
+        height: 250,
+        bottom: 40 
+    },
+    slotCard: { 
+        width: '46%', 
+        height: '100%',
+        backgroundColor: COLORS.card, 
+        borderRadius: 24, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        overflow: 'hidden' 
+    },
+    slotImage: { width: '100%', height: '100%', borderRadius: 24, position: 'absolute' },
+    slotPlaceholder: { alignItems: 'center', gap: 12 },
+    dashedIconCircle: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: 'dashed', borderColor: COLORS.textSecondary, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
+    slotLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 14 },
+    vsBadge: { position: 'absolute', left: '50%', marginLeft: -20, width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.gold, justifyContent: 'center', alignItems: 'center', zIndex: 5 },
+    vsText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.gold },
+    slotBadge: { position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 2 },
+    slotBadgeText: { fontFamily: 'Tajawal-Bold', color: '#FFF', fontSize: 11 },
+    removeBtn: { position: 'absolute', top: 10, left: 10, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+    pinnedBottomDock: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        marginBottom: 0,
+        zIndex: 100,
+    },
+    // Step 3: New Compact Claims UI
+    claimsChipContainer: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        justifyContent: 'center', 
+        gap: 10, 
+        paddingBottom: 120, 
+        paddingTop: 10 
+    },
+    claimChipCompact: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        minWidth: '40%'
+    },
+    claimChipCompactActive: {
+        backgroundColor: COLORS.accentGreen,
+        borderColor: COLORS.accentGreen,
+    },
+    claimChipText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'center'
+    },
+    claimChipTextActive: {
+        color: COLORS.textOnAccent,
+        fontFamily: 'Tajawal-Bold',
+    },
+    fabWrapper: {
+        position: 'absolute',
+        bottom: 90,
+        alignSelf: 'center',
+        zIndex: 20
+    },
 
-    // TYPE SELECTION
-    detectedContainer: { marginBottom: 20 },
-    detectedHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 10 },
-    detectedLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 12 },
-    activeIconCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-    gridContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 },
-    typeCard: { width: '48%', aspectRatio: 1.5, backgroundColor: COLORS.card, borderRadius: 16, marginBottom: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-    typeCardActive: { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen },
-    typeText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textSecondary, marginTop: 8 },
-    typeTextActive: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.textOnAccent },
+    // Results UI
+    segmentTrack: { flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 4, width: '100%' },
+    segmentBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    segmentText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textSecondary },
 
-    // CLAIMS (Chips)
-    chipsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, paddingBottom: 120 }, // Extra padding for scroll
-    chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row-reverse', alignItems: 'center', minHeight: 40 },
-    chipActive: { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen },
-    chipText: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary },
-    chipTextActive: { fontFamily: 'Tajawal-Bold', color: COLORS.textOnAccent },
+    // H2H Inside Glass
+    h2hRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 15 },
+    h2hCol: { alignItems: 'center', gap: 8, flex: 1 },
+    h2hImg: { width: 80, height: 80, borderRadius: 24, borderWidth: 2 },
+    verdictPill: { alignItems: 'center', marginTop: 5 },
+    h2hScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24 },
+    verdictText: { fontFamily: 'Tajawal-Regular', fontSize: 11, textAlign: 'center' },
 
-    // RESULTS HEADER
-    resultHeader: { marginBottom: 20 },
-    winnerBanner: { flexDirection: 'row-reverse', alignSelf: 'center', alignItems: 'center', backgroundColor: 'rgba(251, 191, 36, 0.15)', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, gap: 8, marginBottom: 16, borderWidth: 1, borderColor: COLORS.gold },
-    winnerText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.gold },
-    headToHead: { flexDirection: 'row-reverse', alignItems: 'stretch', justifyContent: 'space-between' },
-    productCol: { width: '28%', alignItems: 'center', gap: 6 },
-    resImg: { width: 50, height: 50, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4 },
-    resName: { fontFamily: 'Tajawal-Bold', fontSize: 11, textAlign: 'center' },
-    ringText: { fontFamily: 'Tajawal-ExtraBold' },
-
-    // TUG OF WAR
-    centerStats: { flex: 1, marginHorizontal: 8, justifyContent: 'center' },
-    compLabel: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textSecondary },
-    tugContainer: { flexDirection: 'row-reverse', height: 8, width: '100%', borderRadius: 4, overflow: 'hidden', backgroundColor: COLORS.card },
-    tugSide: { flex: 1, flexDirection: 'row', alignItems: 'center' }, 
-    tugBar: { height: '100%' },
-    tugDivider: { width: 2, backgroundColor: COLORS.background, zIndex: 1 },
-
-    // TABS & CARDS
-    tabsContainer: { flexDirection: 'row-reverse', backgroundColor: COLORS.card, borderRadius: 12, padding: 4, marginBottom: 16 },
-    tabBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-    tabBtnActive: { backgroundColor: COLORS.accentGreen },
-    tabText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary },
-    tabTextActive: { fontFamily: 'Tajawal-Bold', color: COLORS.textOnAccent },
+    vsCenter: { gap: 4, alignItems: 'center', marginTop: 35 },
+    vsCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    vsText: { fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.textSecondary },
     
-    cardBase: { backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, padding: 16, marginBottom: 10 },
-    cardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 10, textAlign: 'right' },
-    verdictText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, textAlign: 'right', marginBottom: 6 },
-    verdictSub: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 18 },
-    colHeader: { fontFamily: 'Tajawal-Bold', fontSize: 12, marginBottom: 8, textAlign: 'right' },
-    bulletPoint: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textPrimary, marginBottom: 4, textAlign: 'right' },
-    breakdownItem: { flexDirection: 'row-reverse', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    bdText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, flex: 1, textAlign: 'right' },
-    bdValue: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-    marketingItem: { backgroundColor: 'rgba(0,0,0,0.15)', padding: 10, borderRadius: 8, marginBottom: 8 },
-    mClaim: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary },
-    mExp: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: 'right', marginTop: 4 },
-    emptyText: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, textAlign: 'center', fontSize: 12, marginTop: 10 },
+    // Corrected Duel Bars
+    duelContainer: { marginBottom: 5 },
+    duelHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+    duelScore: { fontFamily: 'Tajawal-Bold', fontSize: 12, width: 35 },
+    duelLabelBox: { flexDirection: 'row-reverse', alignItems: 'center' },
+    duelLabel: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textSecondary },
+    duelTrackContainer: { flexDirection: 'row', height: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, overflow: 'hidden', width: '100%' },
+    duelDivider: { width: 2, backgroundColor: 'rgba(255,255,255,0.1)' },
+    duelBar: { height: '100%' }, // width is animated inline
 
-    // BUTTONS
-    btnPrimary: { flexDirection: 'row', gap: 8, backgroundColor: COLORS.accentGreen, paddingVertical: 16, borderRadius: 14, width: '100%', justifyContent: 'center', alignItems: 'center' },
-    btnTextPrimary: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textOnAccent },
-    btnSecondary: { flexDirection: 'row', gap: 8, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 14, borderRadius: 14, width: '100%', justifyContent: 'center', alignItems: 'center' },
-    btnTextSecondary: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
-    
-    // LOADING & BUBBLE
-    loadingText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, marginTop: 20 },
-    loaderRingOuter: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' },
-    
-    fixedBubbleContainer: { position: 'absolute', bottom: 0, width: '100%', alignItems: 'center', backgroundColor: 'transparent' },
-    instructionBubble: { backgroundColor: 'rgba(20, 30, 27, 0.95)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, flexDirection: 'row-reverse', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, width: '92%', marginBottom: 10, elevation: 5 },
-    instructionIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginLeft: 10 },
-    instructionText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary, textAlign: 'right' },
+    loadingLabel: { position: 'absolute', bottom: 100, width: '100%', textAlign: 'center', fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 16 },
+    resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, gap: 10, marginTop: 20, width: CARD_WIDTH },
+    resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary }
 });

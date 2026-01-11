@@ -1542,6 +1542,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     useEffect(() => {
         const initialRoutines = userProfile?.routines || { am: [], pm: [] };
         setRoutines(initialRoutines);
+        // Only show onboarding if routines are completely empty
         if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
             setShowOnboarding(true);
         }
@@ -1595,6 +1596,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
         }
     };
   
+    // --- HANDLER: CONNECTED TO BACKEND ---
     const handleAutoBuildRoutine = () => {
       if (savedProducts.length < 2) {
           AlertService.show({
@@ -1607,9 +1609,10 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
   
       const runArchitect = async () => {
         setIsBuilding(true);
-        setRoutineLogs([]); 
+        setRoutineLogs([]); // Clear previous logs
         
         try {
+            // 1. Call Your Backend API
             const response = await fetch(`${PROFILE_API_URL}/generate-routine.js`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1619,25 +1622,30 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
                 })
             });
   
-              const data = await response.json();
-              if (!response.ok) throw new Error(data.error || "Server Error");
-  
-              const newRoutines = { am: data.am || [], pm: data.pm || [] };
-              await saveRoutines(newRoutines);
-              
-              if (data.logs && Array.isArray(data.logs)) {
-                  setRoutineLogs(data.logs);
-              }
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || "Server Error");
+            }
 
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناءً على تحليل وثيق .");
+            // 2. Save the Routines
+            const newRoutines = { am: data.am || [], pm: data.pm || [] };
+            await saveRoutines(newRoutines);
+            
+            // 3. Set the Logs (This makes them appear in the Viewer)
+            if (data.logs && Array.isArray(data.logs)) {
+                setRoutineLogs(data.logs);
+            }
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناءً على تحليل وثيق.");
   
-          } catch (error) {
-              console.error("Routine Generation Error:", error);
-              AlertService.error("خطأ", "تعذر الاتصال بروتين وثيق.");
-          } finally {
-              setIsBuilding(false);
-          }
+        } catch (error) {
+            console.error("Routine Generation Error:", error);
+            AlertService.error("خطأ", "تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.");
+        } finally {
+            setIsBuilding(false);
+        }
       };
   
       AlertService.confirm(
@@ -1682,10 +1690,10 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
                </PressableScale>
           </View>
   
-          {/* CONTENT AREA (Replaced FlatList with standard View mapping) */}
+          {/* CONTENT AREA */}
           <View style={{ paddingBottom: 220, paddingTop: 10 }}>
               
-              {/* 1. Diagnostic Report Header */}
+              {/* 1. LOG VIEWER - Only shows if logs exist */}
               <View style={{ marginBottom: 10 }}>
                   <RoutineLogViewer logs={routineLogs} />
               </View>

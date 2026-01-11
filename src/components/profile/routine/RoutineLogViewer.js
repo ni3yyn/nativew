@@ -100,11 +100,17 @@ export const RoutineLogViewer = ({ logs }) => {
                             </Text>
                             
                             {log.product && (
-                                <View style={styles.productTag}>
-                                    <MaterialCommunityIcons name="flask-outline" size={12} color={COLORS.textDim} style={{ marginLeft: 4 }} />
-                                    <Text style={styles.productText}>{log.product}</Text>
-                                </View>
-                            )}
+    <View style={styles.productTag}>
+        <MaterialCommunityIcons name="flask-outline" size={12} color={COLORS.textDim} style={{ marginLeft: 4 }} />
+        <Text style={styles.productText}>
+            {/* FIX IS HERE: Check if it's an object first */}
+            {typeof log.product === 'object' && log.product !== null 
+                ? log.product.productName 
+                : log.product}
+        </Text>
+    </View>
+)}
+
                         </View>
                     ))}
                     

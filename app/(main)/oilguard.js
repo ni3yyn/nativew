@@ -22,15 +22,16 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
 // ... other imports
-import { PremiumShareButton } from './ShareComponent'; // Adjust path if needed
+import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
 import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService'; 
 import { AlertService } from '../../src/services/alertService';
 import { uriToBase64 } from '../../src/utils/formatters';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
 import CustomCameraModal from '../../src/components/oilguard/CustomCameraModal'; // <--- NEW IMPORT
 import ImageCropperModal from '../../src/components/oilguard/ImageCropperModal';
-import ActionRow from './ActionRow'; // Adjust path if needed
+import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path if needed
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
+import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -39,7 +40,7 @@ import {
   styles, COLORS, width, height, 
   ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
   DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
-} from './oilguard.styles';
+} from '../../src/components/oilguard/oilguard.styles';
 
 // --- SYSTEM CONFIG ---
 I18nManager.allowRTL(false);
@@ -87,52 +88,6 @@ const Spore = ({ size, startX, duration, delay }) => {
   const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
 
   return ( <Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} /> );
-};
-
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-const PressableScale = ({ onPress, children, style, disabled }) => {
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-
-    const handlePressIn = () => {
-        if (disabled) return;
-        Haptics.selectionAsync();
-        Animated.spring(scaleAnim, {
-            toValue: 0.95,
-            useNativeDriver: true,
-            speed: 50,
-            bounciness: 10,
-        }).start();
-    };
-
-    const handlePressOut = () => {
-        Animated.spring(scaleAnim, {
-            toValue: 1,
-            useNativeDriver: true,
-            speed: 50,
-            bounciness: 10,
-        }).start();
-    };
-
-    return (
-        <AnimatedTouchableOpacity
-            onPress={onPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            disabled={disabled}
-            activeOpacity={1} // Disables the default "fade" opacity
-            style={[
-                style, 
-                { 
-                    transform: [{ scale: scaleAnim }],
-                    // Fixes some Android shadow clipping/glow artifacts
-                    overflow: 'visible' 
-                }
-            ]}
-        >
-            {children}
-        </AnimatedTouchableOpacity>
-    );
 };
 
 const ContentCard = ({ children, style, delay = 0 }) => {
@@ -340,7 +295,7 @@ const MarketingClaimsSection = ({ results }) => {
 
         return (
             <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
-                <PressableScale onPress={toggle}>
+                <TouchableOpacity onPress={toggle}>
                     <Animated.View style={[
                         styles.claimRowMain, 
                         // Smooth background color transition
@@ -379,7 +334,7 @@ const MarketingClaimsSection = ({ results }) => {
                         </View>
 
                     </Animated.View>
-                </PressableScale>
+                </TouchableOpacity>
 
                 {/* ANIMATED CONTENT WRAPPER */}
                 <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
@@ -800,14 +755,14 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
 
   return (
     <StaggeredItem index={index}>
-      <PressableScale onPress={onPress}>
+      <TouchableOpacity onPress={onPress}>
         <Animated.View style={[styles.typeChip, { backgroundColor }]}>
           <FontAwesome5 name={type.icon} color={iconColor} size={14} />
           <Animated.Text style={[styles.typeText, { color: textColor }]}>
             {type.label}
           </Animated.Text>
         </Animated.View>
-      </PressableScale>
+      </TouchableOpacity>
     </StaggeredItem>
   );
 };
@@ -903,7 +858,7 @@ const InputStepView = React.memo(({ onImageSelect }) => {
                         />
                     </View>
 
-                    <PressableScale onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
+                    <TouchableOpacity onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
                         <LinearGradient
                             colors={[COLORS.accentGreen, '#4a8570']}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -918,18 +873,18 @@ const InputStepView = React.memo(({ onImageSelect }) => {
                             </View>
                             <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
                         </LinearGradient>
-                    </PressableScale>
+                    </TouchableOpacity>
 
                     <View style={styles.secondaryActionsRow}>
-                        <PressableScale onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
+                        <TouchableOpacity onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
                             <Ionicons name="images" size={22} color={COLORS.textSecondary} />
                             <Text style={styles.secondaryBtnText}>المعرض</Text>
-                        </PressableScale>
+                        </TouchableOpacity>
                         <View style={styles.verticalDivider} />
-                        <PressableScale onPress={() => { /* Add logic */ }} style={styles.secondaryBtn}>
+                        <TouchableOpacity onPress={() => { /* Add logic */ }} style={styles.secondaryBtn}>
                             <Ionicons name="search" size={22} color={COLORS.textSecondary} />
                             <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
-                        </PressableScale>
+                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
             </StaggeredItem>
@@ -1484,7 +1439,7 @@ const processImageWithGemini = async (uri) => {
 
 const executeAnalysis = async () => {
     // 1. Trigger Transition INSTANTLY (Fast Mode: true)
-    // We remove the Haptics call here because PressableScale already handles it
+    // We remove the Haptics call here because TouchableOpacity already handles it
     changeStep(3, { fast: true });
 
     // 2. Defer the heavy network/logic to the next tick
@@ -1675,178 +1630,6 @@ const pickFrontImage = () => {
         </View>
     );
   };
-
-
-  // --- IN FILE: oilguard.js ---
-
-  const ReviewStep = React.memo(({ productType, setProductType, changeStep }) => {
-    const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
-    const [isAnimating, setIsAnimating] = useState(false);
-    const [localProductType, setLocalProductType] = useState(productType);
-    
-    const gridOpacity = useRef(new Animated.Value(0)).current;
-    const gridTranslateY = useRef(new Animated.Value(-20)).current;
-
-    useEffect(() => {
-        setLocalProductType(productType);
-    }, [productType]);
-
-    const toggleGrid = (show) => {
-        if (isAnimating) return;
-        
-        setIsAnimating(true);
-        setShowManualTypeGrid(show);
-        
-        Animated.parallel([
-            Animated.timing(gridOpacity, {
-                toValue: show ? 1 : 0,
-                duration: show ? 300 : 200,
-                useNativeDriver: true,
-                easing: Easing.out(Easing.cubic)
-            }),
-            
-            Animated.spring(gridTranslateY, {
-                toValue: show ? 0 : -20,
-                useNativeDriver: true,
-                friction: 8,
-                tension: 40
-            })
-        ]).start(() => {
-            setIsAnimating(false);
-        });
-    };
-
-    const handleTypeSelect = useCallback((typeId) => {
-        if (localProductType === typeId) {
-            toggleGrid(false);
-            return;
-        }
-        
-        setLocalProductType(typeId);
-        setProductType(typeId);
-        Haptics.selectionAsync();
-        toggleGrid(false);
-    }, [localProductType, setProductType]);
-
-    const currentType = useMemo(() => 
-        PRODUCT_TYPES.find(t => t.id === localProductType) || PRODUCT_TYPES[PRODUCT_TYPES.length - 1],
-        [localProductType]
-    );
-
-    const iconName = useMemo(() => {
-        if (localProductType === 'hair_mask') return 'spa';
-        const typeObj = PRODUCT_TYPES.find(t => t.id === localProductType);
-        return typeObj ? typeObj.icon : 'box-open';
-    }, [localProductType]);
-
-    const TitleSection = useMemo(() => (
-        <View style={styles.rs_CenterContent}>
-            <Text style={styles.rs_Title}>التحقق من المنتج</Text>
-            <Text style={styles.rs_Subtitle}>هل هذا التصنيف صحيح؟</Text>
-        </View>
-    ), []);
-
-    const CircleAndLabelSection = useMemo(() => (
-        <View style={styles.rs_CenterContent}>
-            <View style={styles.rs_VisualCircleContainer}>
-                <View style={styles.rs_GlowRing} />
-                <View style={styles.rs_GlassCircle}>
-                    <FontAwesome5 name={iconName} size={48} color={COLORS.accentGreen} />
-                </View>
-            </View>
-
-            <View style={styles.rs_LabelContainer}>
-                <Text style={styles.rs_LabelText}>{currentType.label}</Text>
-                
-                {!showManualTypeGrid && !isAnimating && (
-                    <PressableScale onPress={() => toggleGrid(true)}>
-                        <View style={styles.rs_EditBtn}>
-                            <Text style={styles.rs_EditBtnText}>تغيير التصنيف</Text>
-                            <FontAwesome5 name="chevron-down" size={12} color={COLORS.accentGreen} />
-                        </View>
-                    </PressableScale>
-                )}
-            </View>
-        </View>
-    ), [localProductType, showManualTypeGrid, isAnimating, iconName, currentType.label]);
-
-    const TypeGridSection = useMemo(() => (
-        <Animated.View 
-            style={[
-                styles.rs_GridWrapper, 
-                { 
-                    opacity: gridOpacity,
-                    transform: [{ translateY: gridTranslateY }],
-                    display: (showManualTypeGrid || isAnimating) ? 'flex' : 'none'
-                }
-            ]}
-            pointerEvents={showManualTypeGrid ? 'auto' : 'none'}
-        >
-            <View style={styles.rs_ChipGrid}>
-                {PRODUCT_TYPES.map((type) => {
-                    const isSelected = localProductType === type.id;
-                    return (
-                        <View key={type.id} style={{marginBottom: 8}}>
-                            <PressableScale onPress={() => handleTypeSelect(type.id)}>
-                                <View style={[styles.rs_TypeChip, isSelected && styles.rs_TypeChipActive]}>
-                                    <Text style={[styles.rs_TypeChipText, isSelected && styles.rs_TypeChipTextActive]}>
-                                        {type.label}
-                                    </Text>
-                                    
-                                    {isSelected && (
-                                        <FontAwesome5 name="check" size={12} color={COLORS.background} />
-                                    )}
-                                </View>
-                            </PressableScale>
-                        </View>
-                    );
-                })}
-            </View>
-            <PressableScale onPress={() => toggleGrid(false)} style={styles.rs_CloseGridBtn}>
-                <FontAwesome5 name="chevron-up" size={16} color={COLORS.textDim} />
-            </PressableScale>
-        </Animated.View>
-    ), [localProductType, showManualTypeGrid, isAnimating, gridOpacity, gridTranslateY, handleTypeSelect]);
-
-    const FooterSection = useMemo(() => {
-        const handleConfirmPress = () => {
-            Haptics.selectionAsync();
-            // Use setTimeout to ensure any pending animations complete
-            setTimeout(() => {
-                changeStep(2);
-            }, 50);
-        };
-        
-        return (
-            <View style={styles.rs_Footer}>
-                <PressableScale 
-                    onPress={handleConfirmPress}
-                    style={styles.rs_ConfirmBtn}
-                >
-                    <LinearGradient
-                        colors={[COLORS.accentGreen, '#4a8570']}
-                        start={{x:0, y:0}} end={{x:1, y:0}}
-                        style={styles.rs_ConfirmGradient}
-                    >
-                        <FontAwesome5 name="arrow-left" color={COLORS.background} size={16} />
-                        <Text style={styles.rs_ConfirmText}>نعم، تابع للتحليل</Text>
-                    </LinearGradient>
-                </PressableScale>
-            </View>
-        );
-    }, [changeStep]);
-
-    return (
-        <View style={styles.rs_Container}>
-            {TitleSection}
-            <View style={styles.rs_HeroWrapper}>
-                {CircleAndLabelSection}
-            </View>
-            {TypeGridSection}
-            {FooterSection}
-        </View>
-    );
-});
   
   const renderClaimsStep = () => {
     const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
@@ -1889,7 +1672,7 @@ const pickFrontImage = () => {
         // FIX: Removed <StaggeredItem> wrapper. 
         // Direct rendering prevents the UI thread freeze on Android.
         return (
-            <PressableScale onPress={() => {
+            <TouchableOpacity onPress={() => {
               // Optional: Haptics.selectionAsync(); 
               setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
             }}>
@@ -1897,7 +1680,7 @@ const pickFrontImage = () => {
                 <AnimatedCheckbox isSelected={isSelected} />
                 <Text style={styles.claimItemText}>{item}</Text>
               </View>
-            </PressableScale>
+            </TouchableOpacity>
         );
       };
 
@@ -1942,9 +1725,9 @@ const pickFrontImage = () => {
             <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
                 <SafeAreaView>
                   <View style={styles.headerContent}>
-                    <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                    <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                    </PressableScale>
+                    </TouchableOpacity>
                     <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
                     <View style={{width: 40}} />
                   </View>
@@ -1974,12 +1757,12 @@ const pickFrontImage = () => {
                 }}
             >
                 <Animated.View style={{ transform: [{ scale: fabScale }] }}>
-                    <PressableScale
+                    <TouchableOpacity
                         onPress={executeAnalysis} 
                         style={styles.fab}
                     >
-                        <FontAwesome5 name="flask" color={COLORS.darkGreen} size={22} />
-                    </PressableScale>
+                        <FontAwesome5 name="flask" color={COLORS.darkGreen} size={28} />
+                    </TouchableOpacity>
                 </Animated.View>
             </Animated.View>
         </View>
@@ -2214,17 +1997,17 @@ return (
                 {step === 0 && <View style={styles.headerBlur} />}
                 
                 {step > 0 && (
-                  <PressableScale onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                  <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                  </PressableScale>
+                  </TouchableOpacity>
                 )}
                 
                 {step > 0 && <View style={{width: 40}}/>}
               </View>
             )}
 
-            {step === 2 ? (
-                // --- CASE 1: Claims Step ---
+{step === 2 ? (
+                // --- CASE 1: Claims Step (Has its own FlatList) ---
                 <Animated.View style={{ 
                     flex: 1, 
                     opacity: contentOpacity,
@@ -2234,8 +2017,7 @@ return (
                     {renderClaimsStep()}
                 </Animated.View>
             ) : step === 0 ? (
-                // --- CASE 2: Input Step ---
-                // FIX: Removed inner <View style={{flex:1}}> wrapper that was causing the layout bug
+                // --- CASE 2: Input Step (Immersive/No Scroll) ---
                 <Animated.View style={{ 
                     flex: 1, 
                     opacity: contentOpacity,
@@ -2243,13 +2025,28 @@ return (
                 }}>
                    <InputStepView onImageSelect={handleImageSelection} />
                 </Animated.View>
+            ) : step === 1 ? (
+                // --- CASE 3: Review Step (FIXED - NO PARENT SCROLL) ---
+                // We apply paddingTop here so it sits correctly below the Header
+                <Animated.View style={{ 
+                    flex: 1, 
+                    opacity: contentOpacity,
+                    transform: [{ translateX: contentTranslateX }],
+                    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+                    paddingHorizontal: 20
+                }}>
+                    <ReviewStep 
+                        productType={productType} 
+                        setProductType={setProductType} 
+                        onConfirm={() => changeStep(2)} 
+                    />
+                </Animated.View>
             ) : (
-                // --- CASE 3: Scroll Steps ---
+                // --- CASE 4: Scroll Steps (Loading & Results) ---
                 <ScrollView 
                     ref={scrollRef} 
                     contentContainerStyle={[
                       styles.scrollContent, 
-                      // FIX: Adjusted padding bottom to handle Android navigation bar better
                       { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
                     ]} 
                     keyboardShouldPersistTaps="handled"
@@ -2260,15 +2057,6 @@ return (
                         width: '100%',
                         transform: [{ translateX: contentTranslateX }]
                     }}>
-                        
-                        {step === 1 && (
-                            <ReviewStep 
-                                productType={productType} 
-                                setProductType={setProductType} 
-                                changeStep={changeStep} 
-                            />
-                        )}
-
                         {step === 3 && (
                             <View style={{ height: height * 0.6, justifyContent: 'center' }}>
                                 <LoadingScreen />

@@ -555,9 +555,9 @@ rs_HeroWrapperAnimated: {
     zIndex: 20,
   },
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 70,
+    height: 70,
+    borderRadius: 37.5,
     backgroundColor: COLORS.accentGreen,
     justifyContent: 'center',
     alignItems: 'center',
