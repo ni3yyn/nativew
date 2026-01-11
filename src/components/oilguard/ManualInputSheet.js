@@ -7,6 +7,9 @@ import {
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 // --- THEME CONFIG ---
 const { height } = Dimensions.get('window');
@@ -30,6 +33,8 @@ const getTextDirection = (text) => {
 };
 
 export default function ManualInputSheet({ visible, onClose, onSubmit }) {
+    const insets = useSafeAreaInsets();
+
     const [text, setText] = useState('');
     const [inputDirection, setInputDirection] = useState('right'); // Default State
     const animController = useRef(new Animated.Value(0)).current;
@@ -53,6 +58,20 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
             },
         })
     ).current;
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+          console.log('Keyboard shown');
+        });
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+          console.log('Keyboard hidden');
+        });
+        
+        return () => {
+          showSubscription.remove();
+          hideSubscription.remove();
+        };
+      }, []);
 
     useEffect(() => {
         if (visible) {
@@ -95,7 +114,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] });
 
     return (
-        <Modal transparent visible={true} onRequestClose={closeSheet} animationType="none" statusBarTranslucent>
+        <Modal transparent visible={true} onRequestClose={closeSheet} animationType="slide" statusBarTranslucent presentationStyle="overFullScreen" >
             <View style={styles.modalContainer}>
                 
                 {/* Dark Backdrop */}
@@ -105,10 +124,12 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
                 {/* --- 2. UPDATE THIS BLOCK --- */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "height"} 
-                    style={styles.keyboardContainer}
-                    keyboardVerticalOffset={Platform.OS === "android" ? 0 : 0} 
-                >
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={[styles.keyboardContainer, { 
+            paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 
+          }]}
+          keyboardVerticalOffset={Platform.OS === 'android' ? insets.top + 20 : 0}
+        >
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>    
                         {/* Content Body */}
                         <View style={styles.sheetContent}>
