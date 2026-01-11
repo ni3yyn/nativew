@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, updateDoc, where, limit } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, updateDoc, where, limit, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -53,46 +53,58 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
-    // Android specific channel setup
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
-
-    // Permission Check
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return;
-    }
-
     try {
-      // Get the Token (FCM for Android)
+      // 1. Android Channel Setup
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+
+      // 2. Permission Check
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      // If user denies permission, we STOP here. 
+      // This explains why some users don't have tokens.
+      if (finalStatus !== 'granted') {
+        console.log('❌ User denied notification permissions');
+        // Optional: Update DB to indicate permission was denied, so you stop debugging these users
+        const userRef = doc(db, 'profiles', uid);
+        await setDoc(userRef, { notificationsEnabled: false }, { merge: true });
+        return;
+      }
+
+      // 3. Get Token
+      // Note: If you are using Expo's Push Notification Service, use getExpoPushTokenAsync instead.
+      // If you are using raw Firebase Cloud Messaging, keep getDevicePushTokenAsync.
       const tokenData = await Notifications.getDevicePushTokenAsync();
       const token = tokenData.data;
       
       console.log("🔥 Device Token Generated:", token);
 
-      // Save Token to Firebase Profile so Admin Panel can see it
+      // 4. Save to Firestore (CRITICAL FIX HERE)
+      // Use setDoc with merge: true instead of updateDoc
+      // This ensures it works even if the profile doc doesn't exist yet
       const userRef = doc(db, 'profiles', uid);
-      await updateDoc(userRef, {
+      await setDoc(userRef, {
         fcmToken: token,
+        notificationsEnabled: true, // Useful flag to know they accepted permissions
         deviceType: Platform.OS,
         lastTokenUpdate: new Date()
-      });
+      }, { merge: true });
+
     } catch (error) {
-      console.error("Error getting push token:", error);
+      console.error("❌ Error registering push token:", error);
+      // Optional: Log this error to a service like Sentry
     }
   };
 

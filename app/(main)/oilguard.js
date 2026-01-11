@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { 
-  View, Text, TouchableOpacity, Dimensions, Image,
-  ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, 
+  View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback,
+  ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
   RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet
 } from 'react-native';
@@ -32,6 +32,7 @@ import ImageCropperModal from '../../src/components/oilguard/ImageCropperModal';
 import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path if needed
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
+import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -49,6 +50,7 @@ I18nManager.allowRTL(false);
 // ENDPOINTS
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
+const VERCEL_PARSE_TEXT_URL = "https://oilguard-backend.vercel.app/api/parse-text.js"; // <--- ADD THIS
 
 
 
@@ -786,7 +788,7 @@ const extractIngredientsFromAIText = async (inputData) => {
 };
 
 // --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
-const InputStepView = React.memo(({ onImageSelect }) => {
+const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
     const scanBarAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -881,10 +883,10 @@ const InputStepView = React.memo(({ onImageSelect }) => {
                             <Text style={styles.secondaryBtnText}>المعرض</Text>
                         </TouchableOpacity>
                         <View style={styles.verticalDivider} />
-                        <TouchableOpacity onPress={() => { /* Add logic */ }} style={styles.secondaryBtn}>
-                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={onManualSelect} style={styles.secondaryBtn}>
+                    <Ionicons name="search" size={22} color={COLORS.textSecondary} />
+                    <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
+                </TouchableOpacity>
                     </View>
                 </LinearGradient>
             </StaggeredItem>
@@ -1135,6 +1137,8 @@ export default function OilGuardEngine() {
   const [cropperVisible, setCropperVisible] = useState(false);
   const [tempImageUri, setTempImageUri] = useState(null);
   const [frontImageUri, setFrontImageUri] = useState(null); 
+  const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
+  const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateX = useRef(new Animated.Value(0)).current;
@@ -1485,6 +1489,53 @@ const executeAnalysis = async () => {
         }
     }, 100); // 100ms delay gives the animation enough time to start
 };
+
+const processManualText = async () => {
+    if (!manualInputText.trim()) {
+        Alert.alert("تنبيه", "الرجاء إدخال المكونات.");
+        return;
+    }
+
+    setManualModalVisible(false); // Close modal
+    setLoading(true);
+    setIsGeminiLoading(true);
+    changeStep(3); // Go to loading screen
+
+    try {
+        const response = await fetch(VERCEL_PARSE_TEXT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: manualInputText }),
+        });
+
+        const responseData = await response.json();
+        
+        if (!response.ok) throw new Error(responseData.error || "Failed");
+
+        const jsonResponse = responseData.result;
+        const rawList = jsonResponse.ingredients_list || [];
+        
+        // Use your existing helper to format for frontend
+        const { ingredients } = await extractIngredientsFromAIText(rawList);
+
+        setOcrText(rawList.join('\n'));
+        setPreProcessedIngredients(ingredients);
+        setProductType(jsonResponse.detected_type || 'other');
+
+        setIsGeminiLoading(false);
+        setLoading(false);
+        setManualInputText(''); // Reset text
+        changeStep(1); // Go to Review Step
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    } catch (error) {
+        console.error("Text Parse Error:", error);
+        Alert.alert("خطأ", "لم نتمكن من تحليل النص، يرجى المحاولة مرة أخرى.");
+        setIsGeminiLoading(false);
+        setLoading(false);
+        changeStep(0);
+    }
+  };
   
   const handleSaveProduct = async () => {
     if (!productName.trim()) { 
@@ -2023,7 +2074,7 @@ return (
                     opacity: contentOpacity,
                     transform: [{ translateX: contentTranslateX }]
                 }}>
-                   <InputStepView onImageSelect={handleImageSelection} />
+                   <InputStepView onImageSelect={handleImageSelection} onManualSelect={() => setManualModalVisible(true)} />
                 </Animated.View>
             ) : step === 1 ? (
                 // --- CASE 3: Review Step (FIXED - NO PARENT SCROLL) ---
@@ -2125,6 +2176,15 @@ return (
             </View>
         </Modal>
         
+        <ManualInputSheet
+            visible={isManualModalVisible}
+            onClose={() => setManualModalVisible(false)}
+            onSubmit={(text) => {
+                setManualInputText(text); // Set the text state
+                processManualText(text);  // Call your existing processing function (Update it to accept an argument)
+            }}
+        />
+    
         <CustomCameraModal
           isVisible={isCameraViewVisible}
           onClose={() => setCameraViewVisible(false)}

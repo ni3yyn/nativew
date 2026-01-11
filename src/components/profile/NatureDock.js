@@ -101,7 +101,7 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                     <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('scan_product')}>
                         <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.actionButtonMain}>
                             <View style={styles.iconBoxMain}>
-                                <MaterialIcons name="qr-code-scanner" size={24} color={COLORS.textOnAccent} />
+                                <MaterialIcons name="camera" size={24} color={COLORS.textOnAccent} />
                             </View>
                             <View style={{flex: 1}}>
                                 <Text style={styles.btnTitleMain}>فحص منتج</Text>
@@ -272,6 +272,8 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                             </LinearGradient>
                         </Animated.View>
                     </TouchableOpacity>
+                    {/* --- NEW GLOWING TEXT --- */}
+                    <Text style={styles.watheeqLabel}>وثيق</Text>
                 </View>
 
                 <View style={styles.dockContainer}>
@@ -280,7 +282,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                             icon="groups" 
                             label="المجتمع" 
                             isActive={activeTab === 'community'} 
-                            onPress={() => navigation.push('/community')} // <--- UPDATED: Direct navigation
+                            onPress={() => navigation.push('/community')} 
                             specialColor={COLORS.gold}
                         />
                         <DockIcon 
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
     },
     cameraButtonWrapper: {
         position: 'absolute',
-        bottom: 22,
+        bottom: 6,
         zIndex: 95,
         elevation: 20,
         alignItems: 'center',
@@ -395,6 +397,17 @@ const styles = StyleSheet.create({
         borderRadius: 33,
         padding: 4,
         backgroundColor: COLORS.background,
+    },
+    // --- NEW STYLE FOR GLOWING TEXT ---
+    watheeqLabel: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.mint,
+        marginTop: 4, 
+        textShadowColor: COLORS.accentGreen,
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 8,
+        letterSpacing: 0.5,
     },
     cameraGradient: {
         flex: 1,

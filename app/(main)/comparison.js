@@ -482,9 +482,9 @@ export default function ComparisonPage() {
                     ]}
                 >
                     <View style={globalStyles.deckHeader}>
-                        <Text style={globalStyles.deckTitle}>المواجهة العلمية</Text>
+                        <Text style={globalStyles.deckTitle}>أيهما أنسب لي؟</Text>
                         <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }}>
-                            قارن بين منتجين لاكتشاف الأفضل لك
+                            قارني بين منتجين لاكتشاف الأفضل لك
                         </Text>
                     </View>
 

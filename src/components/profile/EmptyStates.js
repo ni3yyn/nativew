@@ -94,8 +94,8 @@ export const ShelfEmptyState = ({ onPress }) => (
 
             <View style={styles.featuresList}>
                 <FeatureItem icon="photo-camera" text="اضغطي على زر الكاميرا العائم في الأسفل" />
-                <FeatureItem icon="qr-code-scanner" text="امسحي الباركود أو صوري المنتج" />
-                <FeatureItem icon="insights" text="احصلي على تحليل فوري للمكونات" />
+                <FeatureItem icon="qr-code-scanner" text="صوري قائمة مكونات المنتج" />
+                <FeatureItem icon="insights" text="احصلي على تحليل مفصل للمنتج ومكوناته" />
             </View>
 
             <WathiqButton label="فتح الكاميرا الآن" icon="add-a-photo" onPress={onPress} />
