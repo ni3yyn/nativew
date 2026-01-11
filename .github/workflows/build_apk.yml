@@ -1,15 +1,12 @@
 name: Turbo Build APK
 
 on:
-  # This enables the manual "Run" button
   workflow_dispatch:
-  
-  # This enables Auto-Run on Push
   push:
     branches:
-      - main   # <--- Verify this matches your branch name (main or master)
+      - main
     paths-ignore:
-      - 'README.md'   # Don't build if you only change documentation
+      - 'README.md'
       - '.gitignore'
 
 jobs:
@@ -32,11 +29,9 @@ jobs:
       - name: 🐘 Cache Gradle
         uses: actions/cache@v4
         with:
-          # The Pipe symbol '|' below is MANDATORY for multiple lines
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          # Ensure this key line is indented exactly under 'path'
           key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-v5-
@@ -53,28 +48,117 @@ jobs:
         run: npm install -g eas-cli
 
       # 6. Install Dependencies (Robust Mode)
-      # We delete package-lock first to prevent sync errors
       - name: 📦 Install Dependencies
         run: |
           rm -f package-lock.json
           npm install
 
-      # 7. Build the APK
-      # We explicitly pass EXPO_TOKEN env var to this step
+      # 7. 🆕 CRITICAL: Apply Keyboard Fix BEFORE Build
+      - name: 🔧 Apply Android Keyboard Fix
+        run: |
+          # Update app.json with correct keyboard settings
+          npm pkg set expo.android.softwareKeyboardLayoutMode=resize
+          npm pkg set 'expo.android.windowSoftInputMode'='adjustResize'
+          
+          # Create the correct styles.xml for Android
+          mkdir -p android/app/src/main/res/values
+          
+          cat > android/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+            
+            <!-- Add color definitions -->
+            <color name="colorPrimary">#5A9C84</color>
+            <color name="splashscreen_background">#1A2D27</color>
+            
+            <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+              <!-- CRITICAL: These two lines fix the keyboard covering issue -->
+              <item name="android:fitsSystemWindows">true</item>
+              <item name="android:windowSoftInputMode">adjustResize</item>
+              
+              <!-- Your existing items -->
+              <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+              <item name="android:navigationBarColor">@android:color/transparent</item>
+              <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+              <item name="colorPrimary">@color/colorPrimary</item>
+              <item name="android:statusBarColor">#1A2D27</item>
+              
+              <!-- Add these for proper window behavior -->
+              <item name="android:windowTranslucentStatus">true</item>
+              <item name="android:windowTranslucentNavigation">true</item>
+              <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+              <item name="android:windowFullscreen">false</item>
+            </style>
+
+            <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">
+              <item name="windowSplashScreenBackground">@color/splashscreen_background</item>
+              <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen_logo</item>
+              <item name="postSplashScreenTheme">@style/AppTheme</item>
+              <item name="android:windowFullscreen">false</item>
+              <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+            </style>
+          </resources>
+          EOF
+          
+          # Apply fix to AndroidManifest.xml if it exists
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            # Ensure windowSoftInputMode is set correctly
+            sed -i 's/android:windowSoftInputMode="[^"]*"/android:windowSoftInputMode="adjustResize"/g' android/app/src/main/AndroidManifest.xml
+            # Add fitsSystemWindows if missing
+            if ! grep -q 'fitsSystemWindows' android/app/src/main/AndroidManifest.xml; then
+              sed -i '/android:name=".MainActivity"/a \        android:fitsSystemWindows="true"' android/app/src/main/AndroidManifest.xml
+            fi
+          fi
+
+      # 8. Build the APK
       - name: 📱 Build APK (Local Mode)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Boost Java memory to 4GB to prevent "Unknown" crashes
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
             exit 1
           fi
-          # Clear EAS cache to ensure it generates fresh android folders
+          
+          # Prebuild first to ensure Android folder exists
+          npx expo prebuild --platform android --clean
+          
+          # Re-apply the styles.xml after prebuild (it might get overwritten)
+          cat > android/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+            <color name="colorPrimary">#5A9C84</color>
+            <color name="splashscreen_background">#1A2D27</color>
+            
+            <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+              <item name="android:fitsSystemWindows">true</item>
+              <item name="android:windowSoftInputMode">adjustResize</item>
+              <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+              <item name="android:navigationBarColor">@android:color/transparent</item>
+              <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+              <item name="colorPrimary">@color/colorPrimary</item>
+              <item name="android:statusBarColor">#1A2D27</item>
+              <item name="android:windowTranslucentStatus">true</item>
+              <item name="android:windowTranslucentNavigation">true</item>
+              <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+              <item name="android:windowFullscreen">false</item>
+            </style>
+
+            <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">
+              <item name="windowSplashScreenBackground">@color/splashscreen_background</item>
+              <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen_logo</item>
+              <item name="postSplashScreenTheme">@style/AppTheme</item>
+              <item name="android:windowFullscreen">false</item>
+              <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+            </style>
+          </resources>
+          EOF
+          
+          # Run the build
           eas build --local --clear-cache --platform android --profile preview --non-interactive --output ./wathiq.apk
 
-      # 8. Upload Result
+      # 9. Upload Result
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
