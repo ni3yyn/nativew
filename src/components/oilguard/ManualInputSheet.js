@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { 
-  View, Text, StyleSheet, Modal, TextInput, Pressable, Animated, 
+  View, Text, StyleSheet, Modal, TextInput, Pressable, Animated, StatusBar,
   Dimensions, Easing, PanResponder, TouchableOpacity, KeyboardAvoidingView, 
   Platform, Keyboard 
 } from 'react-native';
@@ -103,14 +103,13 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
                 </Animated.View>
 
-                {/* Keyboard Handler */}
+                {/* --- 2. UPDATE THIS BLOCK --- */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : undefined} 
+                    behavior={Platform.OS === "ios" ? "padding" : "height"} 
                     style={styles.keyboardContainer}
-                    keyboardVerticalOffset={0}
+                    keyboardVerticalOffset={Platform.OS === "android" ? 0 : 0} 
                 >
-                    <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
-                        
+                    <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>    
                         {/* Content Body */}
                         <View style={styles.sheetContent}>
                             
