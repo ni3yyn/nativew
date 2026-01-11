@@ -28,6 +28,8 @@
         "backgroundColor": "#1A2D27"
       },
       "edgeToEdgeEnabled": true,
+      "enableEdgeToEdge": true,
+      "windowSoftInputMode": "adjustResize",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",

@@ -15,7 +15,7 @@
     "@react-native-community/slider": "5.0.1",
     "@supabase/supabase-js": "^2.89.0",
     "date-fns": "^4.1.0",
-    "expo": "^54.0.30",
+    "expo": "^54.0.31",
     "expo-build-properties": "~1.0.10",
     "expo-camera": "~17.0.9",
     "expo-constants": "~18.0.12",
