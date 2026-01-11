@@ -55,7 +55,7 @@ const SunProtectionCard = ({ analysisData }) => (
      <ContentCard style={{flex: 1}} animated={false}>
         <View style={styles.analysisCardHeader}>
            <FontAwesome5 name="shield-alt" size={14} color={COLORS.textSecondary} />
-           <Text style={styles.analysisCardTitle}>حماية الشمس</Text>
+           <Text style={styles.analysisCardTitle}>حماية من الشمس</Text>
        </View>
        <View style={styles.sunProtectionContainer}>
            <ChartRing 

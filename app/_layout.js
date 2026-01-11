@@ -31,7 +31,7 @@ const ForceUpdateScreen = ({ url }) => (
       <MaterialIcons name="system-update" size={70} color="#fbbf24" style={{ marginBottom: 20 }} />
       <Text style={styles.systemTitle}>تحديث إجباري مطلوب</Text>
       <Text style={styles.systemMessage}>
-        هذا الإصدار قديم جداً ولم يعد مدعوماً. يرجى التحديث للمتابعة.
+        هذا الإصدار مليء بالمشاكل التي تم حلها في الإصدار الجديد.
       </Text>
       {url ? (
         <Pressable style={styles.updateButton} onPress={() => Linking.openURL(url)}>
@@ -64,9 +64,9 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
           </View>
           
           {/* Centered Text */}
-          <Text style={styles.optionalTitle}>تحديث جديد متوفر ✨</Text>
+          <Text style={styles.optionalTitle}>تحديث جديد متوفر</Text>
           <Text style={styles.optionalSub}>
-            إصدار جديد جاهز للتحميل. استمتع بأحدث الميزات!
+            إصدار جديد جاهز للتحميل. استمتعوا بأحدث الميزات!
           </Text>
 
           {/* Changelog List */}
@@ -265,7 +265,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       } 
       // B. If notification data says 'routine' (Active), go to Profile
       else if (data?.screen === 'routine') {
-        router.push('/(main)/profile');
+        router.push('/profile');
       }
     });
 
@@ -306,9 +306,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(onboarding)" />
-        <Stack.Screen name="(main)" />
       </Stack>
     </>
   );
@@ -326,9 +323,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#00000000');
-      NavigationBar.setPositionAsync('absolute');
-      NavigationBar.setButtonStyleAsync('light'); 
     }
   }, []);
 

@@ -15,7 +15,7 @@ export default function Index() {
     if (!loading) {
       SplashScreen.hideAsync(); 
       if (user) {
-        router.replace('/(main)/profile'); 
+        router.replace('/profile'); 
       } else {
         router.replace('/login');
       }

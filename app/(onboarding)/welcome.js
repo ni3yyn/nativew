@@ -227,7 +227,7 @@ export default function WelcomeScreen() {
     try {
         // Saving formData directly works because we initialized goals: [] in state
         await updateDoc(doc(db, 'profiles', user.uid), { settings: formData, onboardingComplete: true });
-        router.replace('/(main)/profile');
+        router.replace('/profile');
     } catch (e) { console.error(e); } 
     finally { setLoading(false); }
   };

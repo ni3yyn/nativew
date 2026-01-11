@@ -34,12 +34,6 @@ const COLORS = {
 const BG_IMAGE = require('../../assets/lolo.jpg');
 const { width, height } = Dimensions.get('window');
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  if (!global?.nativeFabricUIManager) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
-
 // --- LOGO ---
 const AppLogo = () => (
     <View style={styles.logoWrapper}>
@@ -219,7 +213,7 @@ export default function LoginScreen() {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        router.replace('/(main)/profile');
+        router.replace('/profile');
       } else {
         if (password.length < 6) throw new Error("password-short");
         

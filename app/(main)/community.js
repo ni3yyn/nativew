@@ -30,11 +30,6 @@ import CommunityRefreshHandler from '../../src/components/community/CommunityRef
 import SortTabs from '../../src/components/community/SortTabs'; 
 import CommunityIntro from '../../src/components/community/CommunityIntro';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    if (!global?.nativeFabricUIManager) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-}
 
 const NewPostsToast = ({ visible, onPress }) => {
     const slideAnim = useRef(new Animated.Value(-100)).current;

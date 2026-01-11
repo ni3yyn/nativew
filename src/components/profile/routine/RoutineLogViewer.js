@@ -17,10 +17,6 @@ const COLORS = {
   info: '#3b82f6', // Added for generic info logs
 };
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 export const RoutineLogViewer = ({ logs }) => {
     const [expanded, setExpanded] = useState(false);
 

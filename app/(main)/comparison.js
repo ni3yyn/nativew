@@ -33,10 +33,6 @@ import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 // Side-Specific Colors for Comparison
 const PROD_COLORS = {
     A: '#10b981', // Emerald Green (Product A - Right Side in RTL)

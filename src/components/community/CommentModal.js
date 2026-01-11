@@ -14,13 +14,6 @@ import { supabase } from '../../config/supabase';
 import { COLORS } from '../../constants/theme';
 import { AlertService } from '../../services/alertService';
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  if (!global?.nativeFabricUIManager) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
-
 const getRandomColor = (name) => {
     if (!name) return COLORS.card;
     const colors = [COLORS.accentGreen, '#D97706', '#059669', '#0891B2', '#7C3AED', '#BE123C'];

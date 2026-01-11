@@ -10,10 +10,6 @@ import { useAppContext } from '../../context/AppContext';
 import { reevaluateProductForUser } from '../../services/communityService';
 import { getClaimsByProductType } from '../../constants/productData'; 
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const { userProfile } = useAppContext();
     

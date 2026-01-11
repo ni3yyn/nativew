@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable, Image,
-  Dimensions, ScrollView, Animated, ImageBackground, Modal, FlatList,
+  Dimensions, ScrollView, Animated, ImageBackground, Modal, FlatList, BackHandler,
   Platform, UIManager, Alert, StatusBar, ActivityIndicator, LayoutAnimation,
   RefreshControl, Keyboard, Easing, I18nManager, AppState, KeyboardAvoidingView
 } from 'react-native';
@@ -46,6 +46,7 @@ import {
 import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
 import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared'; 
 import { RoutineLogViewer } from '../../src/components/profile/routine/RoutineLogViewer';
+import { NatureDock } from '../../src/components/profile/NatureDock';
 
 
 
@@ -347,110 +348,6 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color = COLORS.pr
 };
 
 // --- COMPONENTS: ORGANIC DOCK ---
-
-const NatureDock = ({ tabs, activeTab, onTabChange }) => {
-  const [tabLayouts, setTabLayouts] = useState({});
-  
-  // Animation value for the pill's horizontal movement
-  const pillTranslateX = useRef(new Animated.Value(0)).current;
-  
-  // The fixed, elegant width of our animated pill
-  const PILL_WIDTH = 60;
-
-  useEffect(() => {
-      // Find the layout information for the currently active tab
-      const activeLayout = tabLayouts[activeTab];
-
-      // If we have layout info, calculate the correct position and animate the pill
-      if (activeLayout) {
-          // THE CORE FIX: Calculate the target X to CENTER the pill on the icon
-          const targetX = activeLayout.x + (activeLayout.width / 2) - (PILL_WIDTH / 2);
-          
-          Animated.spring(pillTranslateX, {
-              toValue: targetX,
-              friction: 10,
-              tension: 80,
-              useNativeDriver: true, // translateX is safe for native driver
-          }).start();
-      }
-  }, [activeTab, tabLayouts]); // Re-run animation when tab or layouts change
-
-  // This function runs for each tab to measure its position on the screen
-  const handleLayout = (id, event) => {
-      const { x, width } = event.nativeEvent.layout;
-      // Store the measurements for each tab
-      setTabLayouts(prev => ({ ...prev, [id]: { x, width } }));
-  };
-
-  return (
-    <View style={styles.dockOuterContainer}>
-      <View style={styles.dockContainer}>
-        {/* 1. The Animated Pill in the background */}
-        <Animated.View style={[
-            styles.pillIndicator,
-            { width: PILL_WIDTH, transform: [{ translateX: pillTranslateX }] }
-        ]} />
-
-        {/* 2. The container for the visible icons/buttons */}
-        <View style={styles.tabsContainer}>
-          {tabs.map((tab) => (
-            <DockItem 
-              key={tab.id} 
-              item={tab} 
-              isActive={activeTab === tab.id} 
-              onPress={() => onTabChange(tab.id)}
-              onLayout={(event) => handleLayout(tab.id, event)}
-            />
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const DockItem = ({ item, isActive, onPress, onLayout }) => {
-  const labelAnim = useRef(new Animated.Value(isActive ? 1 : 0)).current;
-
-  useEffect(() => {
-      Animated.spring(labelAnim, {
-          toValue: isActive ? 1 : 0,
-          friction: 7,
-          tension: 60,
-          useNativeDriver: true,
-      }).start();
-  }, [isActive]);
-
-  const handlePress = () => {
-      if (!isActive) { // Prevent re-tapping the active icon
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onPress();
-      }
-  };
-
-  const labelTranslateY = labelAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] });
-  const labelOpacity = labelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-
-  return (
-      <TouchableOpacity 
-          onPress={handlePress}
-          onLayout={onLayout} // This passes the layout measurements up to the parent
-          style={styles.dockItem}
-          activeOpacity={0.7}
-      >
-          <FontAwesome5 
-            name={item.icon} 
-            size={18} 
-            color={isActive ? COLORS.textOnAccent : COLORS.textSecondary}
-          />
-          <Animated.Text style={[
-              styles.dockLabel,
-              { opacity: labelOpacity, transform: [{ translateY: labelTranslateY }] }
-          ]}>
-              {item.label}
-          </Animated.Text>
-      </TouchableOpacity>
-  );
-};
 
 // 7. ENHANCED ACCORDION with smooth height animation
 const Accordion = ({ title, icon, children, isOpen, onPress }) => {
@@ -886,7 +783,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>حماية الشمس</Text>
+              <Text style={styles.statLabel}>منتجات وقاية</Text>
               <AnimatedCount value={products.filter(p => p.analysisData?.product_type === 'sunscreen').length} style={styles.statValue} />
             </View>
             <View style={styles.statDivider} />
@@ -1716,12 +1613,6 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
               )}
           </View>
           
-          {/* Floating Action Button */}
-          <PressableScale style={styles.fabRoutine} onPress={() => onOpenAddStepModal(handleAddStep)}>
-              <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.fabGradient}>
-                  <FontAwesome5 name="plus" size={20} color={COLORS.textOnAccent} />
-              </LinearGradient>
-          </PressableScale>
   
           {/* Modals */}
           {selectedStep && (
@@ -2615,155 +2506,6 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     );
 };
 
-const ShelfActionGroup = ({ router }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const anim = useRef(new Animated.Value(0)).current;
-
-    const toggleMenu = () => {
-        const toValue = isOpen ? 0 : 1;
-        if (!isOpen) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setIsOpen(!isOpen);
-        
-        Animated.spring(anim, {
-            toValue,
-            friction: 5,
-            tension: 40,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const handlePressIn = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    };
-
-    const handlePress = (route) => {
-        router.push(route);
-        // Clean up UI silently after navigation
-        setTimeout(() => {
-            setIsOpen(false);
-            anim.setValue(0);
-        }, 400);
-    };
-
-    const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
-    
-    // Updated Spacing for 3 Buttons:
-    const action1Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -190] }); // Top (Comparison)
-    const action2Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -130] }); // Middle (Community) - NEW
-    const action3Y = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });  // Bottom (Scan)
-    
-    // Buttons appear instantly (0 -> 1 quickly)
-    const buttonOpacity = anim.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 1] });
-    
-    // Overlay fades smoothly (0 -> 1 linear)
-    const backdropOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-
-    return (
-        <View style={styles.fabContainer} pointerEvents="box-none">
-            
-            {/* 1. INDEPENDENT OVERLAY */}
-            <Animated.View 
-                style={{
-                    position: 'absolute',
-                    top: -height * 1.5, 
-                    left: -width * 1.5, 
-                    width: width * 3, 
-                    height: height * 3,
-                    backgroundColor: 'rgba(26, 45, 39, 0.9)',
-                    zIndex: 0, 
-                    opacity: backdropOpacity,
-                    elevation: 0 
-                }} 
-                pointerEvents={isOpen ? 'auto' : 'none'}
-            >
-                <Pressable style={{flex: 1}} onPress={toggleMenu} />
-            </Animated.View>
-
-            {/* 2. BUTTON 1: Comparison (Top) */}
-            <Animated.View 
-                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action1Y }], zIndex: 10 }]}
-            >
-                <View style={styles.actionLabelContainer}>
-                    <Text style={styles.actionLabel}>مقارنة منتجات</Text>
-                </View>
-                
-                <Pressable
-                    onPressIn={handlePressIn}
-                    onPress={() => handlePress('/comparison')}
-                    style={({ pressed }) => [
-                        styles.actionBtn, 
-                        { backgroundColor: '#4a8a73', opacity: pressed ? 0.8 : 1 }
-                    ]}
-                    hitSlop={20} 
-                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
-                >
-                    <FontAwesome5 name="balance-scale" size={16} color={COLORS.textOnAccent} />
-                </Pressable>
-            </Animated.View>
-
-            {/* 3. BUTTON 2: Community (Middle - NEW) */}
-            <Animated.View 
-                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action2Y }], zIndex: 10 }]}
-            >
-                <View style={styles.actionLabelContainer}>
-                    <Text style={styles.actionLabel}>المجتمع</Text>
-                </View>
-                
-                <Pressable
-                    onPressIn={handlePressIn}
-                    onPress={() => handlePress('/community')}
-                    style={({ pressed }) => [
-                        styles.actionBtn, 
-                        { backgroundColor: COLORS.gold, opacity: pressed ? 0.8 : 1 }
-                    ]}
-                    hitSlop={20} 
-                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
-                >
-                    <FontAwesome5 name="users" size={16} color={COLORS.textOnAccent} />
-                </Pressable>
-            </Animated.View>
-
-            {/* 4. BUTTON 3: Scan (Bottom) */}
-            <Animated.View 
-                style={[styles.actionBtnWrap, { opacity: buttonOpacity, transform: [{ translateY: action3Y }], zIndex: 10 }]}
-            >
-                <View style={styles.actionLabelContainer}>
-                    <Text style={styles.actionLabel}>فحص منتج</Text>
-                </View>
-
-                <Pressable
-                    onPressIn={handlePressIn}
-                    onPress={() => handlePress('/oilguard')}
-                    style={({ pressed }) => [
-                        styles.actionBtn, 
-                        { backgroundColor: COLORS.accentGreen, opacity: pressed ? 0.8 : 1 }
-                    ]}
-                    hitSlop={20}
-                    pressRetentionOffset={{ top: 150, bottom: 150, left: 150, right: 150 }}
-                >
-                    <FontAwesome5 name="magic" size={16} color={COLORS.textOnAccent} />
-                </Pressable>
-            </Animated.View>
-
-            {/* 5. MAIN FAB */}
-            <PressableScale 
-                style={[styles.mainFab, { zIndex: 20 }]} 
-                onPress={toggleMenu}
-            >
-                <LinearGradient 
-                    colors={isOpen ? [COLORS.danger, '#991b1b'] : [COLORS.accentGreen, '#4a8a73']} 
-                    style={styles.fabGradient}
-                >
-                    <Animated.View style={{ transform: [{ rotate }] }}>
-                        <FontAwesome5 name="plus" size={22} color={COLORS.textOnAccent} />
-                    </Animated.View>
-                </LinearGradient>
-            </PressableScale>
-            
-        </View>
-    );
-};
-
 // --- OPTIMIZED COMPONENT: ANIMATED SCORE RING (Fixed Latency) ---
 // --- OPTIMIZED COMPONENT: ANIMATED SCORE RING (Fixed Text Orientation) ---
 const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth = 4 }) => {
@@ -2889,7 +2631,7 @@ export default function ProfileScreen() {
     const [addStepHandler, setAddStepHandler] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
-    
+    const [cameraSheetVisible, setCameraSheetVisible] = useState(false);
     // Permissions
     const [locationPermission, setLocationPermission] = useState('undetermined');
     const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
@@ -3039,6 +2781,17 @@ export default function ProfileScreen() {
         }
     }, [savedProducts, userProfile]);
 
+    useEffect(() => {
+        const backAction = () => {
+            if (activeTab !== 'shelf') {
+                setActiveTab('shelf');
+                return true; // Prevent default behavior (exit)
+            }
+            return false;
+        };
+        const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+        return () => backHandler.remove();
+    }, [activeTab]);
     // ========================================================================
     // --- 7. ORCHESTRATOR & LIFECYCLE ---
     // ========================================================================
@@ -3255,20 +3008,27 @@ export default function ProfileScreen() {
                         onLogout={() => { logout(); router.replace('/login'); }} 
                     />
                   )}
+
+                  {activeTab === 'community' && (
+                    <View style={{padding:20}}><Text style={{color:'white'}}>Community Screen</Text></View>
+                  )}
               
               </Animated.View>
           </Animated.ScrollView>
   
           {/* --- FLOATING CONTROLS --- */}
-          <NatureDock tabs={TABS} activeTab={activeTab} onTabChange={switchTab} />
-          
+          <NatureDock 
+    activeTab={activeTab} 
+    onTabChange={switchTab} // Your existing switchTab function works perfectly here
+    navigation={router}     // Pass the expo-router instance
+/>
           <AddStepModal 
             isVisible={isAddStepModalVisible} 
             onClose={() => setAddStepModalVisible(false)} 
             onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }} 
           />
           
-          {activeTab === 'shelf' && <ShelfActionGroup router={router} />}
+          {activeTab === 'shelf'}
           
           <LocationPermissionModal 
               visible={isPermissionModalVisible} 
@@ -3422,142 +3182,7 @@ export default function ProfileScreen() {
         alignItems: 'center',
         justifyContent: 'center',
     },
-  
-    // ========================================================================
-    // --- 4. BOTTOM DOCK (NATURE DOCK) ---
-    // ========================================================================
-    dockOuterContainer: {
-        position: 'absolute',
-        bottom: 60,
-        left: 20,
-        right: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    dockContainer: {
-        height: 65,
-        borderRadius: 35,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        backgroundColor: COLORS.card,
-        overflow: 'hidden',
-    },
-    pillIndicator: {
-        position: 'absolute',
-        top: 5,
-        left: 0,
-        height: 52,
-        borderRadius: 24,
-        backgroundColor: COLORS.accentGreen,
-        zIndex: 1,
-    },
-    tabsContainer: {
-        ...StyleSheet.absoluteFillObject,
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        zIndex: 2,
-    },
-    dockItem: {
-        flex: 1,
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative',
-    },
-    dockLabel: {
-        position: 'absolute',
-        bottom: 7,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 10,
-        color: COLORS.textOnAccent,
-    },
-  
-    // ========================================================================
-    // --- 5. FLOATING ACTION BUTTON (FAB) ---
-    // ========================================================================
-    fabRoutine: { 
-        position: 'absolute',
-        bottom: 130,
-        right: 20,
-        shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 10
-    },
-    fabGradient: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-    },
-  
-    fabContainer: {
-      position: 'absolute',
-      bottom: 130, 
-      right: 20,
-      alignItems: 'center',
-      zIndex: 999,
-  },
-  mainFab: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-      zIndex: 2,
-  },
-  actionBtnWrap: {
-      position: 'absolute',
-      bottom: 0,
-      right: 4, 
-      flexDirection: 'row', 
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      width: 200, 
-      zIndex: 2,
-      pointerEvents: 'box-none',
-  },
-  actionBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 5,
-  },
-  actionLabelContainer: {
-      backgroundColor: COLORS.card, 
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 10,
-      marginRight: 12, 
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-  },
-  actionLabel: {
-      fontFamily: 'Tajawal-Bold',
-      fontSize: 12,
-      color: COLORS.textPrimary,
-  },
-  
+
     // ========================================================================
     // --- 6. SECTION: SHELF & PRODUCTS ---
     // ========================================================================

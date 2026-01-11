@@ -1525,7 +1525,7 @@ const executeAnalysis = async () => {
         AlertService.success(
             "تم الحفظ", 
             "تمت إضافة المنتج إلى رفّك.", 
-            () => router.replace('/(main)/profile')
+            () => router.replace('/profile')
         );
 
     } catch (error) {
