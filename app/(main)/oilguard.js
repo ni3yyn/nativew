@@ -44,7 +44,6 @@ import {
 } from '../../src/components/oilguard/oilguard.styles';
 
 // --- SYSTEM CONFIG ---
-I18nManager.allowRTL(false);
 
 
 // ENDPOINTS
