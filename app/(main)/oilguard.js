@@ -43,9 +43,6 @@ import {
   DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
 } from '../../src/components/oilguard/oilguard.styles';
 
-// --- SYSTEM CONFIG ---
-
-
 // ENDPOINTS
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
