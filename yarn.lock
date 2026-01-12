@@ -49,6 +49,27 @@
     json5 "^2.2.3"
     semver "^6.3.1"
 
+"@babel/core@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.28.5.tgz#4c81b35e51e1b734f510c99b07dfbc7bbbb48f7e"
+  integrity sha512-e7jT4DxYvIDLk1ZHmU/m/mB19rex9sv0c2ftBtjSBv+kVM/902eh0fINUzD7UwLLNR+jU585GxUJ8/EBfAM5fw==
+  dependencies:
+    "@babel/code-frame" "^7.27.1"
+    "@babel/generator" "^7.28.5"
+    "@babel/helper-compilation-targets" "^7.27.2"
+    "@babel/helper-module-transforms" "^7.28.3"
+    "@babel/helpers" "^7.28.4"
+    "@babel/parser" "^7.28.5"
+    "@babel/template" "^7.27.2"
+    "@babel/traverse" "^7.28.5"
+    "@babel/types" "^7.28.5"
+    "@jridgewell/remapping" "^2.3.5"
+    convert-source-map "^2.0.0"
+    debug "^4.1.0"
+    gensync "^1.0.0-beta.2"
+    json5 "^2.2.3"
+    semver "^6.3.1"
+
 "@babel/generator@^7.20.5", "@babel/generator@^7.25.0", "@babel/generator@^7.28.5":
   version "7.28.5"
   resolved "https://registry.npmjs.org/@babel/generator/-/generator-7.28.5.tgz"
@@ -4020,10 +4041,10 @@ expo-navigation-bar@~5.0.10:
     debug "^4.3.2"
     react-native-is-edge-to-edge "^1.2.1"
 
-expo-notifications@~0.32.15:
-  version "0.32.15"
-  resolved "https://registry.npmjs.org/expo-notifications/-/expo-notifications-0.32.15.tgz"
-  integrity sha512-gnJcauheC2S0Wl0RuJaFkaBRVzCG011j5hlG0TEbsuOCPBuB/F30YEk8yurK8Psv+zHkVfeiJ5AC+nL0LWk0WA==
+expo-notifications@~0.32.16:
+  version "0.32.16"
+  resolved "https://registry.yarnpkg.com/expo-notifications/-/expo-notifications-0.32.16.tgz#1a1304b89efedd7cdeba92de39b21f09fb2db2c7"
+  integrity sha512-QQD/UA6v7LgvwIJ+tS7tSvqJZkdp0nCSj9MxsDk/jU1GttYdK49/5L2LvE/4U0H7sNBz1NZAyhDZozg8xgBLXw==
   dependencies:
     "@expo/image-utils" "^0.8.8"
     "@ide/backoff" "^1.0.0"
@@ -4031,7 +4052,7 @@ expo-notifications@~0.32.15:
     assert "^2.0.0"
     badgin "^1.1.5"
     expo-application "~7.0.8"
-    expo-constants "~18.0.12"
+    expo-constants "~18.0.13"
 
 expo-router@~6.0.16:
   version "6.0.21"
