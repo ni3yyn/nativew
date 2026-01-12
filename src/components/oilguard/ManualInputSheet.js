@@ -105,7 +105,9 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
                 {/* Keyboard Handler */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : undefined} 
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                    // ADD THIS LINE: Disable KAV entirely on Android to prevent the flash
+                    enabled={Platform.OS === "ios"} 
                     style={styles.keyboardContainer}
                     keyboardVerticalOffset={0}
                 >
