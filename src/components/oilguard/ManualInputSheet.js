@@ -114,7 +114,12 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                 </Animated.View>
 
                 {/* Keyboard Handler: DISABLED KAV ON ANDROID */}
-                <ContainerWrapper {...containerProps}>
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === "ios" ? "padding" : "padding"} 
+                    style={styles.keyboardContainer}
+                    // Add an offset if the keyboard hides the button (adjust 20-50 as needed)
+                    keyboardVerticalOffset={Platform.OS === "android" ? 0 : 0}
+                >
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                         
                         {/* Content Body */}
@@ -186,7 +191,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
                         </View>
                     </Animated.View>
-                </ContainerWrapper>
+                </KeyboardAvoidingView>
             </View>
         </Modal>
     );
@@ -195,8 +200,6 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 const styles = StyleSheet.create({
     modalContainer: {
         flex: 1,
-        justifyContent: 'flex-end',
-        // Removed unnecessary logic here
     },
     backdrop: { 
         ...StyleSheet.absoluteFillObject, 
@@ -206,7 +209,8 @@ const styles = StyleSheet.create({
     keyboardContainer: { 
         width: '100%',
         zIndex: 2,
-        justifyContent: 'flex-end', // Crucial for adjustResize
+        justifyContent: 'flex-end',
+        flex: 1
     },
     sheetContainer: { 
         width: '100%',
