@@ -1487,22 +1487,26 @@ const executeAnalysis = async () => {
     }, 100); // 100ms delay gives the animation enough time to start
 };
 
-const processManualText = async () => {
-    if (!manualInputText.trim()) {
+const processManualText = async (directInputText) => {
+    // FIX: Use the argument passed directly, fallback to state only if argument is missing
+    const textToProcess = directInputText || manualInputText;
+
+    if (!textToProcess || !textToProcess.trim()) {
         Alert.alert("تنبيه", "الرجاء إدخال المكونات.");
         return;
     }
 
-    setManualModalVisible(false); // Close modal
+    setManualModalVisible(false); 
     setLoading(true);
     setIsGeminiLoading(true);
-    changeStep(3); // Go to loading screen
+    changeStep(3); 
 
     try {
         const response = await fetch(VERCEL_PARSE_TEXT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: manualInputText }),
+            // FIX: Send the local variable, not the state
+            body: JSON.stringify({ text: textToProcess }), 
         });
 
         const responseData = await response.json();
@@ -1512,7 +1516,6 @@ const processManualText = async () => {
         const jsonResponse = responseData.result;
         const rawList = jsonResponse.ingredients_list || [];
         
-        // Use your existing helper to format for frontend
         const { ingredients } = await extractIngredientsFromAIText(rawList);
 
         setOcrText(rawList.join('\n'));
@@ -1521,8 +1524,8 @@ const processManualText = async () => {
 
         setIsGeminiLoading(false);
         setLoading(false);
-        setManualInputText(''); // Reset text
-        changeStep(1); // Go to Review Step
+        setManualInputText(''); 
+        changeStep(1); 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     } catch (error) {
@@ -1532,7 +1535,7 @@ const processManualText = async () => {
         setLoading(false);
         changeStep(0);
     }
-  };
+};
   
   const handleSaveProduct = async () => {
     if (!productName.trim()) { 
@@ -2174,13 +2177,13 @@ return (
         </Modal>
         
         <ManualInputSheet
-            visible={isManualModalVisible}
-            onClose={() => setManualModalVisible(false)}
-            onSubmit={(text) => {
-                setManualInputText(text); // Set the text state
-                processManualText(text);  // Call your existing processing function (Update it to accept an argument)
-            }}
-        />
+    visible={isManualModalVisible}
+    onClose={() => setManualModalVisible(false)}
+    onSubmit={(text) => {
+        setManualInputText(text); // We still set state for backup/UI purposes
+        processManualText(text);  // FIX: Pass the text directly to the function
+    }}
+/>
     
         <CustomCameraModal
           isVisible={isCameraViewVisible}

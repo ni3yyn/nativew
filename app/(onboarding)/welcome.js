@@ -317,7 +317,12 @@ export default function WelcomeScreen() {
       <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
         <LinearGradient colors={['rgba(26, 45, 39, 0.85)', 'rgba(26, 45, 39, 0.95)']} style={StyleSheet.absoluteFill} />
         {particles.map(p => <Spore key={p.id} {...p} />)}
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1}} keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}>
+        <KeyboardAvoidingView 
+    behavior="padding" 
+    style={{flex: 1}} 
+    // On adjustPan, we usually don't need a large offset.
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
+>
           <View style={[styles.safeArea, { paddingTop: 40 + insets.top, paddingBottom: insets.bottom }]}>
             
             <View style={styles.progressContainer}>

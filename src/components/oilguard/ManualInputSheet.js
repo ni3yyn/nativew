@@ -90,14 +90,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] });
-
-    // WRAPPER: Decides whether to use KAV or standard View
-    // On Android (adjustResize), standard View is smoother and prevents conflict.
-    const ContainerWrapper = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
-    const containerProps = Platform.OS === 'ios' 
-        ? { behavior: "padding", style: styles.keyboardContainer, keyboardVerticalOffset: 0 }
-        : { style: styles.keyboardContainer };
-
+    
     return (
         <Modal 
             transparent 

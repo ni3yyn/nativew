@@ -179,7 +179,7 @@ const TemplateContent = ({ analysis, typeLabel, customProductName }) => {
             </View>
 
             <View style={styles.footer}>
-                <Text style={styles.emotionalText}>لا تدعِ الشركات تخدعكِ.</Text>
+                <Text style={styles.emotionalText}>لا تدع الشركات تخدعك.</Text>
                 <Text style={styles.emotionalSub}>تحققي من منتجاتك عبر وثيق.</Text>
                 
                 <View style={styles.ctaPill}>

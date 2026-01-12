@@ -27,17 +27,13 @@ const COLORS = {
 // PART 1: THE SLIDING SHEET COMPONENT (FIXED CONTENT SWAPPING)
 // ============================================================================
 const DockSheet = ({ visible, onClose, type, onSelect }) => {
-    // 1. Controls whether the Modal is physically mounted in the tree
     const [showModal, setShowModal] = useState(false);
-    
-    // 2. Remembers the content (Camera vs More) so it doesn't swap during close animation
     const [safeType, setSafeType] = useState(type);
 
+    // Initial value strictly set to height (off-screen)
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    // Sync safeType: Only update if 'type' is valid. 
-    // If 'type' becomes null (closing), keep the old 'safeType'.
     useEffect(() => {
         if (type) {
             setSafeType(type);
@@ -46,23 +42,33 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 
     useEffect(() => {
         if (visible) {
-            // OPEN
+            // 1. FIX: Force the value to 'height' (off-screen) immediately
+            // This ensures that even if it renders instantly, it renders off-screen.
+            slideAnim.setValue(height);
+            fadeAnim.setValue(0);
+
+            // 2. Mount the Modal
             setShowModal(true);
-            Animated.parallel([
-                Animated.timing(fadeAnim, { 
-                    toValue: 1, 
-                    duration: 250, 
-                    useNativeDriver: true 
-                }),
-                Animated.timing(slideAnim, { 
-                    toValue: 0, 
-                    duration: 350, 
-                    easing: Easing.out(Easing.cubic), 
-                    useNativeDriver: true 
-                })
-            ]).start();
+
+            // 3. FIX: Use requestAnimationFrame
+            // This waits for the Native View to be mounted and ready before starting the animation
+            requestAnimationFrame(() => {
+                Animated.parallel([
+                    Animated.timing(fadeAnim, { 
+                        toValue: 1, 
+                        duration: 250, 
+                        useNativeDriver: true 
+                    }),
+                    Animated.timing(slideAnim, { 
+                        toValue: 0, 
+                        duration: 350, 
+                        easing: Easing.out(Easing.cubic), 
+                        useNativeDriver: true 
+                    })
+                ]).start();
+            });
         } else {
-            // CLOSE
+            // CLOSE ANIMATION
             Animated.parallel([
                 Animated.timing(fadeAnim, { 
                     toValue: 0, 
@@ -85,13 +91,12 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 
     const handleAction = (actionId) => {
         Haptics.selectionAsync();
-        onClose(); // Triggers the close animation in useEffect above
+        onClose(); 
         onSelect(actionId);
     };
 
     if (!showModal) return null;
 
-    // Use 'safeType' for rendering, not 'type' (which might be null)
     const renderContent = () => {
         if (safeType === 'camera') {
             return (
@@ -167,7 +172,14 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                 <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 </Animated.View>
-                <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+                {/* 
+                   FIX 4: Added 'renderToHardwareTextureAndroid' for smoother performance 
+                   and to help prevent artifacting during the slide.
+                */}
+                <Animated.View 
+                    style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+                    renderToHardwareTextureAndroid={true} 
+                >
                     {renderContent()}
                 </Animated.View>
             </View>
