@@ -21,17 +21,15 @@ const COLORS = {
   accentGlow: 'rgba(90, 156, 132, 0.4)',
 };
 
-// --- HELPER: Detect Text Language ---
-// Returns 'right' if empty or Arabic, 'left' if English/Latin
 const getTextDirection = (text) => {
-    if (!text) return 'right'; // Default to Right for Arabic Placeholder
+    if (!text) return 'right'; 
     const isArabic = /[\u0600-\u06FF]/.test(text);
     return isArabic ? 'right' : 'left';
 };
 
 export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     const [text, setText] = useState('');
-    const [inputDirection, setInputDirection] = useState('right'); // Default State
+    const [inputDirection, setInputDirection] = useState('right');
     const animController = useRef(new Animated.Value(0)).current;
     const inputRef = useRef(null);
 
@@ -57,14 +55,13 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     useEffect(() => {
         if (visible) {
             setText('');
-            setInputDirection('right'); // Reset direction
+            setInputDirection('right');
             Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
             Haptics.selectionAsync();
             setTimeout(() => inputRef.current?.focus(), 400);
         }
     }, [visible]);
 
-    // Update direction when text changes
     const handleTextChange = (val) => {
         setText(val);
         setInputDirection(getTextDirection(val));
@@ -94,8 +91,21 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] });
 
+    // WRAPPER: Decides whether to use KAV or standard View
+    // On Android (adjustResize), standard View is smoother and prevents conflict.
+    const ContainerWrapper = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+    const containerProps = Platform.OS === 'ios' 
+        ? { behavior: "padding", style: styles.keyboardContainer, keyboardVerticalOffset: 0 }
+        : { style: styles.keyboardContainer };
+
     return (
-        <Modal transparent visible={true} onRequestClose={closeSheet} animationType="none" statusBarTranslucent>
+        <Modal 
+            transparent 
+            visible={true} 
+            onRequestClose={closeSheet} 
+            animationType="fade" // Changed from 'none' to 'fade' to help smooth the initial render
+            statusBarTranslucent
+        >
             <View style={styles.modalContainer}>
                 
                 {/* Dark Backdrop */}
@@ -103,25 +113,17 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
                 </Animated.View>
 
-                {/* Keyboard Handler */}
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                    // ADD THIS LINE: Disable KAV entirely on Android to prevent the flash
-                    enabled={Platform.OS === "ios"} 
-                    style={styles.keyboardContainer}
-                    keyboardVerticalOffset={0}
-                >
+                {/* Keyboard Handler: DISABLED KAV ON ANDROID */}
+                <ContainerWrapper {...containerProps}>
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                         
                         {/* Content Body */}
                         <View style={styles.sheetContent}>
                             
-                            {/* Drag Handle */}
                             <View style={styles.sheetHandleBar} {...panResponder.panHandlers}>
                                 <View style={styles.sheetHandle} />
                             </View>
 
-                            {/* Header */}
                             <View style={styles.header}>
                                 <View style={styles.headerIconCircle}>
                                     <FontAwesome5 name="search" size={18} color={COLORS.accentGreen} />
@@ -135,7 +137,6 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Visual Instructions */}
                             <View style={styles.instructionsContainer}>
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="pen" size={16} color={COLORS.accentGreen} />
@@ -153,13 +154,12 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                 </View>
                             </View>
 
-                            {/* Input Area */}
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     ref={inputRef}
                                     style={[
                                         styles.textInput, 
-                                        { textAlign: inputDirection } // Dynamic Direction
+                                        { textAlign: inputDirection } 
                                     ]}
                                     multiline
                                     placeholder="مثال: Water, Glycerin, Niacinamide..."
@@ -169,7 +169,6 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                 />
                             </View>
 
-                            {/* Analyze Button */}
                             <TouchableOpacity 
                                 onPress={handleSubmit} 
                                 style={[styles.submitBtn, { opacity: text.trim().length > 2 ? 1 : 0.6 }]}
@@ -187,7 +186,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
                         </View>
                     </Animated.View>
-                </KeyboardAvoidingView>
+                </ContainerWrapper>
             </View>
         </Modal>
     );
@@ -197,6 +196,7 @@ const styles = StyleSheet.create({
     modalContainer: {
         flex: 1,
         justifyContent: 'flex-end',
+        // Removed unnecessary logic here
     },
     backdrop: { 
         ...StyleSheet.absoluteFillObject, 
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     keyboardContainer: { 
         width: '100%',
         zIndex: 2,
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-end', // Crucial for adjustResize
     },
     sheetContainer: { 
         width: '100%',
@@ -230,8 +230,6 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.border, 
         borderRadius: 10 
     },
-    
-    // Header
     header: { 
         flexDirection: 'row-reverse', 
         alignItems: 'center', 
@@ -270,8 +268,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 20
     },
-
-    // Instructions
     instructionsContainer: { 
         flexDirection: 'row-reverse', 
         justifyContent: 'space-between', 
@@ -298,8 +294,6 @@ const styles = StyleSheet.create({
         height: '70%', 
         backgroundColor: COLORS.border 
     },
-
-    // Input
     inputWrapper: { 
         backgroundColor: COLORS.background, 
         borderRadius: 16, 
@@ -312,7 +306,6 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary, 
         fontFamily: 'Tajawal-Regular', 
         fontSize: 15, 
-        // Reduced padding ensures cursor starts closer to edge
         paddingHorizontal: 15, 
         paddingTop: 15, 
         paddingBottom: 15,
@@ -320,8 +313,6 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top', 
         lineHeight: 24,
     },
-
-    // Button
     submitBtn: { 
         borderRadius: 16, 
         overflow: 'hidden', 
