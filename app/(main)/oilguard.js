@@ -33,7 +33,7 @@ import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path 
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
-import { BannerAd, BannerAdSize, TestIds, useInterstitialAd } from 'react-native-google-mobile-ads';
+import { TestIds, useInterstitialAd } from 'react-native-google-mobile-ads'; // Removed Banner imports
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -50,9 +50,7 @@ const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
 const VERCEL_PARSE_TEXT_URL = "https://oilguard-backend.vercel.app/api/parse-text.js"; // <--- ADD THIS
 
-const adUnitId = __DEV__ ? TestIds.BANNER : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyy'; 
-const interstitialId = __DEV__ 
-  ? TestIds.INTERSTITIAL : 'ca-app-pub-7808816060487731/8992297454';
+const interstitialId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-7808816060487731/8992297454';
 // --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
   if (!name) return '';
@@ -1112,6 +1110,8 @@ export default function OilGuardEngine() {
   const { user, userProfile } = useAppContext();
   const insets = useSafeAreaInsets();
 
+  const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
+
   const [step, setStep] = useState(0); 
   const [loading, setLoading] = useState(false);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
@@ -1624,11 +1624,7 @@ const processManualText = async (directInputText) => {
 
   // CREATE NEW resetFlow that triggers the Ad
   const resetFlow = () => {
-    if (isLoaded) {
-      show(); // Show ad, then "useEffect" above calls performReset when closed
-    } else {
-      performReset(); // No ad loaded? Just reset immediately
-    }
+    performReset();
   };
 
   const openSaveModal = () => {
@@ -2148,22 +2144,7 @@ return (
                             </View>
                         )}
 
-{step === 4 && (
-                <>
-                    {renderResultStep()}
-                    
-                    {/* ADD BANNER AD HERE */}
-                    <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                        <BannerAd
-                            unitId={adUnitId}
-                            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-                            requestOptions={{
-                                requestNonPersonalizedAdsOnly: true,
-                            }}
-                        />
-                    </View>
-                </>
-            )}
+{step === 4 && renderResultStep()}
                         
                     </Animated.View>
                 </ScrollView>
