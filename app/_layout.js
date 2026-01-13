@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
+import mobileAds from 'react-native-google-mobile-ads'; 
 
 
 // Import the Notification Helpers
@@ -197,6 +198,14 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         checkIntro();
     }
 }, [fontsLoaded]);
+
+useEffect(() => {
+  mobileAds()
+    .initialize()
+    .then(adapterStatuses => {
+      console.log('AdMob initialized successfully');
+    });
+}, []);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();

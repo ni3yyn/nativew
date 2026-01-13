@@ -33,6 +33,7 @@ import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path 
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
+import { BannerAd, BannerAdSize, TestIds, useInterstitialAd } from 'react-native-google-mobile-ads';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -49,8 +50,9 @@ const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
 const VERCEL_PARSE_TEXT_URL = "https://oilguard-backend.vercel.app/api/parse-text.js"; // <--- ADD THIS
 
-
-
+const adUnitId = __DEV__ ? TestIds.BANNER : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyy'; 
+const interstitialId = __DEV__ 
+  ? TestIds.INTERSTITIAL : 'ca-app-pub-7808816060487731/8992297454';
 // --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
   if (!name) return '';
@@ -1263,6 +1265,24 @@ export default function OilGuardEngine() {
     };
   }, [isAnimatingTransition]);
 
+  const { isLoaded, isClosed, load, show } = useInterstitialAd(interstitialId, {
+    requestNonPersonalizedAdsOnly: true,
+  });
+
+  // 2. LOAD AD WHEN COMPONENT MOUNTS
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // 3. RELOAD AD AFTER IT IS CLOSED
+  useEffect(() => {
+    if (isClosed) {
+      load();
+      // Actually reset the app flow after ad closes
+      performReset(); 
+    }
+  }, [isClosed, load]);
+
   const changeStep = useCallback((next) => {
     const isForward = next > step;
     const slideDist = 20; // Reduced distance for subtler movement
@@ -1586,15 +1606,29 @@ const processManualText = async (directInputText) => {
     }
   };
 
-  const resetFlow = () => {
+  const performReset = () => {
     setIsGeminiLoading(false);
-    setStep(0); setFinalAnalysis(null); setOcrText(''); 
-      setPreProcessedIngredients([]); setSelectedClaims([]);
-      setShowSwipeHint(true);
-      setSearchQuery('');
-      setProductName(''); setShowManualTypeGrid(false); setManualIngredients('');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setFrontImageUri(null);
+    setStep(0); 
+    setFinalAnalysis(null); 
+    setOcrText(''); 
+    setPreProcessedIngredients([]); 
+    setSelectedClaims([]);
+    setShowSwipeHint(true);
+    setSearchQuery('');
+    setProductName(''); 
+    setShowManualTypeGrid(false); 
+    setManualIngredients('');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFrontImageUri(null);
+  };
+
+  // CREATE NEW resetFlow that triggers the Ad
+  const resetFlow = () => {
+    if (isLoaded) {
+      show(); // Show ad, then "useEffect" above calls performReset when closed
+    } else {
+      performReset(); // No ad loaded? Just reset immediately
+    }
   };
 
   const openSaveModal = () => {
@@ -2114,7 +2148,22 @@ return (
                             </View>
                         )}
 
-                        {step === 4 && renderResultStep()}
+{step === 4 && (
+                <>
+                    {renderResultStep()}
+                    
+                    {/* ADD BANNER AD HERE */}
+                    <View style={{ alignItems: 'center', marginVertical: 20 }}>
+                        <BannerAd
+                            unitId={adUnitId}
+                            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+                            requestOptions={{
+                                requestNonPersonalizedAdsOnly: true,
+                            }}
+                        />
+                    </View>
+                </>
+            )}
                         
                     </Animated.View>
                 </ScrollView>
