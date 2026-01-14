@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 // --- THEME MATCHING PROFILE.JS ---
@@ -49,9 +49,41 @@ const FadeInView = ({ children, delay = 0 }) => {
     );
 };
 
+// --- FAST SHIMMER BUTTON WRAPPER ---
+const FastShimmerButton = ({ children }) => {
+    const opacityAnim = useRef(new Animated.Value(0.8)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.parallel([
+                Animated.sequence([
+                    Animated.timing(opacityAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+                    Animated.timing(opacityAnim, { toValue: 0.8, duration: 600, useNativeDriver: true })
+                ]),
+                Animated.sequence([
+                    Animated.timing(scaleAnim, { toValue: 1.03, duration: 600, useNativeDriver: true }),
+                    Animated.timing(scaleAnim, { toValue: 1, duration: 600, useNativeDriver: true })
+                ])
+            ])
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, []);
+
+    return (
+        <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], width: '100%' }}>
+            {children}
+        </Animated.View>
+    );
+};
+
 // --- SHARED BUTTON ---
-const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress }) => {
-    const IconComponent = iconFamily === "MaterialCommunityIcons" ? MaterialCommunityIcons : MaterialIcons;
+const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, variant = 'primary' }) => {
+    const IconComponent = iconFamily === "MaterialCommunityIcons" ? MaterialCommunityIcons : 
+                          iconFamily === "FontAwesome5" ? FontAwesome5 : MaterialIcons;
+
+    const isPrimary = variant === 'primary';
 
     return (
         <Pressable
@@ -61,29 +93,37 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress }) =>
             }}
             style={({ pressed }) => [
                 styles.actionButton,
+                !isPrimary && styles.actionButtonOutline,
                 { opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }
             ]}
         >
-            <LinearGradient
-                colors={[COLORS.accentGreen, '#4a8a73']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.actionButtonGradient}
-            >
-                <IconComponent name={icon} size={18} color={COLORS.textOnAccent} />
-                <Text style={styles.actionButtonText}>{label}</Text>
-            </LinearGradient>
+            {isPrimary ? (
+                <LinearGradient
+                    colors={[COLORS.accentGreen, '#4a8a73']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.actionButtonGradient}
+                >
+                    <IconComponent name={icon} size={18} color={COLORS.textOnAccent} />
+                    <Text style={styles.actionButtonText}>{label}</Text>
+                </LinearGradient>
+            ) : (
+                <View style={styles.actionButtonGradient}>
+                    <IconComponent name={icon} size={18} color={COLORS.accentGreen} />
+                    <Text style={[styles.actionButtonText, { color: COLORS.accentGreen }]}>{label}</Text>
+                </View>
+            )}
         </Pressable>
     );
 };
 
-// --- 1. SHELF EMPTY STATE (Updated for Dock) ---
+// --- 1. SHELF EMPTY STATE (Updated with instruction step) ---
 export const ShelfEmptyState = ({ onPress }) => (
     <FadeInView>
         <View style={styles.container}>
             <View style={styles.iconCircle}>
                 <Image 
                     source={require('../../../assets/icon.png')} 
-                    style={{ width: 80, height: 80, resizeMode: 'contain' }} 
+                    style={{ width: 80, height: 80, resizeMode: 'contain', opacity: 0.9 }} 
                 />
             </View>
             
@@ -93,43 +133,81 @@ export const ShelfEmptyState = ({ onPress }) => (
             </Text>
 
             <View style={styles.featuresList}>
-                <FeatureItem icon="photo-camera" text="اضغطي على زر الكاميرا العائم في الأسفل" />
+                <FeatureItem icon="touch-app" text="اضغطي على زر 'إضافة منتج' في الأسفل" />
                 <FeatureItem icon="qr-code-scanner" text="صوري قائمة مكونات المنتج" />
                 <FeatureItem icon="insights" text="احصلي على تحليل مفصل للمنتج ومكوناته" />
+                <FeatureItem icon="save" text="اضغطي على 'إضافة للرف'" />
             </View>
 
-            <WathiqButton label="فتح الكاميرا الآن" icon="add-a-photo" onPress={onPress} />
+            <View style={{ width: '100%' }}>
+                <WathiqButton label="إضافة منتج الآن" icon="add-a-photo" onPress={onPress} />
+            </View>
         </View>
     </FadeInView>
 );
 
-// --- 2. ANALYSIS EMPTY STATE ---
+// --- 2. ANALYSIS EMPTY STATE (Updated Layout + Shimmer) ---
 export const AnalysisEmptyState = ({ onPress }) => (
     <FadeInView>
         <View style={styles.container}>
-            <LinearGradient
-                colors={['rgba(90, 156, 132, 0.08)', 'transparent']}
-                style={StyleSheet.absoluteFill}
-            />
-            <View style={[styles.iconCircle, { borderColor: COLORS.gold }]}>
-                <MaterialIcons name="donut-large" size={36} color={COLORS.gold} />
+            
+            {/* 1. The Insistence Header */}
+            <View style={styles.lockedHeader}>
+                <View style={[styles.iconCircle, { width: 50, height: 50, borderColor: COLORS.gold, backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
+                    <FontAwesome5 name="lock" size={20} color={COLORS.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.titleAlignRight}>التحليل بانتظار البيانات</Text>
+                    <Text style={styles.descAlignRight}>يجب إضافة منتجات للرف لفتح التحليل.</Text>
+                </View>
             </View>
 
-            <Text style={styles.title}>التحليل بانتظار البيانات</Text>
-            <Text style={styles.description}>
-                يقوم وثيق بربط مكونات منتجاتك ببعضها البعض لكشف الفعالية والأمان.
-            </Text>
+            {/* 2. The Steps Visual (Insistence) */}
+            <View style={styles.stepsContainer}>
+                {/* Step 1: Active */}
+                <View style={styles.stepRow}>
+                    <View style={styles.stepIndicatorContainer}>
+                        <View style={[styles.stepDot, { borderColor: COLORS.danger, backgroundColor: COLORS.danger + '20' }]}>
+                            <MaterialIcons name="priority-high" size={12} color={COLORS.danger} />
+                        </View>
+                        <View style={styles.stepLine} />
+                    </View>
+                    <View style={styles.stepContent}>
+                        <Text style={[styles.stepTitle, { color: COLORS.danger }]}>إضافة منتجات للرف</Text>
+                        <Text style={styles.stepDesc}>الخطوة الأولى</Text>
+                    </View>
+                </View>
 
+                {/* Step 2: Locked */}
+                <View style={styles.stepRow}>
+                    <View style={styles.stepIndicatorContainer}>
+                        <View style={styles.stepDotLocked} />
+                    </View>
+                    <View style={styles.stepContent}>
+                        <Text style={styles.stepTitleLocked}>فتح لوحة التحليل الشاملة</Text>
+                        <Text style={styles.stepDesc}>مغلق حالياً</Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* SHIMMER BUTTON: Under the Steps */}
+            <View style={{ width: '100%', marginBottom: 15 }}>
+                <FastShimmerButton>
+                    <WathiqButton label="إضافة منتجات للرف" icon="add" onPress={onPress} />
+                </FastShimmerButton>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* 3. The Features (Motivation) */}
+            <Text style={styles.sectionHeader}>مالذي ستحصلين عليه؟</Text>
             <View style={styles.featuresGrid}>
-                <FeatureCard icon="health-and-safety" title="صحة الحاجز" desc="قياس الإجهاد الكيميائي" color={COLORS.success} />
+                <FeatureCard icon="shield" title="صحة الحاجز" desc="قياس الإجهاد الكيميائي" color={COLORS.success} />
                 <FeatureCard icon="wb-sunny" title="المناخ والبشرة" desc="تحليل تأثير الطقس" color={COLORS.accentGreen} />
                 <FeatureCard icon="verified" title="أهداف البشرة" desc="مدى توافق المنتجات" color={COLORS.gold} />
                 <FeatureCard icon="warning" title="التعارضات" desc="تنبيهات الخلط الخاطئ" color={COLORS.danger} />
             </View>
 
-            <View style={{ marginTop: 20 }}>
-                <WathiqButton label="إضافة منتجات للتحليل" icon="playlist-add" onPress={onPress} />
-            </View>
         </View>
     </FadeInView>
 );
@@ -167,6 +245,7 @@ export const IngredientsEmptyState = () => (
             </View>
             <Text style={[styles.title, { color: COLORS.textSecondary }]}>موسوعة المكونات</Text>
             <Text style={styles.description}>بعد إضافة منتج للرف، ستظهر هنا بطاقات تعريفية ذكية لكل مكون.</Text>
+            
             <View style={{ flexDirection: 'row-reverse', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <Badge text="الإسم العلمي" icon="science" />
                 <Badge text="الوظيفة" icon="work-outline" />
@@ -200,7 +279,7 @@ export const MigrationSuccessState = () => (
     </FadeInView>
 );
 
-// --- SUB-COMPONENTS (With Material Icons) ---
+// --- SUB-COMPONENTS ---
 
 const FeatureItem = ({ icon, text }) => (
     <View style={styles.featureRow}>
@@ -231,7 +310,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 25,
         backgroundColor: COLORS.card,
-        borderRadius: 28, // Material 3 uses more rounded corners
+        borderRadius: 28, 
         borderWidth: 1,
         borderColor: COLORS.border,
         marginVertical: 10,
@@ -241,7 +320,7 @@ const styles = StyleSheet.create({
     iconCircle: {
         width: 72,
         height: 72,
-        borderRadius: 24, // Squircle-ish
+        borderRadius: 24, 
         backgroundColor: 'rgba(90, 156, 132, 0.08)',
         justifyContent: 'center',
         alignItems: 'center',
@@ -265,6 +344,110 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         maxWidth: '95%',
     },
+    
+    // --- Specific Styles for Locked Analysis ---
+    lockedHeader: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+        marginBottom: 15,
+    },
+    titleAlignRight: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    descAlignRight: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+    },
+    stepsContainer: {
+        width: '100%',
+        marginBottom: 20,
+        paddingRight: 5,
+    },
+    stepRow: {
+        flexDirection: 'row-reverse',
+        alignItems: 'flex-start',
+        minHeight: 50,
+    },
+    stepIndicatorContainer: {
+        alignItems: 'center',
+        marginLeft: 15,
+        width: 24,
+    },
+    stepDot: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        zIndex: 2,
+        backgroundColor: COLORS.card,
+    },
+    stepDotLocked: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: COLORS.border,
+        marginTop: 6,
+        zIndex: 2,
+    },
+    stepLine: {
+        width: 2,
+        flex: 1,
+        backgroundColor: COLORS.border,
+        marginVertical: 4,
+    },
+    stepContent: {
+        flex: 1,
+        paddingTop: 1,
+        alignItems: 'flex-end',
+        paddingLeft: 10,
+    },
+    stepTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textPrimary,
+        marginBottom: 2,
+        textAlign: 'right',
+    },
+    stepTitleLocked: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textDim,
+        marginBottom: 2,
+        textAlign: 'right',
+    },
+    stepDesc: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 11,
+        color: COLORS.textSecondary,
+        textAlign: 'right',
+    },
+    divider: {
+        width: '100%',
+        height: 1,
+        backgroundColor: COLORS.border,
+        marginVertical: 15,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: COLORS.border
+    },
+    sectionHeader: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        alignSelf: 'center',
+        marginBottom: 15,
+    },
+
+    // --- Standard Features List ---
     featuresList: {
         alignSelf: 'stretch',
         paddingHorizontal: 5,
@@ -277,12 +460,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     featureText: {
-        fontFamily: 'Tajawal-Bold', // Bolder for readability
+        fontFamily: 'Tajawal-Bold', 
         fontSize: 13,
         color: COLORS.textPrimary,
         textAlign: 'right',
         flex: 1,
     },
+
+    // --- Grid for Analysis Features ---
     featuresGrid: {
         flexDirection: 'row-reverse',
         flexWrap: 'wrap',
@@ -311,6 +496,8 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 14,
     },
+    
+    // --- Buttons ---
     actionButton: {
         borderRadius: 16,
         overflow: 'hidden',
@@ -319,10 +506,20 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
+        width: '100%',
+    },
+    actionButtonOutline: {
+        borderWidth: 1,
+        borderColor: COLORS.accentGreen,
+        width: 'auto',
+        minWidth: 80,
+        elevation: 0,
+        backgroundColor: 'transparent',
     },
     actionButtonGradient: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 10,
         paddingVertical: 14,
         paddingHorizontal: 32,
@@ -332,6 +529,8 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: COLORS.textOnAccent,
     },
+
+    // --- Badges ---
     badge: {
         flexDirection: 'row-reverse',
         alignItems: 'center',

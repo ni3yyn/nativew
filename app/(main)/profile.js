@@ -1609,8 +1609,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
                       </StaggeredItem>
                   ))
               ) : (
-                  <RoutineEmptyState onPress={() => onOpenAddStepModal(handleAddStep)} />
-              )}
+<RoutineEmptyState onPress={handleAutoBuildRoutine} />              )}
           </View>
           
   

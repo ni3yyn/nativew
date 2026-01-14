@@ -199,7 +199,7 @@ export default function CommunityScreen() {
                 return {
                     id: post.id,
                     userId: post.firebase_user_id,
-                    userName: post.author_snapshot?.name || 'مستخدم',
+                    userName: post.author_snapshot?.name || 'مستخدم وثيق',
                     authorSettings: post.author_snapshot || {},
     
                     type: post.type,
@@ -301,7 +301,7 @@ export default function CommunityScreen() {
             await createPost(
                 payload, 
                 user.uid, 
-                userProfile?.settings?.name || 'مستخدم',
+                userProfile?.settings?.name || 'مستخدم وثيق',
                 userProfile?.settings || {} 
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

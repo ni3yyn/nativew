@@ -1942,6 +1942,20 @@
   resolved "https://registry.npmjs.org/@react-native-community/slider/-/slider-5.0.1.tgz"
   integrity sha512-K3JRWkIW4wQ79YJ6+BPZzp1SamoikxfPRw7Yw4B4PElEQmqZFrmH9M5LxvIo460/3QSrZF/wCgi3qizJt7g/iw==
 
+"@react-native-firebase/analytics@^23.8.2":
+  version "23.8.2"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/analytics/-/analytics-23.8.2.tgz#4bca6d17ee3076254da23a21910a5fb3799b3a72"
+  integrity sha512-5dLGcyzT1c9pgmLm3fBKXPDy61WZuHHn48yp+cxhWtU7aeehkGk2IMoxyjU6KasiPQSovfeK6qqkSq7U7/HOqA==
+  dependencies:
+    superstruct "^2.0.2"
+
+"@react-native-firebase/app@^23.8.2":
+  version "23.8.2"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/app/-/app-23.8.2.tgz#0fbc2d603eb0b51dd2c3b8a22bd8bdced4027b90"
+  integrity sha512-L1RbO7tQwjO7t3+1HWz9z4zxLKbDJ2ErOu43HCfPOXv10aJT/14E3F1pCmGAeG7oqImCH0pK3X+NaFfcnUAjPA==
+  dependencies:
+    firebase "12.7.0"
+
 "@react-native/assets-registry@0.81.5":
   version "0.81.5"
   resolved "https://registry.npmjs.org/@react-native/assets-registry/-/assets-registry-0.81.5.tgz"
@@ -4366,7 +4380,7 @@ find-up@^5.0.0:
     locate-path "^6.0.0"
     path-exists "^4.0.0"
 
-firebase@^12.6.0:
+firebase@12.7.0, firebase@^12.6.0:
   version "12.7.0"
   resolved "https://registry.npmjs.org/firebase/-/firebase-12.7.0.tgz"
   integrity sha512-ZBZg9jFo8uH4Emd7caOqtalKJfDGHnHQSrCPiqRAdTFQd0wL3ERilUBfhnhBLnlernugkN/o7nJa0p+sE71Izg==
@@ -7957,6 +7971,11 @@ sucrase@~3.35.1:
     pirates "^4.0.1"
     tinyglobby "^0.2.11"
     ts-interface-checker "^0.1.9"
+
+superstruct@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/superstruct/-/superstruct-2.0.2.tgz#3f6d32fbdc11c357deff127d591a39b996300c54"
+  integrity sha512-uV+TFRZdXsqXTL2pRvujROjdZQ4RAlBUS5BTh9IGm+jTqQntYThciG/qu57Gs69yjnVUSqdxF9YLmSnpupBW9A==
 
 supports-color@^5.3.0:
   version "5.5.0"

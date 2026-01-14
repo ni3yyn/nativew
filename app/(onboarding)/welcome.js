@@ -49,7 +49,7 @@ const SCALP_OPTIONS = [
     { id: 'normal', label: 'عادية', icon: 'user' }
 ];
 
-// --- NEW: GOALS LIST ---
+// --- GOALS LIST ---
 const GOALS_LIST = [
     { id: 'acne', name: 'مكافحة حب الشباب', desc: 'التخلص من البثور وآثارها' },
     { id: 'anti_aging', name: 'مكافحة الشيخوخة', desc: 'تقليل التجاعيد والخطوط الدقيقة' },
@@ -76,7 +76,6 @@ const ALLERGIES_LIST = [
     { id: 'gluten', name: 'الغلوتين' },
 ];
 
-// Updated Config to include Goals (Step index 4)
 const getStepConfig = (gender) => {
   const isFemale = gender === 'أنثى';
   return [
@@ -84,7 +83,6 @@ const getStepConfig = (gender) => {
     { id: 'name', title: isFemale ? 'ما هو اسمكِ؟' : 'ما هو اسمك؟', subtitle: isFemale ? 'الاسم الذي تحبين أن نناديك به' : 'الاسم الذي تحب أن نناديك به', type: 'input' },
     { id: 'skin', title: isFemale ? 'نوع بشرتكِ؟' : 'نوع بشرتك؟', subtitle: isFemale ? 'أساس العناية ببشرتكِ' : 'أساس العناية ببشرتك', type: 'single' },
     { id: 'scalp', title: isFemale ? 'فروة رأسكِ؟' : 'فروة رأسك؟', subtitle: isFemale ? 'مهم لتحليل الشامبو المناسب لكِ' : 'مهم لتحليل الشامبو المناسب لك', type: 'single' },
-    // NEW STEP HERE
     { id: 'goals', title: isFemale ? 'ما هي أهدافك؟' : 'ما هي أهدافك؟', subtitle: isFemale ? 'لنختار لكِ الروتين والمنتجات المثالية' : 'لنختار لك الروتين والمنتجات المثالية', type: 'multi' },
     { id: 'conditions', title: isFemale ? 'مخاوف صحية؟' : 'مخاوف صحية؟', subtitle: isFemale ? 'لتنبيهكِ من المنتجات التي قد تضركِ' : 'لتنبيهك من المنتجات التي قد تضرك', type: 'multi' },
     { id: 'allergies', title: isFemale ? 'لديكِ حساسية؟' : 'لديك حساسية؟', subtitle: isFemale ? 'لتحذيركِ فوريا من المكونات' : 'لتحذيرك فوريا من المكونات', type: 'multi' },
@@ -92,7 +90,7 @@ const getStepConfig = (gender) => {
   ];
 };
 
-// --- 1. COMPONENT: ORGANIC SPORE ---
+// --- COMPONENT: ORGANIC SPORE ---
 const Spore = ({ size, startX, duration }) => {
   const animY = useRef(new Animated.Value(0)).current; 
   useEffect(() => {
@@ -102,7 +100,7 @@ const Spore = ({ size, startX, duration }) => {
   return <Animated.View style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }} />;
 };
 
-// --- 2. COMPONENT: SQUARE OPTION (GRID) ---
+// --- COMPONENT: SQUARE OPTION ---
 const SquareOption = ({ label, icon, selected, onPress, index }) => {
     const scale = useRef(new Animated.Value(0)).current;
     useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: index * 50, useNativeDriver: true }).start(); }, []);
@@ -120,7 +118,7 @@ const SquareOption = ({ label, icon, selected, onPress, index }) => {
     );
 };
 
-// --- 3. COMPONENT: ROW OPTION (LIST) - UPDATED FOR DESCRIPTION ---
+// --- COMPONENT: ROW OPTION ---
 const RowOption = ({ label, selected, onPress, index, category, description }) => {
     const slide = useRef(new Animated.Value(50)).current;
     const fade = useRef(new Animated.Value(0)).current;
@@ -162,9 +160,13 @@ export default function WelcomeScreen() {
   const contentTransX = useRef(new Animated.Value(0)).current; 
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  // --- Error Animation State ---
+  const [showNameError, setShowNameError] = useState(false);
+  const errorFadeAnim = useRef(new Animated.Value(0)).current;
+
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  // NEW: Initialized 'goals' as empty array to prevent firebase errors
+  
   const [formData, setFormData] = useState({ 
     name: '', 
     gender: '', 
@@ -177,7 +179,7 @@ export default function WelcomeScreen() {
 
   const STEPS = useMemo(() => getStepConfig(formData.gender), [formData.gender]);
   const particles = useMemo(() => [...Array(20)].map((_, i) => ({
-    id: i, // <--- CHANGED from 'key' to 'id'
+    id: i,
     size: Math.random()*5+2, 
     startX: Math.random()*width, 
     duration: 15000+Math.random()*10000,
@@ -191,9 +193,21 @@ export default function WelcomeScreen() {
       }).start();
   }, [currentStep]);
 
+  // --- Animate Error Message ---
+  useEffect(() => {
+    Animated.timing(errorFadeAnim, {
+        toValue: showNameError ? 1 : 0,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false 
+    }).start();
+  }, [showNameError]);
+
   const changeStep = (dir) => {
       const next = currentStep + dir;
       if(next < 0 || next >= STEPS.length) { if(next >= STEPS.length) finishOnboarding(); return; }
+
+      setShowNameError(false);
 
       Animated.parallel([
           Animated.timing(contentOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
@@ -208,6 +222,18 @@ export default function WelcomeScreen() {
       });
   };
 
+  const handleNextStep = () => {
+    if (STEPS[currentStep].id === 'name') {
+        const name = formData.name.trim();
+        if (name.length < 4) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            setShowNameError(true);
+            return;
+        }
+    }
+    changeStep(1);
+  };
+
   const handleSingleSelect = (field, value) => {
       setFormData(prev => ({ ...prev, [field]: value }));
       setTimeout(() => changeStep(1), 350);
@@ -215,7 +241,7 @@ export default function WelcomeScreen() {
 
   const toggleMulti = (field, value) => {
       setFormData(prev => {
-          const list = prev[field] || []; // Safety check
+          const list = prev[field] || [];
           return list.includes(value) ? { ...prev, [field]: list.filter(i => i !== value) } : { ...prev, [field]: [...list, value] };
       });
   };
@@ -225,7 +251,6 @@ export default function WelcomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setLoading(true);
     try {
-        // Saving formData directly works because we initialized goals: [] in state
         await updateDoc(doc(db, 'profiles', user.uid), { settings: formData, onboardingComplete: true });
         router.replace('/profile');
     } catch (e) { console.error(e); } 
@@ -243,16 +268,29 @@ export default function WelcomeScreen() {
           case 1: return ( 
               <View style={styles.nameContainer}>
                   <TextInput 
-                    style={styles.bigInput} 
+                    style={[styles.bigInput, showNameError && { borderBottomColor: COLORS.danger, color: COLORS.danger }]} 
                     placeholder="الاسم الكريم..." 
                     placeholderTextColor={COLORS.textDim}
                     value={formData.name} 
-                    onChangeText={t => setFormData({...formData, name: t})} 
+                    onChangeText={t => {
+                        setFormData({...formData, name: t});
+                        if (t.trim().length >= 4) setShowNameError(false);
+                    }} 
                     textAlign="center" 
                     autoFocus
                     returnKeyType="done"
-                    onSubmitEditing={() => formData.name.trim() && changeStep(1)}
+                    onSubmitEditing={handleNextStep}
                   />
+                  
+                  <Animated.View style={{
+                      height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 30] }),
+                      opacity: errorFadeAnim,
+                      overflow: 'hidden',
+                      justifyContent: 'center',
+                  }}>
+                      <Text style={styles.errorText}>يجب أن يتكون الاسم من 4 أحرف على الأقل</Text>
+                  </Animated.View>
+
                   <Text style={styles.inputHint}>اضغط "التالي" للمتابعة</Text>
               </View>
           );
@@ -266,7 +304,6 @@ export default function WelcomeScreen() {
                   {SCALP_OPTIONS.map((t, i) => <SquareOption index={i} key={t.id} label={t.label} icon={t.icon} selected={formData.scalpType === t.id} onPress={() => handleSingleSelect('scalpType', t.id)} />)}
               </View>
           );
-          // NEW CASE 4: GOALS
           case 4: return (
               <View style={styles.listContainer}>
                   {GOALS_LIST.map((g, i) => (
@@ -274,7 +311,7 @@ export default function WelcomeScreen() {
                         index={i} 
                         key={g.id} 
                         label={g.name} 
-                        description={g.desc} // Passing description
+                        description={g.desc}
                         selected={formData.goals.includes(g.id)} 
                         onPress={() => toggleMulti('goals', g.id)} 
                       />
@@ -304,12 +341,9 @@ export default function WelcomeScreen() {
   };
 
   const isNextEnabled = () => {
-      if(currentStep === 1 && !formData.name.trim()) return false;
-      // Note: Goals, Conditions, Allergies are optional (multi-select), so next is enabled even if empty
+      if(currentStep === 1 && formData.name.trim().length === 0) return false;
       return true; 
   };
-
-  // ... (Render return stays mostly the same, ensuring STEPS[currentStep] index access is safe via the logic above)
   
   return (
     <View style={styles.container}>
@@ -317,12 +351,15 @@ export default function WelcomeScreen() {
       <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
         <LinearGradient colors={['rgba(26, 45, 39, 0.85)', 'rgba(26, 45, 39, 0.95)']} style={StyleSheet.absoluteFill} />
         {particles.map(p => <Spore key={p.id} {...p} />)}
+        
+        {/* --- KEYBOARD HANDLING: ManualInputSheet Method --- */}
         <KeyboardAvoidingView 
-    behavior="padding" 
-    style={{flex: 1}} 
-    // On adjustPan, we usually don't need a large offset.
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
->
+            behavior={Platform.OS === "ios" ? "padding" : "padding"} 
+            style={{flex: 1}} 
+            // Setting offset to 0 or similar ensures it doesn't over-lift.
+            // Adjust to 20 if status bar area causes issues, but 0 usually works best with 'padding' on full screen.
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
           <View style={[styles.safeArea, { paddingTop: 40 + insets.top, paddingBottom: insets.bottom }]}>
             
             <View style={styles.progressContainer}>
@@ -341,7 +378,13 @@ export default function WelcomeScreen() {
 
                     <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
                         <ScrollView 
-                            contentContainerStyle={{ flexGrow: 1, paddingBottom: 20, paddingTop: currentStep === 1 ? 40 : 0, justifyContent: currentStep === 1 ? 'flex-start' : 'center' }} 
+                            contentContainerStyle={{ 
+                                flexGrow: 1, 
+                                paddingBottom: 20, 
+                                // Reduce top padding when keyboard is up (Name Step) to keep input valid
+                                paddingTop: currentStep === 1 ? 20 : 0, 
+                                justifyContent: currentStep === 1 ? 'flex-start' : 'center' 
+                            }} 
                             showsVerticalScrollIndicator={false}
                             keyboardShouldPersistTaps="handled"
                         >
@@ -356,9 +399,12 @@ export default function WelcomeScreen() {
                             </TouchableOpacity>
                         ) : <View style={{ width: 50 }} />}
 
-                        {/* Hide Next button on Single Select screens to force selection (Gender, Skin, Scalp) */}
                         {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
-                            <TouchableOpacity onPress={() => changeStep(1)} disabled={!isNextEnabled() || loading} style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}>
+                            <TouchableOpacity 
+                                onPress={handleNextStep} 
+                                disabled={!isNextEnabled() || loading} 
+                                style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
+                            >
                                 <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.btnGradient} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
                                     {loading ? <Text style={styles.btnText}>جاري الحفظ...</Text> : <Text style={styles.btnText}>{currentStep === 7 ? (formData.gender === 'أنثى' ? 'انطلقي' : 'انطلق') : 'التالي'}</Text>}
                                     {currentStep !== 7 && !loading && <Ionicons name="arrow-forward" size={18} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />}
@@ -376,10 +422,10 @@ export default function WelcomeScreen() {
   );
 }
 
-// --- STYLES (UNCHANGED) ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  safeArea: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, paddingTop: 40 },
+  // Changed justifyContent to center, but KAV with padding will resize this area.
+  safeArea: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
   progressContainer: { marginBottom: 15, paddingHorizontal: 5 },
   stepCounter: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 13, marginBottom: 8, textAlign: 'right' },
   track: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
@@ -399,7 +445,7 @@ const styles = StyleSheet.create({
   checkBadge: { position: 'absolute', top: 10, right: 10, backgroundColor: COLORS.accentGreen, padding: 4, borderRadius: 10 },
   rowContainer: { width: '100%' },
   rowInner: { 
-    flexDirection: 'row-reverse', // <--- CHANGED: Starts from Right
+    flexDirection: 'row-reverse', 
     alignItems: 'center', 
     padding: 16, 
     borderRadius: 16, 
@@ -420,26 +466,27 @@ checkbox: {
     borderColor: COLORS.textDim, 
     alignItems: 'center', 
     justifyContent: 'center', 
-    marginLeft: 15, // <--- CHANGED: Margin Left because checkbox is on Right
-    marginRight: 0  // <--- Reset
+    marginLeft: 15, 
+    marginRight: 0 
 },
 rowText: { 
     fontSize: 16, 
     fontFamily: 'Tajawal-Regular', 
     color: COLORS.textPrimary, 
     flex: 1,
-    textAlign: 'right' // <--- CHANGED: Arabic Alignment
+    textAlign: 'right'
 },
 rowSub: { 
     fontSize: 12, 
     fontFamily: 'Tajawal-Regular', 
     color: COLORS.textSecondary, 
     marginTop: 4,
-    textAlign: 'right' // <--- CHANGED: Arabic Alignment
+    textAlign: 'right'
 },
-nameContainer: { width: '100%', alignItems: 'center', gap: 15, marginTop: Platform.OS === 'ios' ? 20 : 40 },
+  nameContainer: { width: '100%', alignItems: 'center', gap: 10, marginTop: Platform.OS === 'ios' ? 20 : 40 },
   bigInput: { width: '100%', fontSize: 26, fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, borderBottomWidth: 2, borderBottomColor: COLORS.accentGreen, paddingVertical: 10, textAlign: 'center' },
-  inputHint: { color: COLORS.textDim, fontSize: 14, fontFamily: 'Tajawal-Regular' },
+  inputHint: { color: COLORS.textDim, fontSize: 14, fontFamily: 'Tajawal-Regular', marginTop: 10 },
+  errorText: { color: COLORS.danger, fontSize: 14, fontFamily: 'Tajawal-Bold', textAlign: 'center' },
   centerFlex: { width: '100%', alignItems: 'center', justifyContent: 'center' },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.accentGreen, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   finishTitle: { fontSize: 26, fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, marginBottom: 8 },

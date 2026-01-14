@@ -36,7 +36,7 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
     const [isLiked, setIsLiked] = useState(false);
     const [likesCount, setLikesCount] = useState(item.likesCount || 0);
     
-    const displayName = item.userName || "مستخدم";
+    const displayName = item.userName || "مستخدم وثيق";
     const initial = displayName.charAt(0).toUpperCase();
 
     // Animations
@@ -165,7 +165,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         text: row.content,
         createdAt: row.created_at,
         userId: row.firebase_user_id,
-        userName: row.author_snapshot?.name || 'مستخدم',
+        userName: row.author_snapshot?.name || 'مستخدم وثيق',
         authorSettings: row.author_snapshot,
         likesCount: 0 
     });
@@ -251,7 +251,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         setComment(''); 
         
         const authorSnapshot = {
-            name: currentUser.settings?.name || currentUser.name || 'مستخدم',
+            name: currentUser.settings?.name || currentUser.name || 'مستخدم وثيق',
             skinType: currentUser.settings?.skinType || null,
             scalpType: currentUser.settings?.scalpType || null
         };
@@ -426,7 +426,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
                             <TextInput 
                                 style={styles.textInput} 
-                                placeholder={`رد باسم ${currentUser?.settings?.name?.split(' ')[0] || 'مستخدم'}...`}
+                                placeholder={`رد باسم ${currentUser?.settings?.name?.split(' ')[0] || 'مستخدم وثيق'}...`}
                                 placeholderTextColor={COLORS.textDim}
                                 value={comment}
                                 onChangeText={setComment}

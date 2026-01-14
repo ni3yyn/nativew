@@ -225,7 +225,7 @@ export default function LoginScreen() {
           createdAt: Timestamp.now(), 
           onboardingComplete: false,
           settings: { 
-              name: 'مستخدم جديد', // Default placeholder
+              name: 'الغالية', // Default placeholder
               gender: '', 
               skinType: '', 
               scalpType: '',

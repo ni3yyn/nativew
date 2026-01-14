@@ -7,7 +7,28 @@ import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
+import analytics from '@react-native-firebase/analytics';
+
 const { width, height } = Dimensions.get('window');
+
+// ============================================================================
+// PART 0: ANALYTICS SERVICE (ABSTRACTION LAYER)
+// ============================================================================
+/**
+ * Central function to handle analytics. 
+ */
+const trackInteraction = async (eventName, params = {}) => {
+    // 1. DEVELOPMENT MODE (Console Log)
+    // This helps you see exactly what is being tracked while you develop.
+    console.log(`📊 [Analytics] Event: ${eventName}`, params);
+
+
+    try {
+        await analytics().logEvent(eventName, params);
+    } catch (error) {
+        console.warn('Analytics Error:', error);
+    }
+};
 
 // --- THEME COLORS ---
 const COLORS = {
@@ -24,7 +45,7 @@ const COLORS = {
 };
 
 // ============================================================================
-// PART 1: THE SLIDING SHEET COMPONENT (FIXED CONTENT SWAPPING)
+// PART 1: THE SLIDING SHEET COMPONENT
 // ============================================================================
 const DockSheet = ({ visible, onClose, type, onSelect }) => {
     const [showModal, setShowModal] = useState(false);
@@ -42,16 +63,17 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 
     useEffect(() => {
         if (visible) {
-            // 1. FIX: Force the value to 'height' (off-screen) immediately
-            // This ensures that even if it renders instantly, it renders off-screen.
+            // TRACKING: Log when the sheet opens
+            trackInteraction('dock_sheet_open', { sheet_type: type });
+
+            // 1. Force values for start position
             slideAnim.setValue(height);
             fadeAnim.setValue(0);
 
             // 2. Mount the Modal
             setShowModal(true);
 
-            // 3. FIX: Use requestAnimationFrame
-            // This waits for the Native View to be mounted and ready before starting the animation
+            // 3. Animate In
             requestAnimationFrame(() => {
                 Animated.parallel([
                     Animated.timing(fadeAnim, { 
@@ -91,6 +113,13 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 
     const handleAction = (actionId) => {
         Haptics.selectionAsync();
+        
+        // TRACKING: Log specific action selected from sheet
+        trackInteraction('dock_action_select', { 
+            action_id: actionId,
+            source_sheet: safeType 
+        });
+
         onClose(); 
         onSelect(actionId);
     };
@@ -172,10 +201,7 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                 <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 </Animated.View>
-                {/* 
-                   FIX 4: Added 'renderToHardwareTextureAndroid' for smoother performance 
-                   and to help prevent artifacting during the slide.
-                */}
+                {/* Hardware Texture used for smoother sliding on Android */}
                 <Animated.View 
                     style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
                     renderToHardwareTextureAndroid={true} 
@@ -190,9 +216,12 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 // ============================================================================
 // PART 2: DOCK ICON
 // ============================================================================
-const DockIcon = ({ icon, label, isActive, onPress, specialColor }) => {
+const DockIcon = ({ icon, label, isActive, onPress, specialColor, enablePulse, id }) => {
     const animValue = useRef(new Animated.Value(isActive ? 1 : 0)).current;
     
+    // Pulse Animation Ref (For the glowing effect)
+    const pulseAnim = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
         Animated.spring(animValue, {
             toValue: isActive ? 1 : 0,
@@ -202,8 +231,39 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor }) => {
         }).start();
     }, [isActive]);
 
+    // Setup Pulse Effect Logic
+    useEffect(() => {
+        if (enablePulse && !isActive) {
+            const pulseSequence = Animated.loop(
+                Animated.sequence([
+                    Animated.delay(4000), // Wait 4 seconds between pulses
+                    Animated.timing(pulseAnim, { 
+                        toValue: 1, 
+                        duration: 1500, 
+                        useNativeDriver: true,
+                        easing: Easing.inOut(Easing.ease)
+                    }),
+                    Animated.timing(pulseAnim, { 
+                        toValue: 0, 
+                        duration: 1500, 
+                        useNativeDriver: true, 
+                        easing: Easing.inOut(Easing.ease)
+                    })
+                ])
+            );
+            pulseSequence.start();
+            return () => pulseSequence.stop();
+        } else {
+            pulseAnim.setValue(0);
+        }
+    }, [enablePulse, isActive]);
+
     const handlePress = () => {
         if (!isActive) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        // TRACKING: Log tab selection
+        trackInteraction('dock_tab_click', { tab_id: id });
+
         onPress();
     };
 
@@ -218,13 +278,37 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor }) => {
     return (
         <TouchableOpacity activeOpacity={1} onPress={handlePress} style={styles.dockItem}>
             <View style={styles.iconContentContainer}>
-                <Animated.View style={{ transform: [{ scale }] }}>
-                    <MaterialIcons 
-                        name={icon} 
-                        size={26} 
-                        color={isActive ? activeColor : inactiveColor} 
-                    />
-                </Animated.View>
+                <View>
+                    {/* Standard Icon */}
+                    <Animated.View style={{ transform: [{ scale }] }}>
+                        <MaterialIcons 
+                            name={icon} 
+                            size={26} 
+                            color={isActive ? activeColor : inactiveColor} 
+                        />
+                    </Animated.View>
+
+                    {/* Pulse Glow Overlay (Only visible if enablePulse is true and tab is inactive) */}
+                    {enablePulse && !isActive && (
+                        <Animated.View style={[
+                            StyleSheet.absoluteFill, 
+                            { 
+                                opacity: pulseAnim,
+                                shadowColor: COLORS.mint,
+                                shadowOffset: { width: 0, height: 0 },
+                                shadowOpacity: 1,
+                                shadowRadius: 8,
+                            }
+                        ]}>
+                             <MaterialIcons 
+                                name={icon} 
+                                size={26} 
+                                color={COLORS.mint} 
+                            />
+                        </Animated.View>
+                    )}
+                </View>
+                
                 <Text style={[
                     styles.dockLabel, 
                     { 
@@ -245,8 +329,41 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor }) => {
 export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
     const [sheetState, setSheetState] = useState(null); // 'camera', 'more', or null
     const cameraScale = useRef(new Animated.Value(1)).current;
+    
+    // Shimmer Animation for Camera Button
+    const shimmerValue = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const shimmerLoop = Animated.loop(
+            Animated.sequence([
+                Animated.delay(3000), // Wait 3 seconds
+                Animated.timing(shimmerValue, {
+                    toValue: 1,
+                    duration: 1200, // Slide across in 1.2s
+                    easing: Easing.bezier(0.4, 0, 0.2, 1),
+                    useNativeDriver: true
+                }),
+                Animated.timing(shimmerValue, {
+                    toValue: 0,
+                    duration: 0, // Reset instantly
+                    useNativeDriver: true
+                })
+            ])
+        );
+        shimmerLoop.start();
+        return () => shimmerLoop.stop();
+    }, []);
+
+    // Interpolate shimmer movement
+    const shimmerTranslate = shimmerValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-100, 100]
+    });
 
     const handleCameraPress = () => {
+        // TRACKING: Camera Main Button Click
+        trackInteraction('dock_camera_click');
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Animated.sequence([
             Animated.timing(cameraScale, { toValue: 0.9, duration: 100, useNativeDriver: true }),
@@ -256,6 +373,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
     };
 
     const handleSheetSelection = (action) => {
+        // Navigation logic based on sheet selection
         switch (action) {
             case 'scan_product': navigation.push('/oilguard'); break;
             case 'compare_products': navigation.push('/comparison'); break;
@@ -273,24 +391,36 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
             <View style={styles.dockPosition}>
                 <View style={styles.cameraButtonWrapper}>
                     <TouchableOpacity activeOpacity={0.9} onPress={handleCameraPress}>
-                        <Animated.View style={[styles.cameraButton, { transform: [{ scale: cameraScale }] }]}>
+                        {/* Added overflow hidden to clip the shimmer effect inside the circle */}
+                        <Animated.View style={[
+                            styles.cameraButton, 
+                            { transform: [{ scale: cameraScale }], overflow: 'hidden' }
+                        ]}>
                             <LinearGradient
                                 colors={[COLORS.accentGreen, '#4a8a73']}
                                 style={styles.cameraGradient}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
                             >
-                                <FontAwesome5 name="camera" size={24} color={COLORS.textOnAccent} />
+                                <FontAwesome5 name="camera" size={24} color={COLORS.textOnAccent} style={{zIndex: 2}}/>
+                                
+                                {/* SHIMMER EFFECT LAYER */}
+                                <Animated.View style={[
+                                    styles.shimmerBar,
+                                    { transform: [{ translateX: shimmerTranslate }, { rotate: '30deg' }] }
+                                ]} />
+
                             </LinearGradient>
                         </Animated.View>
                     </TouchableOpacity>
-                    {/* --- NEW GLOWING TEXT --- */}
+                    {/* Glowing Text Label */}
                     <Text style={styles.watheeqLabel}>وثيق</Text>
                 </View>
 
                 <View style={styles.dockContainer}>
                     <View style={styles.dockSideGroup}>
                         <DockIcon 
+                            id="community" // ID for Analytics
                             icon="groups" 
                             label="المجتمع" 
                             isActive={activeTab === 'community'} 
@@ -298,6 +428,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                             specialColor={COLORS.gold}
                         />
                         <DockIcon 
+                            id="analysis" // ID for Analytics
                             icon="bubble-chart" 
                             label="تحليل" 
                             isActive={activeTab === 'analysis'} 
@@ -307,16 +438,23 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                     <View style={styles.centerSpacer} />
                     <View style={styles.dockSideGroup}>
                         <DockIcon 
+                            id="routine" // ID for Analytics
                             icon="spa" 
                             label="روتيني" 
                             isActive={activeTab === 'routine'} 
                             onPress={() => onTabChange('routine')}
+                            enablePulse={true} // Pulse Effect Enabled
                         />
                         <DockIcon 
+                            id="more" // ID for Analytics
                             icon="menu" 
                             label="المزيد" 
                             isActive={isMoreActive} 
-                            onPress={() => setSheetState('more')}
+                            onPress={() => {
+                                // TRACKING: More menu opened
+                                trackInteraction('dock_more_menu_open');
+                                setSheetState('more');
+                            }}
                         />
                     </View>
                 </View>
@@ -410,7 +548,14 @@ const styles = StyleSheet.create({
         padding: 4,
         backgroundColor: COLORS.background,
     },
-    // --- NEW STYLE FOR GLOWING TEXT ---
+    // --- SHIMMER BAR STYLE ---
+    shimmerBar: {
+        position: 'absolute',
+        width: 30,
+        height: 100, // Taller than button to cover diagonal
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        zIndex: 1,
+    },
     watheeqLabel: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 16,
@@ -427,7 +572,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.25)'
+        borderColor: 'rgba(255,255,255,0.25)',
+        position: 'relative', // Needed for absolute children
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,

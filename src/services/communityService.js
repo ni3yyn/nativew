@@ -12,7 +12,7 @@ import {
     try {
         // 1. Prepare Author Snapshot
         const authorSnapshot = {
-            name: userName || 'مستخدم',
+            name: userName || 'مستخدم وثيق',
             skinType: userSettings?.skinType || null,
             scalpType: userSettings?.scalpType || null,
             allergies: userSettings?.allergies || [],   // <--- ADDED
