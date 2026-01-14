@@ -28,7 +28,7 @@ export const AlertService = {
             title,
             message,
             type: 'success',
-            buttons: [{ text: 'حسناً', style: 'primary', onPress: onOk }]
+            buttons: [{ text: 'حسنا', style: 'primary', onPress: onOk }]
         });
     },
 

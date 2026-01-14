@@ -288,10 +288,10 @@ export default function LoginScreen() {
                     <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formSlide }], padding: 25 }}>
                         
                         <Text style={styles.formTitle}>
-                            {isLogin ? 'مرحباً بعودتك!' : 'انضمي لعائلة وثيق'}
+                            {isLogin ? 'مرحبا بعودتك!' : 'انضمي لعائلة وثيق'}
                         </Text>
                         <Text style={styles.formSub}>
-                            {isLogin ? 'سجلي دخولكِ للوصول إلى رفّك وتحليلاتك.' : 'أنشئي حساباً واكتشفي حقيقة منتجاتك.'}
+                            {isLogin ? 'سجلي دخولكِ للوصول إلى رفّك وتحليلاتك.' : 'أنشئي حسابا واكتشفي حقيقة منتجاتك.'}
                         </Text>
 
                         <BioInput 
@@ -335,7 +335,7 @@ export default function LoginScreen() {
                         <TouchableOpacity style={styles.switchBtn} onPress={switchMode} activeOpacity={0.6}>
                             <Text style={styles.switchText}>
                                 {isLogin ? 'ليس لديك حساب؟ ' : 'لديك حساب بالفعل؟ '}
-                                <Text style={styles.linkText}>{isLogin ? ' أنشئي حساباً' : ' سجلّي الدخول'}</Text>
+                                <Text style={styles.linkText}>{isLogin ? ' أنشئي حسابا' : ' سجلّي الدخول'}</Text>
                             </Text>
                         </TouchableOpacity>
 

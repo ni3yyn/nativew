@@ -30,7 +30,7 @@ const getAuthenticContent = (productCount, name) => {
   if (productCount > 10) {
     return [
       { text: "خيرات! لكن كثرة الأيادي تفسد الطبخة", icon: "exclamation-circle", iconColor: COLORS.textSecondary },
-      { text: "خزانة مليئة.. هل فعلاً تحتاجين كل هذا؟", icon: "question", iconColor: COLORS.accentGreen },
+      { text: "خزانة مليئة.. هل فعلا تحتاجين كل هذا؟", icon: "question", iconColor: COLORS.accentGreen },
       { text: "الزين في البساطة، لا في التكدس", icon: "gem", iconColor: COLORS.gold }
     ];
   }

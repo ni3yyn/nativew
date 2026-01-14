@@ -37,7 +37,7 @@ const COLORS = {
 const SLIDES = [
     {
         id: 'welcome',
-        title: "أهلاً بكِ في وثيق",
+        title: "أهلا بكِ في وثيق",
         subtitle: "الجمال يبدأ بالحقيقة",
         desc: "تجاوزي وعود الإعلانات واكتشفي الحقيقة العلمية لكل منتج. نحن هنا لتمكينك بالمعرفة وليس لبيع الأوهام.",
         icon: "shield-alt",
@@ -48,7 +48,7 @@ const SLIDES = [
         id: 'oilguard',
         title: "فاحص المكونات",
         subtitle: "عين الخبير في جيبك",
-        desc: "صوري المكونات واحصلي فوراً على تحليل كيميائي دقيق. نكشف لكِ السموم الخفية، المواد الحافظة، والفعالية الحقيقية.",
+        desc: "صوري المكونات واحصلي فورا على تحليل كيميائي دقيق. نكشف لكِ السموم الخفية، المواد الحافظة، والفعالية الحقيقية.",
         icon: "search-plus",
         color: COLORS.gold, 
         bgGradient: [COLORS.background, '#14532D']
@@ -57,7 +57,7 @@ const SLIDES = [
         id: 'shelf',
         title: "الرف الذكي",
         subtitle: "تنظيم وتحليل",
-        desc: "رتبي منتجاتك رقمياً، وسنقوم بتحليل التناغم بينها. هل تتعارض مكونات روتينك؟ وثيق سيخبرك قبل أن تضعيها على بشرتك.",
+        desc: "رتبي منتجاتك رقميا، وسنقوم بتحليل التناغم بينها. هل تتعارض مكونات روتينك؟ وثيق سيخبرك قبل أن تضعيها على بشرتك.",
         icon: "flask",
         color: COLORS.primary, 
         bgGradient: [COLORS.background, '#065F46']
@@ -66,7 +66,7 @@ const SLIDES = [
         id: 'community',
         title: "مجتمع وثيق",
         subtitle: "تجارب تشبهكِ",
-        desc: "انضمي لمجتمع يعتمد على 'التطابق الحيوي'. شاركي تجاربك واقرئي تقييمات أشخاص يملكون نفس نوع بشرتك تماماً.",
+        desc: "انضمي لمجتمع يعتمد على 'التطابق الحيوي'. شاركي تجاربك واقرئي تقييمات أشخاص يملكون نفس نوع بشرتك تماما.",
         icon: "users",
         color: '#6EE7B7', 
         bgGradient: [COLORS.background, '#047857']
@@ -75,7 +75,7 @@ const SLIDES = [
         id: 'comparison',
         title: "حلبة المقارنة",
         subtitle: "القرار العلمي",
-        desc: "محتارة بين منتجين؟ ضعيهما وجهاً لوجه في مقارنة علمية دقيقة تكشف الأفضل لكِ بناءً على السعر، الأمان، والفعالية.",
+        desc: "محتارة بين منتجين؟ ضعيهما وجها لوجه في مقارنة علمية دقيقة تكشف الأفضل لكِ بناء على السعر، الأمان، والفعالية.",
         icon: "balance-scale",
         color: COLORS.textPrimary,
         bgGradient: [COLORS.background, '#111827']
@@ -173,7 +173,7 @@ const CustomSwitch = ({ value, onToggle, activeColor }) => (
         <View style={[styles.checkboxBase, value && { borderColor: activeColor, backgroundColor: activeColor }]}>
             {value && <Ionicons name="checkmark" size={12} color="#000" />}
         </View>
-        <Text style={styles.switchText}>عدم الإظهار مجدداً</Text>
+        <Text style={styles.switchText}>عدم الإظهار مجددا</Text>
     </TouchableOpacity>
 );
 

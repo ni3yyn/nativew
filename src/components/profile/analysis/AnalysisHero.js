@@ -41,7 +41,7 @@ const AllClearState = () => (
             <View style={styles.allClearIconWrapper}>
                  <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
             </View>
-            <Text style={styles.allClearTitle}>روتينك يبدو رائعاً!</Text>
+            <Text style={styles.allClearTitle}>روتينك يبدو رائعا!</Text>
             <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
         </ContentCard>
     </StaggeredItem>

@@ -156,7 +156,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             </View>
                             <Text style={styles.friendlyText}>
                                 نقوم بحساب توازن روتينك بين <Text style={{color: COLORS.danger, fontFamily: 'Tajawal-Bold'}}>الإجهاد</Text> (المقشرات والمواد القوية) وبين <Text style={{color: COLORS.success, fontFamily: 'Tajawal-Bold'}}>الترميم</Text> (المرطبات والزيوت).
-                                {"\n"}الهدف هو أن تتفوق كفة الترميم دائماً للحفاظ على نضارة البشرة.
+                                {"\n"}الهدف هو أن تتفوق كفة الترميم دائما للحفاظ على نضارة البشرة.
                             </Text>
                         </View>
 

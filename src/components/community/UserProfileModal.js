@@ -222,10 +222,16 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                 {loading ? (
                     <ActivityIndicator size="large" color={COLORS.accentGreen} style={{marginTop: 50}} />
                 ) : (
-                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        
-                        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-                            
+
+                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+                    <ScrollView 
+            contentContainerStyle={styles.scrollContent} 
+            showsVerticalScrollIndicator={false}
+            // 2. ADD THESE PROPS TO FORCE SCROLL BEHAVIOR
+            bounces={true}
+            alwaysBounceVertical={true} 
+            overScrollMode="always" 
+        >       
                             {/* 1. Identity Card */}
                             <LinearGradient colors={[COLORS.card, '#2C3E38']} style={styles.idCard}>
                                 <View style={[styles.matchRing, !isMe && { borderColor: matchInfo.color }]}>
@@ -358,9 +364,8 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                     </View>
                                 )}
                             </View>
-
-                        </Animated.View>
                     </ScrollView>
+                    </Animated.View>
                 )}
             </View>
         </Modal>

@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback,
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet
+  RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
@@ -33,7 +33,6 @@ import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path 
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
-import { TestIds, useInterstitialAd } from 'react-native-google-mobile-ads'; // Removed Banner imports
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -50,7 +49,6 @@ const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js";
 const VERCEL_EVALUATE_URL = "https://oilguard-backend.vercel.app/api/evaluate.js";
 const VERCEL_PARSE_TEXT_URL = "https://oilguard-backend.vercel.app/api/parse-text.js"; // <--- ADD THIS
 
-const interstitialId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-7808816060487731/8992297454';
 // --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
   if (!name) return '';
@@ -61,7 +59,28 @@ const normalizeForMatching = (name) => {
     .replace(/\s+/g, ' ') 
     .trim();
 };
+let useInterstitialAd;
+let TestIds = { INTERSTITIAL: 'ca-app-pub-7808816060487731/8992297454' }; // Default dummy ID
 
+// 2. Check environment
+const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+
+if (isAdMobLinked) {
+    // REAL: If native code exists, import the real library
+    const adMob = require('react-native-google-mobile-ads');
+    useInterstitialAd = adMob.useInterstitialAd;
+    TestIds = adMob.TestIds;
+} else {
+    // FAKE: If in Expo Go, use this dummy hook that does nothing
+    console.log("Running in Expo Go: Ads are mocked.");
+    useInterstitialAd = () => ({
+        isLoaded: false,
+        isClosed: false,
+        load: () => console.log("Mock Ad Loaded"),
+        show: () => console.log("Mock Ad Shown (No real ad)"),
+        error: null
+    });
+}
 
 // --- LOGIC MOVED TO SERVER: These functions were removed to protect IP ---
 
@@ -1109,6 +1128,8 @@ export default function OilGuardEngine() {
   const router = useRouter();
   const { user, userProfile } = useAppContext();
   const insets = useSafeAreaInsets();
+  const interstitialId = TestIds.INTERSTITIAL;
+
 
   const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
 
@@ -1348,7 +1369,7 @@ export default function OilGuardEngine() {
         if (mode === 'camera') {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('عذراً', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
+                Alert.alert('عذرا', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
                 return;
             }
             setCameraViewVisible(true);
@@ -1358,7 +1379,7 @@ export default function OilGuardEngine() {
         if (mode === 'gallery') {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('عذراً', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
+                Alert.alert('عذرا', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
                 return;
             }
 

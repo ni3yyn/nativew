@@ -456,7 +456,7 @@ export default function CommunityScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
-                            <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? 'لا توجد نتائج تطابق بحثك.' : 'القسم فارغ حالياً.'}</Text>
+                            <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? 'لا توجد نتائج تطابق بحثك.' : 'القسم فارغ حاليا.'}</Text>
                             {(!searchQuery && !isBioFilterActive) && (
                                 <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
                                     <Text style={styles.emptyActionText}>أضف أول مشاركة</Text>

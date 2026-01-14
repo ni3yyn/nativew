@@ -87,9 +87,9 @@ export const ShelfEmptyState = ({ onPress }) => (
                 />
             </View>
             
-            <Text style={styles.title}>أهلاً بك في وثيق</Text>
+            <Text style={styles.title}>أهلا بك في وثيق</Text>
             <Text style={styles.description}>
-                للبدء في تحليل بشرتك وبناء روتينك، نحتاج أولاً لمعرفة المنتجات التي تملكينها.
+                للبدء في تحليل بشرتك وبناء روتينك، نحتاج أولا لمعرفة المنتجات التي تملكينها.
             </Text>
 
             <View style={styles.featuresList}>
@@ -144,12 +144,12 @@ export const RoutineEmptyState = ({ onPress }) => (
 
             <Text style={styles.title}>بناء الروتين الذكي</Text>
             <Text style={styles.description}>
-                اتركي خوارزمية وثيق ترتب منتجاتك تلقائياً للحصول على أقصى فعالية.
+                اتركي خوارزمية وثيق ترتب منتجاتك تلقائيا للحصول على أقصى فعالية.
             </Text>
 
             <View style={styles.featuresList}>
                 <FeatureItem icon="layers" text="الترتيب حسب اللزوجة (من الأخف للأثقل)" />
-                <FeatureItem icon="wb-twilight" text="فصل المكونات النشطة (صباحاً ومساءً)" />
+                <FeatureItem icon="wb-twilight" text="فصل المكونات النشطة (صباحا ومساء)" />
                 <FeatureItem icon="shield" text="ضمان وجود طبقة الحماية والمرطب" />
             </View>
 

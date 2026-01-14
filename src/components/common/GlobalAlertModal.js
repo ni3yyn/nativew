@@ -153,7 +153,7 @@ const GlobalAlertModal = () => {
                                 activeOpacity={0.8}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.buttonText, { color: '#ffffff' }]}>حسناً</Text>
+                                <Text style={[styles.buttonText, { color: '#ffffff' }]}>حسنا</Text>
                             </TouchableOpacity>
                         )}
                     </View>

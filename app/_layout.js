@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Modal, Pressable, Linking, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, Platform, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, Easing } from 'react-native';
 import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { StatusBar } from "expo-status-bar";
@@ -13,7 +13,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
-import mobileAds from 'react-native-google-mobile-ads'; 
 
 
 // Import the Notification Helpers
@@ -112,7 +111,71 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
 };
 
 // ============================================================================
-// 3. HELPER COMPONENT: MAINTENANCE SCREEN
+// 3. HELPER COMPONENT: NOTIFICATION PERMISSION MODAL (NEW)
+// ============================================================================
+const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Gentle shake animation for the bell
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -10, duration: 100, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
+          Animated.delay(1500)
+        ])
+      ).start();
+    }
+  }, [visible]);
+
+  return (
+    <Modal 
+      transparent 
+      visible={visible} 
+      animationType="fade"
+      statusBarTranslucent
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.optionalCard}>
+          
+          <View style={styles.iconGlowContainer}>
+             <View style={[styles.optionalIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                <Animated.View style={{ transform: [{ rotate: shakeAnim.interpolate({ inputRange: [-10, 10], outputRange: ['-15deg', '15deg'] }) }] }}>
+                  <Feather name="bell-off" size={32} color="#ef4444" />
+                </Animated.View>
+             </View>
+          </View>
+          
+          <Text style={styles.optionalTitle}>التنبيهات معطلة</Text>
+          <Text style={styles.optionalSub}>
+            بدون التنبيهات، لن يتمكن "وثيق" من تذكيرك بمواعيد الروتين أو التحسينات الجديدة.
+            و لن يتمكن من إرسال نصائح يومية لبشرتك.
+          </Text>
+
+          <View style={styles.optionalActions}>
+            <Pressable 
+                style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} 
+                onPress={onEnable}
+            >
+                <Text style={styles.updateButtonTextSmall}>تفعيل من الإعدادات</Text>
+                <Feather name="settings" size={18} color="#1A2D27" />
+            </Pressable>
+            
+            <Pressable style={styles.skipButton} onPress={onDismiss}>
+                <Text style={styles.skipText}>سأفعلها لاحقا</Text>
+            </Pressable>
+          </View>
+
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// ============================================================================
+// 4. HELPER COMPONENT: MAINTENANCE SCREEN
 // ============================================================================
 const MaintenanceScreen = ({ message }) => (
   <View style={styles.systemScreen}>
@@ -127,7 +190,7 @@ const MaintenanceScreen = ({ message }) => (
 );
 
 // ============================================================================
-// 4. HELPER COMPONENT: ANNOUNCEMENT MODAL
+// 5. HELPER COMPONENT: ANNOUNCEMENT MODAL
 // ============================================================================
 const AnnouncementModal = ({ data, onDismiss }) => {
   if (!data) return null;
@@ -141,7 +204,7 @@ const AnnouncementModal = ({ data, onDismiss }) => {
           </View>
           <Text style={styles.announcementBody}>{data.body}</Text>
           <Pressable style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissText}>حسناً</Text>
+            <Text style={styles.dismissText}>حسنا</Text>
           </Pressable>
         </View>
       </View>
@@ -150,11 +213,12 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 };
 
 // ============================================================================
-// 5. INNER LOGIC COMPONENT (The Brain)
+// 6. INNER LOGIC COMPONENT (The Brain)
 // ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts } = useAppContext();
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showAppIntro, setShowAppIntro] = useState(false);
   const router = useRouter();
 
@@ -181,12 +245,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   useEffect(() => {
     const checkIntro = async () => {
         try {
-            // CHANGE 'false' TO 'true' IF YOU WANT TO FORCE SHOW IT FOR TESTING
             const FORCE_DEBUG_INTRO = false; 
-
             const hasSeen = await AsyncStorage.getItem('has_seen_app_intro');
             if (hasSeen !== 'true' || FORCE_DEBUG_INTRO) {
-                // Slight delay to let the app load visually first
                 setTimeout(() => setShowAppIntro(true), 500);
             }
         } catch (e) {
@@ -197,15 +258,24 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     if (fontsLoaded) {
         checkIntro();
     }
-}, [fontsLoaded]);
+  }, [fontsLoaded]);
 
-useEffect(() => {
-  mobileAds()
-    .initialize()
-    .then(adapterStatuses => {
-      console.log('AdMob initialized successfully');
-    });
-}, []);
+  useEffect(() => {
+    // Check if AdMob native module exists (It won't exist in Expo Go)
+    const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+  
+    if (isAdMobLinked) {
+      // Dynamically require the library so it doesn't crash Expo Go
+      const mobileAds = require('react-native-google-mobile-ads').default;
+      mobileAds()
+        .initialize()
+        .then(adapterStatuses => {
+          console.log('AdMob initialized successfully');
+        });
+    } else {
+      console.log('AdMob not linked (Running in Expo Go) - Ads Disabled');
+    }
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
@@ -243,22 +313,25 @@ useEffect(() => {
   // --- SMART NOTIFICATION LOGIC ---
   useEffect(() => {
     const initNotifications = async () => {
-        // 1. Register Permissions (Required for Android 13+)
+        // 1. Try to Register Permissions
         await registerForPushNotificationsAsync();
 
-        // 2. Schedule Intelligent Authenticity
-        // This calculates the next 7 days of notifications based on:
-        // - User's Name
-        // - Shelf Status (Empty vs Full)
-        // - Goals (Acne vs Anti-aging)
-        // - Season (Winter vs Summer)
-        if (user && userProfile) {
-            const name = userProfile.settings?.name || 'غالية';
-            const settings = userProfile.settings || {};
-            const products = savedProducts || [];
-            
-            // Runs the 7-day scheduler
-            await scheduleAuthenticNotifications(name, products, settings);
+        // 2. CHECK STATUS - If denied, show the custom modal
+        const { status } = await Notifications.getPermissionsAsync();
+        
+        if (status !== 'granted') {
+             // Optional: You can check AsyncStorage here if you want to suppress 
+             // this after the user clicks "Later" once per session.
+             // For now, we show it to ensure compliance.
+             setShowNotificationModal(true);
+        } else {
+             // Only schedule if granted
+             if (user && userProfile) {
+                const name = userProfile.settings?.name || 'غالية';
+                const settings = userProfile.settings || {};
+                const products = savedProducts || [];
+                await scheduleAuthenticNotifications(name, products, settings);
+            }
         }
     };
 
@@ -267,12 +340,9 @@ useEffect(() => {
     // 3. Handle Notification Taps (Deep Linking Logic)
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      
-      // A. If notification data says 'oilguard' (Empty Shelf), go to Scanner
       if (data?.screen === 'oilguard') {
         router.push('/oilguard');
       } 
-      // B. If notification data says 'routine' (Active), go to Profile
       else if (data?.screen === 'routine') {
         router.push('/profile');
       }
@@ -280,6 +350,11 @@ useEffect(() => {
 
     return () => subscription.remove();
   }, [user, userProfile, savedProducts]);
+
+  const handleEnableNotifications = () => {
+      setShowNotificationModal(false);
+      Linking.openSettings();
+  };
 
   if (!fontsLoaded) return null;
 
@@ -307,6 +382,13 @@ useEffect(() => {
         onUpdate={handleUpdateClick}
         onSkip={handleSkipUpdate}
       />
+      
+      {/* Notification Modal added here */}
+      <NotificationRequestModal 
+        visible={showNotificationModal}
+        onEnable={handleEnableNotifications}
+        onDismiss={() => setShowNotificationModal(false)}
+      />
 
       <AnnouncementModal 
         data={activeAnnouncement} 
@@ -321,7 +403,7 @@ useEffect(() => {
 };
 
 // ============================================================================
-// 6. MAIN EXPORT
+// 7. MAIN EXPORT
 // ============================================================================
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -346,7 +428,7 @@ export default function RootLayout() {
 }
 
 // ============================================================================
-// 7. STYLES
+// 8. STYLES
 // ============================================================================
 const styles = StyleSheet.create({
   // --- SYSTEM SCREENS ---
@@ -362,7 +444,7 @@ const styles = StyleSheet.create({
   updateButton: { marginTop: 30, backgroundColor: '#fbbf24', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 12 },
   updateButtonText: { fontFamily: 'Tajawal-Bold', color: '#1A2D27', fontSize: 16 },
 
-  // --- OPTIONAL UPDATE MODAL ---
+  // --- OPTIONAL UPDATE & NOTIFICATION MODAL ---
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.85)', 

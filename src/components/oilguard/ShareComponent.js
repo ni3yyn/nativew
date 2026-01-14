@@ -187,7 +187,7 @@ const TemplateContent = ({ analysis, typeLabel, customProductName }) => {
                         <FontAwesome5 name="fingerprint" size={24} color="#FFF" />
                     </View>
                     <View>
-                        <Text style={styles.ctaAction}>افحصي منتجاتك مجاناً</Text>
+                        <Text style={styles.ctaAction}>افحصي منتجاتك مجانا</Text>
                         <Text style={styles.ctaLink}>wathiq.web.app</Text>
                     </View>
                 </View>

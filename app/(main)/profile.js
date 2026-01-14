@@ -103,7 +103,7 @@ const BASIC_HAIR_TYPES = [
     { id: 'straight', label: 'ناعم / مستقيم', icon: 'stream' },
     { id: 'wavy', label: 'مموج', icon: 'water' },
     { id: 'curly', label: 'مجعد', icon: 'holly-berry' },
-    { id: 'coily', label: 'أفرو / كيرلي جداً', icon: 'dna' }
+    { id: 'coily', label: 'أفرو / كيرلي جدا', icon: 'dna' }
 ];
 const BASIC_SKIN_TYPES = [
     { id: 'oily', label: 'دهنية', icon: 'blurType' },
@@ -984,7 +984,7 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
         {
             id: 'auto_build',
             title: "روتين وثيق",
-            text: "دعي وثيق يبني لكِ روتيناً مثالياً بضغطة زر.",
+            text: "دعي وثيق يبني لكِ روتينا مثاليا بضغطة زر.",
             // Position: Top Left (AutoBuild is on the left in row-reverse)
             x: 45, 
             y: insets.top + 145, 
@@ -993,7 +993,7 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
         {
             id: 'add_step',
             title: "إضافة خطوة",
-            text: "زر الإضافة العائم يتيح لكِ إدراج منتجات جديدة يدوياً.",
+            text: "زر الإضافة العائم يتيح لكِ إدراج منتجات جديدة يدويا.",
             // Position: Bottom Right (FAB is bottom: 130, right: 20)
             x: width - 52, // 20px margin + 32px half-width
             y: height - 162, // 130px bottom + 32px half-height
@@ -1535,11 +1535,11 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
             }
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناءً على تحليل وثيق.");
+            AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناء على تحليل وثيق.");
   
         } catch (error) {
             console.error("Routine Generation Error:", error);
-            AlertService.error("خطأ", "تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.");
+            AlertService.error("خطأ", "تعذر الاتصال بالخادم. يرجى المحاولة لاحقا.");
         } finally {
             setIsBuilding(false);
         }
@@ -1547,7 +1547,7 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
   
       AlertService.confirm(
           "روتين وثيق التلقائي",
-          "سيتم إعادة ترتيب روتينك بالكامل بناءً على تعارض المكونات وحالة بشرتك. موافق؟",
+          "سيتم إعادة ترتيب روتينك بالكامل بناء على تعارض المكونات وحالة بشرتك. موافق؟",
           runArchitect
       );
     };
@@ -2896,7 +2896,7 @@ export default function ProfileScreen() {
               ]}>
                   <View style={{ flex: 1, paddingRight: 10 }}>
                       <Text style={styles.welcomeText}>
-                          أهلاً، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
+                          أهلا، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
                       </Text>
                       <AuthenticHeader 
                           productCount={savedProducts.length} 

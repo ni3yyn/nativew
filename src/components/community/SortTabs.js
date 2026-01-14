@@ -62,7 +62,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
                             styles.tabText, 
                             currentSort === 'popular' ? styles.textActive : styles.textInactive
                         ]}>
-                            الأكثر تفاعلاً
+                            الأكثر تفاعلا
                         </Text>
                     </View>
                 </TouchableOpacity>

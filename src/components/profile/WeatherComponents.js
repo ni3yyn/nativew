@@ -440,7 +440,7 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
     } else {
         const safeUV = Math.min(uvIndex, 11);
         percentage = safeUV / 11;
-        if (uvIndex >= 8) { label = "خطر جدًا"; color = COLORS.danger; }
+        if (uvIndex >= 8) { label = "خطر جدا"; color = COLORS.danger; }
         else if (uvIndex >= 6) { label = "خطر عالٍ"; color = COLORS.warning; }
         else if (uvIndex >= 3) { label = "متوسط"; color = COLORS.gold; }
     }
@@ -1000,7 +1000,7 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
             } else {
                 AlertService.show({
                     title: "الإذن مطلوب",
-                    message: "يبدو أنك قمت برفض الإذن سابقاً. يرجى تفعيل الموقع يدوياً من إعدادات الهاتف.",
+                    message: "يبدو أنك قمت برفض الإذن سابقا. يرجى تفعيل الموقع يدويا من إعدادات الهاتف.",
                     type: 'warning',
                     buttons: [
                         { text: "إلغاء", style: "secondary" },
@@ -1078,7 +1078,7 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                             activeOpacity={0.7}
                             delayPressIn={0} // <--- FIX: Removes tap delay
                         >
-                            <Text style={styles.btnSecondaryText}>لاحقاً</Text>
+                            <Text style={styles.btnSecondaryText}>لاحقا</Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity 

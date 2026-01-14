@@ -6,7 +6,7 @@ export const CATEGORIES = [
         label: 'تجارب حقيقية', 
         icon: 'star', 
         color: COLORS.accentGreen, 
-        desc: 'شاركي رأيكِ في المنتجات بناءً على تحليلها.' 
+        desc: 'شاركي رأيكِ في المنتجات بناء على تحليلها.' 
     },
     { 
         id: 'journey', 

@@ -80,14 +80,14 @@ const ALLERGIES_LIST = [
 const getStepConfig = (gender) => {
   const isFemale = gender === 'أنثى';
   return [
-    { id: 'gender', title: 'لنتعرف عليكِ', subtitle: 'نخصص التجربة بناءً على نوعك', type: 'single' },
+    { id: 'gender', title: 'لنتعرف عليكِ', subtitle: 'نخصص التجربة بناء على نوعك', type: 'single' },
     { id: 'name', title: isFemale ? 'ما هو اسمكِ؟' : 'ما هو اسمك؟', subtitle: isFemale ? 'الاسم الذي تحبين أن نناديك به' : 'الاسم الذي تحب أن نناديك به', type: 'input' },
     { id: 'skin', title: isFemale ? 'نوع بشرتكِ؟' : 'نوع بشرتك؟', subtitle: isFemale ? 'أساس العناية ببشرتكِ' : 'أساس العناية ببشرتك', type: 'single' },
     { id: 'scalp', title: isFemale ? 'فروة رأسكِ؟' : 'فروة رأسك؟', subtitle: isFemale ? 'مهم لتحليل الشامبو المناسب لكِ' : 'مهم لتحليل الشامبو المناسب لك', type: 'single' },
     // NEW STEP HERE
     { id: 'goals', title: isFemale ? 'ما هي أهدافك؟' : 'ما هي أهدافك؟', subtitle: isFemale ? 'لنختار لكِ الروتين والمنتجات المثالية' : 'لنختار لك الروتين والمنتجات المثالية', type: 'multi' },
     { id: 'conditions', title: isFemale ? 'مخاوف صحية؟' : 'مخاوف صحية؟', subtitle: isFemale ? 'لتنبيهكِ من المنتجات التي قد تضركِ' : 'لتنبيهك من المنتجات التي قد تضرك', type: 'multi' },
-    { id: 'allergies', title: isFemale ? 'لديكِ حساسية؟' : 'لديك حساسية؟', subtitle: isFemale ? 'لتحذيركِ فورياً من المكونات' : 'لتحذيرك فورياً من المكونات', type: 'multi' },
+    { id: 'allergies', title: isFemale ? 'لديكِ حساسية؟' : 'لديك حساسية؟', subtitle: isFemale ? 'لتحذيركِ فوريا من المكونات' : 'لتحذيرك فوريا من المكونات', type: 'multi' },
     { id: 'finish', title: isFemale ? 'جاهزة!' : 'جاهز!', subtitle: isFemale ? 'تم إعداد مختبركِ الشخصي' : 'تم إعداد مختبرك الشخصي', type: 'action' },
   ];
 };

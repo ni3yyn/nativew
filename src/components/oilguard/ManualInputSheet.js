@@ -127,7 +127,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                     <FontAwesome5 name="search" size={18} color={COLORS.accentGreen} />
                                 </View>
                                 <View style={styles.headerTexts}>
-                                    <Text style={styles.headerTitle}>إدخال المكونات يدوياً</Text>
+                                    <Text style={styles.headerTitle}>إدخال المكونات يدويا</Text>
                                     <Text style={styles.headerSub}>تحليل فوري عبر النص</Text>
                                 </View>
                                 <TouchableOpacity onPress={closeSheet} style={styles.closeBtn}>
