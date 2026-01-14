@@ -6,27 +6,33 @@ import {
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-
-import analytics from '@react-native-firebase/analytics';
-
-const { width, height } = Dimensions.get('window');
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 // ============================================================================
-// PART 0: ANALYTICS SERVICE (ABSTRACTION LAYER)
+// PART 0: ANALYTICS SERVICE (FULLY MOCKED FOR EXPO GO)
 // ============================================================================
-/**
- * Central function to handle analytics. 
- */
+
+// Detect if we are running in Expo Go
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 const trackInteraction = async (eventName, params = {}) => {
-    // 1. DEVELOPMENT MODE (Console Log)
-    // This helps you see exactly what is being tracked while you develop.
-    console.log(`📊 [Analytics] Event: ${eventName}`, params);
+    // 1. ALWAYS Log to Console (So you know it's working)
+    const mockPrefix = isExpoGo ? '🚫 [MOCK]' : '✅ [REAL]';
+    console.log(`${mockPrefix} Analytics: ${eventName}`, params);
 
+    // 2. IF EXPO GO -> STOP HERE.
+    // This prevents the app from ever touching the native modules that cause errors.
+    if (isExpoGo) {
+        return; 
+    }
 
+    // 3. IF NATIVE BUILD -> LOAD FIREBASE
     try {
+        const analytics = require('@react-native-firebase/analytics').default;
         await analytics().logEvent(eventName, params);
     } catch (error) {
-        console.warn('Analytics Error:', error);
+        // Safe catch for any other native issues
+        console.log('[Analytics Silent Fail]:', error.message);
     }
 };
 
@@ -44,6 +50,8 @@ const COLORS = {
     danger: '#ef4444'
 };
 
+const { width, height } = Dimensions.get('window');
+
 // ============================================================================
 // PART 1: THE SLIDING SHEET COMPONENT
 // ============================================================================
@@ -51,75 +59,44 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
     const [showModal, setShowModal] = useState(false);
     const [safeType, setSafeType] = useState(type);
 
-    // Initial value strictly set to height (off-screen)
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        if (type) {
-            setSafeType(type);
-        }
+        if (type) setSafeType(type);
     }, [type]);
 
     useEffect(() => {
         if (visible) {
-            // TRACKING: Log when the sheet opens
             trackInteraction('dock_sheet_open', { sheet_type: type });
 
-            // 1. Force values for start position
             slideAnim.setValue(height);
             fadeAnim.setValue(0);
-
-            // 2. Mount the Modal
             setShowModal(true);
 
-            // 3. Animate In
             requestAnimationFrame(() => {
                 Animated.parallel([
                     Animated.timing(fadeAnim, { 
-                        toValue: 1, 
-                        duration: 250, 
-                        useNativeDriver: true 
+                        toValue: 1, duration: 250, useNativeDriver: true 
                     }),
                     Animated.timing(slideAnim, { 
-                        toValue: 0, 
-                        duration: 350, 
-                        easing: Easing.out(Easing.cubic), 
-                        useNativeDriver: true 
+                        toValue: 0, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true 
                     })
                 ]).start();
             });
         } else {
-            // CLOSE ANIMATION
             Animated.parallel([
-                Animated.timing(fadeAnim, { 
-                    toValue: 0, 
-                    duration: 250, 
-                    useNativeDriver: true 
-                }),
-                Animated.timing(slideAnim, { 
-                    toValue: height, 
-                    duration: 300, 
-                    easing: Easing.in(Easing.cubic),
-                    useNativeDriver: true 
-                })
+                Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: height, duration: 300, easing: Easing.in(Easing.cubic), useNativeDriver: true })
             ]).start(({ finished }) => {
-                if (finished) {
-                    setShowModal(false);
-                }
+                if (finished) setShowModal(false);
             });
         }
     }, [visible]);
 
     const handleAction = (actionId) => {
         Haptics.selectionAsync();
-        
-        // TRACKING: Log specific action selected from sheet
-        trackInteraction('dock_action_select', { 
-            action_id: actionId,
-            source_sheet: safeType 
-        });
-
+        trackInteraction('dock_action_select', { action_id: actionId, source_sheet: safeType });
         onClose(); 
         onSelect(actionId);
     };
@@ -201,7 +178,6 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                 <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 </Animated.View>
-                {/* Hardware Texture used for smoother sliding on Android */}
                 <Animated.View 
                     style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
                     renderToHardwareTextureAndroid={true} 
@@ -218,37 +194,21 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
 // ============================================================================
 const DockIcon = ({ icon, label, isActive, onPress, specialColor, enablePulse, id }) => {
     const animValue = useRef(new Animated.Value(isActive ? 1 : 0)).current;
-    
-    // Pulse Animation Ref (For the glowing effect)
     const pulseAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         Animated.spring(animValue, {
-            toValue: isActive ? 1 : 0,
-            friction: 5,
-            tension: 80,
-            useNativeDriver: true,
+            toValue: isActive ? 1 : 0, friction: 5, tension: 80, useNativeDriver: true,
         }).start();
     }, [isActive]);
 
-    // Setup Pulse Effect Logic
     useEffect(() => {
         if (enablePulse && !isActive) {
             const pulseSequence = Animated.loop(
                 Animated.sequence([
-                    Animated.delay(4000), // Wait 4 seconds between pulses
-                    Animated.timing(pulseAnim, { 
-                        toValue: 1, 
-                        duration: 1500, 
-                        useNativeDriver: true,
-                        easing: Easing.inOut(Easing.ease)
-                    }),
-                    Animated.timing(pulseAnim, { 
-                        toValue: 0, 
-                        duration: 1500, 
-                        useNativeDriver: true, 
-                        easing: Easing.inOut(Easing.ease)
-                    })
+                    Animated.delay(4000),
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+                    Animated.timing(pulseAnim, { toValue: 0, duration: 1500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
                 ])
             );
             pulseSequence.start();
@@ -260,61 +220,36 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor, enablePulse, i
 
     const handlePress = () => {
         if (!isActive) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        
-        // TRACKING: Log tab selection
         trackInteraction('dock_tab_click', { tab_id: id });
-
         onPress();
     };
 
     const activeColor = specialColor || COLORS.mint;
     const inactiveColor = COLORS.textSecondary;
-
-    const scale = animValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: [1, 1.15] 
-    });
+    const scale = animValue.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] });
 
     return (
         <TouchableOpacity activeOpacity={1} onPress={handlePress} style={styles.dockItem}>
             <View style={styles.iconContentContainer}>
                 <View>
-                    {/* Standard Icon */}
                     <Animated.View style={{ transform: [{ scale }] }}>
-                        <MaterialIcons 
-                            name={icon} 
-                            size={26} 
-                            color={isActive ? activeColor : inactiveColor} 
-                        />
+                        <MaterialIcons name={icon} size={26} color={isActive ? activeColor : inactiveColor} />
                     </Animated.View>
-
-                    {/* Pulse Glow Overlay (Only visible if enablePulse is true and tab is inactive) */}
                     {enablePulse && !isActive && (
                         <Animated.View style={[
                             StyleSheet.absoluteFill, 
                             { 
                                 opacity: pulseAnim,
-                                shadowColor: COLORS.mint,
-                                shadowOffset: { width: 0, height: 0 },
-                                shadowOpacity: 1,
-                                shadowRadius: 8,
+                                shadowColor: COLORS.mint, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 8,
                             }
                         ]}>
-                             <MaterialIcons 
-                                name={icon} 
-                                size={26} 
-                                color={COLORS.mint} 
-                            />
+                             <MaterialIcons name={icon} size={26} color={COLORS.mint} />
                         </Animated.View>
                     )}
                 </View>
-                
                 <Text style={[
                     styles.dockLabel, 
-                    { 
-                        color: isActive ? activeColor : inactiveColor,
-                        fontFamily: isActive ? 'Tajawal-Bold' : 'Tajawal-Regular' 
-                    }
+                    { color: isActive ? activeColor : inactiveColor, fontFamily: isActive ? 'Tajawal-Bold' : 'Tajawal-Regular' }
                 ]}>
                     {label}
                 </Text>
@@ -327,41 +262,29 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor, enablePulse, i
 // PART 3: MAIN NATURE DOCK
 // ============================================================================
 export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
-    const [sheetState, setSheetState] = useState(null); // 'camera', 'more', or null
+    const [sheetState, setSheetState] = useState(null); 
     const cameraScale = useRef(new Animated.Value(1)).current;
-    
-    // Shimmer Animation for Camera Button
     const shimmerValue = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         const shimmerLoop = Animated.loop(
             Animated.sequence([
-                Animated.delay(3000), // Wait 3 seconds
+                Animated.delay(200),
                 Animated.timing(shimmerValue, {
-                    toValue: 1,
-                    duration: 1200, // Slide across in 1.2s
-                    easing: Easing.bezier(0.4, 0, 0.2, 1),
-                    useNativeDriver: true
+                    toValue: 1, duration: 1700, easing: Easing.bezier(0.4, 0, 0.2, 1), useNativeDriver: true
                 }),
-                Animated.timing(shimmerValue, {
-                    toValue: 0,
-                    duration: 0, // Reset instantly
-                    useNativeDriver: true
-                })
+                Animated.timing(shimmerValue, { toValue: 0, duration: 0, useNativeDriver: true })
             ])
         );
         shimmerLoop.start();
         return () => shimmerLoop.stop();
     }, []);
 
-    // Interpolate shimmer movement
     const shimmerTranslate = shimmerValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-100, 100]
+        inputRange: [0, 1], outputRange: [-100, 100]
     });
 
     const handleCameraPress = () => {
-        // TRACKING: Camera Main Button Click
         trackInteraction('dock_camera_click');
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -373,7 +296,6 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
     };
 
     const handleSheetSelection = (action) => {
-        // Navigation logic based on sheet selection
         switch (action) {
             case 'scan_product': navigation.push('/oilguard'); break;
             case 'compare_products': navigation.push('/comparison'); break;
@@ -391,67 +313,37 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
             <View style={styles.dockPosition}>
                 <View style={styles.cameraButtonWrapper}>
                     <TouchableOpacity activeOpacity={0.9} onPress={handleCameraPress}>
-                        {/* Added overflow hidden to clip the shimmer effect inside the circle */}
-                        <Animated.View style={[
-                            styles.cameraButton, 
-                            { transform: [{ scale: cameraScale }], overflow: 'hidden' }
-                        ]}>
+                        <Animated.View style={[ styles.cameraButton, { transform: [{ scale: cameraScale }], overflow: 'hidden' } ]}>
                             <LinearGradient
                                 colors={[COLORS.accentGreen, '#4a8a73']}
                                 style={styles.cameraGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                             >
                                 <FontAwesome5 name="camera" size={24} color={COLORS.textOnAccent} style={{zIndex: 2}}/>
-                                
-                                {/* SHIMMER EFFECT LAYER */}
                                 <Animated.View style={[
                                     styles.shimmerBar,
                                     { transform: [{ translateX: shimmerTranslate }, { rotate: '30deg' }] }
                                 ]} />
-
                             </LinearGradient>
                         </Animated.View>
                     </TouchableOpacity>
-                    {/* Glowing Text Label */}
                     <Text style={styles.watheeqLabel}>وثيق</Text>
                 </View>
 
                 <View style={styles.dockContainer}>
                     <View style={styles.dockSideGroup}>
-                        <DockIcon 
-                            id="community" // ID for Analytics
-                            icon="groups" 
-                            label="المجتمع" 
-                            isActive={activeTab === 'community'} 
-                            onPress={() => navigation.push('/community')} 
-                            specialColor={COLORS.gold}
-                        />
-                        <DockIcon 
-                            id="analysis" // ID for Analytics
-                            icon="bubble-chart" 
-                            label="تحليل" 
-                            isActive={activeTab === 'analysis'} 
-                            onPress={() => onTabChange('analysis')}
-                        />
+                        <DockIcon id="community" icon="groups" label="المجتمع" isActive={activeTab === 'community'} onPress={() => navigation.push('/community')} specialColor={COLORS.gold} />
+                        <DockIcon id="analysis" icon="bubble-chart" label="تحليل" isActive={activeTab === 'analysis'} onPress={() => onTabChange('analysis')} />
                     </View>
                     <View style={styles.centerSpacer} />
                     <View style={styles.dockSideGroup}>
+                        <DockIcon id="routine" icon="spa" label="روتيني" isActive={activeTab === 'routine'} onPress={() => onTabChange('routine')} enablePulse={true} />
                         <DockIcon 
-                            id="routine" // ID for Analytics
-                            icon="spa" 
-                            label="روتيني" 
-                            isActive={activeTab === 'routine'} 
-                            onPress={() => onTabChange('routine')}
-                            enablePulse={true} // Pulse Effect Enabled
-                        />
-                        <DockIcon 
-                            id="more" // ID for Analytics
+                            id="more" 
                             icon="menu" 
                             label="المزيد" 
                             isActive={isMoreActive} 
                             onPress={() => {
-                                // TRACKING: More menu opened
                                 trackInteraction('dock_more_menu_open');
                                 setSheetState('more');
                             }}
@@ -460,7 +352,6 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                 </View>
             </View>
 
-            {/* Pass sheetState directly. Child handles persistence. */}
             <DockSheet 
                 visible={sheetState !== null}
                 type={sheetState} 
@@ -476,213 +367,56 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
 // ============================================================================
 const styles = StyleSheet.create({
     dockPosition: {
-        position: 'absolute',
-        bottom: 30,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 90,
+        position: 'absolute', bottom: 30, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', zIndex: 90,
     },
     dockContainer: {
-        flexDirection: 'row-reverse',
-        width: width * 0.94,
-        maxWidth: 420,
-        height: 72,
-        backgroundColor: 'rgba(37, 61, 52, 0.98)', 
-        borderRadius: 35,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.35,
-        shadowRadius: 20,
-        elevation: 15,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 8,
+        flexDirection: 'row-reverse', width: width * 0.94, maxWidth: 420, height: 72,
+        backgroundColor: 'rgba(37, 61, 52, 0.98)', borderRadius: 35, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+        shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.35, shadowRadius: 20,
+        elevation: 15, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8,
     },
     dockSideGroup: {
-        flex: 1,
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-evenly', 
-        alignItems: 'center',
-        height: '100%',
+        flex: 1, flexDirection: 'row-reverse', justifyContent: 'space-evenly', alignItems: 'center', height: '100%',
     },
-    centerSpacer: {
-        width: 80,
-    },
-    dockItem: {
-        height: '100%',
-        width: 65,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    iconContentContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: 4,
-    },
-    dockLabel: {
-        fontSize: 11,
-        textAlign: 'center',
-        marginTop: 2,
-    },
+    centerSpacer: { width: 80 },
+    dockItem: { height: '100%', width: 65, justifyContent: 'center', alignItems: 'center' },
+    iconContentContainer: { alignItems: 'center', justifyContent: 'center', height: '100%', gap: 4 },
+    dockLabel: { fontSize: 11, textAlign: 'center', marginTop: 2 },
     cameraButtonWrapper: {
-        position: 'absolute',
-        bottom: 6,
-        zIndex: 95,
-        elevation: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: COLORS.mint,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
+        position: 'absolute', bottom: 6, zIndex: 95, elevation: 20, alignItems: 'center', justifyContent: 'center',
+        shadowColor: COLORS.mint, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12,
     },
-    cameraButton: {
-        width: 66,
-        height: 66,
-        borderRadius: 33,
-        padding: 4,
-        backgroundColor: COLORS.background,
-    },
-    // --- SHIMMER BAR STYLE ---
+    cameraButton: { width: 66, height: 66, borderRadius: 33, padding: 4, backgroundColor: COLORS.background },
     shimmerBar: {
-        position: 'absolute',
-        width: 30,
-        height: 100, // Taller than button to cover diagonal
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        zIndex: 1,
+        position: 'absolute', width: 30, height: 100, backgroundColor: 'rgba(255, 255, 255, 0.4)', zIndex: 1,
     },
     watheeqLabel: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 16,
-        color: COLORS.mint,
-        marginTop: 4, 
-        textShadowColor: COLORS.accentGreen,
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
-        letterSpacing: 0.5,
+        fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.mint, marginTop: 4, 
+        textShadowColor: COLORS.accentGreen, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8, letterSpacing: 0.5,
     },
     cameraGradient: {
-        flex: 1,
-        borderRadius: 33,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.25)',
-        position: 'relative', // Needed for absolute children
+        flex: 1, borderRadius: 33, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', position: 'relative',
     },
-    backdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        zIndex: 100,
-    },
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100 },
     sheet: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: COLORS.card,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: 25,
-        paddingBottom: 40,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        zIndex: 101,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -5 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 25,
+        position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card,
+        borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 25, paddingBottom: 40,
+        borderWidth: 1, borderColor: COLORS.border, zIndex: 101,
+        shadowColor: "#000", shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 25,
     },
-    handle: {
-        width: 48,
-        height: 5,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        borderRadius: 3,
-        alignSelf: 'center',
-        marginBottom: 25,
-    },
-    sheetTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 18,
-        color: COLORS.textPrimary,
-        textAlign: 'center',
-        marginBottom: 25,
-    },
-    actionButtonMain: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 20,
-        marginBottom: 15,
-        gap: 15,
-    },
-    actionButtonSecondary: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        gap: 15,
-    },
-    iconBoxMain: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    iconBoxSec: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+    handle: { width: 48, height: 5, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 3, alignSelf: 'center', marginBottom: 25 },
+    sheetTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 25 },
+    actionButtonMain: { flexDirection: 'row-reverse', alignItems: 'center', padding: 16, borderRadius: 20, marginBottom: 15, gap: 15 },
+    actionButtonSecondary: { flexDirection: 'row-reverse', alignItems: 'center', padding: 16, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: COLORS.border, gap: 15 },
+    iconBoxMain: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+    iconBoxSec: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
     btnTitleMain: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textOnAccent, textAlign: 'right' },
     btnSubMain: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: 'rgba(26, 45, 39, 0.7)', textAlign: 'right', marginTop: 2 },
     btnTitleSec: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right' },
     btnSubSec: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right', marginTop: 2 },
-    menuGrid: {
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        overflow: 'hidden',
-    },
-    menuItem: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-    },
-    menuIconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginLeft: 15,
-    },
-    menuText: {
-        flex: 1,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 15,
-        color: COLORS.textPrimary,
-        textAlign: 'right',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        marginLeft: 20,
-    }
+    menuGrid: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+    menuItem: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20 },
+    menuIconBox: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginLeft: 15 },
+    menuText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary, textAlign: 'right' },
+    divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginLeft: 20 }
 });
