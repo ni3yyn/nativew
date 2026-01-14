@@ -33,7 +33,7 @@ const ActionRow = ({ onSave, onReset, analysis, productTypeLabel }) => {
             <View style={styles.iconContainer}>
                  <FontAwesome5 name="bookmark" size={16} color={COLORS.accentGreen} />
             </View>
-            <Text style={[styles.triggerText]}>حفظ في رفي</Text>
+            <Text style={[styles.triggerText]}>إضافة للرف</Text>
         </Pressable>
 
         {/* Small Divider */}
