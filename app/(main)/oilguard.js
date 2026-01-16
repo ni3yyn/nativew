@@ -1421,63 +1421,94 @@ export default function OilGuardEngine() {
     }
   }, []);
 
-const processImageWithGemini = async (uri) => {
-  setLoading(true);
-  setIsGeminiLoading(true);
-  changeStep(3);
-
-  try {
-    const base64Data = await uriToBase64(uri);
-
-    // Call VERCEL OCR Endpoint
-    const response = await fetch(VERCEL_BACKEND_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ base64Data: base64Data }),
-    });
-
-    const responseData = await response.json();
-    console.log("OCR Response Data:", JSON.stringify(responseData, null, 2));
-
-    if (!response.ok) {
-      throw new Error(responseData.error || "An error occurred in the backend.");
+  const processImageWithGemini = async (uri) => {
+    setLoading(true);
+    setIsGeminiLoading(true);
+    changeStep(3); // Move to loading screen
+  
+    try {
+      const base64Data = await uriToBase64(uri);
+  
+      const response = await fetch(VERCEL_BACKEND_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ base64Data: base64Data }),
+      });
+  
+      const responseData = await response.json();
+      console.log("OCR Response Data:", JSON.stringify(responseData, null, 2));
+  
+      if (!response.ok) {
+        throw new Error(responseData.error || "An error occurred in the backend.");
+      }
+  
+      let jsonResponse;
+      if (typeof responseData.result === 'object') {
+          jsonResponse = responseData.result;
+      } else {
+          const text = responseData.result.replace(/```json|```/g, '').trim();
+          jsonResponse = JSON.parse(text);
+      }
+  
+      // --- NEW LOGIC START ---
+      // Check if the backend detected a front label instead of ingredients
+      if (jsonResponse.status === 'front_label_detected') {
+          setIsGeminiLoading(false);
+          setLoading(false);
+          
+          // Return to the Input/Camera step
+          changeStep(0); 
+          
+          // Show the Alert Modal
+          setTimeout(() => {
+              AlertService.show({
+                  title: "تنبيه",
+                  message: "يبدو أنك صورتي واجهة المنتج. من فضلك صوري قائمة المكونات (خلف العبوة) للتحليل.",
+                  type: "warning",
+                  buttons: [{ text: "حسنا", style: "primary" }]
+              });
+          }, 500); // Small delay to allow transition back to step 0
+          
+          return; // Stop execution
+      }
+      // --- NEW LOGIC END ---
+  
+      const rawList = jsonResponse.ingredients_list || [];
+      
+      // Fallback: If status is success but list is empty, it might still be a bad photo
+      if (rawList.length === 0) {
+           throw new Error("No ingredients found");
+      }
+  
+      // Existing logic continues...
+      const { ingredients } = await extractIngredientsFromAIText(rawList);
+      
+      setOcrText(rawList.join('\n')); 
+      setPreProcessedIngredients(ingredients);
+      setProductType(jsonResponse.detected_type || 'other');
+  
+      setIsGeminiLoading(false);
+      setLoading(false);
+      changeStep(1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  
+    } catch (error) {
+      console.error("Processing Error:", error);
+      
+      setIsGeminiLoading(false);
+      setLoading(false);
+      changeStep(0);
+      
+      // Generic error alert
+      AlertService.show({
+          title: "خطأ في المسح",
+          message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
+          type: "error"
+      });
     }
-
-    let jsonResponse;
-    
-    if (typeof responseData.result === 'object') {
-        // It is already parsed by the backend
-        jsonResponse = responseData.result;
-    } else {
-        // It is a string, so we need to clean and parse it
-        const text = responseData.result.replace(/```json|```/g, '').trim();
-        jsonResponse = JSON.parse(text);
-    }
-    // ------------------------
-    const rawList = jsonResponse.ingredients_list || [];
-    
-    // Updated: Simplified extraction that DOES NOT rely on local DB
-    const { ingredients } = await extractIngredientsFromAIText(rawList);
-    
-    setOcrText(rawList.join('\n')); 
-    setPreProcessedIngredients(ingredients);
-    setProductType(jsonResponse.detected_type || 'other');
-
-    setIsGeminiLoading(false);
-    setLoading(false);
-    changeStep(1);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-  } catch (error) {
-    console.error("Vercel Backend Error:", error);
-    Alert.alert("Analysis Failed", `Could not process image: ${error.message}`);
-    setIsGeminiLoading(false);
-    setLoading(false);
-    changeStep(0);
-  }
-};
+  };
 
 const executeAnalysis = async () => {
     // 1. Trigger Transition INSTANTLY (Fast Mode: true)
