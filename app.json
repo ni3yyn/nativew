@@ -17,6 +17,9 @@
       "bundleIdentifier": "com.app.wathiq",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -27,13 +30,18 @@
         "backgroundColor": "#1A2D27"
       },
       "edgeToEdgeEnabled": true,
-      "softwareKeyboardLayoutMode": "pan", 
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -51,7 +59,7 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-7808816060487731~9164537902",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511" 
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ]
     ],
@@ -60,6 +68,9 @@
       "eas": {
         "projectId": "6ebdbfe1-08ea-4f21-9fa2-482f152a3266"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6ebdbfe1-08ea-4f21-9fa2-482f152a3266"
     }
   }
 }

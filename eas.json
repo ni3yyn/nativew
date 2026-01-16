@@ -9,12 +9,14 @@
       "distribution": "internal"
     },
     "preview": {
+      "channel": "production",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease --stacktrace --info"
       }
     },
     "production": {
+      "channel": "production",
       "autoIncrement": true
     }
   },
