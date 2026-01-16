@@ -1,19 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Platform, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, Easing, AppState } from 'react-native';
 import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
+import * as Updates from 'expo-updates'; 
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
-
 
 // Import the Notification Helpers
 import { registerForPushNotificationsAsync, scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
@@ -21,7 +20,107 @@ import { registerForPushNotificationsAsync, scheduleAuthenticNotifications } fro
 SplashScreen.preventAutoHideAsync();
 
 // ============================================================================
-// 1. HELPER COMPONENT: FORCE UPDATE SCREEN (BLOCKING)
+// 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
+// ============================================================================
+const useSilentUpdates = () => {
+    useEffect(() => {
+        if (__DEV__) return; 
+
+        let isUpdatePending = false;
+
+        const checkAndDownload = async () => {
+            try {
+                const update = await Updates.checkForUpdateAsync();
+                if (update.isAvailable) {
+                    await Updates.fetchUpdateAsync();
+                    isUpdatePending = true;
+                    console.log("Silent OTA Update downloaded.");
+                }
+            } catch (e) {
+                // Ignore errors silently
+            }
+        };
+
+        checkAndDownload();
+
+        const subscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'background' && isUpdatePending) {
+                Updates.reloadAsync();
+            }
+        });
+
+        return () => subscription.remove();
+    }, []);
+};
+
+// ============================================================================
+// 2. HELPER: APP OPEN AD HOOK (New 5s Entrance Ad)
+// ============================================================================
+const useAppOpenAd = () => {
+  useEffect(() => {
+      // 1. Safety Check: Don't run in Expo Go
+      const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+      if (!isAdMobLinked) return;
+
+      const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
+
+      // 2. Config: Use Test ID in Dev, Real ID in Prod
+      const adUnitId = __DEV__ 
+          ? TestIds.APP_OPEN 
+          : 'ca-app-pub-6010052879824695/7889332295';
+
+      let appOpenAd = null;
+
+      try {
+          appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
+              requestNonPersonalizedAdsOnly: true,
+          });
+
+          // 3. Listener: When Loaded, Show it!
+          const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+              console.log('App Open Ad Loaded - Showing now');
+              appOpenAd.show();
+          });
+
+          // 4. Listener: When Closed, Load the Next one
+          const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+              console.log('App Open Ad Closed - Loading next');
+              appOpenAd.load();
+          });
+
+          // 5. Listener: Handle Errors
+          const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
+              console.log('App Open Ad Error:', error);
+          });
+
+          // 6. Initial Load
+          appOpenAd.load();
+
+          // 7. Handle App Resume (Background -> Active)
+          const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+              if (nextAppState === 'active') {
+                  // Try to load/show again if user returns
+                  // Note: appOpenAd.show() only works if loaded. 
+                  // If it wasn't loaded yet, the LOADED event above handles it.
+                  appOpenAd.load(); 
+              }
+          });
+
+          return () => {
+              unsubscribeLoaded();
+              unsubscribeClosed();
+              unsubscribeError();
+              appStateSub.remove();
+          };
+
+      } catch (e) {
+          console.log("AdMob Init Error:", e);
+      }
+  }, []);
+};
+
+// ============================================================================
+// 3. HELPER COMPONENT: FORCE UPDATE SCREEN (BLOCKING)
 // ============================================================================
 const ForceUpdateScreen = ({ url }) => (
   <View style={styles.systemScreen}>
@@ -43,33 +142,21 @@ const ForceUpdateScreen = ({ url }) => (
 );
 
 // ============================================================================
-// 2. HELPER COMPONENT: OPTIONAL UPDATE MODAL
+// 4. HELPER COMPONENT: OPTIONAL UPDATE MODAL
 // ============================================================================
 const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
   return (
-    <Modal 
-      transparent 
-      visible={visible} 
-      animationType="fade"
-      statusBarTranslucent
-    >
+    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
       <View style={styles.modalOverlay}>
         <View style={styles.optionalCard}>
-          
-          {/* Centered Glowing Icon */}
           <View style={styles.iconGlowContainer}>
              <View style={styles.optionalIconBox}>
                 <Feather name="gift" size={32} color="#5A9C84" />
              </View>
           </View>
-          
-          {/* Centered Text */}
           <Text style={styles.optionalTitle}>تحديث جديد متوفر</Text>
-          <Text style={styles.optionalSub}>
-            إصدار جديد جاهز للتحميل. استمتعوا بأحدث الميزات!
-          </Text>
+          <Text style={styles.optionalSub}>إصدار جديد جاهز للتحميل. استمتعوا بأحدث الميزات!</Text>
 
-          {/* Changelog List */}
           <View style={styles.changelogContainer}>
             <Text style={styles.whatsNewHeader}>ما الجديد؟</Text>
             <ScrollView style={styles.changelogList} contentContainerStyle={{gap: 8}}>
@@ -89,21 +176,15 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
             </ScrollView>
           </View>
 
-          {/* Actions */}
           <View style={styles.optionalActions}>
-            <Pressable 
-                style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} 
-                onPress={onUpdate}
-            >
-                <Text style={styles.updateButtonTextSmall}>تحديث الآن</Text>
+            <Pressable style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onUpdate}>
+                <Text style={styles.updateButtonTextSmall}>تحديث من المتجر</Text>
                 <Feather name="download-cloud" size={18} color="#1A2D27" />
             </Pressable>
-            
             <Pressable style={styles.skipButton} onPress={onSkip}>
                 <Text style={styles.skipText}>ليس الآن</Text>
             </Pressable>
           </View>
-
         </View>
       </View>
     </Modal>
@@ -111,14 +192,13 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
 };
 
 // ============================================================================
-// 3. HELPER COMPONENT: NOTIFICATION PERMISSION MODAL (NEW)
+// 5. HELPER COMPONENT: NOTIFICATION PERMISSION MODAL
 // ============================================================================
 const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Gentle shake animation for the bell
       Animated.loop(
         Animated.sequence([
           Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
@@ -131,15 +211,9 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
   }, [visible]);
 
   return (
-    <Modal 
-      transparent 
-      visible={visible} 
-      animationType="fade"
-      statusBarTranslucent
-    >
+    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
       <View style={styles.modalOverlay}>
         <View style={styles.optionalCard}>
-          
           <View style={styles.iconGlowContainer}>
              <View style={[styles.optionalIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
                 <Animated.View style={{ transform: [{ rotate: shakeAnim.interpolate({ inputRange: [-10, 10], outputRange: ['-15deg', '15deg'] }) }] }}>
@@ -147,27 +221,19 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
                 </Animated.View>
              </View>
           </View>
-          
           <Text style={styles.optionalTitle}>التنبيهات معطلة</Text>
           <Text style={styles.optionalSub}>
             بدون التنبيهات، لن يتمكن "وثيق" من تذكيرك بمواعيد الروتين أو التحسينات الجديدة.
-            و لن يتمكن من إرسال نصائح يومية لبشرتك.
           </Text>
-
           <View style={styles.optionalActions}>
-            <Pressable 
-                style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} 
-                onPress={onEnable}
-            >
+            <Pressable style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onEnable}>
                 <Text style={styles.updateButtonTextSmall}>تفعيل من الإعدادات</Text>
                 <Feather name="settings" size={18} color="#1A2D27" />
             </Pressable>
-            
             <Pressable style={styles.skipButton} onPress={onDismiss}>
                 <Text style={styles.skipText}>سأفعلها لاحقا</Text>
             </Pressable>
           </View>
-
         </View>
       </View>
     </Modal>
@@ -175,7 +241,7 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
 };
 
 // ============================================================================
-// 4. HELPER COMPONENT: MAINTENANCE SCREEN
+// 6. HELPER COMPONENT: MAINTENANCE SCREEN
 // ============================================================================
 const MaintenanceScreen = ({ message }) => (
   <View style={styles.systemScreen}>
@@ -190,7 +256,7 @@ const MaintenanceScreen = ({ message }) => (
 );
 
 // ============================================================================
-// 5. HELPER COMPONENT: ANNOUNCEMENT MODAL
+// 7. HELPER COMPONENT: ANNOUNCEMENT MODAL
 // ============================================================================
 const AnnouncementModal = ({ data, onDismiss }) => {
   if (!data) return null;
@@ -213,7 +279,7 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 };
 
 // ============================================================================
-// 6. INNER LOGIC COMPONENT (The Brain)
+// 8. INNER LOGIC COMPONENT (The Brain)
 // ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts } = useAppContext();
@@ -225,10 +291,14 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // ➤ CURRENT VERSION
   const APP_VERSION = '1.0.0'; 
 
+  // ➤ ACTIVATE SILENT UPDATES
+  useSilentUpdates();
+
+  // ➤ ACTIVATE APP OPEN ADS (The New Part)
+  useAppOpenAd();
+
   // --- VERSION CHECKING LOGIC ---
-  const getUpdateSignature = (config) => {
-    return `${config.latestVersion}_${JSON.stringify(config.changelog || [])}`;
-  };
+  const getUpdateSignature = (config) => `${config.latestVersion}_${JSON.stringify(config.changelog || [])}`;
 
   const compareVersions = (vA, vB) => {
     try {
@@ -245,35 +315,19 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   useEffect(() => {
     const checkIntro = async () => {
         try {
-            const FORCE_DEBUG_INTRO = false; 
             const hasSeen = await AsyncStorage.getItem('has_seen_app_intro');
-            if (hasSeen !== 'true' || FORCE_DEBUG_INTRO) {
-                setTimeout(() => setShowAppIntro(true), 500);
-            }
-        } catch (e) {
-            console.error(e);
-        }
+            if (hasSeen !== 'true') setTimeout(() => setShowAppIntro(true), 500);
+        } catch (e) { console.error(e); }
     };
-
-    if (fontsLoaded) {
-        checkIntro();
-    }
+    if (fontsLoaded) checkIntro();
   }, [fontsLoaded]);
 
+  // --- ADMOB INIT ---
   useEffect(() => {
-    // Check if AdMob native module exists (It won't exist in Expo Go)
     const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
-  
     if (isAdMobLinked) {
-      // Dynamically require the library so it doesn't crash Expo Go
       const mobileAds = require('react-native-google-mobile-ads').default;
-      mobileAds()
-        .initialize()
-        .then(adapterStatuses => {
-          console.log('AdMob initialized successfully');
-        });
-    } else {
-      console.log('AdMob not linked (Running in Expo Go) - Ads Disabled');
+      mobileAds().initialize();
     }
   }, []);
 
@@ -285,13 +339,10 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   useEffect(() => {
     const checkOptionalUpdate = async () => {
         if (!appConfig.latestVersion) return;
-
         const isNewer = compareVersions(appConfig.latestVersion, APP_VERSION) === 1;
-        
         if (isNewer) {
             const currentSignature = getUpdateSignature(appConfig);
             const storedSignature = await AsyncStorage.getItem('skipped_update_signature');
-            
             if (currentSignature !== storedSignature) {
                 setShowOptionalUpdate(true);
             }
@@ -310,22 +361,16 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       if(appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
   };
 
-  // --- SMART NOTIFICATION LOGIC ---
+  // --- NOTIFICATION LOGIC ---
   useEffect(() => {
     const initNotifications = async () => {
-        // 1. Try to Register Permissions
         await registerForPushNotificationsAsync();
-
-        // 2. CHECK STATUS - If denied, show the custom modal
         const { status } = await Notifications.getPermissionsAsync();
         
         if (status !== 'granted') {
-             // Optional: You can check AsyncStorage here if you want to suppress 
-             // this after the user clicks "Later" once per session.
-             // For now, we show it to ensure compliance.
-             setShowNotificationModal(true);
+             const skipped = await AsyncStorage.getItem('skipped_noti_request_session');
+             if (skipped !== 'true') setShowNotificationModal(true);
         } else {
-             // Only schedule if granted
              if (user && userProfile) {
                 const name = userProfile.settings?.name || 'غالية';
                 const settings = userProfile.settings || {};
@@ -335,21 +380,16 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         }
     };
 
-    initNotifications();
+    if (fontsLoaded) initNotifications();
 
-    // 3. Handle Notification Taps (Deep Linking Logic)
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      if (data?.screen === 'oilguard') {
-        router.push('/oilguard');
-      } 
-      else if (data?.screen === 'routine') {
-        router.push('/profile');
-      }
+      if (data?.screen === 'oilguard') router.push('/oilguard');
+      else if (data?.screen === 'routine') router.push('/profile');
     });
 
     return () => subscription.remove();
-  }, [user, userProfile, savedProducts]);
+  }, [user, userProfile, savedProducts, fontsLoaded]);
 
   const handleEnableNotifications = () => {
       setShowNotificationModal(false);
@@ -358,12 +398,12 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   if (!fontsLoaded) return null;
 
-  // 1. Maintenance Check (Highest Priority)
+  // 1. Maintenance
   if (appConfig?.maintenanceMode) {
     return <MaintenanceScreen message={appConfig.maintenanceMessage} />;
   }
 
-  // 2. Force Update Check (Medium Priority)
+  // 2. Force Update
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
     return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
@@ -383,17 +423,16 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         onSkip={handleSkipUpdate}
       />
       
-      {/* Notification Modal added here */}
       <NotificationRequestModal 
         visible={showNotificationModal}
         onEnable={handleEnableNotifications}
-        onDismiss={() => setShowNotificationModal(false)}
+        onDismiss={async () => {
+             setShowNotificationModal(false);
+             await AsyncStorage.setItem('skipped_noti_request_session', 'true');
+        }}
       />
 
-      <AnnouncementModal 
-        data={activeAnnouncement} 
-        onDismiss={dismissAnnouncement} 
-      />
+      <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} />
 
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
@@ -403,7 +442,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 };
 
 // ============================================================================
-// 7. MAIN EXPORT
+// 9. MAIN EXPORT
 // ============================================================================
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -411,11 +450,6 @@ export default function RootLayout() {
     'Tajawal-Bold': require('../assets/fonts/Tajawal-Bold.ttf'),
     'Tajawal-ExtraBold': require('../assets/fonts/Tajawal-ExtraBold.ttf'),
   });
-
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-    }
-  }, []);
 
   return (
     <SafeAreaProvider>
@@ -428,7 +462,7 @@ export default function RootLayout() {
 }
 
 // ============================================================================
-// 8. STYLES
+// 10. STYLES
 // ============================================================================
 const styles = StyleSheet.create({
   // --- SYSTEM SCREENS ---
@@ -444,7 +478,7 @@ const styles = StyleSheet.create({
   updateButton: { marginTop: 30, backgroundColor: '#fbbf24', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 12 },
   updateButtonText: { fontFamily: 'Tajawal-Bold', color: '#1A2D27', fontSize: 16 },
 
-  // --- OPTIONAL UPDATE & NOTIFICATION MODAL ---
+  // --- MODAL COMMON ---
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.85)', 
