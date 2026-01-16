@@ -224,6 +224,7 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
           <Text style={styles.optionalTitle}>التنبيهات معطلة</Text>
           <Text style={styles.optionalSub}>
             بدون التنبيهات، لن يتمكن "وثيق" من تذكيرك بمواعيد الروتين أو التحسينات الجديدة.
+            و لن يتمكن من إرسال نصائح يومية لبشرتك.
           </Text>
           <View style={styles.optionalActions}>
             <Pressable style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onEnable}>
@@ -239,6 +240,7 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
     </Modal>
   );
 };
+
 
 // ============================================================================
 // 6. HELPER COMPONENT: MAINTENANCE SCREEN
@@ -368,8 +370,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         const { status } = await Notifications.getPermissionsAsync();
         
         if (status !== 'granted') {
-             const skipped = await AsyncStorage.getItem('skipped_noti_request_session');
-             if (skipped !== 'true') setShowNotificationModal(true);
+             // ❌ REMOVED CHECK: const skipped = await AsyncStorage.getItem(...)
+             // ✅ ALWAYS SHOW IF NOT GRANTED
+             setShowNotificationModal(true);
         } else {
              if (user && userProfile) {
                 const name = userProfile.settings?.name || 'غالية';
@@ -428,7 +431,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         onEnable={handleEnableNotifications}
         onDismiss={async () => {
              setShowNotificationModal(false);
-             await AsyncStorage.setItem('skipped_noti_request_session', 'true');
+            
         }}
       />
 
