@@ -33,6 +33,7 @@ import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path 
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adjust path if needed
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
+import ScoreBreakdownModal from '../../src/components/oilguard/ScoreBreakdownModal'; // <--- ADD THIS
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -1159,6 +1160,7 @@ export default function OilGuardEngine() {
   const [frontImageUri, setFrontImageUri] = useState(null); 
   const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
   const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
+  const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateX = useRef(new Animated.Value(0)).current;
@@ -2069,6 +2071,44 @@ const pickFrontImage = () => {
                             />
                         </View>
 
+                        {/* --- ENHANCED BREAKDOWN TRIGGER (Pop & Clean) --- */}
+                        <TouchableOpacity 
+                            onPress={() => setBreakdownModalVisible(true)}
+                            activeOpacity={0.7}
+                            style={{
+                                flexDirection: 'row-reverse', // RTL
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginTop: 12,                        
+                                paddingVertical: 12,
+                                paddingHorizontal: 16,
+                                backgroundColor: 'rgba(255, 255, 255, 0.03)', // Subtle glass fill
+                                borderRadius: 16,
+                            }}
+                        >
+                            <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 10}}>
+                                {/* Mini Icon Badge */}
+                                <View style={{
+                                    width: 24, height: 24, borderRadius: 12,
+                                    backgroundColor: 'rgba(90, 156, 132, 0.1)',
+                                    alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <FontAwesome5 name="microscope" size={11} color={COLORS.accentGreen} />
+                                </View>
+                                
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold', // Thicker font
+                                    fontSize: 15,
+                                    color: COLORS.textPrimary,  // Brighter text
+                                    letterSpacing: 0.3
+                                }}>
+                                    تحليل تفصيلي للدرجة
+                                </Text>
+                            </View>
+
+                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.textDim} />
+                        </TouchableOpacity>
+
                         {/* Match Reasons (Safe Access) */}
                         <MatchBreakdown 
                             reasons={personalMatch.reasons} 
@@ -2300,6 +2340,12 @@ return (
                 setCropperVisible(false);
                 processImageWithGemini(cropped.uri);
             }}
+        />
+
+<ScoreBreakdownModal 
+            visible={isBreakdownModalVisible}
+            onClose={() => setBreakdownModalVisible(false)}
+            data={finalAnalysis?.scoreBreakdown}
         />
 
     </View>

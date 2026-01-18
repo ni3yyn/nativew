@@ -1062,10 +1062,9 @@ rs_HeroWrapperAnimated: {
   
   // The Main Dashboard Container (HUD)
   dashboardContainer: {
-    marginHorizontal: 5,
     borderRadius: 24,
     overflow: 'hidden',
-
+    width: '100%',
     borderWidth: 1,
     borderColor: 'rgba(90, 156, 132, 0.3)',
     marginBottom: 20,
@@ -1073,6 +1072,7 @@ rs_HeroWrapperAnimated: {
   },
   dashboardGlass: {
     padding: 20,
+    paddingHorizontal: 15,
     backgroundColor: 'rgba(26, 45, 39, 0.6)', 
   },
   
@@ -1216,6 +1216,8 @@ rs_HeroWrapperAnimated: {
     borderRadius: 16,
     paddingVertical: 5,
     marginHorizontal: 5,
+    width: '100%',
+    alignSelf: 'center',
   },
 
   // Single Header
