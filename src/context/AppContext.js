@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, updateDoc, where, limit, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -9,13 +9,16 @@ import Constants from 'expo-constants';
 import { 
   setSavedProductsCache, 
   getSavedProductsCache,
-  setSelfProfileCache,   // <--- IMPORT THIS
-  getSelfProfileCache    // <--- IMPORT THIS
+  setSelfProfileCache,   
+  getSelfProfileCache    
 } from '../services/cachingService'; 
 
 const AppContext = createContext();
 
-// Configure how notifications appear when the app is in the foreground
+// ==================================================================
+// 1. NOTIFICATION HANDLER CONFIG
+// Describes how notifications behave when the app is in the FOREGROUND
+// ==================================================================
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -46,15 +49,18 @@ export const AppProvider = ({ children }) => {
   const [profileError, setProfileError] = useState(null);
   const [productsError, setProductsError] = useState(null);
 
-  // --- HELPER: Register for Push Notifications ---
+  // ==================================================================
+  // 2. HELPER: REGISTER FOR PUSH NOTIFICATIONS
+  // Handles Permissions, Android Channels, and Token Generation
+  // ==================================================================
   const registerForPushNotificationsAsync = async (uid) => {
     if (!Device.isDevice) {
-      console.log('Must use physical device for Push Notifications');
+      console.log('⚠️ Must use physical device for Push Notifications');
       return;
     }
 
     try {
-      // 1. Android Channel Setup
+      // A. Android Channel Setup
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
@@ -64,7 +70,7 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      // 2. Permission Check
+      // B. Permission Check
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
@@ -73,44 +79,64 @@ export const AppProvider = ({ children }) => {
         finalStatus = status;
       }
       
-      // If user denies permission, we STOP here. 
-      // This explains why some users don't have tokens.
       if (finalStatus !== 'granted') {
         console.log('❌ User denied notification permissions');
-        // Optional: Update DB to indicate permission was denied, so you stop debugging these users
-        const userRef = doc(db, 'profiles', uid);
-        await setDoc(userRef, { notificationsEnabled: false }, { merge: true });
+        await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
         return;
       }
 
-      // 3. Get Token
-      // Note: If you are using Expo's Push Notification Service, use getExpoPushTokenAsync instead.
-      // If you are using raw Firebase Cloud Messaging, keep getDevicePushTokenAsync.
-      const tokenData = await Notifications.getDevicePushTokenAsync();
-      const token = tokenData.data;
-      
-      console.log("🔥 Device Token Generated:", token);
+      // C. Get Project ID (Critical for Expo SDK 49+)
+      // We look for the ID dynamically, but fall back to your app.json ID if missing.
+      const projectId = 
+        Constants?.expoConfig?.extra?.eas?.projectId ?? 
+        Constants?.easConfig?.projectId ?? 
+        "6ebdbfe1-08ea-4f21-9fa2-482f152a3266"; // <--- HARDCODED ID FROM APP.JSON
 
-      // 4. Save to Firestore (CRITICAL FIX HERE)
-      // Use setDoc with merge: true instead of updateDoc
-      // This ensures it works even if the profile doc doesn't exist yet
+      if (!projectId) {
+          console.error("❌ ERROR: Missing Project ID. Notifications will fail.");
+          return; 
+      }
+
+      // D. Get EXPO Token (For Client-to-Client / Comments)
+      let expoTokenString = null;
+      try {
+          const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+          expoTokenString = expoTokenData.data;
+          console.log("✅ Expo Token:", expoTokenString);
+      } catch (e) {
+          console.warn("⚠️ Error getting Expo Token:", e);
+      }
+
+      // E. Get FCM Token (For Admin SDK / Backend)
+      let fcmTokenString = null;
+      try {
+          const deviceTokenData = await Notifications.getDevicePushTokenAsync();
+          fcmTokenString = deviceTokenData.data;
+          // console.log("✅ FCM Token:", fcmTokenString);
+      } catch (e) {
+          console.warn("⚠️ Error getting Device Token:", e);
+      }
+
+      // F. Save to Firestore
       const userRef = doc(db, 'profiles', uid);
       await setDoc(userRef, {
-        fcmToken: token,
-        notificationsEnabled: true, // Useful flag to know they accepted permissions
+        expoPushToken: expoTokenString, 
+        fcmToken: fcmTokenString,       
+        notificationsEnabled: true,
         deviceType: Platform.OS,
         lastTokenUpdate: new Date()
       }, { merge: true });
 
     } catch (error) {
-      console.error("❌ Error registering push token:", error);
-      // Optional: Log this error to a service like Sentry
+      console.error("❌ Error registering push tokens:", error);
     }
   };
 
+  // ==================================================================
+  // 3. MAIN EFFECT: INIT APP
+  // ==================================================================
   useEffect(() => {
-    // 1. Listen to System Config (Maintenance Mode & Version) from Admin Panel
-    // Note: Admin Panel writes to 'app_config/version_control'
+    // A. Listen to System Config (Maintenance Mode & Version)
     const configRef = doc(db, 'app_config', 'version_control'); 
     
     const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
@@ -121,17 +147,17 @@ export const AppProvider = ({ children }) => {
         setAppConfig({
           maintenanceMode: data.maintenance_mode || false,
           minSupportedVersion: data.android?.min_supported_version || '1.0.0',
-          latestVersion: data.android?.latest_version || '1.0.0', // NEW
+          latestVersion: data.android?.latest_version || '1.0.0',
           latestVersionUrl: data.android?.store_url || '',
           maintenanceMessage: data.maintenance_message || 'الصيانة جارية',
-          changelog: data.android?.changelog || [], // NEW
+          changelog: data.android?.changelog || [],
         });
       }
     }, (err) => {
       console.error("System config fetch error", err);
     });
 
-    // 2. Listen for Auth Changes
+    // B. Listen for Auth Changes
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setProfileError(null);
@@ -139,70 +165,59 @@ export const AppProvider = ({ children }) => {
       
       if (currentUser) {
         console.log("🟢 User Detected:", currentUser.email);
-        setLoading(true); 
+        // Don't set loading true here immediately to avoid flash if we have cache
         
-        // ➤ REGISTER TOKEN
+        // 1. REGISTER NOTIFICATION TOKEN
         registerForPushNotificationsAsync(currentUser.uid);
     
-        // ============================================================
-        // 🚀 OFFLINE STRATEGY (Sequential Loading)
-        // ============================================================
+        // 2. OFFLINE STRATEGY (Load from AsyncStorage first)
         const loadCache = async () => {
             try {
-                console.log("📂 Attempting to load cache...");
-                
-                // 1. Load Profile Cache
+                // Load Profile Cache
                 const cachedProfile = await getSelfProfileCache();
                 if (cachedProfile) {
-                    console.log("✅ Profile loaded from cache");
+                    // console.log("✅ Profile loaded from cache");
                     setUserProfile(cachedProfile);
                 }
     
-                // 2. Load Products Cache
+                // Load Products Cache
                 const cachedProducts = await getSavedProductsCache();
                 if (cachedProducts && cachedProducts.length > 0) {
-                    console.log(`✅ Loaded ${cachedProducts.length} products from cache`);
+                    // console.log(`✅ Loaded ${cachedProducts.length} products from cache`);
                     setSavedProducts(cachedProducts);
                 }
     
-                // 🛑 CRITICAL FIX:
-                // If we found data in cache, STOP loading immediately.
-                // We do NOT wait for the network to connect.
+                // If we found data in cache, we can stop the global loading spinner
                 if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
                     setLoading(false);
                 }
-    
             } catch (e) {
                 console.error("Cache load error:", e);
             }
         };
-    
-        // Run the cache loader
+        
+        // Trigger cache load
         loadCache();
     
+        // 3. NETWORK STRATEGY (Background Sync)
     
-        // ============================================================
-        // 📡 NETWORK STRATEGY (Background Sync)
-        // ============================================================
-    
-        // ➤ LISTEN: Real-time Profile Updates
+        // ➤ Listen: Real-time Profile Updates
         const profileRef = doc(db, 'profiles', currentUser.uid);
         const unsubscribeProfile = onSnapshot(profileRef, 
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
               setUserProfile(data);
-              setSelfProfileCache(data); // Sync to storage
+              setSelfProfileCache(data); // Update storage
+              setLoading(false); // Ensure loading is off once we have real data
             }
           }, 
           (err) => {
-            // If offline, just log warning. 
-            // DO NOT set userProfile to null, keep the cached version!
-            console.warn("⚠️ Offline: Using cached profile");
+            console.warn("⚠️ Offline: Keeping cached profile");
           }
         );
     
-        // ➤ LISTEN: Real-time Products Updates
+        // ➤ Listen: Real-time Products Updates
         const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
         const productsQuery = query(productsRef, orderBy('createdAt', 'desc'));
         
@@ -214,19 +229,15 @@ export const AppProvider = ({ children }) => {
             }));
 
             setSavedProducts(currentSavedProducts => {
-                // 🛑 PROTECTION: 
-                // If Firestore returns an empty list from its local cache (metadata.fromCache is true),
-                // BUT we already have data loaded from our AsyncStorage cache (currentSavedProducts > 0),
-                // then Firestore is lying because it hasn't synced yet. IGNORE this update.
+                // PROTECTION: If Firestore returns empty list because of cache miss 
+                // but we have data in memory, ignore the empty list.
                 if (newProducts.length === 0 && snapshot.metadata.fromCache && currentSavedProducts.length > 0) {
-                    console.log("🛡️ Ignoring empty Firestore cache update; keeping AsyncStorage data.");
                     return currentSavedProducts;
                 }
 
                 // Normal Logic: Update if data changed
                 const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(currentSavedProducts);
                 if (isDifferent) {
-                    console.log("🔄 Syncing new data...");
                     setSavedProductsCache(newProducts);
                     return newProducts; 
                 }
@@ -234,11 +245,10 @@ export const AppProvider = ({ children }) => {
                 return currentSavedProducts; 
             });
             
-            // Ensure loading is false
             setLoading(false);
           }, 
           (err) => {
-            console.warn("⚠️ Offline: Using cached products");
+            console.warn("⚠️ Offline: Keeping cached products");
             setLoading(false);
           }
         );
@@ -247,33 +257,44 @@ export const AppProvider = ({ children }) => {
           unsubscribeProfile();
           unsubscribeProducts();
         };
-    }  else {
+      } else {
         // No user logged in
         setUserProfile(null);
         setSavedProducts([]);
-        // Clear specific user data from state (optional: clear cache here if strict security needed)
         setLoading(false);
       }
     });
 
     return () => {
-      // unsubscribeConfig(); // Make sure this is defined in your original code
+      unsubscribeConfig();
       unsubscribeAuth();
     };
   }, []);
 
+  // ==================================================================
+  // 4. LOGOUT HELPER
+  // ==================================================================
   const logout = async () => {
     try {
       await signOut(auth);
+      // Optional: clear specific cache keys here if you want strict security
+      setUserProfile(null);
+      setSavedProducts([]);
     } catch (e) {
       console.error(e);
     }
   };
 
+  // ==================================================================
+  // 5. ANNOUNCEMENT HELPERS
+  // ==================================================================
   const dismissAnnouncement = () => {
     setActiveAnnouncement(null);
   };
 
+  // ==================================================================
+  // 6. RENDER PROVIDER
+  // ==================================================================
   return (
     <AppContext.Provider value={{ 
       user, 

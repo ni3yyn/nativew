@@ -8,6 +8,7 @@ import { FontAwesome5, Feather, MaterialCommunityIcons, Ionicons } from '@expo/v
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 // --- IMPORTS ---
 import { COLORS } from '../../src/constants/theme';
@@ -49,7 +50,9 @@ const NewPostsToast = ({ visible, onPress }) => {
 export default function CommunityScreen() {
     const { user, userProfile, savedProducts } = useAppContext();
     const insets = useSafeAreaInsets();
-    
+    const { openPostId } = useLocalSearchParams();
+    const router = useRouter();
+
     // --- STATE ---
     const [viewMode, setViewMode] = useState('menu');
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -78,6 +81,34 @@ export default function CommunityScreen() {
         const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 400);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    useEffect(() => {
+        if (openPostId && allPosts.length > 0) {
+            // 1. Find the post in the current list
+            const targetPost = allPosts.find(p => p.id === openPostId);
+            
+            if (targetPost) {
+                // 2. Force the view to 'feed' mode so the user sees the context
+                if (viewMode === 'menu') {
+                    const cat = CATEGORIES.find(c => c.id === targetPost.type);
+                    if (cat) setSelectedCategory(cat);
+                    setViewMode('feed');
+                }
+
+                // 3. Open the comments modal
+                setCommentingPost(targetPost);
+
+                // 4. Clear the parameter from the URL so it doesn't open again
+                router.setParams({ openPostId: undefined });
+                
+                console.log("✅ Successfully deep-linked to post:", openPostId);
+            } else {
+                // If not found in the initial 20 posts, you could fetch it specifically
+                // but usually, recent notifications are for recent posts.
+                console.log("⚠️ Post from notification not found in current list");
+            }
+        }
+    }, [openPostId, allPosts, viewMode]);
 
     // --- 🟢 DATA LOADING & REALTIME SUBSCRIPTION ---
     useEffect(() => {
@@ -475,7 +506,17 @@ export default function CommunityScreen() {
 
             <CreatePostModal visible={isCreateModalVisible} onClose={() => setCreateModalVisible(false)} onSubmit={handleCreateWrapper} savedProducts={savedProducts} userRoutines={userProfile?.routines} defaultType={selectedCategory.id} />
             <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
-            <CommentModal visible={!!commentingPost} onClose={() => setCommentingPost(null)} post={commentingPost} currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} onProfilePress={(userId) => setViewingUserProfile({id: userId})} />
+            <CommentModal 
+    visible={!!commentingPost} 
+    onClose={() => {
+        setCommentingPost(null);
+        // Ensure parameters are cleared when closing manually too
+        router.setParams({ openPostId: undefined });
+    }} 
+    post={commentingPost} 
+    currentUser={userProfile ? {...userProfile, uid: user.uid} : {uid: user.uid}} 
+    onProfilePress={(userId) => setViewingUserProfile({id: userId})} 
+/>
             <FullImageViewer visible={!!viewingImage} imageUrl={viewingImage} onClose={() => setViewingImage(null)} />
             
             <UserProfileModal 

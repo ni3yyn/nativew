@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, Easing, AppState } from 'react-native';
+import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState } from 'react-native';
 import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { StatusBar } from "expo-status-bar";
@@ -14,8 +14,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
 
-// Import the Notification Helpers
-import { registerForPushNotificationsAsync, scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
+// Import Notification Helper (Assumes this file exists in your utils)
+// If you don't have this file, you can remove the scheduleAuthenticNotifications call below.
+import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +38,7 @@ const useSilentUpdates = () => {
                     console.log("Silent OTA Update downloaded.");
                 }
             } catch (e) {
-                // Ignore errors silently
+                // Ignore errors silently (network issues, etc.)
             }
         };
 
@@ -54,37 +55,36 @@ const useSilentUpdates = () => {
 };
 
 // ============================================================================
-// 2. HELPER: APP OPEN AD HOOK (New 5s Entrance Ad)
+// 2. HELPER: APP OPEN AD HOOK
 // ============================================================================
 const useAppOpenAd = () => {
   useEffect(() => {
-      // 1. Safety Check: Don't run in Expo Go
+      // 1. Safety Check: Ensure AdMob module is linked
       const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
       if (!isAdMobLinked) return;
 
-      const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
-
-      // 2. Config: Use Test ID in Dev, Real ID in Prod
-      const adUnitId = __DEV__ 
-          ? TestIds.APP_OPEN 
-          : 'ca-app-pub-6010052879824695/7889332295';
-
-      let appOpenAd = null;
-
       try {
-          appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
+          const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
+
+          // 2. Config: Use Test ID in Dev, Real ID in Prod
+          // REPLACE 'ca-app-pub-...' with your actual AD UNIT ID for App Open
+          const adUnitId = __DEV__ 
+              ? TestIds.APP_OPEN 
+              : 'ca-app-pub-6010052879824695/7889332295'; 
+
+          const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
               requestNonPersonalizedAdsOnly: true,
           });
 
           // 3. Listener: When Loaded, Show it!
           const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-              console.log('App Open Ad Loaded - Showing now');
+              // console.log('App Open Ad Loaded - Showing now');
               appOpenAd.show();
           });
 
           // 4. Listener: When Closed, Load the Next one
           const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-              console.log('App Open Ad Closed - Loading next');
+              // console.log('App Open Ad Closed - Loading next');
               appOpenAd.load();
           });
 
@@ -99,9 +99,6 @@ const useAppOpenAd = () => {
           // 7. Handle App Resume (Background -> Active)
           const appStateSub = AppState.addEventListener('change', (nextAppState) => {
               if (nextAppState === 'active') {
-                  // Try to load/show again if user returns
-                  // Note: appOpenAd.show() only works if loaded. 
-                  // If it wasn't loaded yet, the LOADED event above handles it.
                   appOpenAd.load(); 
               }
           });
@@ -120,7 +117,7 @@ const useAppOpenAd = () => {
 };
 
 // ============================================================================
-// 3. HELPER COMPONENT: FORCE UPDATE SCREEN (BLOCKING)
+// 3. UI HELPER: FORCE UPDATE SCREEN (BLOCKING)
 // ============================================================================
 const ForceUpdateScreen = ({ url }) => (
   <View style={styles.systemScreen}>
@@ -142,7 +139,7 @@ const ForceUpdateScreen = ({ url }) => (
 );
 
 // ============================================================================
-// 4. HELPER COMPONENT: OPTIONAL UPDATE MODAL
+// 4. UI HELPER: OPTIONAL UPDATE MODAL
 // ============================================================================
 const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
   return (
@@ -192,7 +189,7 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
 };
 
 // ============================================================================
-// 5. HELPER COMPONENT: NOTIFICATION PERMISSION MODAL
+// 5. UI HELPER: NOTIFICATION PERMISSION MODAL
 // ============================================================================
 const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -241,9 +238,8 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
   );
 };
 
-
 // ============================================================================
-// 6. HELPER COMPONENT: MAINTENANCE SCREEN
+// 6. UI HELPER: MAINTENANCE SCREEN
 // ============================================================================
 const MaintenanceScreen = ({ message }) => (
   <View style={styles.systemScreen}>
@@ -258,7 +254,7 @@ const MaintenanceScreen = ({ message }) => (
 );
 
 // ============================================================================
-// 7. HELPER COMPONENT: ANNOUNCEMENT MODAL
+// 7. UI HELPER: ANNOUNCEMENT MODAL
 // ============================================================================
 const AnnouncementModal = ({ data, onDismiss }) => {
   if (!data) return null;
@@ -290,13 +286,13 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const [showAppIntro, setShowAppIntro] = useState(false);
   const router = useRouter();
 
-  // ➤ CURRENT VERSION
+  // ➤ CURRENT VERSION (Must match app.json)
   const APP_VERSION = '1.0.0'; 
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
 
-  // ➤ ACTIVATE APP OPEN ADS (The New Part)
+  // ➤ ACTIVATE APP OPEN ADS
   useAppOpenAd();
 
   // --- VERSION CHECKING LOGIC ---
@@ -314,6 +310,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     } catch (e) { return 0; }
   };
 
+  // --- INTRO CHECK ---
   useEffect(() => {
     const checkIntro = async () => {
         try {
@@ -324,18 +321,23 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     if (fontsLoaded) checkIntro();
   }, [fontsLoaded]);
 
-  // --- ADMOB INIT ---
-  useEffect(() => {
-    const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
-    if (isAdMobLinked) {
-      const mobileAds = require('react-native-google-mobile-ads').default;
-      mobileAds().initialize();
-    }
-  }, []);
-
+  // --- HIDE SPLASH SCREEN ---
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
+
+  // --- INIT ADMOB ---
+  useEffect(() => {
+    try {
+        const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+        if (isAdMobLinked) {
+            const mobileAds = require('react-native-google-mobile-ads').default;
+            mobileAds().initialize();
+        }
+    } catch (e) {
+        console.warn("AdMob initialize failed", e);
+    }
+  }, []);
 
   // --- CHECK OPTIONAL UPDATE ---
   useEffect(() => {
@@ -363,56 +365,110 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       if(appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
   };
 
-  // --- NOTIFICATION LOGIC ---
+  // --- NOTIFICATION PERMISSIONS & LISTENERS ---
   useEffect(() => {
-    const initNotifications = async () => {
-        await registerForPushNotificationsAsync();
+    if (!fontsLoaded) return;
+
+    // 1. PERMISSIONS & SCHEDULING LOGIC
+    const checkPermissionAndSchedule = async () => {
         const { status } = await Notifications.getPermissionsAsync();
         
         if (status !== 'granted') {
-             // ❌ REMOVED CHECK: const skipped = await AsyncStorage.getItem(...)
-             // ✅ ALWAYS SHOW IF NOT GRANTED
-             setShowNotificationModal(true);
+             const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
+             if (hasSkipped !== 'true') {
+                 setShowNotificationModal(true);
+             }
         } else {
              if (user && userProfile) {
-                const name = userProfile.settings?.name || 'غالية';
-                const settings = userProfile.settings || {};
-                const products = savedProducts || [];
-                await scheduleAuthenticNotifications(name, products, settings);
+                try {
+                    const name = userProfile.settings?.name || 'غالية';
+                    const settings = userProfile.settings || {};
+                    const products = savedProducts || [];
+                    
+                    if (scheduleAuthenticNotifications) {
+                        await scheduleAuthenticNotifications(name, products, settings);
+                    }
+                } catch (e) {
+                    console.log("Error scheduling local notifications:", e);
+                }
             }
         }
     };
 
-    if (fontsLoaded) initNotifications();
+    // 2. UNIFIED NAVIGATION HANDLER
+    // This handles the actual redirect logic for all notification types
+    const handleNotificationNavigation = (response) => {
+        const data = response.notification.request.content.data;
+        console.log("🔔 Notification Data Received:", data);
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      if (data?.screen === 'oilguard') router.push('/oilguard');
-      else if (data?.screen === 'routine') router.push('/profile');
-    });
+        // We use a small delay (800ms) to allow the app's internal 
+        // Auth-Redirect (e.g. going to /profile) to finish before we 
+        // override it with the notification destination.
+        setTimeout(() => {
+            if (data?.screen === 'oilguard') {
+                router.push('/oilguard');
+            } 
+            else if (data?.screen === 'routine') {
+                router.push('/profile');
+            } 
+            else if (data?.postId || (data?.screen === 'PostDetails' && data?.postId)) {
+                // Use the standardized /community route with the openPostId param
+                // so that community.js catches it and opens the modal.
+                router.push({ 
+                    pathname: "/community", 
+                    params: { openPostId: data.postId } 
+                });
+            }
+        }, 800);
+    };
+
+    // 3. COLD START CHECK (App was completely closed)
+    const checkInitialNotification = async () => {
+        const response = await Notifications.getLastNotificationResponseAsync();
+        if (response) {
+            console.log("🧊 App opened from Cold Start via notification");
+            handleNotificationNavigation(response);
+        }
+    };
+
+    // 4. EXECUTION
+    checkPermissionAndSchedule();
+    checkInitialNotification();
+
+    // 5. BACKGROUND/FOREGROUND LISTENER
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationNavigation);
 
     return () => subscription.remove();
-  }, [user, userProfile, savedProducts, fontsLoaded]);
+}, [user, userProfile, savedProducts, fontsLoaded]);
 
-  const handleEnableNotifications = () => {
+  const handleEnableNotifications = async () => {
       setShowNotificationModal(false);
-      Linking.openSettings();
+      if (Platform.OS === 'ios') {
+          Linking.openURL('app-settings:');
+      } else {
+          Linking.openSettings();
+      }
+  };
+
+  const handleDismissNotifications = async () => {
+      setShowNotificationModal(false);
+      await AsyncStorage.setItem('skipped_notif_permission', 'true');
   };
 
   if (!fontsLoaded) return null;
 
-  // 1. Maintenance
+  // 1. Maintenance Mode Check
   if (appConfig?.maintenanceMode) {
     return <MaintenanceScreen message={appConfig.maintenanceMessage} />;
   }
 
-  // 2. Force Update
+  // 2. Force Update Check
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
     return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
   }
 
-  // 3. Normal App Structure
+  // 3. Normal App Render
   return (
     <>
       <StatusBar style="light" translucent={true} />
@@ -429,10 +485,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       <NotificationRequestModal 
         visible={showNotificationModal}
         onEnable={handleEnableNotifications}
-        onDismiss={async () => {
-             setShowNotificationModal(false);
-            
-        }}
+        onDismiss={handleDismissNotifications}
       />
 
       <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} />

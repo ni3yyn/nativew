@@ -61,6 +61,13 @@
           "androidAppId": "ca-app-pub-7808816060487731~9164537902",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1A2D27"
+        }
       ]
     ],
     "extra": {

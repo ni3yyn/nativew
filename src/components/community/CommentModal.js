@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, 
   FlatList, KeyboardAvoidingView, Platform, StyleSheet, 
-  Animated, LayoutAnimation, UIManager, Pressable, Keyboard 
+  Animated, LayoutAnimation, Pressable, Keyboard 
 } from 'react-native';
 import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,8 +11,105 @@ import * as Haptics from 'expo-haptics';
 
 // --- CONFIG & SERVICES ---
 import { supabase } from '../../config/supabase';
+import { db } from '../../config/firebase'; 
+import { doc, getDoc } from 'firebase/firestore';
 import { COLORS } from '../../constants/theme';
 import { AlertService } from '../../services/alertService';
+
+
+// ==================================================================
+// 1. HELPER: ROBUST NOTIFICATION SENDER
+// ==================================================================
+const sendNotificationToOwner = async (postOwnerId, commenterName, postId, commentText) => {
+    console.log("\n🔵 --- START NOTIFICATION DEBUG --- 🔵");
+    
+    // 1. Validate Input
+    if (!postOwnerId) {
+        console.error("❌ Stopped: No Post Owner ID provided");
+        return;
+    }
+
+    try {
+        // 2. Fetch User Profile
+        const userDocRef = doc(db, 'profiles', postOwnerId);
+        const userSnap = await getDoc(userDocRef);
+
+        if (!userSnap.exists()) {
+            console.error("❌ Stopped: User profile not found in Firestore");
+            return;
+        }
+
+        const userData = userSnap.data();
+        const pushToken = userData.expoPushToken;
+
+        console.log(`👤 Target User: ${userData.name || 'Unknown'}`);
+        console.log(`🔑 Target Token: ${pushToken}`);
+
+        // 3. Validate Token Local
+        if (!pushToken) {
+            console.error("❌ Stopped: User has NO 'expoPushToken' in Firestore.");
+            return;
+        }
+        if (!pushToken.startsWith('ExponentPushToken')) {
+            console.error("❌ Stopped: Token format is invalid. Must start with ExponentPushToken.");
+            return;
+        }
+
+        // 4. Construct Message
+        const message = {
+            to: pushToken,
+            sound: 'default',
+            title: 'تعليق جديد 💬',
+            body: `${commenterName}: ${commentText}`,
+            data: { postId: postId, screen: 'PostDetails' }, 
+        };
+
+        console.log("🚀 Sending request to Expo API...");
+
+        // 5. Send Request
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Accept-encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+        });
+
+        // 6. READ RAW RESPONSE (Crucial Step)
+        const rawText = await response.text(); 
+        console.log("📡 RAW RESPONSE FROM EXPO:", rawText);
+
+        const result = JSON.parse(rawText);
+
+        // 7. Analyze Specific Errors
+        if (result.errors) {
+            // Top level errors (e.g., entire batch failed)
+            console.error("❌ API LEVEL ERROR:", JSON.stringify(result.errors, null, 2));
+        } 
+        else if (result.data && result.data.status === 'error') {
+            // Specific delivery error
+            console.error("❌ DELIVERY ERROR:");
+            console.error("👉 Code:", result.data.details?.error || "Unknown Code");
+            console.error("👉 Message:", result.data.message);
+            
+            if (result.data.details?.error === 'DeviceNotRegistered') {
+                console.warn("💡 FIX: The token is old/invalid. The user must open the app again to generate a new token.");
+            }
+            if (result.data.message?.includes('ExperienceId')) {
+                console.warn("💡 FIX: Mismatch between 'Expo Go' and 'Development Build'. Tokens generated in one won't work in the other.");
+            }
+        } 
+        else {
+            console.log("✅ SUCCESS! Notification Ticket ID:", result.data?.id);
+        }
+
+    } catch (err) {
+        console.error("❌ NETWORK/CRASH ERROR:", err);
+    }
+    console.log("🔵 --- END NOTIFICATION DEBUG --- 🔵\n");
+};
 
 const getRandomColor = (name) => {
     if (!name) return COLORS.card;
@@ -22,7 +119,6 @@ const getRandomColor = (name) => {
 };
 
 const QUICK_REPLIES = [
-    "روتين هايل! 😍",
     "شكرا على المشاركة ✨",
     "وين لقيتيه؟",
     "اواه ماشي سومتو",
@@ -33,9 +129,15 @@ const QUICK_REPLIES = [
 // --- SUB-COMPONENT: INTERACTIVE COMMENT ITEM ---
 const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress }) => {
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
-    const [isLiked, setIsLiked] = useState(false);
+    
+    const [isLiked, setIsLiked] = useState(item.isLikedByCurrentUser || false);
     const [likesCount, setLikesCount] = useState(item.likesCount || 0);
     
+    useEffect(() => {
+        setIsLiked(item.isLikedByCurrentUser);
+        setLikesCount(item.likesCount);
+    }, [item.isLikedByCurrentUser, item.likesCount]);
+
     const displayName = item.userName || "مستخدم وثيق";
     const initial = displayName.charAt(0).toUpperCase();
 
@@ -46,6 +148,25 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
 
     const lastTap = useRef(null);
 
+    const toggleLikeApi = async (newStatus) => {
+        try {
+            if (newStatus) {
+                const { error } = await supabase
+                    .from('comment_likes')
+                    .insert([{ comment_id: item.id, user_id: currentUser.uid }]);
+                if (error && error.code !== '23505') throw error;
+            } else {
+                const { error } = await supabase
+                    .from('comment_likes')
+                    .delete()
+                    .match({ comment_id: item.id, user_id: currentUser.uid });
+                if (error) throw error;
+            }
+        } catch (error) {
+            console.error("Error toggling like:", error);
+        }
+    };
+
     const handleLike = () => {
         if (!currentUser?.uid) return;
         Haptics.selectionAsync();
@@ -55,15 +176,16 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
             Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 50 })
         ]).start();
 
-        setIsLiked(!isLiked);
-        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+        const newStatus = !isLiked;
+        setIsLiked(newStatus);
+        setLikesCount(prev => newStatus ? prev + 1 : prev - 1);
+        toggleLikeApi(newStatus);
     };
 
     const triggerDoubleTapLike = () => {
         if (!currentUser?.uid || isLiked) return;
         
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
         popHeartScale.setValue(0.5);
         popHeartOpacity.setValue(1);
         
@@ -91,7 +213,6 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
     const handleLongPress = () => {
         if (!isMe) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        
         AlertService.delete(
             "حذف التعليق",
             "هل أنت متأكد؟ سيختفي هذا التعليق نهائيا.",
@@ -106,7 +227,7 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
     return (
         <View style={styles.commentRow}>
             <TouchableOpacity 
-                onPress={() => onProfilePress && onProfilePress(item.userId)}
+                onPress={() => onProfilePress && onProfilePress(item.userId, item.authorSettings)}
                 activeOpacity={0.8}
                 style={[styles.avatarContainer, { backgroundColor: getRandomColor(displayName) }]}
             >
@@ -130,7 +251,6 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
 
                 <View style={styles.metaRow}>
                     <Text style={styles.metaText}>{timeAgo}</Text>
-                    
                     {likesCount > 0 && (
                         <Text style={[styles.metaText, {color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold'}]}>
                             {likesCount} إعجاب
@@ -159,33 +279,35 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const [loading, setLoading] = useState(true);
     const flatListRef = useRef();
 
-    // Helper to map DB row to UI object
-    const normalizeComment = (row) => ({
-        id: row.id,
-        text: row.content,
-        createdAt: row.created_at,
-        userId: row.firebase_user_id,
-        userName: row.author_snapshot?.name || 'مستخدم وثيق',
-        authorSettings: row.author_snapshot,
-        likesCount: 0 
-    });
+    const normalizeComment = (row, myLikesSet = null) => {
+        let isLiked = false;
+        if (myLikesSet) {
+            isLiked = myLikesSet.has(row.id);
+        }
+        
+        return {
+            id: row.id,
+            text: row.content,
+            createdAt: row.created_at,
+            userId: row.firebase_user_id,
+            userName: row.author_snapshot?.name || 'مستخدم وثيق',
+            authorSettings: row.author_snapshot || {},
+            likesCount: row.likes_count || 0,
+            isLikedByCurrentUser: isLiked
+        };
+    };
 
-    // 🟢 INITIAL LOAD & SUBSCRIPTION
     useEffect(() => {
         if (!post?.id || !visible) return;
         
-        // 1. Initial Fetch
         fetchComments();
     
-        // 2. Realtime Subscription
-        // We chain two listeners: one filtered for INSERTs, one unfiltered for DELETEs
         const channel = supabase.channel(`comments:${post.id}`)
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${post.id}` },
                 (payload) => {
-                    // 🟢 INSERT LOGIC (Filtered by Post ID)
-                    if (payload.new.firebase_user_id === currentUser.uid) return; // Stop Echo
+                    if (payload.new.firebase_user_id === currentUser.uid) return; 
 
                     const newComment = normalizeComment(payload.new);
                     setCommentsList((currentComments) => {
@@ -201,14 +323,10 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'comments' },
                 (payload) => {
-                    // 🟢 DELETE LOGIC (Global Listener -> Local Filter)
-                    // We catch ALL deletes, but only react if the ID exists in our list.
-                    // This bypasses the limitation where DELETE payloads don't include post_id.
                     const deletedId = payload.old.id;
-                    
                     setCommentsList((currentComments) => {
                         const exists = currentComments.some(c => c.id === deletedId);
-                        if (!exists) return currentComments; // Not a comment on this post
+                        if (!exists) return currentComments;
 
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                         return currentComments.filter(c => c.id !== deletedId);
@@ -225,15 +343,33 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const fetchComments = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            // A. Get Comments
+            const { data: commentsData, error: commentsError } = await supabase
                 .from('comments')
                 .select('*')
                 .eq('post_id', post.id)
                 .order('created_at', { ascending: true });
 
-            if (error) throw error;
+            if (commentsError) throw commentsError;
 
-            const normalized = data.map(normalizeComment);
+            // B. Get My Likes
+            const commentIds = commentsData.map(c => c.id);
+            const myLikesSet = new Set();
+
+            if (commentIds.length > 0 && currentUser?.uid) {
+                const { data: likesData, error: likesError } = await supabase
+                    .from('comment_likes')
+                    .select('comment_id')
+                    .eq('user_id', currentUser.uid)
+                    .in('comment_id', commentIds);
+
+                if (!likesError && likesData) {
+                    likesData.forEach(like => myLikesSet.add(like.comment_id));
+                }
+            }
+
+            // C. Merge
+            const normalized = commentsData.map(row => normalizeComment(row, myLikesSet));
             setCommentsList(normalized);
             
         } catch (err) {
@@ -253,12 +389,13 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         const authorSnapshot = {
             name: currentUser.settings?.name || currentUser.name || 'مستخدم وثيق',
             skinType: currentUser.settings?.skinType || null,
-            scalpType: currentUser.settings?.scalpType || null
+            scalpType: currentUser.settings?.scalpType || null,
+            goals: currentUser.settings?.goals || [],
+            conditions: currentUser.settings?.conditions || []
         };
 
         const tempId = Math.random().toString(); 
 
-        // 🟢 Optimistic Update
         const optimisticComment = {
             id: tempId,
             text: tempText,
@@ -266,7 +403,8 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             userId: currentUser.uid,
             userName: authorSnapshot.name,
             authorSettings: authorSnapshot,
-            likesCount: 0
+            likesCount: 0,
+            isLikedByCurrentUser: false
         };
 
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -275,7 +413,6 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
         try {
-            // Send to Supabase
             const { data, error } = await supabase
                 .from('comments')
                 .insert([{
@@ -289,26 +426,31 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
             if (error) throw error;
 
-            await supabase.rpc('increment_comments_count', { row_id: post.id });
-
-            // Swap Temp ID -> Real ID silently (No animation needed for swap)
             setCommentsList(prev => prev.map(c => c.id === tempId ? normalizeComment(data) : c));
-            
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // --- SEND NOTIFICATION ---
+            if (post.userId !== currentUser.uid) {
+                sendNotificationToOwner(
+                    post.userId, 
+                    authorSnapshot.name, 
+                    post.id, 
+                    tempText
+                );
+            } else {
+                console.log("ℹ️ Notification skipped: User commented on their own post.");
+            }
 
         } catch (error) { 
             AlertService.error("خطأ", "لم يتم إرسال التعليق.");
-            // Revert
             setCommentsList(prev => prev.filter(c => c.id !== tempId)); 
             setComment(tempText); 
         }
     };
 
     const handleDelete = async (commentId) => {
-        // 🟢 Optimistic Delete
         const prevList = [...commentsList];
         
-        // Remove locally first
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setCommentsList(prev => prev.filter(c => c.id !== commentId));
 
@@ -319,14 +461,10 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 .eq('id', commentId);
 
             if (error) throw error;
-
-            await supabase.rpc('decrement_comments_count', { row_id: post.id });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
         } catch (error) { 
             console.error("Delete Error:", error); 
             AlertService.error("خطأ", "تعذر حذف التعليق");
-            // Revert if API fails
             setCommentsList(prevList); 
         }
     };
@@ -349,8 +487,11 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             presentationStyle="pageSheet" 
             onRequestClose={onClose}
         >
-            <View style={styles.modalContainer}>
-                
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+                style={styles.modalContainer}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
+            >
                 <View style={styles.modalHeader}>
                     <View style={styles.handleBar} />
                     <View style={styles.headerRow}>
@@ -366,84 +507,78 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     </View>
                 </View>
 
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-                    style={{ flex: 1 }}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-                >
-                    <View style={{flex: 1}}>
-                        {loading ? (
-                            <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
-                        ) : (
-                            <FlatList
-                                ref={flatListRef}
-                                data={commentsList}
-                                keyExtractor={item => item.id}
-                                contentContainerStyle={styles.listContent}
-                                renderItem={({ item }) => (
-                                    <CommentItem 
-                                        item={item} 
-                                        currentUser={currentUser} 
-                                        onDelete={handleDelete}
-                                        onProfilePress={onProfilePress} 
-                                    />
-                                )}
-                                keyboardShouldPersistTaps="handled" 
-                                ListEmptyComponent={
-                                    <View style={styles.emptyState}>
-                                        <View style={styles.emptyIconBox}>
-                                            <Feather name="message-circle" size={32} color={COLORS.textDim} />
-                                        </View>
-                                        <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
-                                        <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
+                <View style={{flex: 1}}>
+                    {loading ? (
+                        <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={commentsList}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={styles.listContent}
+                            renderItem={({ item }) => (
+                                <CommentItem 
+                                    item={item} 
+                                    currentUser={currentUser} 
+                                    onDelete={handleDelete}
+                                    onProfilePress={onProfilePress} 
+                                />
+                            )}
+                            keyboardShouldPersistTaps="handled" 
+                            ListEmptyComponent={
+                                <View style={styles.emptyState}>
+                                    <View style={styles.emptyIconBox}>
+                                        <Feather name="message-circle" size={32} color={COLORS.textDim} />
                                     </View>
-                                }
+                                    <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
+                                    <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
+                                </View>
+                            }
+                        />
+                    )}
+                </View>
+
+                <View style={styles.inputWrapper}>
+                    <View style={{height: 40, marginBottom: 8}}>
+                            <FlatList 
+                            horizontal 
+                            data={QUICK_REPLIES}
+                            keyExtractor={(item) => item}
+                            renderItem={({item}) => <QuickReplyChip text={item} />}
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{paddingHorizontal: 10, gap: 8}}
+                            keyboardShouldPersistTaps="handled"
                             />
-                        )}
                     </View>
 
-                    <View style={styles.inputWrapper}>
-                        <View style={{height: 40, marginBottom: 8}}>
-                             <FlatList 
-                                horizontal 
-                                data={QUICK_REPLIES}
-                                keyExtractor={(item) => item}
-                                renderItem={({item}) => <QuickReplyChip text={item} />}
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={{paddingHorizontal: 10, gap: 8}}
-                                keyboardShouldPersistTaps="handled"
-                             />
-                        </View>
+                    <View style={styles.inputContainer}>
+                        <TouchableOpacity 
+                            onPress={() => handleSend()} 
+                            style={[styles.sendBtn, !comment.trim() && styles.sendBtnDisabled]} 
+                            disabled={!comment.trim()}
+                        >
+                            <FontAwesome5 name="arrow-up" size={14} color={COLORS.background} />
+                        </TouchableOpacity>
 
-                        <View style={styles.inputContainer}>
-                            <TouchableOpacity 
-                                onPress={() => handleSend()} 
-                                style={[styles.sendBtn, !comment.trim() && styles.sendBtnDisabled]} 
-                                disabled={!comment.trim()}
-                            >
-                                <FontAwesome5 name="arrow-up" size={14} color={COLORS.background} />
-                            </TouchableOpacity>
+                        <TextInput 
+                            style={styles.textInput} 
+                            placeholder={`رد باسم ${currentUser?.settings?.name?.split(' ')[0] || 'مستخدم وثيق'}...`}
+                            placeholderTextColor={COLORS.textDim}
+                            value={comment}
+                            onChangeText={setComment}
+                            multiline 
+                            maxLength={500} 
+                            textAlign="right"
+                        />
 
-                            <TextInput 
-                                style={styles.textInput} 
-                                placeholder={`رد باسم ${currentUser?.settings?.name?.split(' ')[0] || 'مستخدم وثيق'}...`}
-                                placeholderTextColor={COLORS.textDim}
-                                value={comment}
-                                onChangeText={setComment}
-                                multiline 
-                                maxLength={500} 
-                                textAlign="right"
-                            />
-
-                            <View style={[styles.inputAvatar, { backgroundColor: COLORS.accentGreen }]}>
-                                <Text style={styles.inputAvatarText}>
-                                    {currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}
-                                </Text>
-                            </View>
+                        <View style={[styles.inputAvatar, { backgroundColor: COLORS.accentGreen }]}>
+                            <Text style={styles.inputAvatarText}>
+                                {currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
                         </View>
                     </View>
-                </KeyboardAvoidingView>
-            </View>
+                </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };

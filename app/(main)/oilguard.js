@@ -1286,6 +1286,12 @@ export default function OilGuardEngine() {
     };
   }, [isAnimatingTransition]);
 
+  // ---------------------------------------------------------
+  // --- ADS DISABLED START ----------------------------------
+  // ---------------------------------------------------------
+  
+  /* 
+  // ORIGINAL CODE COMMENTED OUT:
   const { isLoaded, isClosed, load, show } = useInterstitialAd(interstitialId, {
     requestNonPersonalizedAdsOnly: true,
   });
@@ -1303,6 +1309,19 @@ export default function OilGuardEngine() {
       performReset(); 
     }
   }, [isClosed, load]);
+  */
+
+  // DUMMY OBJECT (Prevents crashes if variables are referenced elsewhere)
+  const { isLoaded, isClosed, load, show } = { 
+    isLoaded: false, 
+    isClosed: false, 
+    load: () => console.log("Ad loading disabled"), 
+    show: () => console.log("Ad showing disabled") 
+  };
+
+  // ---------------------------------------------------------
+  // --- ADS DISABLED END ------------------------------------
+  // ---------------------------------------------------------
 
   const changeStep = useCallback((next) => {
     const isForward = next > step;
