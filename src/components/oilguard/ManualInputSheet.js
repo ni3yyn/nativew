@@ -81,6 +81,13 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
     const handleSubmit = () => {
         if (!text.trim()) return;
+        
+        // --- LOGGING ADDED HERE ---
+        console.log("====================================");
+        console.log("📝 [ManualInput] Sending Text:");
+        console.log(text);
+        console.log("====================================");
+        
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         closeSheet();
         setTimeout(() => onSubmit(text), 300);
@@ -96,7 +103,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
             transparent 
             visible={true} 
             onRequestClose={closeSheet} 
-            animationType="fade" // Changed from 'none' to 'fade' to help smooth the initial render
+            animationType="fade"
             statusBarTranslucent
         >
             <View style={styles.modalContainer}>
@@ -106,12 +113,10 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
                 </Animated.View>
 
-                {/* Keyboard Handler: DISABLED KAV ON ANDROID */}
+                {/* Keyboard Handler */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "padding"} 
+                    behavior={Platform.OS === "ios" ? "padding" : undefined} // 'undefined' is better for Android usually
                     style={styles.keyboardContainer}
-                    // Add an offset if the keyboard hides the button (adjust 20-50 as needed)
-                    keyboardVerticalOffset={Platform.OS === "android" ? 0 : 0}
                 >
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                         

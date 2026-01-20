@@ -1627,7 +1627,8 @@ const processManualText = async (directInputText) => {
         });
 
         const responseData = await response.json();
-        
+        console.log("✅ [OilGuard] Manual Analysis Result:", JSON.stringify(responseData, null, 2));
+
         if (!response.ok) throw new Error(responseData.error || "Failed");
 
         const jsonResponse = responseData.result;
