@@ -809,24 +809,33 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
     const scanBarAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        const animation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(scanBarAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: Platform.OS !== 'web'
-                }),
-                Animated.timing(scanBarAnim, {
-                    toValue: 0,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: Platform.OS !== 'web'
-                })
-            ])
-        );
-        animation.start();
-        return () => animation.stop();
+        // FIX: Add a 300ms delay. 
+        // This ensures the navigation transition finishes and the Layout is calculated 
+        // before we start the heavy animation loop.
+        const timer = setTimeout(() => {
+            const animation = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(scanBarAnim, {
+                        toValue: 1,
+                        duration: 2000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: Platform.OS !== 'web'
+                    }),
+                    Animated.timing(scanBarAnim, {
+                        toValue: 0,
+                        duration: 2000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: Platform.OS !== 'web'
+                    })
+                ])
+            );
+            animation.start();
+            
+            // cleanup animation on unmount
+            return () => animation.stop();
+        }, 300); 
+
+        return () => clearTimeout(timer);
     }, []);
 
     const scanTranslateY = scanBarAnim.interpolate({
@@ -2211,7 +2220,10 @@ return (
             ) : step === 0 ? (
                 // --- CASE 2: Input Step (Immersive/No Scroll) ---
                 <Animated.View style={{ 
-                    flex: 1, 
+                    flex: 1,
+                    // FIX: Force explicit dimensions to prevent "Half Black Screen" collapse
+                    height: '100%', 
+                    width: width, 
                     opacity: contentOpacity,
                     transform: [{ translateX: contentTranslateX }]
                 }}>
