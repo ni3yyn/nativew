@@ -331,7 +331,9 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 // 8. INNER LOGIC COMPONENT (The Brain)
 // ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
-  const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts } = useAppContext();
+  // 1. ADD 'loading' to the destructuring here:
+  const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts, loading } = useAppContext();
+  
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showAppIntro, setShowAppIntro] = useState(false);
@@ -419,11 +421,31 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       if(appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
   };
 
-  // --- NOTIFICATION PERMISSIONS & LISTENERS ---
+  // =========================================================
+  // ➤ NEW: THE WATCHER (Redirects Instantly on Repair)
+  // =========================================================
+  useEffect(() => {
+    // 1. If we are still loading, do nothing
+    if (loading) return; 
+
+    if (user && userProfile) {
+      // 2. If the user exists but onboarding is FALSE (because we just repaired it)
+      if (userProfile.onboardingComplete === false) {
+        // 3. Force them to the Welcome screen immediately
+        router.replace({
+          pathname: '/(onboarding)/welcome',
+          params: { reason: 'repair' } 
+      });
+      }
+    } 
+  }, [user, userProfile, loading]);
+
+  // =========================================================
+  // ➤ UPDATED: NOTIFICATION LOGIC (Stops the Loop)
+  // =========================================================
   useEffect(() => {
     if (!fontsLoaded) return;
 
-    // 1. PERMISSIONS & SCHEDULING LOGIC
     const checkPermissionAndSchedule = async () => {
         const { status } = await Notifications.getPermissionsAsync();
         
@@ -434,6 +456,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
              }
         } else {
              if (user && userProfile) {
+                // ➤ SAFETY CHECK: Stop loop if profile is broken/incomplete
+                if (!userProfile.onboardingComplete) return;
+
                 try {
                     const name = userProfile.settings?.name || 'غالية';
                     const settings = userProfile.settings || {};
@@ -449,15 +474,10 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         }
     };
 
-    // 2. UNIFIED NAVIGATION HANDLER
-    // This handles the actual redirect logic for all notification types
     const handleNotificationNavigation = (response) => {
         const data = response.notification.request.content.data;
         console.log("🔔 Notification Data Received:", data);
 
-        // We use a small delay (800ms) to allow the app's internal 
-        // Auth-Redirect (e.g. going to /profile) to finish before we 
-        // override it with the notification destination.
         setTimeout(() => {
             if (data?.screen === 'oilguard') {
                 router.push('/oilguard');
@@ -466,8 +486,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
                 router.push('/profile');
             } 
             else if (data?.postId || (data?.screen === 'PostDetails' && data?.postId)) {
-                // Use the standardized /community route with the openPostId param
-                // so that community.js catches it and opens the modal.
                 router.push({ 
                     pathname: "/community", 
                     params: { openPostId: data.postId } 
@@ -476,7 +494,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         }, 800);
     };
 
-    // 3. COLD START CHECK (App was completely closed)
     const checkInitialNotification = async () => {
         const response = await Notifications.getLastNotificationResponseAsync();
         if (response) {
@@ -485,11 +502,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         }
     };
 
-    // 4. EXECUTION
     checkPermissionAndSchedule();
     checkInitialNotification();
 
-    // 5. BACKGROUND/FOREGROUND LISTENER
     const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationNavigation);
 
     return () => subscription.remove();
@@ -511,19 +526,15 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   if (!fontsLoaded) return null;
 
-  // 1. Maintenance Mode Check
   if (appConfig?.maintenanceMode) {
     return <MaintenanceScreen message={appConfig.maintenanceMessage} />;
   }
 
-  // 2. Force Update Check
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
     return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
   }
 
-  
-  // 3. Normal App Render
   return (
     <>
       <StatusBar style="light" translucent={true} />

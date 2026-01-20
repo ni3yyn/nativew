@@ -8,19 +8,26 @@ import { useAppContext } from '../src/context/AppContext';
 SplashScreen.preventAutoHideAsync();
 
 export default function Index() {
-  const { user, loading } = useAppContext();
+  const { user, userProfile, loading } = useAppContext(); // Get userProfile too
   const router = useRouter();
   
   useEffect(() => {
     if (!loading) {
       SplashScreen.hideAsync(); 
       if (user) {
-        router.replace('/profile'); 
+        // Only go to profile if we actually have profile data
+        // Check for a specific field like 'onboardingComplete' or 'settings'
+        if (userProfile && userProfile.onboardingComplete) {
+            router.replace('/profile');
+        } else {
+            // If user exists but no profile (or onboarding incomplete), send to Welcome/Onboarding
+            router.replace('/(onboarding)/welcome'); 
+        }
       } else {
         router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [user, userProfile, loading, router]);
 
   return (
     <View 

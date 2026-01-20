@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -33,6 +33,11 @@ export const AppProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [savedProducts, setSavedProducts] = useState([]);
   
+  // =========================================================
+  // ➤ CRITICAL: THIS REF PREVENTS THE INFINITE LOOPS
+  // =========================================================
+  const isRepairing = useRef(false);
+
   // --- System State (Controlled by Admin Panel) ---
   const [appConfig, setAppConfig] = useState({
     maintenanceMode: false,
@@ -81,12 +86,18 @@ export const AppProvider = ({ children }) => {
       
       if (finalStatus !== 'granted') {
         console.log('❌ User denied notification permissions');
-        await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
+        try {
+          // CHANGE: Use updateDoc instead of setDoc to prevent creating empty ghost profiles
+          await updateDoc(doc(db, 'profiles', uid), { notificationsEnabled: false });
+        } catch (error) {
+          // If error.code === 'not-found', the profile doesn't exist yet. 
+          // We ignore it here because we don't want to create a ghost profile.
+          console.log("Skipping notification flag update: Profile does not exist yet.");
+        }
         return;
       }
 
       // C. Get Project ID (Critical for Expo SDK 49+)
-      // We look for the ID dynamically, but fall back to your app.json ID if missing.
       const projectId = 
         Constants?.expoConfig?.extra?.eas?.projectId ?? 
         Constants?.easConfig?.projectId ?? 
@@ -119,13 +130,20 @@ export const AppProvider = ({ children }) => {
 
       // F. Save to Firestore
       const userRef = doc(db, 'profiles', uid);
-      await setDoc(userRef, {
-        expoPushToken: expoTokenString, 
-        fcmToken: fcmTokenString,       
-        notificationsEnabled: true,
-        deviceType: Platform.OS,
-        lastTokenUpdate: new Date()
-      }, { merge: true });
+      // ➤ CRITICAL FIX: Use updateDoc in try/catch. 
+      // Do NOT create the document here. Let the onSnapshot logic create it properly.
+      try {
+        await updateDoc(userRef, {
+          expoPushToken: expoTokenString, 
+          fcmToken: fcmTokenString,       
+          notificationsEnabled: true,
+          deviceType: Platform.OS,
+          lastTokenUpdate: new Date()
+        });
+      } catch (e) {
+         // Profile doesn't exist yet. The main logic will create it momentarily.
+         // We safely ignore this to prevent ghost files.
+      }
 
     } catch (error) {
       console.error("❌ Error registering push tokens:", error);
@@ -142,8 +160,6 @@ export const AppProvider = ({ children }) => {
     const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        
-        // Map Admin Panel fields (snake_case) to App State (camelCase)
         setAppConfig({
           maintenanceMode: data.maintenance_mode || false,
           minSupportedVersion: data.android?.min_supported_version || '1.0.0',
@@ -165,7 +181,6 @@ export const AppProvider = ({ children }) => {
       
       if (currentUser) {
         console.log("🟢 User Detected:", currentUser.email);
-        // Don't set loading true here immediately to avoid flash if we have cache
         
         // 1. REGISTER NOTIFICATION TOKEN
         registerForPushNotificationsAsync(currentUser.uid);
@@ -173,21 +188,12 @@ export const AppProvider = ({ children }) => {
         // 2. OFFLINE STRATEGY (Load from AsyncStorage first)
         const loadCache = async () => {
             try {
-                // Load Profile Cache
                 const cachedProfile = await getSelfProfileCache();
-                if (cachedProfile) {
-                    // console.log("✅ Profile loaded from cache");
-                    setUserProfile(cachedProfile);
-                }
+                if (cachedProfile) setUserProfile(cachedProfile);
     
-                // Load Products Cache
                 const cachedProducts = await getSavedProductsCache();
-                if (cachedProducts && cachedProducts.length > 0) {
-                    // console.log(`✅ Loaded ${cachedProducts.length} products from cache`);
-                    setSavedProducts(cachedProducts);
-                }
+                if (cachedProducts && cachedProducts.length > 0) setSavedProducts(cachedProducts);
     
-                // If we found data in cache, we can stop the global loading spinner
                 if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
                     setLoading(false);
                 }
@@ -196,26 +202,101 @@ export const AppProvider = ({ children }) => {
             }
         };
         
-        // Trigger cache load
         loadCache();
     
         // 3. NETWORK STRATEGY (Background Sync)
     
-        // ➤ Listen: Real-time Profile Updates
+        // ➤ Listen: Real-time Profile Updates & Self-Healing Logic
         const profileRef = doc(db, 'profiles', currentUser.uid);
-        const unsubscribeProfile = onSnapshot(profileRef, 
-          (docSnap) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              setUserProfile(data);
-              setSelfProfileCache(data); // Update storage
-              setLoading(false); // Ensure loading is off once we have real data
+        const unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
+          
+          if (isRepairing.current) return;
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            const updatesToApply = {};
+
+            // 1. Check Email
+            if (!data.email) {
+                // console.warn("⚠️ Repairing: Missing Email");
+                updatesToApply.email = currentUser.email;
             }
-          }, 
-          (err) => {
-            console.warn("⚠️ Offline: Keeping cached profile");
+
+            // 2. Check Settings
+            // We only reset onboarding if settings are COMPLETELY missing
+            if (!data.settings) {
+                console.warn("⚠️ Repairing: Missing Settings object");
+                updatesToApply.settings = { 
+                    name: '', gender: '', skinType: '', scalpType: '',
+                    goals: [], conditions: [], allergies: []
+                };
+                updatesToApply.onboardingComplete = false; 
+            }
+
+            // 3. Check Notification Flag
+            if (data.notificationsEnabled === undefined) {
+                updatesToApply.notificationsEnabled = false;
+            }
+
+            // 4. Check CreatedAt (Restores missing timestamp)
+            if (!data.createdAt) {
+                console.warn("⚠️ Repairing: Missing CreatedAt");
+                updatesToApply.createdAt = new Date();
+            }
+
+            // APPLY UPDATES IF NEEDED
+            if (Object.keys(updatesToApply).length > 0) {
+               console.log("🛠 Applying Repair Patches:", updatesToApply);
+               
+               isRepairing.current = true; // LOCK
+               try {
+                   // 1. Update Firestore
+                   await setDoc(profileRef, updatesToApply, { merge: true });
+
+                   // 2. Update Local State IMMEDIATELY to trigger the Watcher redirect
+                   const fixedProfile = { ...data, ...updatesToApply };
+                   setUserProfile(fixedProfile);
+                   setSelfProfileCache(fixedProfile);
+
+               } catch (e) {
+                   console.error("Repair failed", e);
+               } finally {
+                   setTimeout(() => { isRepairing.current = false; }, 2000);
+               }
+               return; 
+            }
+
+            // If we get here, the profile is valid!
+            setUserProfile(data);
+            setSelfProfileCache(data); 
+            setLoading(false); 
+          } else {
+            // CASE: User is in Auth, but NO document exists at all
+            console.warn("⚠️ No profile found for authenticated user. Creating default...");
+            
+            isRepairing.current = true; // LOCK
+
+            const defaultProfile = {
+                email: currentUser.email,
+                createdAt: new Date(),
+                onboardingComplete: false,
+                settings: { name: '', gender: '', skinType: '', scalpType: '', goals: [], conditions: [], allergies: [] }, 
+                routines: { am: [], pm: [] },
+                notificationsEnabled: false
+            };
+            
+            try {
+              await setDoc(profileRef, defaultProfile);
+              // Update local state immediately
+              setUserProfile(defaultProfile);
+            } finally {
+              setTimeout(() => { isRepairing.current = false; }, 2000);
+            }
           }
-        );
+        }, (err) => {
+            console.warn("⚠️ Offline: Keeping cached profile");
+        });
     
         // ➤ Listen: Real-time Products Updates
         const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
@@ -229,22 +310,16 @@ export const AppProvider = ({ children }) => {
             }));
 
             setSavedProducts(currentSavedProducts => {
-                // PROTECTION: If Firestore returns empty list because of cache miss 
-                // but we have data in memory, ignore the empty list.
                 if (newProducts.length === 0 && snapshot.metadata.fromCache && currentSavedProducts.length > 0) {
                     return currentSavedProducts;
                 }
-
-                // Normal Logic: Update if data changed
                 const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(currentSavedProducts);
                 if (isDifferent) {
                     setSavedProductsCache(newProducts);
                     return newProducts; 
                 }
-                
                 return currentSavedProducts; 
             });
-            
             setLoading(false);
           }, 
           (err) => {
@@ -277,7 +352,6 @@ export const AppProvider = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      // Optional: clear specific cache keys here if you want strict security
       setUserProfile(null);
       setSavedProducts([]);
     } catch (e) {

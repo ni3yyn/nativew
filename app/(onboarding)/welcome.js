@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
   Dimensions, KeyboardAvoidingView, Platform, ScrollView, 
-  Animated, Easing, ImageBackground, StatusBar, UIManager
+  Animated, Easing, ImageBackground, StatusBar, Keyboard // <--- 1. ADD Keyboard IMPORT
 } from 'react-native';
 
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import { useAppContext } from '../../src/context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AlertService } from '../../src/services/alertService'; 
 
 // --- CONFIGURATION ---
 
@@ -30,12 +31,10 @@ const COLORS = {
   textSecondary: '#A3B1AC', 
   textOnAccent: '#1A2D27',  
   danger: '#ef4444', 
-  
   glassTint: 'rgba(26, 45, 39, 0.85)', 
 };
 
-// --- DATA ---
-
+// --- DATA CONSTANTS ---
 const SKIN_OPTIONS = [
     { id: 'oily', label: 'دهنية', icon: 'tint' },
     { id: 'dry', label: 'جافة', icon: 'leaf' },
@@ -49,7 +48,6 @@ const SCALP_OPTIONS = [
     { id: 'normal', label: 'عادية', icon: 'user' }
 ];
 
-// --- GOALS LIST ---
 const GOALS_LIST = [
     { id: 'acne', name: 'مكافحة حب الشباب', desc: 'التخلص من البثور وآثارها' },
     { id: 'anti_aging', name: 'مكافحة الشيخوخة', desc: 'تقليل التجاعيد والخطوط الدقيقة' },
@@ -97,13 +95,20 @@ const Spore = ({ size, startX, duration }) => {
     Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true })).start();
   }, []);
   const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
-  return <Animated.View style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }} />;
+  
+  // 2. ADD pointerEvents="none" to ensure particles never block clicks
+  return (
+    <Animated.View 
+        pointerEvents="none"
+        style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }} 
+    />
+  );
 };
 
 // --- COMPONENT: SQUARE OPTION ---
 const SquareOption = ({ label, icon, selected, onPress, index }) => {
     const scale = useRef(new Animated.Value(0)).current;
-    useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: index * 50, useNativeDriver: true }).start(); }, []);
+    useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: 100 + (index * 50), useNativeDriver: true }).start(); }, []);
 
     return (
         <Animated.View style={{ transform: [{ scale }], width: '47%', aspectRatio: 1.1, marginBottom: 12 }}>
@@ -125,8 +130,8 @@ const RowOption = ({ label, selected, onPress, index, category, description }) =
 
     useEffect(() => {
         Animated.parallel([
-            Animated.timing(slide, { toValue: 0, duration: 300, delay: index * 40, useNativeDriver: true }),
-            Animated.timing(fade, { toValue: 1, duration: 300, delay: index * 40, useNativeDriver: true })
+            Animated.timing(slide, { toValue: 0, duration: 300, delay: 100 + (index * 40), useNativeDriver: true }),
+            Animated.timing(fade, { toValue: 1, duration: 300, delay: 100 + (index * 40), useNativeDriver: true })
         ]).start();
     }, []);
 
@@ -154,8 +159,11 @@ const RowOption = ({ label, selected, onPress, index, category, description }) =
 export default function WelcomeScreen() {
   const { user } = useAppContext();
   const router = useRouter();
+  const params = useLocalSearchParams(); 
   const insets = useSafeAreaInsets();
   
+  const hasShownAlert = useRef(false);
+
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTransX = useRef(new Animated.Value(0)).current; 
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -187,13 +195,26 @@ export default function WelcomeScreen() {
   })), []);
 
   useEffect(() => {
+    if (params.reason === 'repair' && !hasShownAlert.current) {
+        hasShownAlert.current = true;
+        setTimeout(() => {
+            AlertService.show({
+                title: "تحديث البيانات مطلوب",
+                message: "حدث خطأ تقني بسيط تسبب في إعادة ضبط تفضيلات بشرتك. \n\nلضمان دقة التحليل، يرجى إعادة اختيار نوع بشرتك وأهدافك.",
+                type: 'info', 
+                buttons: [{ text: "حسناً", style: "primary" }]
+            });
+        }, 500);
+    }
+  }, [params]);
+
+  useEffect(() => {
       Animated.timing(progressAnim, {
           toValue: (currentStep + 1) / STEPS.length,
           duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: false
       }).start();
   }, [currentStep]);
 
-  // --- Animate Error Message ---
   useEffect(() => {
     Animated.timing(errorFadeAnim, {
         toValue: showNameError ? 1 : 0,
@@ -205,24 +226,33 @@ export default function WelcomeScreen() {
 
   const changeStep = (dir) => {
       const next = currentStep + dir;
-      if(next < 0 || next >= STEPS.length) { if(next >= STEPS.length) finishOnboarding(); return; }
+      if(next < 0 || next >= STEPS.length) { 
+          if(next >= STEPS.length) finishOnboarding(); 
+          return; 
+      }
 
       setShowNameError(false);
 
       Animated.parallel([
           Animated.timing(contentOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.timing(contentTransX, { toValue: dir > 0 ? -30 : 30, duration: 200, useNativeDriver: true })
+          Animated.timing(contentTransX, { toValue: dir > 0 ? -40 : 40, duration: 200, useNativeDriver: true })
       ]).start(() => {
           setCurrentStep(next);
-          contentTransX.setValue(dir > 0 ? 30 : -30); 
-          Animated.parallel([
-            Animated.timing(contentOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-            Animated.spring(contentTransX, { toValue: 0, friction: 9, useNativeDriver: true })
-          ]).start();
+          contentTransX.setValue(dir > 0 ? 40 : -40); 
+          
+          setTimeout(() => {
+              Animated.parallel([
+                Animated.timing(contentOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.spring(contentTransX, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
+              ]).start();
+          }, 50); 
       });
   };
 
   const handleNextStep = () => {
+    // 3. FORCE KEYBOARD DISMISSAL - This fixes the "Double Tap" requirement
+    Keyboard.dismiss();
+
     if (STEPS[currentStep].id === 'name') {
         const name = formData.name.trim();
         if (name.length < 4) {
@@ -281,7 +311,6 @@ export default function WelcomeScreen() {
                     returnKeyType="done"
                     onSubmitEditing={handleNextStep}
                   />
-                  
                   <Animated.View style={{
                       height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 30] }),
                       opacity: errorFadeAnim,
@@ -290,7 +319,6 @@ export default function WelcomeScreen() {
                   }}>
                       <Text style={styles.errorText}>يجب أن يتكون الاسم من 4 أحرف على الأقل</Text>
                   </Animated.View>
-
                   <Text style={styles.inputHint}>اضغط "التالي" للمتابعة</Text>
               </View>
           );
@@ -352,12 +380,9 @@ export default function WelcomeScreen() {
         <LinearGradient colors={['rgba(26, 45, 39, 0.85)', 'rgba(26, 45, 39, 0.95)']} style={StyleSheet.absoluteFill} />
         {particles.map(p => <Spore key={p.id} {...p} />)}
         
-        {/* --- KEYBOARD HANDLING: ManualInputSheet Method --- */}
         <KeyboardAvoidingView 
             behavior={Platform.OS === "ios" ? "padding" : "padding"} 
             style={{flex: 1}} 
-            // Setting offset to 0 or similar ensures it doesn't over-lift.
-            // Adjust to 20 if status bar area causes issues, but 0 usually works best with 'padding' on full screen.
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <View style={[styles.safeArea, { paddingTop: 40 + insets.top, paddingBottom: insets.bottom }]}>
@@ -378,15 +403,16 @@ export default function WelcomeScreen() {
 
                     <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
                         <ScrollView 
+                            key={currentStep} 
                             contentContainerStyle={{ 
                                 flexGrow: 1, 
                                 paddingBottom: 20, 
-                                // Reduce top padding when keyboard is up (Name Step) to keep input valid
                                 paddingTop: currentStep === 1 ? 20 : 0, 
                                 justifyContent: currentStep === 1 ? 'flex-start' : 'center' 
                             }} 
                             showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
+                            // 4. IMPORTANT: Allow taps to pass through even if keyboard logic is lingering
+                            keyboardShouldPersistTaps="always"
                         >
                             {renderContent()}
                         </ScrollView>
@@ -424,7 +450,6 @@ export default function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  // Changed justifyContent to center, but KAV with padding will resize this area.
   safeArea: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
   progressContainer: { marginBottom: 15, paddingHorizontal: 5 },
   stepCounter: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 13, marginBottom: 8, textAlign: 'right' },
