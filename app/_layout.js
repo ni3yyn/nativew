@@ -13,12 +13,63 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'; 
+// ADJUST THIS PATH to match where your 'db' variable is exported in your app
+import { db } from '../src/config/firebase';
 
 // Import Notification Helper (Assumes this file exists in your utils)
 // If you don't have this file, you can remove the scheduleAuthenticNotifications call below.
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 
 SplashScreen.preventAutoHideAsync();
+
+
+const useDailyPresence = (user) => {
+  useEffect(() => {
+    if (!user) return;
+
+    const checkDailyPresence = async () => {
+      try {
+        // 1. Get today's date as a string (e.g., "2023-10-25")
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // 2. Check what we stored last time
+        const lastRecordedDate = await AsyncStorage.getItem('last_presence_date');
+
+        // 3. If dates are different, it's a new day -> Update Firestore
+        if (lastRecordedDate !== todayStr) {
+          
+          const userRef = doc(db, "profiles", user.uid);
+          
+          await updateDoc(userRef, {
+            lastSeen: serverTimestamp(),
+            // Optional: You can add 'appVersion' here too so you know which version they use
+            // appVersion: '1.0.0' 
+          });
+
+          // 4. Save today's date locally so we don't update again until tomorrow
+          await AsyncStorage.setItem('last_presence_date', todayStr);
+          console.log("📅 Daily presence logged for:", todayStr);
+        }
+      } catch (e) {
+        // Fail silently so we don't annoy the user
+        console.log("Presence Error:", e);
+      }
+    };
+
+    // Run on mount
+    checkDailyPresence();
+
+    // Run when app comes from background to foreground
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        checkDailyPresence();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [user]);
+};
 
 // ============================================================================
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
@@ -294,6 +345,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   // ➤ ACTIVATE APP OPEN ADS
   useAppOpenAd();
+  
+  // ➤ ACTIVATE DAILY TRACKING
+  useDailyPresence(user); 
 
   // --- VERSION CHECKING LOGIC ---
   const getUpdateSignature = (config) => `${config.latestVersion}_${JSON.stringify(config.changelog || [])}`;
@@ -468,6 +522,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
   }
 
+  
   // 3. Normal App Render
   return (
     <>

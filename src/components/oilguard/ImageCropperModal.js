@@ -298,36 +298,62 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
     try {
       const centerX = SCREEN_WIDTH / 2;
       const centerY = WORKSPACE_HEIGHT / 2;
-      const currentPanX = panAnim.x._value;
-      const currentPanY = panAnim.y._value;
 
+      // FIX 1: Use __getValue() to get the total position (offset + current value)
+      // This ensures we get the position even if the animation hasn't settled
+      const currentPanX = panAnim.x.__getValue();
+      const currentPanY = panAnim.y.__getValue();
+
+      // Calculate where the image is currently drawn on screen
       const visualImageX = centerX + currentPanX - (viewSize.width * scale) / 2;
       const visualImageY = centerY + currentPanY - (viewSize.height * scale) / 2;
 
+      // Calculate the difference between the Crop Box (mask) and the Image Edge
       const deltaX = maskRect.x - visualImageX;
       const deltaY = maskRect.y - visualImageY;
 
+      // Ratio converts "Screen Pixels" to "Image Pixels"
       const ratio = originalSize.width / viewSize.width;
 
-      let cropX = (deltaX / scale) * ratio;
-      let cropY = (deltaY / scale) * ratio;
-      let cropW = (maskRect.width / scale) * ratio;
-      let cropH = (maskRect.height / scale) * ratio;
+      // FIX 2: ROUNDING
+      // ImageManipulator requires integers. Floats cause "out of bounds" errors 
+      // which result in the library returning the original image.
+      let cropX = Math.round((deltaX / scale) * ratio);
+      let cropY = Math.round((deltaY / scale) * ratio);
+      let cropW = Math.round((maskRect.width / scale) * ratio);
+      let cropH = Math.round((maskRect.height / scale) * ratio);
 
+      // FIX 3: BOUNDARY CLAMPING
+      // Ensure we don't accidentally ask for pixels outside the image
       cropX = Math.max(0, cropX);
       cropY = Math.max(0, cropY);
-      if (cropX + cropW > originalSize.width) cropW = originalSize.width - cropX;
-      if (cropY + cropH > originalSize.height) cropH = originalSize.height - cropY;
+      
+      // If rounding pushed the width over the edge, clamp it
+      if (cropX + cropW > originalSize.width) {
+          cropW = originalSize.width - cropX;
+      }
+      if (cropY + cropH > originalSize.height) {
+          cropH = originalSize.height - cropY;
+      }
 
-      const actions = [{ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } }];
+      // FIX 4: ACTION ORDER
+      // We must Flip BEFORE Cropping. 
+      // Since you are calculating coordinates based on what you see (the flipped version),
+      // we must make the source image match that visual state before applying the crop rect.
+      const actions = [];
+      
       if (isFlippedH) actions.push({ flip: ImageManipulator.FlipType.Horizontal });
       if (isFlippedV) actions.push({ flip: ImageManipulator.FlipType.Vertical });
+      
+      // Add crop action last
+      actions.push({ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } });
 
       const result = await ImageManipulator.manipulateAsync(
         displayUri,
         actions,
         { format: ImageManipulator.SaveFormat.JPEG, compress: 0.95 }
       );
+      
       onCropComplete(result);
     } catch (err) {
       console.error(err);
