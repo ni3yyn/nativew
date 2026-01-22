@@ -115,7 +115,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
                 {/* Keyboard Handler */}
                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : undefined} // 'undefined' is better for Android usually
+                    behavior={Platform.OS === "ios" ? "padding" : "padding"} 
                     style={styles.keyboardContainer}
                 >
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
