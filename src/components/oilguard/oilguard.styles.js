@@ -1465,5 +1465,143 @@ rs_HeroWrapperAnimated: {
     fontSize: 12, // Increased from 10
     color: COLORS.textPrimary,
   },
+  guideSection: {
+    width: '100%',
+    paddingHorizontal: 10,
+    marginTop: -15,
+    marginBottom: 25,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'stretch', // Ensures both cards match height
+    gap: 12,
+  },
+
+  // --- THE GLASS CARD (Base) ---
+  opticalCard: {
+    flex: 1, // Split width 50/50
+    backgroundColor: '#0f1513', // Deep matte black
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    
+    // Modern Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+
+  // --- SPECIFIC STATES ---
+  cardError: {
+    borderColor: 'rgba(239, 68, 68, 0.4)', // Dim Red
+  },
+  cardSuccess: {
+    borderColor: 'rgba(90, 156, 132, 0.6)', // Sharp Teal/Green
+  },
+
+  // --- THE IMAGE DISPLAY ---
+  scannerScreen: {
+    width: '100%',
+    aspectRatio: 0.65, // Enforces the vertical rectangle shape
+    position: 'relative',
+  },
+  guideImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  // --- OVERLAYS & EFFECTS ---
   
+  // Left Side: "Signal Lost" Effect
+  noiseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20, 10, 10, 0.7)', // Heavy dark tint
+    zIndex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorGlitchBox: {
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: COLORS.danger,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    marginTop: 10,
+  },
+  errorTextMono: {
+    color: COLORS.danger,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 10,
+    letterSpacing: 1,
+    fontWeight: 'bold',
+  },
+
+  // Right Side: "Signal Locked" Effect
+  gridOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+    opacity: 0.3,
+  },
+  // The bright laser beam
+  laserBeam: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#00ffaa', // Neon Green
+    zIndex: 10,
+    shadowColor: '#00ffaa',
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 1,
+    shadowRadius: 10, // Glowing effect
+  },
+  // The trail following the laser
+  laserGradient: {
+    position: 'absolute',
+    top: -60,
+    left: 0,
+    right: 0,
+    height: 60,
+  },
+
+  // --- HUD CORNERS (The "Tech" Feel) ---
+  hudCorner: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderColor: 'white',
+    zIndex: 20,
+    opacity: 0.8,
+  },
+  hudTL: { top: 6, left: 6, borderTopWidth: 1, borderLeftWidth: 1 },
+  hudTR: { top: 6, right: 6, borderTopWidth: 1, borderRightWidth: 1 },
+  hudBL: { bottom: 6, left: 6, borderBottomWidth: 1, borderLeftWidth: 1 },
+  hudBR: { bottom: 6, right: 6, borderBottomWidth: 1, borderRightWidth: 1 },
+
+  // --- FOOTER LABELS ---
+  cardFooter: {
+    paddingVertical: 12,
+    paddingHorizontal: 5,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerLabel: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  indicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 6,
+  },
 });

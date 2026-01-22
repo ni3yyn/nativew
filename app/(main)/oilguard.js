@@ -806,65 +806,155 @@ const extractIngredientsFromAIText = async (inputData) => {
 
 // --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
 const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
-    const scanBarAnim = useRef(new Animated.Value(0)).current;
+    
+    // 1. Calculate height for perfect scan loop
+    const { width } = Dimensions.get('window');
+    const CARD_WIDTH = (width - 40) / 2; // (Screen - Padding) / 2 cards
+    const SCAN_HEIGHT = CARD_WIDTH / 0.65; // Matches the aspectRatio: 0.65 style
+
+    // Animations
+    const scanAnim = useRef(new Animated.Value(0)).current; // Laser position
+    const pulseAnim = useRef(new Animated.Value(1)).current; // Error pulse
 
     useEffect(() => {
-        // FIX: Add a 300ms delay. 
-        // This ensures the navigation transition finishes and the Layout is calculated 
-        // before we start the heavy animation loop.
-        const timer = setTimeout(() => {
-            const animation = Animated.loop(
-                Animated.sequence([
-                    Animated.timing(scanBarAnim, {
-                        toValue: 1,
-                        duration: 2000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: Platform.OS !== 'web'
-                    }),
-                    Animated.timing(scanBarAnim, {
-                        toValue: 0,
-                        duration: 2000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: Platform.OS !== 'web'
-                    })
-                ])
-            );
-            animation.start();
-            
-            // cleanup animation on unmount
-            return () => animation.stop();
-        }, 300); 
+        // Laser Loop
+        const scanLoop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(scanAnim, {
+                    toValue: 1,
+                    duration: 2200, 
+                    easing: Easing.linear,
+                    useNativeDriver: true
+                }),
+                Animated.delay(100) // Brief pause
+            ])
+        );
 
-        return () => clearTimeout(timer);
+        // Warning Pulse Loop
+        const pulseLoop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 0.6, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+            ])
+        );
+
+        scanLoop.start();
+        pulseLoop.start();
+
+        return () => {
+            scanLoop.stop();
+            pulseLoop.stop();
+        };
     }, []);
 
-    const scanTranslateY = scanBarAnim.interpolate({
+    const scanTranslateY = scanAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 140]
+        outputRange: [-5, SCAN_HEIGHT + 5] 
     });
 
     return (
         <View style={styles.inputStepContainer}>
+            
             <View style={styles.heroVisualContainer}>
-                <View style={styles.scanFrame}>
-                    <FontAwesome5 name="wine-bottle" size={80} color={COLORS.textSecondary} style={{ opacity: 0.5 }} />
-                    <Animated.View style={[
-                        styles.scanLaser,
-                        { transform: [{ translateY: scanTranslateY }] }
-                    ]}>
-                        <LinearGradient
-                            colors={['transparent', COLORS.accentGreen, 'transparent']}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={{ flex: 1 }}
-                        />
-                    </Animated.View>
-                    <View style={[styles.scanCorner, styles.scanCornerTL]} />
-                    <View style={[styles.scanCorner, styles.scanCornerTR]} />
-                    <View style={[styles.scanCorner, styles.scanCornerBL]} />
-                    <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                <View style={styles.guideSection}>
+                    
+                    {/* =============================================
+                        LEFT CARD: "SIGNAL LOST" (Wrong)
+                       ============================================= */}
+                    <View style={[styles.opticalCard, styles.cardError]}>
+                        
+                        {/* HUD Corners */}
+                        <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.danger }]} />
+                        <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.danger }]} />
+                        <View style={[styles.hudCorner, styles.hudBL, { borderColor: COLORS.danger }]} />
+                        <View style={[styles.hudCorner, styles.hudBR, { borderColor: COLORS.danger }]} />
+
+                        <View style={styles.scannerScreen}>
+                            {/* YOUR LOCAL IMAGE HERE */}
+                            <Image 
+                                source={require('../../assets/images/front.jpg')}
+                                style={styles.guideImage}
+                            />
+                            
+                            {/* Dark Noise Overlay */}
+                            <View style={styles.noiseOverlay}>
+                                {/* Pulsing Icon */}
+                                <Animated.View style={{ opacity: pulseAnim, alignItems: 'center' }}>
+                                    <FontAwesome5 name="ban" size={28} color={COLORS.danger} />
+                                </Animated.View>
+                            </View>
+                        </View>
+
+                        <View style={styles.cardFooter}>
+                            <View style={[styles.indicatorDot, { backgroundColor: COLORS.danger }]} />
+                            <Text style={[styles.footerLabel, { color: COLORS.textDim }]}>
+                                المنتج كامل (خطأ)
+                            </Text>
+                        </View>
+                    </View>
+
+
+                    {/* =============================================
+                        RIGHT CARD: "INTELLIGENCE FOUND" (Correct)
+                       ============================================= */}
+                    <View style={[styles.opticalCard, styles.cardSuccess]}>
+                        
+                        {/* HUD Corners */}
+                        <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.accentGreen }]} />
+                        <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.accentGreen }]} />
+                        <View style={[styles.hudCorner, styles.hudBL, { borderColor: COLORS.accentGreen }]} />
+                        <View style={[styles.hudCorner, styles.hudBR, { borderColor: COLORS.accentGreen }]} />
+
+                        <View style={styles.scannerScreen}>
+                            {/* YOUR LOCAL IMAGE HERE */}
+                            <Image 
+                                source={require('../../assets/images/inci.jpg')}
+                                style={styles.guideImage}
+                            />
+                            
+                            {/* Tech Grid Overlay (SVG pattern simulation) */}
+                            <View style={styles.gridOverlay}>
+                                <Svg height="100%" width="100%">
+                                    <Defs>
+                                        {/* FIX: Used SvgLinearGradient to avoid conflict with Expo LinearGradient */}
+                                        <SvgLinearGradient id="gridGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <Stop offset="0" stopColor={COLORS.accentGreen} stopOpacity="0.05" />
+                                            <Stop offset="1" stopColor={COLORS.accentGreen} stopOpacity="0.2" />
+                                        </SvgLinearGradient>
+                                    </Defs>
+                                    <Rect x="0" y="0" width="100%" height="100%" fill="url(#gridGrad)" />
+                                    {/* Horizontal grid lines */}
+                                    <Path d={`M0 ${SCAN_HEIGHT*0.33} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
+                                    <Path d={`M0 ${SCAN_HEIGHT*0.66} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
+                                </Svg>
+                            </View>
+
+                            {/* The Laser Beam */}
+                            <Animated.View style={[
+                                styles.laserBeam, 
+                                { transform: [{ translateY: scanTranslateY }] }
+                            ]}>
+                                {/* Trail Gradient */}
+                                <LinearGradient
+                                    colors={['rgba(0, 255, 170, 0)', 'rgba(0, 255, 170, 0.25)']}
+                                    style={styles.laserGradient}
+                                />
+                            </Animated.View>
+
+                        </View>
+
+                        <View style={styles.cardFooter}>
+                            <View style={[styles.indicatorDot, { backgroundColor: COLORS.accentGreen }]} />
+                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
+                                المكونات فقط (صح)
+                            </Text>
+                        </View>
+                    </View>
+
                 </View>
             </View>
 
+            {/* BOTTOM DECK (Unchanged) */}
             <StaggeredItem index={0} style={styles.bottomDeck}>
                 <LinearGradient
                     colors={[COLORS.card, '#152520']}
@@ -874,9 +964,9 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
                         <Text style={styles.deckTitle}>فحص المكونات</Text>
                         <Typewriter
                             texts={[
-                                "كشف الخبايا الكيميائية...",
-                                "تحليل مدى الأمان...",
-                                "هل يناسب بشرتك؟",
+                                "ابحث عن كلمة Ingredients...",
+                                "يستحسن تصوير المكونات بالإنجليزية لدقة أفضل",
+                                "لكن لا بأس بالعربية",
                             ]}
                             typingSpeed={60}
                             style={{
@@ -896,8 +986,8 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
                                 <Ionicons name="camera" size={28} color={COLORS.background} />
                             </View>
                             <View>
-                                <Text style={styles.primaryActionTitle}>تصوير المنتج</Text>
-                                <Text style={styles.primaryActionSub}>التقط صورة واضحة للمكونات الخلفية</Text>
+                                <Text style={styles.primaryActionTitle}>تصوير المكونات</Text>
+                                <Text style={styles.primaryActionSub}>اضغط لفتح الكاميرا</Text>
                             </View>
                             <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
                         </LinearGradient>
@@ -910,9 +1000,9 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
                         </TouchableOpacity>
                         <View style={styles.verticalDivider} />
                         <TouchableOpacity onPress={onManualSelect} style={styles.secondaryBtn}>
-                    <Ionicons name="search" size={22} color={COLORS.textSecondary} />
-                    <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
-                </TouchableOpacity>
+                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
+                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
+                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
             </StaggeredItem>
