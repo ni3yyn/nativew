@@ -56,7 +56,6 @@ export const AppProvider = ({ children }) => {
 
   // ==================================================================
   // 2. HELPER: REGISTER FOR PUSH NOTIFICATIONS
-  // Handles Permissions, Android Channels, and Token Generation
   // ==================================================================
   const registerForPushNotificationsAsync = async (uid) => {
     if (!Device.isDevice) {
@@ -84,31 +83,31 @@ export const AppProvider = ({ children }) => {
         finalStatus = status;
       }
       
+      const userRef = doc(db, 'profiles', uid);
+
       if (finalStatus !== 'granted') {
         console.log('❌ User denied notification permissions');
         try {
-          // CHANGE: Use updateDoc instead of setDoc to prevent creating empty ghost profiles
-          await updateDoc(doc(db, 'profiles', uid), { notificationsEnabled: false });
+          // Use updateDoc to prevent skeleton creation
+          await updateDoc(userRef, { notificationsEnabled: false });
         } catch (error) {
-          // If error.code === 'not-found', the profile doesn't exist yet. 
-          // We ignore it here because we don't want to create a ghost profile.
           console.log("Skipping notification flag update: Profile does not exist yet.");
         }
         return;
       }
 
-      // C. Get Project ID (Critical for Expo SDK 49+)
+      // C. Get Project ID
       const projectId = 
         Constants?.expoConfig?.extra?.eas?.projectId ?? 
         Constants?.easConfig?.projectId ?? 
-        "6ebdbfe1-08ea-4f21-9fa2-482f152a3266"; // <--- HARDCODED ID FROM APP.JSON
+        "6ebdbfe1-08ea-4f21-9fa2-482f152a3266";
 
       if (!projectId) {
           console.error("❌ ERROR: Missing Project ID. Notifications will fail.");
           return; 
       }
 
-      // D. Get EXPO Token (For Client-to-Client / Comments)
+      // D. Get EXPO Token
       let expoTokenString = null;
       try {
           const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
@@ -118,20 +117,18 @@ export const AppProvider = ({ children }) => {
           console.warn("⚠️ Error getting Expo Token:", e);
       }
 
-      // E. Get FCM Token (For Admin SDK / Backend)
+      // E. Get FCM Token
       let fcmTokenString = null;
       try {
           const deviceTokenData = await Notifications.getDevicePushTokenAsync();
           fcmTokenString = deviceTokenData.data;
-          // console.log("✅ FCM Token:", fcmTokenString);
       } catch (e) {
           console.warn("⚠️ Error getting Device Token:", e);
       }
 
       // F. Save to Firestore
-      const userRef = doc(db, 'profiles', uid);
-      // ➤ CRITICAL FIX: Use updateDoc in try/catch. 
-      // Do NOT create the document here. Let the onSnapshot logic create it properly.
+      // CRITICAL: Only updateDoc. If it fails, the profile isn't ready.
+      // This prevents "Ghost files" that cause the reset loop.
       try {
         await updateDoc(userRef, {
           expoPushToken: expoTokenString, 
@@ -141,8 +138,7 @@ export const AppProvider = ({ children }) => {
           lastTokenUpdate: new Date()
         });
       } catch (e) {
-         // Profile doesn't exist yet. The main logic will create it momentarily.
-         // We safely ignore this to prevent ghost files.
+         // Silently ignore: Profile isn't ready for tokens yet.
       }
 
     } catch (error) {
@@ -154,9 +150,8 @@ export const AppProvider = ({ children }) => {
   // 3. MAIN EFFECT: INIT APP
   // ==================================================================
   useEffect(() => {
-    // A. Listen to System Config (Maintenance Mode & Version)
+    // A. Listen to System Config
     const configRef = doc(db, 'app_config', 'version_control'); 
-    
     const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -182,10 +177,7 @@ export const AppProvider = ({ children }) => {
       if (currentUser) {
         console.log("🟢 User Detected:", currentUser.email);
         
-        // 1. REGISTER NOTIFICATION TOKEN
-        registerForPushNotificationsAsync(currentUser.uid);
-    
-        // 2. OFFLINE STRATEGY (Load from AsyncStorage first)
+        // 1. OFFLINE STRATEGY (Load Cache)
         const loadCache = async () => {
             try {
                 const cachedProfile = await getSelfProfileCache();
@@ -201,12 +193,9 @@ export const AppProvider = ({ children }) => {
                 console.error("Cache load error:", e);
             }
         };
-        
         loadCache();
     
-        // 3. NETWORK STRATEGY (Background Sync)
-    
-        // ➤ Listen: Real-time Profile Updates & Self-Healing Logic
+        // 2. NETWORK STRATEGY (Profile & Repair Logic)
         const profileRef = doc(db, 'profiles', currentUser.uid);
         const unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
           
@@ -214,51 +203,47 @@ export const AppProvider = ({ children }) => {
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            
             const updatesToApply = {};
+            let isCriticalRepair = false;
 
-            // 1. Check Email
+            // --- CRITICAL FIELDS: Causes Redirect/Alert ---
             if (!data.email) {
-                // console.warn("⚠️ Repairing: Missing Email");
                 updatesToApply.email = currentUser.email;
+                isCriticalRepair = true;
             }
-
-            // 2. Check Settings
-            // We only reset onboarding if settings are COMPLETELY missing
             if (!data.settings) {
-                console.warn("⚠️ Repairing: Missing Settings object");
+                console.warn("⚠️ Repairing Critical: Missing Settings");
                 updatesToApply.settings = { 
                     name: '', gender: '', skinType: '', scalpType: '',
                     goals: [], conditions: [], allergies: []
                 };
                 updatesToApply.onboardingComplete = false; 
+                isCriticalRepair = true;
             }
 
-            // 3. Check Notification Flag
+            // --- HOUSEKEEPING: Silent background fixes ---
             if (data.notificationsEnabled === undefined) {
                 updatesToApply.notificationsEnabled = false;
             }
-
-            // 4. Check CreatedAt (Restores missing timestamp)
             if (!data.createdAt) {
                 console.warn("⚠️ Repairing: Missing CreatedAt");
                 updatesToApply.createdAt = new Date();
             }
 
-            // APPLY UPDATES IF NEEDED
+            // APPLY REPAIR
             if (Object.keys(updatesToApply).length > 0) {
                console.log("🛠 Applying Repair Patches:", updatesToApply);
-               
-               isRepairing.current = true; // LOCK
+               isRepairing.current = true; 
                try {
-                   // 1. Update Firestore
                    await setDoc(profileRef, updatesToApply, { merge: true });
 
-                   // 2. Update Local State IMMEDIATELY to trigger the Watcher redirect
-                   const fixedProfile = { ...data, ...updatesToApply };
-                   setUserProfile(fixedProfile);
-                   setSelfProfileCache(fixedProfile);
-
+                   // Update local state ONLY if repair is critical
+                   // This prevents alerts for missing tokens/timestamps
+                   if (isCriticalRepair) {
+                       const fixedProfile = { ...data, ...updatesToApply };
+                       setUserProfile(fixedProfile);
+                       setSelfProfileCache(fixedProfile);
+                   }
                } catch (e) {
                    console.error("Repair failed", e);
                } finally {
@@ -267,16 +252,20 @@ export const AppProvider = ({ children }) => {
                return; 
             }
 
-            // If we get here, the profile is valid!
+            // Valid Profile Path
             setUserProfile(data);
             setSelfProfileCache(data); 
             setLoading(false); 
-          } else {
-            // CASE: User is in Auth, but NO document exists at all
-            console.warn("⚠️ No profile found for authenticated user. Creating default...");
-            
-            isRepairing.current = true; // LOCK
 
+            // Only register tokens AFTER profile is valid and onboarding is complete
+            if (data.onboardingComplete) {
+                registerForPushNotificationsAsync(currentUser.uid);
+            }
+
+          } else if (!docSnap.metadata.fromCache) {
+            // Document missing on Server (True new user)
+            console.warn("⚠️ No profile found on server. Creating default...");
+            isRepairing.current = true; 
             const defaultProfile = {
                 email: currentUser.email,
                 createdAt: new Date(),
@@ -285,10 +274,8 @@ export const AppProvider = ({ children }) => {
                 routines: { am: [], pm: [] },
                 notificationsEnabled: false
             };
-            
             try {
               await setDoc(profileRef, defaultProfile);
-              // Update local state immediately
               setUserProfile(defaultProfile);
             } finally {
               setTimeout(() => { isRepairing.current = false; }, 2000);
@@ -298,16 +285,11 @@ export const AppProvider = ({ children }) => {
             console.warn("⚠️ Offline: Keeping cached profile");
         });
     
-        // ➤ Listen: Real-time Products Updates
+        // 3. PRODUCTS SYNC
         const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
         const productsQuery = query(productsRef, orderBy('createdAt', 'desc'));
-        
-        const unsubscribeProducts = onSnapshot(productsQuery, 
-          (snapshot) => {
-            const newProducts = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
+        const unsubscribeProducts = onSnapshot(productsQuery, (snapshot) => {
+            const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             setSavedProducts(currentSavedProducts => {
                 if (newProducts.length === 0 && snapshot.metadata.fromCache && currentSavedProducts.length > 0) {
@@ -333,7 +315,7 @@ export const AppProvider = ({ children }) => {
           unsubscribeProducts();
         };
       } else {
-        // No user logged in
+        // Logged out
         setUserProfile(null);
         setSavedProducts([]);
         setLoading(false);
@@ -347,7 +329,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // ==================================================================
-  // 4. LOGOUT HELPER
+  // 4. HELPERS
   // ==================================================================
   const logout = async () => {
     try {
@@ -359,16 +341,10 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ==================================================================
-  // 5. ANNOUNCEMENT HELPERS
-  // ==================================================================
   const dismissAnnouncement = () => {
     setActiveAnnouncement(null);
   };
 
-  // ==================================================================
-  // 6. RENDER PROVIDER
-  // ==================================================================
   return (
     <AppContext.Provider value={{ 
       user, 
