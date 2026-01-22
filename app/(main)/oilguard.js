@@ -217,26 +217,20 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const MarketingClaimsSection = ({ results }) => {
     
-    // 1. Helper to Clean Emojis from Backend Text
+    // Helper to Clean Emojis from Backend Text
     const cleanStatusText = (text) => {
         if (!text) return '';
         return text.replace(/[✅🌿⚖️❌🚫⚠️]/g, '').trim();
     };
 
-    // 2. Sort Logic
     const sortedResults = useMemo(() => {
         return [...results].sort((a, b) => {
             const getScore = (item) => {
                 const s = item.status ? item.status.toString() : '';
-                // Priority: 
-                // 1. Proven (Blue)
-                // 2. Traditional (Green)
-                // 3. Angel Dusting/Warning (Yellow)
-                // 4. False/None (Red)
-                if (s.includes('✅')) return 4;
-                if (s.includes('🌿')) return 3;
-                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2;
-                return 1;
+                if (s.includes('✅')) return 4; // Proven
+                if (s.includes('🌿')) return 3; // Traditional
+                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2; // Warning
+                return 1; // False
             };
             return getScore(b) - getScore(a);
         });
@@ -249,51 +243,38 @@ const MarketingClaimsSection = ({ results }) => {
 
         const getStatusConfig = (statusRaw) => {
             const s = statusRaw ? statusRaw.toString() : '';
-
-            // A. Red: False / No Ingredients
             if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
-                return { 
-                    color: '#FF6B6B', 
-                    icon: 'times-circle', 
-                    bg: 'rgba(255, 107, 107, 0.1)',
-                    borderColor: 'rgba(255, 107, 107, 0.2)'
-                };
+                return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)' };
             }
-            // B. Yellow: Angel Dusting / Trace Amounts
             if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) {
-                return { 
-                    color: '#FFB84C', 
-                    icon: 'exclamation-circle', 
-                    bg: 'rgba(255, 184, 76, 0.1)',
-                    borderColor: 'rgba(255, 184, 76, 0.2)'
-                };
+                return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)' };
             }
-            // C. Green: Traditional / Natural
             if (s.includes('🌿') || s.includes('تقليديا')) {
-                return { 
-                    color: '#6BCB77', 
-                    icon: 'leaf', 
-                    bg: 'rgba(107, 203, 119, 0.1)',
-                    borderColor: 'rgba(107, 203, 119, 0.2)'
-                };
+                return { color: '#6BCB77', icon: 'leaf', bg: 'rgba(107, 203, 119, 0.1)' };
             }
-            // D. Blue: Scientific Proven
-            return { 
-                color: '#4D96FF', 
-                icon: 'check-circle', 
-                bg: 'rgba(77, 150, 255, 0.1)',
-                borderColor: 'rgba(77, 150, 255, 0.2)'
-            };
+            return { color: '#4D96FF', icon: 'check-circle', bg: 'rgba(77, 150, 255, 0.1)' };
         };
 
         const config = getStatusConfig(result.status);
         const cleanStatus = cleanStatusText(result.status);
 
-        // Merge logic: Combine proven and traditional, handling both objects (new logic) and strings (fallback)
-        const allEvidence = [
-            ...(result.proven || []), 
-            ...(result.traditionallyProven || [])
-        ];
+        // --- DATA PROCESSING FOR LAYOUT ---
+        const rawEvidence = [...(result.proven || []), ...(result.traditionallyProven || [])];
+        
+        // Split into Strong (Primary) vs Weak (Trace)
+        const strongEvidence = [];
+        const weakEvidence = [];
+
+        rawEvidence.forEach(item => {
+            const isObj = typeof item === 'object';
+            const data = {
+                name: isObj ? item.name : item,
+                benefit: isObj ? item.benefit : null,
+                isTrace: isObj ? item.isTrace : false
+            };
+            if (data.isTrace) weakEvidence.push(data);
+            else strongEvidence.push(data);
+        });
 
         const toggle = () => {
             const targetValue = expanded ? 0 : 1;
@@ -316,14 +297,12 @@ const MarketingClaimsSection = ({ results }) => {
                         <View style={styles.claimIconCol}>
                             <FontAwesome5 name={config.icon} size={20} color={config.color} />
                         </View>
-
                         <View style={styles.claimTextCol}>
                             <Animated.Text style={[styles.claimTextTitle, { color: animController.interpolate({ inputRange: [0, 1], outputRange: [COLORS.textPrimary, config.color] }) }]}>
                                 {result.claim}
                             </Animated.Text>
                             <Text style={[styles.claimTextStatus, { color: config.color }]}>{cleanStatus}</Text>
                         </View>
-
                         <View style={styles.claimArrowCol}>
                             <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
                                 <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
@@ -337,35 +316,38 @@ const MarketingClaimsSection = ({ results }) => {
                         style={[styles.claimDetails, { position: 'absolute', width: '100%' }]}
                         onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}
                     >
+                        {/* Explanation Text */}
                         <Text style={styles.claimExplanation}>{result.explanation}</Text>
                         
-                        {allEvidence.length > 0 && (
-                            <View style={styles.miniEvidenceGrid}>
-                                <Text style={styles.miniEvidenceLabel}>الأدلة المكتشفة:</Text>
-                                <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6}}>
-                                    {allEvidence.map((ing, i) => {
-                                        // Handle Object (New Logic) vs String (Legacy)
-                                        const isObj = typeof ing === 'object';
-                                        const name = isObj ? ing.name : ing;
-                                        const isTrace = isObj ? ing.isTrace : false;
-                                        const benefit = isObj && ing.benefit ? ing.benefit : null;
+                        {/* --- SECTION 1: PRIMARY DRIVERS (Strong) --- */}
+                        {strongEvidence.length > 0 && (
+                            <View style={styles.evidenceGroup}>
+                                {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
+                                <View style={styles.evidenceLabelContainer}>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>مكونات فعالة أساسية:</Text>
+                                    <FontAwesome5 name="check" size={10} color={COLORS.success} />
+                                </View>
+                                {/* === END OF CORRECTION === */}
+                                <View style={styles.chipContainer}>
+                                    {strongEvidence.map((ing, i) => (
+                                        <View key={i} style={styles.chipPrimary}><Text style={styles.chipTextPrimary}>{ing.name}{ing.benefit && <Text style={styles.chipBenefit}> • {ing.benefit}</Text>}</Text></View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
 
-                                        return (
-                                            <View key={i} style={[
-                                                styles.miniEvidenceChip,
-                                                isTrace && { backgroundColor: 'rgba(255, 184, 76, 0.1)', borderColor: 'rgba(255, 184, 76, 0.3)' }
-                                            ]}>
-                                                {isTrace && <FontAwesome5 name="exclamation-triangle" size={10} color="#FFB84C" style={{marginRight: 4}} />}
-                                                <Text style={[
-                                                    styles.miniEvidenceText,
-                                                    isTrace && { color: '#FFB84C' }
-                                                ]}>
-                                                    {name}
-                                                    {benefit && <Text style={{opacity: 0.7, fontSize: 10}}> • {benefit}</Text>}
-                                                </Text>
-                                            </View>
-                                        );
-                                    })}
+                        {weakEvidence.length > 0 && (
+                            <View style={[styles.evidenceGroup, { marginTop: strongEvidence.length > 0 ? 12 : 0 }]}>
+                                {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
+                                <View style={styles.evidenceLabelContainer}>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>تراكيز ثانوية / منخفضة:</Text>
+                                    <FontAwesome5 name="exclamation-triangle" size={10} color={COLORS.warning} />
+                                </View>
+                                {/* === END OF CORRECTION === */}
+                                <View style={styles.chipContainer}>
+                                    {weakEvidence.map((ing, i) => (
+                                        <View key={i} style={styles.chipTrace}><Text style={styles.chipTextTrace}>{ing.name}{ing.benefit && <Text style={styles.chipBenefitTrace}> • {ing.benefit}</Text>}</Text></View>
+                                    ))}
                                 </View>
                             </View>
                         )}
@@ -375,9 +357,7 @@ const MarketingClaimsSection = ({ results }) => {
         );
     };
 
-    // Calculate Honest Score
     const total = sortedResults.length;
-    // We count Proven (4) and Traditional (3) as valid. Warning (2) and False (1) are penalties.
     const validCount = sortedResults.filter(r => {
         const s = r.status.toString();
         return s.includes('✅') || s.includes('🌿');

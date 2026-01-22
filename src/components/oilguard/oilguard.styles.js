@@ -1365,8 +1365,7 @@ rs_HeroWrapperAnimated: {
 
   // Body
   claimsBody: {
-    paddingHorizontal: 0, // No padding ensures full width
-    paddingTop: 5,
+    paddingHorizontal: 0, // Padding is now on the row itself
   },
   
   // Row
@@ -1437,6 +1436,7 @@ rs_HeroWrapperAnimated: {
     lineHeight: 24, // Increased line height for readability
     textAlign: 'right',
     marginBottom: 15,
+    direction: 'rtl',
   },
 
   miniEvidenceGrid: {
@@ -1446,11 +1446,12 @@ rs_HeroWrapperAnimated: {
     gap: 8,
   },
   
-  miniEvidenceLabel: {
+  evidenceLabel: {
     fontFamily: 'Tajawal-Bold',
-    fontSize: 13, // Increased from 11
-    color: COLORS.textDim,
-    marginLeft: 5,
+    fontSize: 13,
+    marginBottom: 8,
+    width: '100%',
+    direction: 'rtl',
   },
 
   miniEvidenceChip: {
@@ -1465,7 +1466,7 @@ rs_HeroWrapperAnimated: {
     marginBottom: 4,
   },
   miniEvidenceText: {
-    fontFamily: 'Tajawal-Medium',
+    fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: '#4D96FF', // Default blue text
     textAlign: 'left',
@@ -1608,5 +1609,85 @@ rs_HeroWrapperAnimated: {
     height: 6,
     borderRadius: 3,
     marginBottom: 6,
+  },
+  claimDetails: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 8,
+  },
+  claimExplanation: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 12,
+    lineHeight: 20,
+    textAlign: 'right', // Or 'right' if RTL
+  },
+  
+  // --- NEW EVIDENCE LAYOUT STYLES ---
+  evidenceGroup: {
+    marginBottom: 12,
+    alignItems: 'flex-end', // Let the container handle wrapping from the start (right)
+  },
+  
+  chipContainer: {
+    flexDirection: 'row-reverse', // RTL (Chips start from the right)
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-start',
+  },
+  
+  // Primary (Strong) Chips
+  chipPrimary: {
+    backgroundColor: 'rgba(77, 150, 255, 0.15)', // Blue tint
+    borderColor: 'rgba(77, 150, 255, 0.3)',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  chipTextPrimary: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: '#4D96FF',
+    textAlign: 'right', // <--- FIX: Changed from 'center' to 'right'
+  },
+  chipBenefit: {
+    fontSize: 10,
+    opacity: 0.8,
+    fontFamily: 'Tajawal-Regular',
+  },
+
+  // Trace (Weak) Chips
+  chipTrace: {
+    backgroundColor: 'rgba(255, 184, 76, 0.1)',
+    borderColor: 'rgba(255, 184, 76, 0.3)',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  chipTextTrace: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 11, // Smaller text
+    color: COLORS.textDim, // Dimmer text
+    textAlign: 'right', // <--- FIX: Changed from 'center' to 'right'
+
+  },
+  chipBenefitTrace: {
+    fontSize: 10,
+    opacity: 0.6,
+  },
+  evidenceLabelContainer: {
+    flexDirection: 'row-reverse', // Key fix for order
+    alignItems: 'center',
+    marginBottom: 8,
+    width: '100%',
+    justifyContent: 'flex-start',
+  },
+  evidenceLabelText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    textAlign: 'right',
   },
 });
