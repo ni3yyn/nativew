@@ -220,8 +220,7 @@ const MarketingClaimsSection = ({ results }) => {
     // 1. Helper to Clean Emojis from Backend Text
     const cleanStatusText = (text) => {
         if (!text) return '';
-        // Removes specific emojis used in logic.js (✅, 🌿, ⚖️, ❌, 🚫) and trims
-        return text.replace(/[✅🌿⚖️❌🚫]/g, '').trim();
+        return text.replace(/[✅🌿⚖️❌🚫⚠️]/g, '').trim();
     };
 
     // 2. Sort Logic
@@ -229,11 +228,14 @@ const MarketingClaimsSection = ({ results }) => {
         return [...results].sort((a, b) => {
             const getScore = (item) => {
                 const s = item.status ? item.status.toString() : '';
-                // 4 = Worst (Red), 3 = Warning (Yellow), 2 = Traditional (Green), 1 = Best (Blue)
-                if (s.includes('❌') || s.includes('تسويقي')) return 4;
-                if (s.includes('🚫') || s.includes('لا توجد')) return 4; // Grouped with worst for sorting
-                if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) return 3;
-                if (s.includes('🌿') || s.includes('تقليديا')) return 2;
+                // Priority: 
+                // 1. Proven (Blue)
+                // 2. Traditional (Green)
+                // 3. Angel Dusting/Warning (Yellow)
+                // 4. False/None (Red)
+                if (s.includes('✅')) return 4;
+                if (s.includes('🌿')) return 3;
+                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2;
                 return 1;
             };
             return getScore(b) - getScore(a);
@@ -243,140 +245,128 @@ const MarketingClaimsSection = ({ results }) => {
     const ClaimRow = ({ result, index }) => {
         const [expanded, setExpanded] = useState(false);
         const [contentHeight, setContentHeight] = useState(0);
-        // We use one controller for both rotation (native) and height (non-native)
-        // Note: We set useNativeDriver: false to support height animation
         const animController = useRef(new Animated.Value(0)).current;
 
         const getStatusConfig = (statusRaw) => {
             const s = statusRaw ? statusRaw.toString() : '';
 
+            // A. Red: False / No Ingredients
             if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
                 return { 
                     color: '#FF6B6B', 
                     icon: 'times-circle', 
-                    bg: 'rgba(255, 107, 107, 0.1)' 
+                    bg: 'rgba(255, 107, 107, 0.1)',
+                    borderColor: 'rgba(255, 107, 107, 0.2)'
                 };
             }
-            if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) {
+            // B. Yellow: Angel Dusting / Trace Amounts
+            if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) {
                 return { 
-                    color: '#FFD93D', 
-                    icon: 'exclamation-triangle', 
-                    bg: 'rgba(255, 217, 61, 0.1)' 
+                    color: '#FFB84C', 
+                    icon: 'exclamation-circle', 
+                    bg: 'rgba(255, 184, 76, 0.1)',
+                    borderColor: 'rgba(255, 184, 76, 0.2)'
                 };
             }
+            // C. Green: Traditional / Natural
             if (s.includes('🌿') || s.includes('تقليديا')) {
                 return { 
                     color: '#6BCB77', 
                     icon: 'leaf', 
-                    bg: 'rgba(107, 203, 119, 0.1)' 
+                    bg: 'rgba(107, 203, 119, 0.1)',
+                    borderColor: 'rgba(107, 203, 119, 0.2)'
                 };
             }
+            // D. Blue: Scientific Proven
             return { 
                 color: '#4D96FF', 
                 icon: 'check-circle', 
-                bg: 'rgba(77, 150, 255, 0.1)' 
+                bg: 'rgba(77, 150, 255, 0.1)',
+                borderColor: 'rgba(77, 150, 255, 0.2)'
             };
         };
 
         const config = getStatusConfig(result.status);
         const cleanStatus = cleanStatusText(result.status);
 
+        // Merge logic: Combine proven and traditional, handling both objects (new logic) and strings (fallback)
         const allEvidence = [
             ...(result.proven || []), 
-            ...(result.traditionallyProven || []), 
-            ...(result.doubtful || []), 
-            ...(result.ineffective || [])
+            ...(result.traditionallyProven || [])
         ];
 
         const toggle = () => {
             const targetValue = expanded ? 0 : 1;
             setExpanded(!expanded);
-            
             Animated.timing(animController, { 
-                toValue: targetValue, 
-                duration: 300, 
-                easing: Easing.inOut(Easing.ease),
-                useNativeDriver: false // Critical: 'false' is required to animate height
+                toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false 
             }).start();
         };
 
-        const rotateArrow = animController.interpolate({ 
-            inputRange: [0, 1], 
-            outputRange: ['0deg', '180deg'] 
-        });
-
-        // Dynamic Height Interpolation
-        const heightInterpolate = animController.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, contentHeight], // Animates from 0 to measured height
-            extrapolate: 'clamp'
-        });
+        const rotateArrow = animController.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+        const heightInterpolate = animController.interpolate({ inputRange: [0, 1], outputRange: [0, contentHeight], extrapolate: 'clamp' });
 
         return (
             <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
-                <TouchableOpacity onPress={toggle}>
+                <TouchableOpacity onPress={toggle} activeOpacity={0.7}>
                     <Animated.View style={[
                         styles.claimRowMain, 
-                        // Smooth background color transition
-                        { backgroundColor: animController.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['transparent', config.bg]
-                        })}
+                        { backgroundColor: animController.interpolate({ inputRange: [0, 1], outputRange: ['transparent', config.bg] }) }
                     ]}>
-                        
-                        {/* Icon (Right) */}
                         <View style={styles.claimIconCol}>
                             <FontAwesome5 name={config.icon} size={20} color={config.color} />
                         </View>
 
-                        {/* Text (Middle) */}
                         <View style={styles.claimTextCol}>
-                            <Animated.Text style={[
-                                styles.claimTextTitle, 
-                                { color: animController.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [COLORS.textPrimary, config.color]
-                                }) }
-                            ]}>
+                            <Animated.Text style={[styles.claimTextTitle, { color: animController.interpolate({ inputRange: [0, 1], outputRange: [COLORS.textPrimary, config.color] }) }]}>
                                 {result.claim}
                             </Animated.Text>
-                            <Text style={[styles.claimTextStatus, { color: config.color }]}>
-                                {cleanStatus}
-                            </Text>
+                            <Text style={[styles.claimTextStatus, { color: config.color }]}>{cleanStatus}</Text>
                         </View>
 
-                        {/* Arrow (Left) */}
                         <View style={styles.claimArrowCol}>
                             <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
                                 <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
                             </Animated.View>
                         </View>
-
                     </Animated.View>
                 </TouchableOpacity>
 
-                {/* ANIMATED CONTENT WRAPPER */}
                 <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
-                    {/* 
-                        We position this absolutely during layout measurement to ensure 
-                        it calculates the correct full size even when hidden.
-                    */}
                     <View 
                         style={[styles.claimDetails, { position: 'absolute', width: '100%' }]}
-                        onLayout={(event) => {
-                            const h = event.nativeEvent.layout.height;
-                            if (h > 0 && h !== contentHeight) setContentHeight(h);
-                        }}
+                        onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}
                     >
                         <Text style={styles.claimExplanation}>{result.explanation}</Text>
+                        
                         {allEvidence.length > 0 && (
                             <View style={styles.miniEvidenceGrid}>
-                                <Text style={styles.miniEvidenceLabel}>المكونات المرتبطة:</Text>
-                                {allEvidence.map((ing, i) => (
-                                    <View key={i} style={styles.miniEvidenceChip}>
-                                        <Text style={styles.miniEvidenceText}>{ing}</Text>
-                                    </View>
-                                ))}
+                                <Text style={styles.miniEvidenceLabel}>الأدلة المكتشفة:</Text>
+                                <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6}}>
+                                    {allEvidence.map((ing, i) => {
+                                        // Handle Object (New Logic) vs String (Legacy)
+                                        const isObj = typeof ing === 'object';
+                                        const name = isObj ? ing.name : ing;
+                                        const isTrace = isObj ? ing.isTrace : false;
+                                        const benefit = isObj && ing.benefit ? ing.benefit : null;
+
+                                        return (
+                                            <View key={i} style={[
+                                                styles.miniEvidenceChip,
+                                                isTrace && { backgroundColor: 'rgba(255, 184, 76, 0.1)', borderColor: 'rgba(255, 184, 76, 0.3)' }
+                                            ]}>
+                                                {isTrace && <FontAwesome5 name="exclamation-triangle" size={10} color="#FFB84C" style={{marginRight: 4}} />}
+                                                <Text style={[
+                                                    styles.miniEvidenceText,
+                                                    isTrace && { color: '#FFB84C' }
+                                                ]}>
+                                                    {name}
+                                                    {benefit && <Text style={{opacity: 0.7, fontSize: 10}}> • {benefit}</Text>}
+                                                </Text>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
                             </View>
                         )}
                     </View>
@@ -385,30 +375,38 @@ const MarketingClaimsSection = ({ results }) => {
         );
     };
 
-    // Calculate Score (Scientific + Traditional = Positive)
+    // Calculate Honest Score
     const total = sortedResults.length;
+    // We count Proven (4) and Traditional (3) as valid. Warning (2) and False (1) are penalties.
     const validCount = sortedResults.filter(r => {
         const s = r.status.toString();
         return s.includes('✅') || s.includes('🌿');
     }).length;
     
     const score = total > 0 ? Math.round((validCount / total) * 100) : 0;
+    const scoreColor = score >= 70 ? COLORS.success : (score >= 40 ? COLORS.warning : COLORS.danger);
 
     return (
         <View style={styles.claimsContainer}>
             <View style={styles.claimsHeader}>
                 <View>
                     <Text style={styles.claimsTitle}>تحليل الادعاءات</Text>
-                    <Text style={styles.claimsSubtitle}>مدى صحة وعود المنتج</Text>
+                    <Text style={styles.claimsSubtitle}>كشف المبالغات التسويقية</Text>
                 </View>
-                <View style={styles.honestyBadge}>
-                    <Text style={styles.honestyScore}>{score}%</Text>
-                    <Text style={styles.honestyLabel}>مصداقية</Text>
+                <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
+                    <Text style={[styles.honestyScore, { color: scoreColor }]}>{score}%</Text>
+                    <Text style={[styles.honestyLabel, { color: scoreColor }]}>مصداقية</Text>
                 </View>
             </View>
 
             <View style={styles.claimsBody}>
-                {sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)}
+                {sortedResults.length > 0 ? (
+                    sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)
+                ) : (
+                    <Text style={{color: COLORS.textDim, textAlign: 'center', marginVertical: 20}}>
+                        لم يتم تحديد ادعاءات للتحليل.
+                    </Text>
+                )}
             </View>
         </View>
     );

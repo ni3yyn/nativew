@@ -1454,16 +1454,21 @@ rs_HeroWrapperAnimated: {
   },
 
   miniEvidenceChip: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(77, 150, 255, 0.1)', // Default blue tint
+    paddingVertical: 6,
     paddingHorizontal: 10,
-    paddingVertical: 6, // Larger touch target/visual
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(77, 150, 255, 0.2)',
+    marginBottom: 4,
   },
-
   miniEvidenceText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 12, // Increased from 10
-    color: COLORS.textPrimary,
+    fontFamily: 'Tajawal-Medium',
+    fontSize: 12,
+    color: '#4D96FF', // Default blue text
+    textAlign: 'left',
   },
   guideSection: {
     width: '100%',
