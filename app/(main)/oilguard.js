@@ -21,6 +21,7 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
+import TextRecognition from 'react-native-text-recognition';
 // ... other imports
 import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
 import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService'; 
@@ -1160,37 +1161,56 @@ const GlassPillar = ({ label, score, color, icon }) => {
 
 // --- NEW SPLIT MATCH COMPONENT ---
 const MatchBreakdown = ({ reasons = [] }) => {
+    
     if (!reasons || reasons.length === 0) return null;
 
-    const processedItems = reasons.map(item => {
-        const isObject = typeof item === 'object';
-        const type = isObject ? item.type : 'warning';
-        const text = isObject ? item.text : item;
-        return { type, text };
-    });
+    // --- UI Helpers ---
+    const getConfig = (type) => {
+        switch (type) {
+            case 'danger': return { color: COLORS.danger };
+            case 'warning': return { color: COLORS.warning };
+            case 'good': return { color: COLORS.success };
+            default: return { color: COLORS.info };
+        }
+    };
 
+    const getIcon = (text, type) => {
+        const lowerText = text ? text.toLowerCase() : '';
+        // Map keywords to FontAwesome5 icons
+        if (lowerText.includes('مسام') || lowerText.includes('بثور')) return 'dot-circle'; 
+        if (lowerText.includes('فطريات') || lowerText.includes('قشرة')) return 'spider'; 
+        if (lowerText.includes('حساسية')) return 'hand-paper'; 
+        if (lowerText.includes('تعارض')) return 'flask'; 
+        // Default icons based on severity
+        return type === 'good' ? 'check' : (type === 'danger' ? 'times' : 'exclamation-triangle');
+    };
+
+    // --- RENDER ---
     return (
         <View style={styles.matchContainer}>
             <View style={styles.matchHeader}>
                 <View style={styles.matchHeaderIcon}>
-                    <FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} />
+                    <FontAwesome5 name="user-cog" size={12} color={COLORS.textPrimary} />
                 </View>
-                <Text style={styles.matchHeaderTitle}>ملاحظات شخصية</Text>
+                <Text style={styles.matchHeaderTitle}>تحليل التوافق الشخصي</Text>
             </View>
-
             <View style={styles.matchBody}>
-                {processedItems.map((item, i) => {
-                    const isGood = item.type === 'good';
-                    const iconColor = isGood ? COLORS.success : COLORS.warning;
-                    const iconName = isGood ? "check" : "exclamation-triangle";
+                {reasons.map((item, i) => {
+                    // Handle both object format {type, text} and simple string format
+                    const type = typeof item === 'object' ? item.type : 'info';
+                    const text = typeof item === 'object' ? item.text : item;
                     
+                    const config = getConfig(type);
+                    const iconName = getIcon(text, type);
+
                     return (
-                        <View key={`match-${i}`} style={styles.matchRow}>
-                            {/* Removed background styling logic here */}
-                            <View style={styles.matchIconBox}>
-                                <FontAwesome5 name={iconName} size={12} color={iconColor} />
+                        <View key={`match-${i}`} style={[styles.matchRow, { alignItems: 'flex-start' }]}>
+                            <View style={[styles.matchIconBox, { marginTop: 2 }]}>
+                                <FontAwesome5 name={iconName} size={12} color={config.color} />
                             </View>
-                            <Text style={styles.matchText}>{item.text}</Text>
+                            <Text style={[styles.matchText, { lineHeight: 22 }]}>
+                                {text}
+                            </Text>
                         </View>
                     );
                 })}
@@ -1525,29 +1545,47 @@ export default function OilGuardEngine() {
     changeStep(3);
   
     try {
-      // OPTIMIZATION EXPLAINED:
-      // 1. resize: { width: 1500 } -> Large enough to read 6pt font, small enough to stop crashes.
-      // 2. compress: 0.8 -> Keeps text edges sharp (critical for OCR). 0.6 is too blurry.
-      // 3. actions: [] -> We intentionally do NOT use grayscale here because some users 
-      //    might rely on the colored packaging for product type detection, 
-      //    though for pure ingredients, grayscale is smaller.
-      
+      // 1. Image Manipulation (Keep your existing settings)
       const manipResult = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ resize: { width: 1500 } }], 
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG } 
-      );
-
-      // This will result in a ~400KB - 600KB Base64 string.
-      // It processes in ~200ms (fast) but retains 99% of text legibility.
-      const base64Data = await uriToBase64(manipResult.uri);
+        uri,
+        [{ resize: { width: 1500 } }], 
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG } 
+    );
+    
+    // ============================================================
+    // SAFE LOCAL OCR (Won't crash if library is missing)
+    // ============================================================
+    let localOcrText = "";
+    
+    try {
+        // Check if the library is actually linked
+        if (TextRecognition) {
+            const result = await TextRecognition.recognize(manipResult.uri);
+            if (result && result.length > 0) {
+                localOcrText = result.join('\n');
+                console.log("✅ Local OCR Success:", localOcrText.substring(0, 50));
+            }
+        } else {
+            console.log("⚠️ TextRecognition module not linked (Rebuild required)");
+        }
+    } catch (e) {
+        // This catches the "null" error safely
+        console.warn("⚠️ Local OCR skipped (Using Server Only):", e.message);
+    }
+    
+    // 2. Prepare Image
+    const base64Data = await uriToBase64(manipResult.uri);
   
       const response = await fetch(VERCEL_BACKEND_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ base64Data: base64Data }),
+        // 3. Send BOTH Base64 Image AND Local Text
+        body: JSON.stringify({ 
+            base64Data: base64Data,
+            localOcrText: localOcrText // <--- Add this
+        }),
       });
   
       const responseData = await response.json();
