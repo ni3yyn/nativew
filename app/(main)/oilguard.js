@@ -21,8 +21,6 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
-
 
 // ... other imports
 import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
