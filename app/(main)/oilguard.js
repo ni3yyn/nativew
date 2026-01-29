@@ -1545,74 +1545,89 @@ export default function OilGuardEngine() {
     changeStep(3);
   
     try {
-      // 1. Image Manipulation (Keep your existing settings)
+      // 1. Image Manipulation
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 1500 } }], 
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG } 
-    );
+      );
     
-    // ============================================================
-    // SAFE LOCAL OCR (Won't crash if library is missing)
-    // ============================================================
-    let localOcrText = "";
-    
-    try {
-        // Check if the library is actually linked
-        if (TextRecognition) {
-            const result = await TextRecognition.recognize(manipResult.uri);
-            if (result && result.length > 0) {
-                localOcrText = result.join('\n');
-                console.log("✅ Local OCR Success:", localOcrText.substring(0, 50));
-            }
-        } else {
-            console.log("⚠️ TextRecognition module not linked (Rebuild required)");
-        }
-    } catch (e) {
-        // This catches the "null" error safely
-        console.warn("⚠️ Local OCR skipped (Using Server Only):", e.message);
-    }
-    
-    // 2. Prepare Image
-    const base64Data = await uriToBase64(manipResult.uri);
-  
+      // ============================================================
+      // 2. UNIVERSAL OCR (Robust & Debuggable)
+      // ============================================================
+      let localOcrText = ""; 
+
+      try {
+          // STEP A: Check if the Native Module is loaded
+          // We check 'recognize' specifically to avoid crashing if the module is an empty object
+          if (TextRecognition && typeof TextRecognition.recognize === 'function') {
+              
+              // STEP B: Ensure URI format is correct for Android
+              // Sometimes Manipulator returns a path without 'file://' which MLKit hates
+              let cleanUri = manipResult.uri;
+              if (Platform.OS === 'android' && !cleanUri.startsWith('file://')) {
+                  cleanUri = `file://${cleanUri}`;
+              }
+
+              // STEP C: Run OCR
+              const result = await TextRecognition.recognize(cleanUri);
+              
+              if (result && result.length > 0) {
+                  // SUCCESS
+                  localOcrText = result.join('\n');
+                  console.log("✅ MLKit Success:", localOcrText.substring(0, 30));
+                  
+                  // OPTIONAL: DEBUG ALERT (Remove this line when ready for production)
+                  Alert.alert("DEBUG: Success", "✅ MLKit read the text locally!"); 
+              } else {
+                  console.log("⚠️ MLKit ran but returned empty text.");
+              }
+
+          } else {
+              // Module is missing (Expo Go or Bad Build)
+              throw new Error("Module not linked (TextRecognition.recognize is undefined)");
+          }
+      } catch (e) {
+          // FAILURE
+          // This Alert will now tell you EXACTLY what is wrong
+          Alert.alert("OCR Debug Error", e.message || JSON.stringify(e));
+          console.log("⚠️ Local OCR Failed:", e);
+      }
+
+      // 3. Prepare Image
+      const base64Data = await uriToBase64(manipResult.uri);
+
+      // 4. Send BOTH to Backend
       const response = await fetch(VERCEL_BACKEND_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // 3. Send BOTH Base64 Image AND Local Text
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             base64Data: base64Data,
-            localOcrText: localOcrText // <--- Add this
+            localOcrText: localOcrText 
         }),
       });
-  
+
       const responseData = await response.json();
-      console.log("OCR Response Data:", JSON.stringify(responseData, null, 2));
-  
+      
+      // ... (Rest of your existing logic) ...
+      
       if (!response.ok) {
-        throw new Error(responseData.error || "An error occurred in the backend.");
+        throw new Error(responseData.error || "Backend Error");
       }
   
       let jsonResponse;
       if (typeof responseData.result === 'object') {
           jsonResponse = responseData.result;
       } else {
+          // Clean potential markdown code blocks
           const text = responseData.result.replace(/```json|```/g, '').trim();
           jsonResponse = JSON.parse(text);
       }
   
-      // --- NEW LOGIC START ---
-      // Check if the backend detected a front label instead of ingredients
       if (jsonResponse.status === 'front_label_detected') {
           setIsGeminiLoading(false);
           setLoading(false);
-          
-          // Return to the Input/Camera step
           changeStep(0); 
-          
-          // Show the Alert Modal
           setTimeout(() => {
               AlertService.show({
                   title: "تنبيه",
@@ -1620,20 +1635,13 @@ export default function OilGuardEngine() {
                   type: "warning",
                   buttons: [{ text: "حسنا", style: "primary" }]
               });
-          }, 500); // Small delay to allow transition back to step 0
-          
-          return; // Stop execution
+          }, 500);
+          return; 
       }
-      // --- NEW LOGIC END ---
   
       const rawList = jsonResponse.ingredients_list || [];
-      
-      // Fallback: If status is success but list is empty, it might still be a bad photo
-      if (rawList.length === 0) {
-           throw new Error("No ingredients found");
-      }
+      if (rawList.length === 0) throw new Error("No ingredients found");
   
-      // Existing logic continues...
       const { ingredients } = await extractIngredientsFromAIText(rawList);
       
       setOcrText(rawList.join('\n')); 
@@ -1647,15 +1655,13 @@ export default function OilGuardEngine() {
   
     } catch (error) {
       console.error("Processing Error:", error);
-      
       setIsGeminiLoading(false);
       setLoading(false);
       changeStep(0);
       
-      // Generic error alert
       AlertService.show({
-          title: "خطأ في المسح",
-          message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
+          title: "خطأ",
+          message: "حدث خطأ أثناء قراءة المكونات.",
           type: "error"
       });
     }
