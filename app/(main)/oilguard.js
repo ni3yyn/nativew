@@ -21,7 +21,7 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
-import TextRecognition from 'react-native-text-recognition';
+import { TextRecognition } from '@react-native-ml-kit/text-recognition';
 // ... other imports
 import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
 import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService'; 
@@ -1553,66 +1553,95 @@ export default function OilGuardEngine() {
       );
     
       // ============================================================
-      // 2. UNIVERSAL OCR (Robust & Debuggable)
+      // 2. NEW OCR with @react-native-ml-kit/text-recognition
       // ============================================================
-      let localOcrText = ""; 
+      let localOcrText = "";
 
       try {
           // STEP A: Check if the Native Module is loaded
-          // We check 'recognize' specifically to avoid crashing if the module is an empty object
           if (TextRecognition && typeof TextRecognition.recognize === 'function') {
               
               // STEP B: Ensure URI format is correct for Android
-              // Sometimes Manipulator returns a path without 'file://' which MLKit hates
               let cleanUri = manipResult.uri;
               if (Platform.OS === 'android' && !cleanUri.startsWith('file://')) {
                   cleanUri = `file://${cleanUri}`;
               }
 
-              // STEP C: Run OCR
+              // STEP C: Run OCR - NEW API FORMAT
+              console.log("🔄 Starting ML-Kit OCR on:", cleanUri.substring(0, 50) + "...");
+              
               const result = await TextRecognition.recognize(cleanUri);
               
-              if (result && result.length > 0) {
-                  // SUCCESS
-                  localOcrText = result.join('\n');
-                  console.log("✅ MLKit Success:", localOcrText.substring(0, 30));
+              console.log("📊 ML-Kit Raw Result:", JSON.stringify(result, null, 2));
+              
+              // NEW: Handle the different response format
+              if (result && result.text) {
+                  // Format 1: { text: "full text", blocks: [...] }
+                  localOcrText = result.text;
+                  console.log("✅ ML-Kit Success (text property):", localOcrText.substring(0, 50));
                   
-                  // OPTIONAL: DEBUG ALERT (Remove this line when ready for production)
-                  Alert.alert("DEBUG: Success", "✅ MLKit read the text locally!"); 
+              } else if (result && Array.isArray(result)) {
+                  // Format 2: Array of strings (backward compatibility)
+                  localOcrText = result.join('\n');
+                  console.log("✅ ML-Kit Success (array):", localOcrText.substring(0, 50));
+                  
+              } else if (result && result.blocks && Array.isArray(result.blocks)) {
+                  // Format 3: Extract from blocks array
+                  localOcrText = result.blocks.map(block => block.text).join('\n');
+                  console.log("✅ ML-Kit Success (blocks):", localOcrText.substring(0, 50));
+                  
               } else {
-                  console.log("⚠️ MLKit ran but returned empty text.");
+                  console.log("⚠️ ML-Kit ran but returned unexpected format:", typeof result);
+              }
+
+              // Debug: Show language detection
+              if (localOcrText) {
+                  const arabicChars = (localOcrText.match(/[\u0600-\u06FF]/g) || []).length;
+                  const englishChars = (localOcrText.match(/[a-zA-Z]/g) || []).length;
+                  console.log(`🌍 Language Stats: ${arabicChars} Arabic, ${englishChars} English characters`);
+                  
+                  if (arabicChars > 0) {
+                      console.log("✅ Detected Arabic text!");
+                  }
               }
 
           } else {
-              // Module is missing (Expo Go or Bad Build)
+              // Module is missing or not properly linked
+              console.log("❌ TextRecognition module not properly loaded");
               throw new Error("Module not linked (TextRecognition.recognize is undefined)");
           }
       } catch (e) {
-          // FAILURE
-          // This Alert will now tell you EXACTLY what is wrong
-          Alert.alert("OCR Debug Error", e.message || JSON.stringify(e));
-          console.log("⚠️ Local OCR Failed:", e);
+          // FAILURE - but don't block the flow
+          console.log("⚠️ Local OCR Failed:", e.message || JSON.stringify(e));
+          
+          // Show user-friendly message but continue to backend
+          Alert.alert(
+              "ملاحظة",
+              "تعذر قراءة النص من الصورة مباشرة. جاري استخدام التحليل الخلفي...",
+              [{ text: "حسنا", style: "default" }]
+          );
+          
+          // Don't throw here - let backend handle OCR
       }
 
       // 3. Prepare Image
       const base64Data = await uriToBase64(manipResult.uri);
 
       // 4. Send BOTH to Backend
+      console.log("📤 Sending to backend...");
       const response = await fetch(VERCEL_BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             base64Data: base64Data,
-            localOcrText: localOcrText 
+            localOcrText: localOcrText || "" // Send empty if OCR failed
         }),
       });
 
       const responseData = await response.json();
       
-      // ... (Rest of your existing logic) ...
-      
       if (!response.ok) {
-        throw new Error(responseData.error || "Backend Error");
+        throw new Error(responseData.error || `Backend Error: ${response.status}`);
       }
   
       let jsonResponse;
@@ -1621,7 +1650,12 @@ export default function OilGuardEngine() {
       } else {
           // Clean potential markdown code blocks
           const text = responseData.result.replace(/```json|```/g, '').trim();
-          jsonResponse = JSON.parse(text);
+          try {
+              jsonResponse = JSON.parse(text);
+          } catch (parseError) {
+              console.error("Failed to parse JSON:", text.substring(0, 100));
+              throw new Error("Invalid response format from backend");
+          }
       }
   
       if (jsonResponse.status === 'front_label_detected') {
@@ -1640,7 +1674,9 @@ export default function OilGuardEngine() {
       }
   
       const rawList = jsonResponse.ingredients_list || [];
-      if (rawList.length === 0) throw new Error("No ingredients found");
+      if (rawList.length === 0) {
+          throw new Error("لم يتم العثور على مكونات في الصورة");
+      }
   
       const { ingredients } = await extractIngredientsFromAIText(rawList);
       
@@ -1661,7 +1697,7 @@ export default function OilGuardEngine() {
       
       AlertService.show({
           title: "خطأ",
-          message: "حدث خطأ أثناء قراءة المكونات.",
+          message: error.message || "حدث خطأ أثناء قراءة المكونات.",
           type: "error"
       });
     }
