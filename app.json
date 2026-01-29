@@ -68,7 +68,8 @@
           "icon": "./assets/icon.png",
           "color": "#1A2D27"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},
