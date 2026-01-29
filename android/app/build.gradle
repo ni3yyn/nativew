@@ -180,9 +180,26 @@ dependencies {
         implementation jscFlavor
     }
 
+    // MLKit Library
     implementation project(':@react-native-ml-kit_text-recognition')
-    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:18.0.2'
-
+    
+    // ADD ARABIC SUPPORT (missing from library!)
+    implementation 'com.google.mlkit:text-recognition-arabic:16.0.1'
+    
+    // Optional: Add English if not already included
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    
+    // Force all MLKit to same version
+    configurations.all {
+        resolutionStrategy {
+            force 'com.google.mlkit:text-recognition:16.0.1'
+            force 'com.google.mlkit:text-recognition-arabic:16.0.1'
+            force 'com.google.mlkit:text-recognition-chinese:16.0.1'
+            force 'com.google.mlkit:text-recognition-devanagari:16.0.1'
+            force 'com.google.mlkit:text-recognition-japanese:16.0.1'
+            force 'com.google.mlkit:text-recognition-korean:16.0.1'
+        }
+    }
 
 }
 
