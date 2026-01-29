@@ -16,7 +16,6 @@
     "@react-native-community/slider": "5.0.1",
     "@react-native-firebase/analytics": "^23.8.2",
     "@react-native-firebase/app": "^23.8.2",
-    "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@supabase/supabase-js": "^2.89.0",
     "date-fns": "^4.1.0",
     "expo": "^54.0.32",

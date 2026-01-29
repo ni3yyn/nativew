@@ -1547,86 +1547,37 @@ export default function OilGuardEngine() {
     changeStep(3);
 
     try {
-        console.log("🔄 [ML Kit] Starting image processing...");
+        // 1. Process image for upload
         const manipResult = await ImageManipulator.manipulateAsync(
             uri,
             [{ resize: { width: 1500 } }],
             { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
         );
-        console.log("✅ [ML Kit] Image processed:", manipResult.uri);
 
-        // STEP: Perform LOCAL ML Kit OCR
-        console.log("🔍 [ML Kit] Starting OCR recognition...");
-        let mlKitOcrText = "";
-        try {
-            const processedUri = Platform.OS === 'android' && !manipResult.uri.startsWith('file://')
-                ? `file://${manipResult.uri}`
-                : manipResult.uri;
-            
-            console.log("📸 [ML Kit] Processing URI:", processedUri.substring(0, 50) + "...");
-            
-            // Time the OCR operation
-            const startTime = Date.now();
-            const ocrResult = await TextRecognition.recognize(processedUri, {
-                language: 'ar', // Arabic
-                latinOnly: false // Allow Arabic script
-              });
-            const endTime = Date.now();
-            
-            mlKitOcrText = ocrResult.text || "";
-
-            Alert.alert(
-                "ML Kit Result",
-                `Text found: ${mlKitOcrText.length} characters\n\n` +
-                `Preview: ${mlKitOcrText.substring(0, 100)}...`,
-                [{ text: "OK" }]
-            );
-            console.log("✅ [ML Kit] OCR Success!");
-            console.log("⏱️ [ML Kit] Time taken:", endTime - startTime + "ms");
-            console.log("📄 [ML Kit] Text length:", mlKitOcrText.length + " characters");
-            console.log("📝 [ML Kit] First 300 chars:", mlKitOcrText.substring(0, 300));
-            
-            // Log structured data if available
-            if (ocrResult.blocks) {
-                console.log("🏗️ [ML Kit] Text blocks found:", ocrResult.blocks.length);
-                ocrResult.blocks.forEach((block, i) => {
-                    console.log(`   Block ${i}: "${block.text.substring(0, 50)}..."`);
-                });
-            }
-            
-        } catch (ocrError) {
-            console.error("❌ [ML Kit] OCR Failed:", ocrError.message, ocrError.stack);
-            // Continue without text
-        }
-
-        // Convert to base64
-        console.log("🔄 [ML Kit] Converting to base64...");
+        // 2. Convert to base64
         const base64Data = await uriToBase64(manipResult.uri);
-        console.log("✅ [ML Kit] Base64 length:", base64Data.length);
 
-        // Send to backend
-        console.log("📤 [ML Kit] Sending to backend...");
-        console.log("📦 [ML Kit] Payload size - Image:", Math.round(base64Data.length / 1024) + "KB");
-        console.log("📦 [ML Kit] Payload size - Text:", mlKitOcrText.length + " chars");
+        // 3. Send to backend (backend now handles OCR.space + Groq)
+        console.log("📤 Sending image to backend for OCR processing...");
         
         const response = await fetch(VERCEL_BACKEND_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 base64Data: base64Data,
-                localOcrText: mlKitOcrText
+                localOcrText: "" // Empty string - backend handles OCR internally
             }),
         });
-        
-        console.log("🌐 [Backend] Response status:", response.status);
+
         const responseData = await response.json();
-        console.log("📨 [Backend] Response received");
+        console.log("🧠 Backend response:", JSON.stringify(responseData, null, 2));
 
         if (!response.ok) {
-            throw new Error(responseData.error || "Backend error");
+            throw new Error(responseData.error || "Backend processing failed");
         }
 
-        // ... [Rest of your existing success/error handling remains the same]
         let jsonResponse;
         if (typeof responseData.result === 'object') {
             jsonResponse = responseData.result;
@@ -1635,11 +1586,12 @@ export default function OilGuardEngine() {
             jsonResponse = JSON.parse(text);
         }
 
-        // Check for front label (your existing logic)
+        // Check for front label detection
         if (jsonResponse.status === 'front_label_detected') {
             setIsGeminiLoading(false);
             setLoading(false);
             changeStep(0);
+            
             setTimeout(() => {
                 AlertService.show({
                     title: "تنبيه",
@@ -1652,11 +1604,14 @@ export default function OilGuardEngine() {
         }
 
         const rawList = jsonResponse.ingredients_list || [];
+        
         if (rawList.length === 0) {
-            throw new Error("No ingredients found");
+            throw new Error("No ingredients found in the image");
         }
 
+        // 4. Extract ingredients for next step
         const { ingredients } = await extractIngredientsFromAIText(rawList);
+        
         setOcrText(rawList.join('\n'));
         setPreProcessedIngredients(ingredients);
         setProductType(jsonResponse.detected_type || 'other');
@@ -1667,10 +1622,12 @@ export default function OilGuardEngine() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     } catch (error) {
-        console.error("Processing Error:", error);
+        console.error("Image Processing Error:", error);
+        
         setIsGeminiLoading(false);
         setLoading(false);
         changeStep(0);
+        
         AlertService.show({
             title: "خطأ في المسح",
             message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
