@@ -21,6 +21,8 @@ import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
 import Fuse from 'fuse.js';
+import TextRecognition from '@react-native-ml-kit/text-recognition';
+
 
 // ... other imports
 import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
@@ -1543,105 +1545,107 @@ export default function OilGuardEngine() {
     setLoading(true);
     setIsGeminiLoading(true);
     changeStep(3);
-  
-    try {
-      // OPTIMIZATION EXPLAINED:
-      // 1. resize: { width: 1500 } -> Large enough to read 6pt font, small enough to stop crashes.
-      // 2. compress: 0.8 -> Keeps text edges sharp (critical for OCR). 0.6 is too blurry.
-      // 3. actions: [] -> We intentionally do NOT use grayscale here because some users 
-      //    might rely on the colored packaging for product type detection, 
-      //    though for pure ingredients, grayscale is smaller.
-      
-      const manipResult = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ resize: { width: 1500 } }], 
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG } 
-      );
 
-      // This will result in a ~400KB - 600KB Base64 string.
-      // It processes in ~200ms (fast) but retains 99% of text legibility.
-      const base64Data = await uriToBase64(manipResult.uri);
-  
-      const response = await fetch(VERCEL_BACKEND_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ base64Data: base64Data }),
-      });
-  
-      const responseData = await response.json();
-      console.log("OCR Response Data:", JSON.stringify(responseData, null, 2));
-  
-      if (!response.ok) {
-        throw new Error(responseData.error || "An error occurred in the backend.");
-      }
-  
-      let jsonResponse;
-      if (typeof responseData.result === 'object') {
-          jsonResponse = responseData.result;
-      } else {
-          const text = responseData.result.replace(/```json|```/g, '').trim();
-          jsonResponse = JSON.parse(text);
-      }
-  
-      // --- NEW LOGIC START ---
-      // Check if the backend detected a front label instead of ingredients
-      if (jsonResponse.status === 'front_label_detected') {
-          setIsGeminiLoading(false);
-          setLoading(false);
-          
-          // Return to the Input/Camera step
-          changeStep(0); 
-          
-          // Show the Alert Modal
-          setTimeout(() => {
-              AlertService.show({
-                  title: "تنبيه",
-                  message: "يبدو أنك صورتي واجهة المنتج. من فضلك صوري قائمة المكونات (خلف العبوة) للتحليل.",
-                  type: "warning",
-                  buttons: [{ text: "حسنا", style: "primary" }]
-              });
-          }, 500); // Small delay to allow transition back to step 0
-          
-          return; // Stop execution
-      }
-      // --- NEW LOGIC END ---
-  
-      const rawList = jsonResponse.ingredients_list || [];
-      
-      // Fallback: If status is success but list is empty, it might still be a bad photo
-      if (rawList.length === 0) {
-           throw new Error("No ingredients found");
-      }
-  
-      // Existing logic continues...
-      const { ingredients } = await extractIngredientsFromAIText(rawList);
-      
-      setOcrText(rawList.join('\n')); 
-      setPreProcessedIngredients(ingredients);
-      setProductType(jsonResponse.detected_type || 'other');
-  
-      setIsGeminiLoading(false);
-      setLoading(false);
-      changeStep(1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  
+    try {
+        // STEP 1: Process image for upload (keep this for potential fallback)
+        const manipResult = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1500 } }],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        // STEP 2: NEW - Perform LOCAL ML Kit OCR on the processed image
+        console.log("Starting ML Kit OCR...");
+        let mlKitOcrText = "";
+        try {
+            // Ensure correct URI format for Android
+            const processedUri = Platform.OS === 'android' && !manipResult.uri.startsWith('file://')
+                ? `file://${manipResult.uri}`
+                : manipResult.uri;
+
+            const ocrResult = await TextRecognition.recognize(processedUri);
+            mlKitOcrText = ocrResult.text || "";
+            console.log("ML Kit OCR Success. Text length:", mlKitOcrText.length);
+            console.log("First 200 chars:", mlKitOcrText.substring(0, 200));
+        } catch (ocrError) {
+            console.warn("ML Kit OCR failed, continuing with image only:", ocrError);
+            // Continue without text - your backend will use vision-only mode
+        }
+
+        // STEP 3: Convert to base64 (for fallback/vision assistance in backend)
+        const base64Data = await uriToBase64(manipResult.uri);
+
+        // STEP 4: Send BOTH the base64 image AND the OCR text to your backend
+        const response = await fetch(VERCEL_BACKEND_URL, { // This is your analyze.js endpoint
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                base64Data: base64Data,
+                localOcrText: mlKitOcrText // NEW: Send the ML Kit extracted text
+            }),
+        });
+
+        const responseData = await response.json();
+        console.log("Backend Response:", JSON.stringify(responseData, null, 2));
+
+        if (!response.ok) {
+            throw new Error(responseData.error || "Backend error");
+        }
+
+        // ... [Rest of your existing success/error handling remains the same]
+        let jsonResponse;
+        if (typeof responseData.result === 'object') {
+            jsonResponse = responseData.result;
+        } else {
+            const text = responseData.result.replace(/```json|```/g, '').trim();
+            jsonResponse = JSON.parse(text);
+        }
+
+        // Check for front label (your existing logic)
+        if (jsonResponse.status === 'front_label_detected') {
+            setIsGeminiLoading(false);
+            setLoading(false);
+            changeStep(0);
+            setTimeout(() => {
+                AlertService.show({
+                    title: "تنبيه",
+                    message: "يبدو أنك صورتي واجهة المنتج. من فضلك صوري قائمة المكونات (خلف العبوة) للتحليل.",
+                    type: "warning",
+                    buttons: [{ text: "حسنا", style: "primary" }]
+                });
+            }, 500);
+            return;
+        }
+
+        const rawList = jsonResponse.ingredients_list || [];
+        if (rawList.length === 0) {
+            throw new Error("No ingredients found");
+        }
+
+        const { ingredients } = await extractIngredientsFromAIText(rawList);
+        setOcrText(rawList.join('\n'));
+        setPreProcessedIngredients(ingredients);
+        setProductType(jsonResponse.detected_type || 'other');
+
+        setIsGeminiLoading(false);
+        setLoading(false);
+        changeStep(1);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
     } catch (error) {
-      console.error("Processing Error:", error);
-      
-      setIsGeminiLoading(false);
-      setLoading(false);
-      changeStep(0);
-      
-      // Generic error alert
-      AlertService.show({
-          title: "خطأ في المسح",
-          message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
-          type: "error"
-      });
+        console.error("Processing Error:", error);
+        setIsGeminiLoading(false);
+        setLoading(false);
+        changeStep(0);
+        AlertService.show({
+            title: "خطأ في المسح",
+            message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
+            type: "error"
+        });
     }
-  };
+};
 
 const executeAnalysis = async () => {
     // 1. Trigger Transition INSTANTLY (Fast Mode: true)
