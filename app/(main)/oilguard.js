@@ -1547,48 +1547,80 @@ export default function OilGuardEngine() {
     changeStep(3);
 
     try {
-        // STEP 1: Process image for upload (keep this for potential fallback)
+        console.log("🔄 [ML Kit] Starting image processing...");
         const manipResult = await ImageManipulator.manipulateAsync(
             uri,
             [{ resize: { width: 1500 } }],
             { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
         );
+        console.log("✅ [ML Kit] Image processed:", manipResult.uri);
 
-        // STEP 2: NEW - Perform LOCAL ML Kit OCR on the processed image
-        console.log("Starting ML Kit OCR...");
+        // STEP: Perform LOCAL ML Kit OCR
+        console.log("🔍 [ML Kit] Starting OCR recognition...");
         let mlKitOcrText = "";
         try {
-            // Ensure correct URI format for Android
             const processedUri = Platform.OS === 'android' && !manipResult.uri.startsWith('file://')
                 ? `file://${manipResult.uri}`
                 : manipResult.uri;
-
-            const ocrResult = await TextRecognition.recognize(processedUri);
+            
+            console.log("📸 [ML Kit] Processing URI:", processedUri.substring(0, 50) + "...");
+            
+            // Time the OCR operation
+            const startTime = Date.now();
+            const ocrResult = await TextRecognition.recognize(processedUri, {
+                language: 'ar', // Arabic
+                latinOnly: false // Allow Arabic script
+              });
+            const endTime = Date.now();
+            
             mlKitOcrText = ocrResult.text || "";
-            console.log("ML Kit OCR Success. Text length:", mlKitOcrText.length);
-            console.log("First 200 chars:", mlKitOcrText.substring(0, 200));
+
+            Alert.alert(
+                "ML Kit Result",
+                `Text found: ${mlKitOcrText.length} characters\n\n` +
+                `Preview: ${mlKitOcrText.substring(0, 100)}...`,
+                [{ text: "OK" }]
+            );
+            console.log("✅ [ML Kit] OCR Success!");
+            console.log("⏱️ [ML Kit] Time taken:", endTime - startTime + "ms");
+            console.log("📄 [ML Kit] Text length:", mlKitOcrText.length + " characters");
+            console.log("📝 [ML Kit] First 300 chars:", mlKitOcrText.substring(0, 300));
+            
+            // Log structured data if available
+            if (ocrResult.blocks) {
+                console.log("🏗️ [ML Kit] Text blocks found:", ocrResult.blocks.length);
+                ocrResult.blocks.forEach((block, i) => {
+                    console.log(`   Block ${i}: "${block.text.substring(0, 50)}..."`);
+                });
+            }
+            
         } catch (ocrError) {
-            console.warn("ML Kit OCR failed, continuing with image only:", ocrError);
-            // Continue without text - your backend will use vision-only mode
+            console.error("❌ [ML Kit] OCR Failed:", ocrError.message, ocrError.stack);
+            // Continue without text
         }
 
-        // STEP 3: Convert to base64 (for fallback/vision assistance in backend)
+        // Convert to base64
+        console.log("🔄 [ML Kit] Converting to base64...");
         const base64Data = await uriToBase64(manipResult.uri);
+        console.log("✅ [ML Kit] Base64 length:", base64Data.length);
 
-        // STEP 4: Send BOTH the base64 image AND the OCR text to your backend
-        const response = await fetch(VERCEL_BACKEND_URL, { // This is your analyze.js endpoint
+        // Send to backend
+        console.log("📤 [ML Kit] Sending to backend...");
+        console.log("📦 [ML Kit] Payload size - Image:", Math.round(base64Data.length / 1024) + "KB");
+        console.log("📦 [ML Kit] Payload size - Text:", mlKitOcrText.length + " chars");
+        
+        const response = await fetch(VERCEL_BACKEND_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 base64Data: base64Data,
-                localOcrText: mlKitOcrText // NEW: Send the ML Kit extracted text
+                localOcrText: mlKitOcrText
             }),
         });
-
+        
+        console.log("🌐 [Backend] Response status:", response.status);
         const responseData = await response.json();
-        console.log("Backend Response:", JSON.stringify(responseData, null, 2));
+        console.log("📨 [Backend] Response received");
 
         if (!response.ok) {
             throw new Error(responseData.error || "Backend error");
