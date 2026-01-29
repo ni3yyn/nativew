@@ -186,24 +186,6 @@ dependencies {
     // ADD ONLY THESE (Arabic might be included in base package)
     implementation 'com.google.mlkit:text-recognition:16.0.1'  // This exists!
 
-configurations.all {
-    resolutionStrategy {
-        // Force ONLY what exists
-        force 'com.google.mlkit:text-recognition:16.0.1'
-        
-        // Remove these - they don't exist!
-        // force 'com.google.mlkit:text-recognition-arabic:16.0.1'
-        // force 'com.google.mlkit:text-recognition-common:16.0.1'
-        // force 'com.google.mlkit:text-recognition-chinese:16.0.1'
-        // force 'com.google.mlkit:text-recognition-devanagari:16.0.1'
-        // force 'com.google.mlkit:text-recognition-japanese:16.0.1'
-        // force 'com.google.mlkit:text-recognition-korean:16.0.1'
-        
-        // Keep exclusions
-        exclude group: 'com.google.android.gms', module: 'play-services-mlkit-text-recognition'
-    }
-}
-
 }
 
 apply plugin: 'com.google.gms.google-services'
