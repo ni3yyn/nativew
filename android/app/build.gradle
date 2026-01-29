@@ -181,11 +181,8 @@ dependencies {
     }
 
     implementation project(':@react-native-ml-kit_text-recognition')
-    
-    // Also add these MLKit dependencies:
-    implementation 'com.google.mlkit:text-recognition:17.0.0'
-    implementation 'com.google.mlkit:text-recognition-arabic:17.0.0'
-    implementation 'com.google.mlkit:text-recognition-english:17.0.0'
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:18.0.2'
+
 
 }
 
