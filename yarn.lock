@@ -7150,11 +7150,6 @@ react-native-is-edge-to-edge@^1.1.6, react-native-is-edge-to-edge@^1.2.1:
   resolved "https://registry.npmjs.org/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
-react-native-mlkit-ocr@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/react-native-mlkit-ocr/-/react-native-mlkit-ocr-0.3.0.tgz#b5b65dbe1fffdca0ca2012b1cab56cca6ea1bf58"
-  integrity sha512-8oNJwNMGsUup41nWlKA01iW6xiNkCcXM3ANDsOKKijvsrd3eWNs7kL0Yhpt3Cq64zSyjoeqkdTdOCDiI6Pv6KA==
-
 react-native-safe-area-context@~5.6.0:
   version "5.6.2"
   resolved "https://registry.npmjs.org/react-native-safe-area-context/-/react-native-safe-area-context-5.6.2.tgz"
