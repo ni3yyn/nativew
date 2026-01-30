@@ -980,11 +980,11 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                     gap: 6
                                 }}
                             >
-                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? '#FFF' : COLORS.textDim} />
+                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? '#1A2D27' : COLORS.textDim} />
                                 <Text style={{
                                     fontFamily: 'Tajawal-Bold',
                                     fontSize: 13,
-                                    color: scanMode === 'fast' ? '#FFF' : COLORS.textDim
+                                    color: scanMode === 'fast' ? '#1A2D27' : COLORS.textDim
                                 }}>وضع السرعة</Text>
                             </TouchableOpacity>
 
@@ -1002,12 +1002,12 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                     gap: 6
                                 }}
                             >
-                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? '#FFF' : COLORS.textDim} />
+                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim} />
                                 <Text style={{
                                     fontFamily: 'Tajawal-Bold',
                                     fontSize: 13,
-                                    color: scanMode === 'accurate' ? '#FFF' : COLORS.textDim
-                                }}>وضع الدقة (مدة أطول)</Text>
+                                    color: scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim
+                                }}>وضع الدقة</Text>
                             </TouchableOpacity>
                         </View>
                         
@@ -2405,9 +2405,7 @@ return (
                 // --- CASE 2: Input Step (Immersive/No Scroll) ---
                 <Animated.View style={{ 
                     flex: 1,
-                    // FIX: Force explicit dimensions to prevent "Half Black Screen" collapse
-                    height: '100%', 
-                    width: width, 
+                    width: '100%', // Use '100%' to be responsive
                     opacity: contentOpacity,
                     transform: [{ translateX: contentTranslateX }]
                 }}>

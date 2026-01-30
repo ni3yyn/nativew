@@ -34,7 +34,7 @@ export const AppProvider = ({ children }) => {
   
   // --- Refs & Control ---
   const isRepairing = useRef(false);
-  const hasRegisteredNotifications = useRef(false); // Prevents re-registration loops
+  const hasRegisteredNotifications = useRef(false); 
 
   // --- System State ---
   const [appConfig, setAppConfig] = useState({
@@ -102,7 +102,6 @@ export const AppProvider = ({ children }) => {
           fcmTokenString = deviceTokenData.data;
       } catch (e) {}
 
-      // ONLY updateDoc here to prevent "Ghost files"
       try {
         await updateDoc(userRef, {
           expoPushToken: expoTokenString, 
@@ -143,11 +142,15 @@ export const AppProvider = ({ children }) => {
     // B. Auth Listener
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      hasRegisteredNotifications.current = false; // Reset on auth change
+      hasRegisteredNotifications.current = false; 
       
       if (currentUser) {
         console.log("🟢 User Detected:", currentUser.email);
         
+        // Check if this is a brand new account or a returning user
+        // We use this to prevent overwriting existing data if the network is slow
+        const isBrandNewAccount = currentUser.metadata.creationTime === currentUser.metadata.lastSignInTime;
+
         // 1. Load Cache
         const loadCache = async () => {
             try {
@@ -166,7 +169,7 @@ export const AppProvider = ({ children }) => {
         };
         loadCache();
     
-        // 2. Profile Real-time Listener & Repair
+        // 2. Profile Real-time Listener
         const profileRef = doc(db, 'profiles', currentUser.uid);
         const unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
           
@@ -175,41 +178,39 @@ export const AppProvider = ({ children }) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const updatesToApply = {};
-            let isCriticalRepair = false;
+            let needsUpdate = false;
 
-            // --- CRITICAL REPAIR ---
+            // --- REPAIR FIELDS IF MISSING (BUT DON'T OVERWRITE WHOLE DOC) ---
             if (!data.email) {
                 updatesToApply.email = currentUser.email;
-                isCriticalRepair = true;
+                needsUpdate = true;
             }
             if (!data.settings) {
                 updatesToApply.settings = { 
                     name: '', gender: '', skinType: '', scalpType: '',
                     goals: [], conditions: [], allergies: []
                 };
-                updatesToApply.onboardingComplete = false; 
-                isCriticalRepair = true;
+                needsUpdate = true;
             }
 
-            // --- HOUSEKEEPING (Silent) ---
             if (data.notificationsEnabled === undefined) {
                 updatesToApply.notificationsEnabled = false;
+                needsUpdate = true;
             }
             if (!data.createdAt) {
                 updatesToApply.createdAt = new Date();
+                needsUpdate = true;
             }
 
-            // Apply Patch
-            if (Object.keys(updatesToApply).length > 0) {
-               console.log("🛠 Applying Repair Patches:", updatesToApply);
+            // Apply Patch only if fields are missing
+            if (needsUpdate) {
+               console.log("🛠 Patching missing fields in profile...");
                isRepairing.current = true; 
                try {
-                   await setDoc(profileRef, updatesToApply, { merge: true });
-                   if (isCriticalRepair) {
-                       const fixedProfile = { ...data, ...updatesToApply };
-                       setUserProfile(fixedProfile);
-                       setSelfProfileCache(fixedProfile);
-                   }
+                   await updateDoc(profileRef, updatesToApply);
+                   const fixedProfile = { ...data, ...updatesToApply };
+                   setUserProfile(fixedProfile);
+                   setSelfProfileCache(fixedProfile);
                } catch (e) {
                    console.error("Repair failed", e);
                } finally {
@@ -218,37 +219,46 @@ export const AppProvider = ({ children }) => {
                return; 
             }
 
-            // Success Path
+            // Normal Data Path
             setUserProfile(data);
             setSelfProfileCache(data); 
             setLoading(false); 
 
-            // ➤ REGISTER TOKENS: Moved here but guarded to run only once
             if (data.onboardingComplete && !hasRegisteredNotifications.current) {
                 hasRegisteredNotifications.current = true;
                 registerForPushNotificationsAsync(currentUser.uid);
             }
 
-          } else if (!docSnap.metadata.fromCache) {
-            console.warn("⚠️ No profile found on server. Creating default...");
-            isRepairing.current = true; 
-            const defaultProfile = {
-                email: currentUser.email,
-                createdAt: new Date(),
-                onboardingComplete: false,
-                settings: { name: '', gender: '', skinType: '', scalpType: '', goals: [], conditions: [], allergies: [] }, 
-                routines: { am: [], pm: [] },
-                notificationsEnabled: false
-            };
-            try {
-              await setDoc(profileRef, defaultProfile);
-              setUserProfile(defaultProfile);
-            } finally {
-              setTimeout(() => { isRepairing.current = false; }, 2000);
+          } else {
+            // DOCUMENT DOES NOT EXIST ON SERVER
+            // We ONLY create a default profile if the user is BRAND NEW.
+            // If they are a returning user and the doc is missing, it's likely a network/sync error.
+            if (isBrandNewAccount && !docSnap.metadata.fromCache) {
+                console.warn("🆕 Brand new user: Creating default profile...");
+                isRepairing.current = true; 
+                const defaultProfile = {
+                    email: currentUser.email,
+                    createdAt: new Date(),
+                    onboardingComplete: false,
+                    settings: { name: '', gender: '', skinType: '', scalpType: '', goals: [], conditions: [], allergies: [] }, 
+                    routines: { am: [], pm: [] },
+                    notificationsEnabled: false
+                };
+                try {
+                  await setDoc(profileRef, defaultProfile);
+                  setUserProfile(defaultProfile);
+                } catch (err) {
+                   console.error("Default profile creation failed", err);
+                } finally {
+                  setTimeout(() => { isRepairing.current = false; }, 2000);
+                }
+            } else {
+                console.log("⏳ Profile not found yet (returning user). Waiting for Firestore sync...");
             }
           }
         }, (err) => {
-            console.warn("⚠️ Offline: Keeping cached profile");
+            console.warn("⚠️ Firestore Listener Error:", err);
+            setLoading(false);
         });
     
         // 3. Products Listener
@@ -294,6 +304,9 @@ export const AppProvider = ({ children }) => {
       await signOut(auth);
       setUserProfile(null);
       setSavedProducts([]);
+      // Clear cache on logout to prevent next user seeing old data
+      setSelfProfileCache(null);
+      setSavedProductsCache([]);
     } catch (e) { console.error(e); }
   };
 
