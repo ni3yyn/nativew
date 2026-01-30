@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState } from 'react-native';
+import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState, Platform } from 'react-native';
 import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { StatusBar } from "expo-status-bar";
@@ -17,8 +17,7 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // ADJUST THIS PATH to match where your 'db' variable is exported in your app
 import { db } from '../src/config/firebase';
 
-// Import Notification Helper (Assumes this file exists in your utils)
-// If you don't have this file, you can remove the scheduleAuthenticNotifications call below.
+// Import Notification Helper
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 
 SplashScreen.preventAutoHideAsync();
@@ -441,7 +440,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   }, [user, userProfile, loading]);
 
   // =========================================================
-  // ➤ UPDATED: NOTIFICATION LOGIC (Stops the Loop)
+  // ➤ UPDATED: NOTIFICATION LOGIC (With Channel Restoration)
   // =========================================================
   useEffect(() => {
     if (!fontsLoaded) return;
@@ -456,16 +455,33 @@ const RootLayoutNav = ({ fontsLoaded }) => {
              }
         } else {
              if (user && userProfile) {
-                // ➤ SAFETY CHECK: Stop loop if profile is broken/incomplete
+                // ➤ SAFETY CHECK: Only proceed if onboarding is done
                 if (!userProfile.onboardingComplete) return;
 
                 try {
+                    // =========================================================================
+                    // ➤ 1. EXPLICITLY CREATE THE CHANNEL (The Fix for Disappearing Category)
+                    // =========================================================================
+                    if (Platform.OS === 'android') {
+                        await Notifications.setNotificationChannelAsync('oilguard-smart', {
+                            name: 'Smart Skincare Reminders',
+                            importance: Notifications.AndroidImportance.MAX,
+                            vibrationPattern: [0, 250, 250, 250],
+                            lightColor: '#5A9C84',
+                        });
+                        console.log("🔔 [Layout] 'oilguard-smart' channel created/verified.");
+                    }
+
+                    // =========================================================================
+                    // ➤ 2. SCHEDULE THE AUTHENTIC MESSAGES
+                    // =========================================================================
                     const name = userProfile.settings?.name || 'غالية';
                     const settings = userProfile.settings || {};
                     const products = savedProducts || [];
                     
                     if (scheduleAuthenticNotifications) {
                         await scheduleAuthenticNotifications(name, products, settings);
+                        console.log("📅 [Layout] Smart notifications scheduled.");
                     }
                 } catch (e) {
                     console.log("Error scheduling local notifications:", e);
