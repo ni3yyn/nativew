@@ -56,7 +56,12 @@ export const AppProvider = ({ children }) => {
   // 2. HELPER: REGISTER FOR PUSH NOTIFICATIONS
   // ==================================================================
   const registerForPushNotificationsAsync = async (uid) => {
-    if (!Device.isDevice) return;
+    console.log("🔔 [AppContext] Starting notification registration for user:", uid);
+    
+    if (!Device.isDevice) {
+      console.log("⚠️ [AppContext] Must use physical device for Push Notifications");
+      return;
+    }
 
     try {
       if (Platform.OS === 'android') {
@@ -66,22 +71,29 @@ export const AppProvider = ({ children }) => {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#FF231F7C',
         });
+        console.log("🔔 [AppContext] Android Notification Channel 'default' set.");
       }
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
       if (existingStatus !== 'granted') {
+        console.log("🔔 [AppContext] requesting permissions...");
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
       
+      console.log("🔔 [AppContext] Final Permission Status:", finalStatus);
+
       const userRef = doc(db, 'profiles', uid);
 
       if (finalStatus !== 'granted') {
+        console.log("❌ [AppContext] Permission denied! Updating profile to disable notifications.");
         try {
           await updateDoc(userRef, { notificationsEnabled: false });
-        } catch (error) {}
+        } catch (error) {
+            console.error("❌ [AppContext] Error updating denied status:", error);
+        }
         return;
       }
 
@@ -94,13 +106,19 @@ export const AppProvider = ({ children }) => {
       try {
           const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
           expoTokenString = expoTokenData.data;
-      } catch (e) {}
+          console.log("✅ [AppContext] Expo Push Token:", expoTokenString);
+      } catch (e) {
+          console.error("❌ [AppContext] Failed to get Expo Token:", e);
+      }
 
       let fcmTokenString = null;
       try {
           const deviceTokenData = await Notifications.getDevicePushTokenAsync();
           fcmTokenString = deviceTokenData.data;
-      } catch (e) {}
+          console.log("✅ [AppContext] FCM/Device Token:", fcmTokenString);
+      } catch (e) {
+          console.error("❌ [AppContext] Failed to get Device Token:", e);
+      }
 
       try {
         await updateDoc(userRef, {
@@ -110,12 +128,13 @@ export const AppProvider = ({ children }) => {
           deviceType: Platform.OS,
           lastTokenUpdate: new Date()
         });
+        console.log("✅ [AppContext] Tokens successfully saved to Firestore!");
       } catch (e) {
-         // Fail silently if profile isn't ready
+         console.error("❌ [AppContext] Error saving tokens to Firestore:", e);
       }
 
     } catch (error) {
-      console.error("❌ Error registering push tokens:", error);
+      console.error("❌ [AppContext] Critical Error registering push tokens:", error);
     }
   };
 
@@ -211,7 +230,6 @@ export const AppProvider = ({ children }) => {
                    setUserProfile(fixedProfile);
                    setSelfProfileCache(fixedProfile);
 
-                   // ➤ FIXED: Check notifications here too, before returning!
                    if (fixedProfile.onboardingComplete && !hasRegisteredNotifications.current) {
                         hasRegisteredNotifications.current = true;
                         registerForPushNotificationsAsync(currentUser.uid);
@@ -230,8 +248,8 @@ export const AppProvider = ({ children }) => {
             setSelfProfileCache(data); 
             setLoading(false); 
 
-            // ➤ Check notifications here
             if (data.onboardingComplete && !hasRegisteredNotifications.current) {
+                console.log("🔔 [AppContext] Profile ready. Initiating token registration...");
                 hasRegisteredNotifications.current = true;
                 registerForPushNotificationsAsync(currentUser.uid);
             }
