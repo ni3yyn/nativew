@@ -784,7 +784,7 @@ const extractIngredientsFromAIText = async (inputData) => {
 };
 
 // --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
-const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
+const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, setScanMode }) => {
     
     // 1. Calculate height for perfect scan loop
     const { width } = Dimensions.get('window');
@@ -954,6 +954,78 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect }) => {
                             }}
                         />
                     </View>
+
+                     {/* --- NEW: SCAN MODE TOGGLE --- */}
+                     <View style={{
+                            flexDirection: 'row',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            borderRadius: 12,
+                            padding: 4,
+                            marginTop: 'auto',
+                            marginBottom: 5,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255,255,255,0.1)'
+                        }}>
+                            {/* Fast Mode Button */}
+                            <TouchableOpacity 
+                                onPress={() => setScanMode('fast')}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 8,
+                                    borderRadius: 8,
+                                    backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'row',
+                                    gap: 6
+                                }}
+                            >
+                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? '#FFF' : COLORS.textDim} />
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 13,
+                                    color: scanMode === 'fast' ? '#FFF' : COLORS.textDim
+                                }}>وضع السرعة</Text>
+                            </TouchableOpacity>
+
+                            {/* Accurate Mode Button */}
+                            <TouchableOpacity 
+                                onPress={() => setScanMode('accurate')}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 8,
+                                    borderRadius: 8,
+                                    backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'row',
+                                    gap: 6
+                                }}
+                            >
+                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? '#FFF' : COLORS.textDim} />
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 13,
+                                    color: scanMode === 'accurate' ? '#FFF' : COLORS.textDim
+                                }}>وضع الدقة (مدة أطول)</Text>
+                            </TouchableOpacity>
+                        </View>
+                        
+                        {/* Info Note based on selection */}
+                        <Text style={{ 
+                            fontFamily: 'Tajawal-Regular', 
+                            color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen, 
+                            fontSize: 12,
+                            textAlign: 'center',
+                            marginBottom: 10
+                        }}>
+                            {scanMode === 'accurate' 
+                                ? "يستغرق وقتاً أطول لكن ينصح به للنصوص العربية" 
+                                : "تحليل سريع ينصح به للصور ذات جودة عالية"}
+                        </Text>
+                        {/* --- END NEW UI --- */}
+
+                    
 
                     <TouchableOpacity onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
                         <LinearGradient
@@ -1258,6 +1330,7 @@ export default function OilGuardEngine() {
   const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
   const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
   const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
+  const [scanMode, setScanMode] = useState('fast'); // 'fast' or 'accurate'
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateX = useRef(new Animated.Value(0)).current;
@@ -1565,7 +1638,8 @@ export default function OilGuardEngine() {
             },
             body: JSON.stringify({
                 base64Data: base64Data,
-                localOcrText: "" // Empty string - backend handles OCR internally
+                localOcrText: "", // Empty string - backend handles OCR internally
+                scanMode: scanMode
             }),
         });
 
@@ -1575,6 +1649,18 @@ export default function OilGuardEngine() {
         if (!response.ok) {
             throw new Error(responseData.error || "Backend processing failed");
         }
+
+        // --- START OF NEW DEBUGGING BLOCK ---
+        const debugInfo = responseData._debug;
+        const processingMode = debugInfo?.processing_mode || "UNKNOWN";
+        const fallbackReason = debugInfo?.fallback_reason || "None"; // <--- Get the reason
+
+        const textPreview = debugInfo?.text_preview || "No preview";
+
+        console.log(`\n============== ANALYSIS REPORT ==============`);
+        console.log(`🛠️ MODE: ${processingMode}`);
+        console.log(`📝 TEXT: ${textPreview}`);
+        console.log(`=============================================\n`);
 
         let jsonResponse;
         if (typeof responseData.result === 'object') {
@@ -1888,8 +1974,31 @@ const pickFrontImage = () => {
         </View>
     );
   };
+
+  const renderClaimItem = useCallback(({ item }) => {
+    const isSelected = selectedClaims.includes(item);
+    
+    // The handler function is now defined inside the memoized callback
+    const handlePress = () => {
+        setSelectedClaims(prev => 
+            prev.includes(item) 
+            ? prev.filter(c => c !== item) 
+            : [...prev, item]
+        );
+        // Optional: Haptics.selectionAsync();
+    };
+
+    return (
+        <TouchableOpacity onPress={handlePress}>
+            <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
+                <AnimatedCheckbox isSelected={isSelected} />
+                <Text style={styles.claimItemText}>{item}</Text>
+            </View>
+        </TouchableOpacity>
+    );
+}, [selectedClaims]);
   
-  const renderClaimsStep = () => {
+const renderClaimsStep = () => {
     const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
     
     const EXPANDED_HEADER_HEIGHT = 160;
@@ -1924,29 +2033,11 @@ const pickFrontImage = () => {
       outputRange: [1, 1.1]
     });
 
-    const renderClaimItem = ({ item, index }) => {
-        const isSelected = selectedClaims.includes(item);
-        
-        // FIX: Removed <StaggeredItem> wrapper. 
-        // Direct rendering prevents the UI thread freeze on Android.
-        return (
-            <TouchableOpacity onPress={() => {
-              // Optional: Haptics.selectionAsync(); 
-              setSelectedClaims(prev => prev.includes(item) ? prev.filter(c => c !== item) : [...prev, item]);
-            }}>
-              <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
-                <AnimatedCheckbox isSelected={isSelected} />
-                <Text style={styles.claimItemText}>{item}</Text>
-              </View>
-            </TouchableOpacity>
-        );
-      };
-
     return (
       <View style={{ flex: 1, width: '100%' }}>
         <Animated.FlatList
           data={displayedClaims}
-          renderItem={renderClaimItem}
+          renderItem={renderClaimItem} // <--- NOW USING THE MEMOIZED FUNCTION
           keyExtractor={(item) => item}
           showsVerticalScrollIndicator={false}
           
@@ -2010,8 +2101,6 @@ const pickFrontImage = () => {
             <Animated.View
                 style={{
                     transform: [{ translateY: fabTranslateY }],
-                    // REMOVED: ref={fabRef}
-                    // REMOVED: opacity: isAnimatingTransition ? 0 : 1
                 }}
             >
                 <Animated.View style={{ transform: [{ scale: fabScale }] }}>
@@ -2322,7 +2411,7 @@ return (
                     opacity: contentOpacity,
                     transform: [{ translateX: contentTranslateX }]
                 }}>
-                   <InputStepView onImageSelect={handleImageSelection} onManualSelect={() => setManualModalVisible(true)} />
+                   <InputStepView onImageSelect={handleImageSelection} onManualSelect={() => setManualModalVisible(true)} scanMode={scanMode} setScanMode={setScanMode} />
                 </Animated.View>
             ) : step === 1 ? (
                 // --- CASE 3: Review Step (FIXED - NO PARENT SCROLL) ---
