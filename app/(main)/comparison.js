@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo  } from 'react';
 import {
     StyleSheet, View, Text,
     ScrollView, Animated, Platform, Alert,
     UIManager, Image, StatusBar,
-    Easing, TouchableOpacity, Dimensions
+    Easing, TouchableOpacity, Dimensions, TextInput, SafeAreaView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Fuse from 'fuse.js'; // Ensure this is installed: npm install fuse.js
 
 import { useAppContext } from '../../src/context/AppContext';
 
@@ -24,7 +26,7 @@ import {
 import LoadingScreen from '../../src/components/oilguard/LoadingScreen';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
 import { uriToBase64 } from '../../src/utils/formatters'; 
-import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
+import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; 
 
 // ============================================================================
 //                       SYSTEM CONFIGURATION
@@ -71,7 +73,6 @@ const StaggeredItem = ({ index, children, style }) => {
     );
 };
 
-// --- CORRECTED METRIC DUEL BAR (Center-Out Growth) ---
 const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
     const animA = useRef(new Animated.Value(0)).current;
     const animB = useRef(new Animated.Value(0)).current;
@@ -88,37 +89,20 @@ const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
 
     return (
         <View style={styles.duelContainer}>
-            {/* Header: Scores on Edges, Label in Center 
-               flexDirection is 'row-reverse', so:
-               - First Child appears on the RIGHT (Product A/Green)
-               - Last Child appears on the LEFT (Product B/Blue)
-            */}
             <View style={styles.duelHeader}>
-                {/* Right Side (Product A - Green) */}
                 <Text style={[styles.duelScore, { color: PROD_COLORS.A, textAlign: 'right' }]}>{Math.round(scoreA || 0)}%</Text>
-                
-                {/* Center Label */}
                 <View style={styles.duelLabelBox}>
                     <Text style={styles.duelLabel}>{label}</Text>
                     <FontAwesome5 name={icon} size={10} color={COLORS.textDim} style={{ marginLeft: 5 }} />
                 </View>
-                
-                {/* Left Side (Product B - Blue) */}
                 <Text style={[styles.duelScore, { color: PROD_COLORS.B, textAlign: 'left' }]}>{Math.round(scoreB || 0)}%</Text>
             </View>
 
-            {/* Bars Track - Center Out */}
             <View style={styles.duelTrackContainer}>
-                
-                {/* Product B Bar (Visual Left - Grows Right-to-Left from center) */}
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', paddingRight: 2 }}> 
                     <Animated.View style={[styles.duelBar, { width: widthB, backgroundColor: PROD_COLORS.B, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
                 </View>
-
-                {/* Center Divider */}
                 <View style={styles.duelDivider} />
-
-                {/* Product A Bar (Visual Right - Grows Left-to-Right from center) */}
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 2 }}>
                     <Animated.View style={[styles.duelBar, { width: widthA, backgroundColor: PROD_COLORS.A, borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
                 </View>
@@ -127,30 +111,45 @@ const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
     );
 };
 
-// ============================================================================
-//                       SUB-COMPONENTS
-// ============================================================================
-
-
 const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
     const [activeSide, setActiveSide] = useState('A'); 
     const rawData = activeSide === 'A' ? leftClaims : rightClaims;
     const fadeAnim = useRef(new Animated.Value(1)).current;
-    const fabPulseAnim = useRef(new Animated.Value(1)).current;
     
+    // Helper: Clean Status Text
+    const cleanStatusText = (text) => {
+        if (!text) return '';
+        return text.replace(/[✅🌿⚖️❌🚫⚠️]/g, '').trim();
+    };
+
+    // Sort Data: Proven/Traditional first, then Warnings/False
     const sortedData = useMemo(() => {
         if (!rawData) return [];
         return [...rawData].sort((a, b) => {
             const getScore = (item) => {
                 const s = item.status ? item.status.toString() : '';
-                if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) return 4;
-                if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('مشكوك')) return 3;
-                if (s.includes('🌿') || s.includes('تقليديا')) return 2;
-                return 1;
+                if (s.includes('✅')) return 4; 
+                if (s.includes('🌿')) return 3; 
+                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2; 
+                return 1; 
             };
             return getScore(b) - getScore(a);
         });
     }, [rawData]);
+
+    // Calculate Honesty Score for the active side
+    const honestyScore = useMemo(() => {
+        if (!sortedData || sortedData.length === 0) return 0;
+        const total = sortedData.length;
+        const validCount = sortedData.filter(r => {
+            const s = r.status ? r.status.toString() : '';
+            return s.includes('✅') || s.includes('🌿');
+        }).length;
+        return Math.round((validCount / total) * 100);
+    }, [sortedData]);
+
+    // Color for the score badge
+    const scoreColor = honestyScore >= 70 ? COLORS.success : (honestyScore >= 40 ? COLORS.warning : COLORS.danger);
 
     const switchSide = (side) => {
         if(side === activeSide) return;
@@ -160,12 +159,26 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
         });
     };
 
-    const cleanStatusText = (text) => text ? text.replace(/[✅🌿⚖️❌🚫]/g, '').trim() : '';
-
     const ClaimRow = ({ item, index }) => {
         const [expanded, setExpanded] = useState(false);
         const [contentHeight, setContentHeight] = useState(0);
         const anim = useRef(new Animated.Value(0)).current;
+
+        // --- DATA PROCESSING FOR EVIDENCE (The OilGuard Logic) ---
+        const rawEvidence = [...(item.proven || []), ...(item.traditionallyProven || [])];
+        const strongEvidence = [];
+        const weakEvidence = [];
+
+        rawEvidence.forEach(ing => {
+            const isObj = typeof ing === 'object';
+            const data = {
+                name: isObj ? ing.name : ing,
+                benefit: isObj ? ing.benefit : null,
+                isTrace: isObj ? ing.isTrace : false
+            };
+            if (data.isTrace) weakEvidence.push(data);
+            else strongEvidence.push(data);
+        });
 
         const toggle = () => {
             setExpanded(!expanded);
@@ -178,13 +191,14 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
         };
 
         const getStatusConfig = (s) => {
+            if (!s) return { color: COLORS.textSecondary, icon: 'question-circle', bg: 'rgba(255,255,255,0.05)' };
             if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) return { color: COLORS.danger, icon: 'times-circle', bg: 'rgba(239, 68, 68, 0.1)' };
-            if (s.includes('⚖️') || s.includes('جزئيا') || s.includes('⚠️')) return { color: COLORS.warning, icon: 'exclamation-triangle', bg: 'rgba(245, 158, 11, 0.1)' };
+            if (s.includes('⚠️') || s.includes('Angel') || s.includes('تركيز')) return { color: COLORS.warning, icon: 'exclamation-triangle', bg: 'rgba(245, 158, 11, 0.1)' };
             if (s.includes('🌿')) return { color: '#6BCB77', icon: 'leaf', bg: 'rgba(107, 203, 119, 0.1)' };
             return { color: COLORS.info, icon: 'check-circle', bg: 'rgba(59, 130, 246, 0.1)' };
         };
 
-        const config = getStatusConfig(item.status || '');
+        const config = getStatusConfig(item.status);
 
         return (
             <View style={[globalStyles.claimRowWrapper, index !== (sortedData.length - 1) && globalStyles.claimRowBorder]}>
@@ -214,7 +228,43 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
 
                 <Animated.View style={{ height: anim.interpolate({ inputRange: [0, 1], outputRange: [0, contentHeight], extrapolate: 'clamp' }), overflow: 'hidden' }}>
                     <View style={[globalStyles.claimDetails, { position: 'absolute', width: '100%' }]} onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}>
+                        
                         <Text style={globalStyles.claimExplanation}>{item.explanation}</Text>
+
+                        {/* --- PRIMARY INGREDIENTS --- */}
+                        {strongEvidence.length > 0 && (
+                            <View style={styles.evidenceGroup}>
+                                <View style={styles.evidenceLabelContainer}>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>مكونات فعالة أساسية:</Text>
+                                    <FontAwesome5 name="check" size={10} color={COLORS.success} />
+                                </View>
+                                <View style={styles.chipContainer}>
+                                    {strongEvidence.map((ing, i) => (
+                                        <View key={i} style={styles.chipPrimary}>
+                                            <Text style={styles.chipTextPrimary}>{ing.name}{ing.benefit && <Text style={styles.chipBenefit}> • {ing.benefit}</Text>}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* --- TRACE INGREDIENTS --- */}
+                        {weakEvidence.length > 0 && (
+                            <View style={[styles.evidenceGroup, { marginTop: strongEvidence.length > 0 ? 12 : 0 }]}>
+                                <View style={styles.evidenceLabelContainer}>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>تراكيز ثانوية / منخفضة:</Text>
+                                    <FontAwesome5 name="exclamation-triangle" size={10} color={COLORS.warning} />
+                                </View>
+                                <View style={styles.chipContainer}>
+                                    {weakEvidence.map((ing, i) => (
+                                        <View key={i} style={styles.chipTrace}>
+                                            <Text style={styles.chipTextTrace}>{ing.name}{ing.benefit && <Text style={styles.chipBenefitTrace}> • {ing.benefit}</Text>}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
                     </View>
                 </Animated.View>
             </View>
@@ -224,10 +274,21 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
     return (
         <View style={globalStyles.claimsContainer}>
             <View style={[globalStyles.claimsHeader, {flexDirection: 'column', alignItems: 'stretch', gap: 15, paddingBottom: 15}]}>
+                
+                {/* Header Top Row: Title + Honesty Badge */}
                 <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center'}}>
-                    <Text style={globalStyles.claimsTitle}>تحليل الادعاءات</Text>
-                    <FontAwesome5 name="tag" color={COLORS.textSecondary} />
+                    <View>
+                        <Text style={globalStyles.claimsTitle}>تحليل الادعاءات</Text>
+                        <Text style={{fontFamily:'Tajawal-Regular', fontSize:11, color:COLORS.textSecondary, textAlign:'right'}}>كشف المبالغات التسويقية</Text>
+                    </View>
+                    
+                    <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
+                        <Text style={[styles.honestyScore, { color: scoreColor }]}>{honestyScore}%</Text>
+                        <Text style={[styles.honestyLabel, { color: scoreColor }]}>مصداقية</Text>
+                    </View>
                 </View>
+
+                {/* Switcher */}
                 <View style={styles.segmentTrack}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('A')} style={[styles.segmentBtn, activeSide === 'A' && {backgroundColor: PROD_COLORS.A}]}>
                         <Text style={[styles.segmentText, activeSide === 'A' && {color: '#FFF'}]}>المنتج (أ)</Text>
@@ -237,6 +298,7 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
                     </TouchableOpacity>
                 </View>
             </View>
+
             <Animated.View style={[globalStyles.claimsBody, {opacity: fadeAnim}]}>
                 {(!sortedData || sortedData.length === 0) ? (
                      <Text style={{textAlign:'center', color:COLORS.textSecondary, margin: 20, fontFamily: 'Tajawal-Regular'}}>لا توجد ادعاءات تم تحليلها لهذا المنتج.</Text>
@@ -248,6 +310,35 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
     );
 };
 
+const AnimatedCheckbox = ({ isSelected }) => {
+    const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+    const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+  
+    useEffect(() => {
+        Animated.spring(scale, {
+            toValue: isSelected ? 1 : 0,
+            friction: 5,
+            tension: 80,
+            useNativeDriver: true,
+        }).start();
+        Animated.timing(checkScale, {
+            toValue: isSelected ? 1 : 0,
+            duration: 200,
+            delay: isSelected ? 100 : 0, 
+            useNativeDriver: true,
+        }).start();
+    }, [isSelected]);
+  
+    return (
+        <View style={styles.checkboxBase}>
+            <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
+            <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+                <FontAwesome5 name="check" size={14} color={COLORS.darkGreen} />
+            </Animated.View>
+        </View>
+    );
+  };
+
 // ============================================================================
 //                       MAIN SCREEN
 // ============================================================================
@@ -258,25 +349,34 @@ export default function ComparisonPage() {
     
     // Core State
     const [step, setStep] = useState(0);
+    const [scanMode, setScanMode] = useState('fast');
     const [loadingText, setLoadingText] = useState('');
     const [particles] = useState([...Array(12)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })));
-    
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Product Data
     const [left, setLeft] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
     const [right, setRight] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
     const [productType, setProductType] = useState('other');
     const [claims, setClaims] = useState([]);
     
-    // Animations
+    // Animations & Refs
     const contentOpacity = useRef(new Animated.Value(1)).current;
     const contentTranslateX = useRef(new Animated.Value(0)).current;
     const fabAnim = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(1)).current;
     const fabPulseAnim = useRef(new Animated.Value(1)).current;
+    const scrollY = useRef(new Animated.Value(0)).current; // For header animation
 
-    // Manage FAB Animation for Claims Step
+    // Memoized Data for Fuse.js
+    const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
+    
+    // Fuse.js Instance
+    const fuse = useMemo(() => new Fuse(claimsForType, {
+        includeScore: false,
+        threshold: 0.4,
+    }), [claimsForType]);
+
     useEffect(() => {
-        // 1. Slide Up Logic (Existing)
         Animated.spring(fabAnim, {
             toValue: claims.length > 0 ? 1 : 0,
             friction: 6,
@@ -284,7 +384,6 @@ export default function ComparisonPage() {
             useNativeDriver: true
         }).start();
 
-        // 2. Pulse Logic (NEW)
         const pulseLoop = Animated.loop(
             Animated.sequence([
                 Animated.timing(fabPulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
@@ -296,18 +395,16 @@ export default function ComparisonPage() {
             pulseLoop.start();
         } else {
             pulseLoop.stop();
-            fabPulseAnim.setValue(1); // Reset size
+            fabPulseAnim.setValue(1); 
         }
 
         return () => pulseLoop.stop();
     }, [claims.length]);
 
-    // --- LOGIC ---
     const changeStep = (next) => {
         const isForward = next > step;
-        const slideDist = 20; // Distance to slide
+        const slideDist = 20;
 
-        // 1. Slide OUT
         Animated.parallel([
             Animated.timing(contentOpacity, { 
                 toValue: 0, 
@@ -321,13 +418,10 @@ export default function ComparisonPage() {
                 useNativeDriver: true 
             })
         ]).start(() => {
-            // 2. Update State while invisible
             setStep(next);
-            
-            // 3. Snap to opposite side
+            // Reset Animation Values
+            scrollY.setValue(0);
             contentTranslateX.setValue(isForward ? slideDist : -slideDist);
-
-            // 4. Slide IN (with small delay for React render)
             setTimeout(() => {
                 Animated.parallel([
                     Animated.timing(contentOpacity, { 
@@ -348,49 +442,64 @@ export default function ComparisonPage() {
     };
 
     const handleOCR = async () => {
-        setLoadingText('صل على رسول الله');
-        
-        // 1. Animate to Loading Step (Step 1)
+        setLoadingText(scanMode === 'accurate' ? 'جاري تحليل الصور بدقة (Engine 3)...' : 'جاري التحليل السريع (AI Vision)...');
         changeStep(1);
 
-        // 2. Defer logic slightly to allow the "Slide Out" animation to finish cleanly
         setTimeout(async () => {
-            const process = async (uri) => {
-                const base64 = await uriToBase64(uri);
+            const processImage = async (uri) => {
+                const manipResult = await ImageManipulator.manipulateAsync(
+                    uri,
+                    [{ resize: { width: 1024 } }], 
+                    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+                );
+
+                const base64 = await uriToBase64(manipResult.uri);
+
                 const res = await fetch(VERCEL_BACKEND_URL, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ base64Data: base64 })
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        base64Data: base64,
+                        scanMode: scanMode
+                    })
                 });
-                if (!res.ok) throw new Error();
+
+                if (!res.ok) throw new Error("Backend Error");
                 const json = await res.json();
-                const data = typeof json.result === 'object' ? json.result : JSON.parse(json.result.replace(/```json|```/g, '').trim());
+                
+                let data;
+                if (typeof json.result === 'object') {
+                    data = json.result;
+                } else {
+                    const text = json.result.replace(/```json|```/g, '').trim();
+                    data = JSON.parse(text);
+                }
+                
                 return { list: data.ingredients_list, type: data.detected_type };
             };
 
             try {
-                const [r1, r2] = await Promise.all([process(left.sourceData), process(right.sourceData)]);
+                const [r1, r2] = await Promise.all([
+                    processImage(left.sourceData), 
+                    processImage(right.sourceData)
+                ]);
                 
-                // Batch state updates
                 setLeft(p => ({...p, ingredientsList: r1.list}));
                 setRight(p => ({...p, ingredientsList: r2.list}));
-                setProductType(r1.type !== 'other' ? r1.type : r2.type);
-                
-                // Animate to Review Step (Step 2)
+                setProductType(r1.type !== 'other' ? r1.type : (r2.type !== 'other' ? r2.type : 'other'));
                 changeStep(2);
             } catch (e) {
-                Alert.alert("خطأ", "فشل تحليل الصور. يرجى المحاولة مرة أخرى.");
-                changeStep(0); // Go back to start
+                console.error("Comparison Analysis Error:", e);
+                Alert.alert("خطأ", "فشل تحليل الصور. يرجى التأكد من وضوح المكونات والمحاولة مرة أخرى.");
+                changeStep(0); 
             }
-        }, 300); // 300ms delay matches the fade/slide animation duration
+        }, 300); 
     };
 
     const handleEval = async () => {
         setLoadingText('مقارنة المعايير والمخاطر...');
-        
-        // 1. Animate to Loading Step (Step 4)
         changeStep(4);
 
-        // 2. Defer logic
         setTimeout(async () => {
             const evaluate = async (list) => {
                 const res = await fetch(VERCEL_EVALUATE_URL, {
@@ -414,12 +523,10 @@ export default function ComparisonPage() {
                 const [e1, e2] = await Promise.all([evaluate(left.ingredientsList), evaluate(right.ingredientsList)]);
                 setLeft(p => ({...p, analysisData: e1}));
                 setRight(p => ({...p, analysisData: e2}));
-                
-                // Animate to Results (Step 5)
                 changeStep(5);
             } catch (e) {
                 Alert.alert("خطأ", "فشل التقييم.");
-                changeStep(3); // Go back to claims
+                changeStep(3);
             }
         }, 300);
     };
@@ -429,6 +536,7 @@ export default function ComparisonPage() {
         setRight({sourceData:null, ingredientsList:[], analysisData:null});
         setProductType('other');
         setClaims([]);
+        setSearchQuery('');
         changeStep(0);
     };
 
@@ -436,7 +544,6 @@ export default function ComparisonPage() {
     const renderArena = () => (
         <View style={globalStyles.inputStepContainer}>
             <View style={globalStyles.heroVisualContainer}>
-                {/* Visual Arena */}
                 <View style={styles.arenaSlotsRow}>
                     {[{d: left, s: setLeft, c: PROD_COLORS.A, l: 'أ'}, {d: right, s: setRight, c: PROD_COLORS.B, l: 'ب'}].map((slot, i) => (
                         <TouchableOpacity activeOpacity={0.7} key={i} style={[styles.slotCard, slot.d.sourceData && { borderColor: slot.c, borderWidth: 2 }]} 
@@ -468,7 +575,6 @@ export default function ComparisonPage() {
                 </View>
             </View>
 
-            {/* FIXED BOTTOM DOCK PLACEMENT */}
             <StaggeredItem index={0} style={[globalStyles.bottomDeck, styles.pinnedBottomDock]}>
                 <LinearGradient 
                     colors={[COLORS.card, '#152520']} 
@@ -483,9 +589,74 @@ export default function ComparisonPage() {
                 >
                     <View style={globalStyles.deckHeader}>
                         <Text style={globalStyles.deckTitle}>أيهما أنسب لي؟</Text>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }}>
-                            قارني بين منتجين لاكتشاف الأفضل لك
+                        
+                        <View style={{
+                            flexDirection: 'row',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            borderRadius: 12,
+                            padding: 4,
+                            marginTop: 10,
+                            marginBottom: 5,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255,255,255,0.1)'
+                        }}>
+                            <TouchableOpacity 
+                                onPress={() => setScanMode('fast')}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 8,
+                                    borderRadius: 8,
+                                    backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'row',
+                                    gap: 6
+                                }}
+                            >
+                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? '#1A2D27' : COLORS.textDim} />
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 13,
+                                    color: scanMode === 'fast' ? '#1A2D27' : COLORS.textDim
+                                }}>وضع السرعة</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                onPress={() => setScanMode('accurate')}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 8,
+                                    borderRadius: 8,
+                                    backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'row',
+                                    gap: 6
+                                }}
+                            >
+                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim} />
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 13,
+                                    color: scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim
+                                }}>وضع الدقة</Text>
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <Text style={{ 
+                            fontFamily: 'Tajawal-Regular', 
+                            color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen, 
+                            fontSize: 12,
+                            textAlign: 'center',
+                            marginBottom: 0,
+                            alignSelf: 'center'
+
+                        }}>
+                            {scanMode === 'accurate' 
+                                ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية" 
+                                : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
                         </Text>
+
                     </View>
 
                     <TouchableOpacity activeOpacity={0.7} 
@@ -513,37 +684,151 @@ export default function ComparisonPage() {
         </View>
     );
 
-    const renderClaims = () => (
-        <View style={{flex:1, width: '100%', paddingHorizontal: 20}}>
-            <View style={[globalStyles.headerContent, {marginTop: 20, marginBottom: 20}]}>
-                <Text style={globalStyles.heroTitle}>معايير الحكم</Text>
-                <Text style={globalStyles.heroSub}>ماذا تتوقع من هذه المنتجات؟</Text>
-            </View>
+    // --- MEMOIZED ITEM RENDERER ---
+    const renderClaimItem = useCallback(({ item }) => {
+        const isSelected = claims.includes(item);
+        
+        const handlePress = () => {
+            Haptics.selectionAsync();
+            setClaims(prev => 
+                prev.includes(item) 
+                ? prev.filter(c => c !== item) 
+                : [...prev, item]
+            );
+        };
+    
+        return (
+            <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+                <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
+                    <AnimatedCheckbox isSelected={isSelected} />
+                    <Text style={styles.claimItemText}>{item}</Text>
+                </View>
+            </TouchableOpacity>
+        );
+    }, [claims]);
+
+    // --- EXACT CLAIMS STEP FROM OILGUARD.JS ---
+    const renderClaims = () => {
+        // Data Filtering via Fuse
+        const displayedClaims = searchQuery 
+            ? fuse.search(searchQuery).map(result => result.item) 
+            : claimsForType;
+
+        const EXPANDED_HEADER_HEIGHT = 160;
+        const COLLAPSED_HEADER_HEIGHT = Platform.OS === 'android' ? 60 : 90;
+        const SEARCH_BAR_HEIGHT = 70;
+        const HEADER_ANIMATION_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
+
+        const headerTranslateY = scrollY.interpolate({
+          inputRange: [0, HEADER_ANIMATION_DISTANCE],
+          outputRange: [0, -HEADER_ANIMATION_DISTANCE],
+          extrapolate: 'clamp',
+        });
+
+        const expandedHeaderOpacity = scrollY.interpolate({
+          inputRange: [0, HEADER_ANIMATION_DISTANCE / 2],
+          outputRange: [1, 0],
+          extrapolate: 'clamp',
+        });
+
+        const collapsedHeaderOpacity = scrollY.interpolate({
+          inputRange: [HEADER_ANIMATION_DISTANCE / 2, HEADER_ANIMATION_DISTANCE],
+          outputRange: [0, 1],
+          extrapolate: 'clamp',
+        });
+
+        const fabTranslateY = fabAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [150, 0],
+        });
+        const fabScale = fabPulseAnim.interpolate({
+          inputRange: [0,1],
+          outputRange: [1, 1.1]
+        });
+
+        return (
+          <View style={{ flex: 1, width: '100%' }}>
+            <Animated.FlatList
+              data={displayedClaims}
+              renderItem={renderClaimItem} 
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              
+              // Performance Optimizations
+              initialNumToRender={10}     
+              maxToRenderPerBatch={10}    
+              windowSize={5}              
+              removeClippedSubviews={true} 
+              
+              contentContainerStyle={{
+                paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+                paddingBottom: 120, 
+                paddingHorizontal: 10, 
+                gap: 12
+              }}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                { useNativeDriver: true }
+              )}
+              scrollEventThrottle={16}
+            />
             
-            {/* New Cleaner Grid Layout */}
-            <ScrollView contentContainerStyle={styles.claimsChipContainer} showsVerticalScrollIndicator={false}>
-                {getClaimsByProductType(productType).map((c, i) => {
-                    const isSelected = claims.includes(c);
-                    return (
-                        <TouchableOpacity activeOpacity={0.7} key={i} onPress={() => { Haptics.selectionAsync(); setClaims(p => isSelected ? p.filter(x=>x!==c) : [...p,c]); }} 
-                            style={[styles.claimChipCompact, isSelected && styles.claimChipCompactActive]}>
-                            
-                            {isSelected && <FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} style={{ marginRight: 6 }} />}
-                            <Text style={[styles.claimChipText, isSelected && styles.claimChipTextActive]}>{c}</Text>
-                        
+            {/* ANIMATED HEADER BLOCK */}
+            <Animated.View style={[styles.fixedHeaderBlock, { 
+                height: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+                transform: [{ translateY: headerTranslateY }],
+            }]}>
+                <View style={styles.headerBackdrop} />
+
+                <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
+                    <Text style={globalStyles.heroTitle}>ما هي وعود المنتج؟</Text>
+                    <Text style={globalStyles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
+                </Animated.View>
+
+                <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
+                    <SafeAreaView>
+                      <View style={globalStyles.headerContent}>
+                        <TouchableOpacity onPress={() => changeStep(step - 1)} style={globalStyles.backBtn}>
+                            <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                         </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
-            
-            {/* Animated Sliding FAB */}
-            <Animated.View style={[styles.fabWrapper, { transform: [{ translateY: fabAnim.interpolate({inputRange:[0,1], outputRange:[100,0]}) }, { scale: fabPulseAnim }], opacity: fabAnim }]}>
-                <TouchableOpacity activeOpacity={0.7} onPress={handleEval} style={globalStyles.fab}>
-                     <FontAwesome5 name="balance-scale" color={COLORS.darkGreen} size={28} />
-                </TouchableOpacity>
+                        <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
+                        <View style={{width: 40}} />
+                      </View>
+                    </SafeAreaView>
+                </Animated.View>
+
+                <View style={styles.claimsSearchContainer}>
+                    <View style={styles.searchInputWrapper}>
+                        <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={{ marginLeft: 10 }} />
+                        <TextInput
+                            style={styles.claimsSearchInput}
+                            placeholder="ابحث عن إدعاء..."
+                            placeholderTextColor={COLORS.textDim}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            textAlign="right"
+                        />
+                    </View>
+                </View>
             </Animated.View>
-        </View>
-    );
+
+            {/* FAB */}
+            <View style={styles.fabContainer}>
+                <Animated.View style={{ transform: [{ translateY: fabTranslateY }] }}>
+                    <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+                        <TouchableOpacity
+                            onPress={handleEval} 
+                            style={globalStyles.fab}
+                            activeOpacity={0.7}
+                        >
+                            <FontAwesome5 name="balance-scale" color={COLORS.darkGreen} size={28} />
+                        </TouchableOpacity>
+                    </Animated.View>
+                </Animated.View>
+            </View>
+          </View>
+        );
+    };
 
     const renderResults = () => {
         if (!left.analysisData || !right.analysisData) return null;
@@ -554,15 +839,13 @@ export default function ComparisonPage() {
         const winnerColor = winner === 'left' ? PROD_COLORS.A : (winner === 'right' ? PROD_COLORS.B : COLORS.gold);
 
         return (
-            <ScrollView contentContainerStyle={[globalStyles.scrollContent, {paddingTop: 0}]} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[globalStyles.scrollContent, {paddingTop: 0}]} showsVerticalScrollIndicator={false} removeClippedSubviews={true}>
                 
-                {/* --- 1. HERO DASHBOARD --- */}
                 <StaggeredItem index={0}>
                     <View style={[globalStyles.dashboardContainer, { borderColor: winnerColor, marginTop: 20 }]}>
                         <LinearGradient colors={['rgba(255,255,255,0.05)', 'transparent']} style={StyleSheet.absoluteFill} />
                         
                         <View style={globalStyles.dashboardGlass}>
-                            {/* Header / Winner Verdict */}
                             <View style={[globalStyles.dashHeader, {justifyContent: 'center', marginBottom: 25}]}>
                                 <View style={{alignItems: 'center'}}>
                                     <Text style={[globalStyles.verdictBig, {color: winnerColor, fontSize: 24}]}>
@@ -572,9 +855,7 @@ export default function ComparisonPage() {
                                 </View>
                             </View>
 
-                            {/* H2H Visuals + Specific Verdicts */}
                             <View style={styles.h2hRow}>
-                                {/* Product A (Right in RTL) */}
                                 <View style={styles.h2hCol}>
                                     <Image source={{uri: left.sourceData}} style={[styles.h2hImg, {borderColor: PROD_COLORS.A}]} />
                                     <View style={styles.verdictPill}>
@@ -585,12 +866,10 @@ export default function ComparisonPage() {
                                     </View>
                                 </View>
                                 
-                                {/* VS Center */}
                                 <View style={styles.vsCenter}>
                                     <View style={styles.vsCircle}><Text style={styles.vsText}>ضد</Text></View>
                                 </View>
 
-                                {/* Product B (Left in RTL) */}
                                 <View style={styles.h2hCol}>
                                     <Image source={{uri: right.sourceData}} style={[styles.h2hImg, {borderColor: PROD_COLORS.B}]} />
                                     <View style={styles.verdictPill}>
@@ -602,12 +881,11 @@ export default function ComparisonPage() {
                                 </View>
                             </View>
 
-                            {/* Metric Duel Bars - Product A (Left Prop/Green) is Right Visually, Product B (Right Prop/Blue) is Left Visually */}
                             <View style={[globalStyles.statsGrid, {marginTop: 25, flexDirection: 'column', gap: 15}]}>
                                 <MetricDuelRow 
                                     label="الأمان" icon="shield-alt" 
-                                    scoreA={left.analysisData.safety?.score || 0} // Green / Right Side
-                                    scoreB={right.analysisData.safety?.score || 0} // Blue / Left Side
+                                    scoreA={left.analysisData.safety?.score || 0} 
+                                    scoreB={right.analysisData.safety?.score || 0} 
                                 />
                                 <MetricDuelRow 
                                     label="الفعالية" icon="flask" 
@@ -616,7 +894,6 @@ export default function ComparisonPage() {
                                 />
                             </View>
 
-                            {/* Personal Match Report */}
                             <View style={[globalStyles.matchContainer, {marginTop: 15}]}>
                                 <View style={globalStyles.matchHeader}>
                                     <View style={globalStyles.matchHeaderIcon}><FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} /></View>
@@ -653,7 +930,6 @@ export default function ComparisonPage() {
                     </View>
                 </StaggeredItem>
 
-                {/* --- 2. MARKETING CLAIMS --- */}
                 <StaggeredItem index={1}>
                     <MarketingClaimsSection 
                         leftClaims={left.analysisData.marketing_results} 
@@ -661,7 +937,6 @@ export default function ComparisonPage() {
                     />
                 </StaggeredItem>
 
-                {/* --- 3. RESET --- */}
                 <TouchableOpacity activeOpacity={0.7} onPress={resetAll} style={styles.resetBtn}>
                     <Text style={styles.resetText}>مقارنة جديدة</Text>
                     <FontAwesome5 name="redo" color={COLORS.textSecondary}/>
@@ -677,8 +952,8 @@ export default function ComparisonPage() {
             <View style={styles.darkOverlay} />
             {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-            {/* HEADER */}
-            {step > 0 && step !== 1 && step !== 4 && (
+            {/* Default Header - Shown on Steps 0, 1, 3, 5, 4 (loading) BUT NOT 3 (claims) because it has its own header */}
+            {step > 0 && step !== 1 && step !== 3 && step !== 4 && (
                 <View style={[globalStyles.header, { paddingTop: insets.top + 10 }]}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => changeStep(step-1)} style={globalStyles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
@@ -687,21 +962,18 @@ export default function ComparisonPage() {
                 </View>
             )}
 
-            {/* MAIN CONTENT AREA */}
             <View style={{flex:1, width: '100%', alignItems: 'center'}}>
                 
                 <Animated.View style={{
                     flex: 1, 
                     width: '100%', 
                     alignItems: 'center',
-                    opacity: contentOpacity, // Apply Fade
-                    transform: [{ translateX: contentTranslateX }] // Apply Slide
+                    opacity: contentOpacity, 
+                    transform: [{ translateX: contentTranslateX }] 
                 }}>
                     
-                    {/* STEP 0: ARENA INPUT */}
                     {step === 0 && renderArena()}
 
-                    {/* STEP 1 & 4: LOADING SCREENS */}
                     {(step === 1 || step === 4) && (
                         <View style={{flex:1, justifyContent:'center', alignItems: 'center', width: '100%'}}>
                             <LoadingScreen />
@@ -709,19 +981,23 @@ export default function ComparisonPage() {
                         </View>
                     )}
 
-                    {/* STEP 2: REVIEW (Using the shared component) */}
-                    {step === 2 && (
-                        <ReviewStep 
-                            productType={productType} 
-                            setProductType={setProductType} 
-                            onConfirm={() => changeStep(3)} 
-                        />
+{step === 2 && (
+                        <View style={{ 
+                            flex: 1, 
+                            width: '100%',
+                            paddingHorizontal: 20,
+                            paddingTop: Platform.OS === 'android' ? 90 : 100 
+                        }}>
+                            <ReviewStep 
+                                productType={productType} 
+                                setProductType={setProductType} 
+                                onConfirm={() => changeStep(3)} 
+                            />
+                        </View>
                     )}
 
-                    {/* STEP 3: CLAIMS SELECTION */}
                     {step === 3 && renderClaims()}
 
-                    {/* STEP 5: RESULTS */}
                     {step === 5 && renderResults()}
 
                 </Animated.View>
@@ -730,21 +1006,16 @@ export default function ComparisonPage() {
     );
 }
 
-// ============================================================================
-//                       STYLES
-// ============================================================================
-
 const styles = StyleSheet.create({
     darkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.0)' },
     
-    // Step 0: Arena
     arenaSlotsRow: { 
         flexDirection: 'row-reverse', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
         width: CARD_WIDTH,
         height: 250,
-        bottom: 40 
+        bottom: 90 
     },
     slotCard: { 
         width: '46%', 
@@ -775,53 +1046,105 @@ const styles = StyleSheet.create({
         marginBottom: 0,
         zIndex: 100,
     },
-    // Step 3: New Compact Claims UI
-    claimsChipContainer: { 
-        flexDirection: 'row', 
-        flexWrap: 'wrap', 
-        justifyContent: 'center', 
-        gap: 10, 
-        paddingBottom: 120, 
-        paddingTop: 10 
+    
+    // --- EXACT CLAIMS STYLES FROM OILGUARD.JS ---
+    fixedHeaderBlock: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        justifyContent: 'flex-end',
+        paddingBottom: 15,
     },
-    claimChipCompact: {
+    headerBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(26, 45, 39, 0.95)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(10px)',
+    },
+    expandedHeader: {
+        position: 'absolute',
+        top: Platform.OS === 'android' ? 50 : 60,
+        width: '100%',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    collapsedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+    },
+    collapsedHeaderText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+        flex: 1,
+        textAlign: 'center',
+    },
+    claimsSearchContainer: {
+        paddingHorizontal: 15,
+        width: '100%',
+        zIndex: 51,
+    },
+    searchInputWrapper: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 16,
+        paddingHorizontal: 15,
+        height: 50,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        minWidth: '40%'
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    claimChipCompactActive: {
-        backgroundColor: COLORS.accentGreen,
+    claimsSearchInput: {
+        flex: 1,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        height: '100%',
+        marginRight: 10,
+        textAlign: 'right'
+    },
+    fabContainer: {
+        position: 'absolute',
+        bottom: 60, 
+        alignSelf: 'center',
+        zIndex: 100,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // List Items
+    claimItem: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        gap: 15
+    },
+    claimItemActive: {
+        backgroundColor: 'rgba(90, 156, 132, 0.15)',
         borderColor: COLORS.accentGreen,
     },
-    claimChipText: {
+    claimItemText: {
+        flex: 1,
         fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
+        fontSize: 15,
         color: COLORS.textSecondary,
-        textAlign: 'center'
+        textAlign: 'right',
+        lineHeight: 22
     },
-    claimChipTextActive: {
-        color: COLORS.textOnAccent,
-        fontFamily: 'Tajawal-Bold',
-    },
-    fabWrapper: {
-        position: 'absolute',
-        bottom: 90,
-        alignSelf: 'center',
-        zIndex: 20
-    },
-
-    // Results UI
+    
+    // --- GENERIC STYLES ---
     segmentTrack: { flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 4, width: '100%' },
     segmentBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     segmentText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textSecondary },
 
-    // H2H Inside Glass
     h2hRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 15 },
     h2hCol: { alignItems: 'center', gap: 8, flex: 1 },
     h2hImg: { width: 80, height: 80, borderRadius: 24, borderWidth: 2 },
@@ -833,7 +1156,6 @@ const styles = StyleSheet.create({
     vsCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     vsText: { fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.textSecondary },
     
-    // Corrected Duel Bars
     duelContainer: { marginBottom: 5 },
     duelHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
     duelScore: { fontFamily: 'Tajawal-Bold', fontSize: 12, width: 35 },
@@ -841,9 +1163,103 @@ const styles = StyleSheet.create({
     duelLabel: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textSecondary },
     duelTrackContainer: { flexDirection: 'row', height: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, overflow: 'hidden', width: '100%' },
     duelDivider: { width: 2, backgroundColor: 'rgba(255,255,255,0.1)' },
-    duelBar: { height: '100%' }, // width is animated inline
+    duelBar: { height: '100%' }, 
 
     loadingLabel: { position: 'absolute', bottom: 100, width: '100%', textAlign: 'center', fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 16 },
-    resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, gap: 10, marginTop: 20, width: CARD_WIDTH },
-    resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary }
+    resetBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', justifyContent: 'center', padding: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, gap: 10, marginTop: 20, width: CARD_WIDTH },
+    resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary },
+
+    // Checkbox Styles
+    checkboxBase: {
+        width: 22,
+        height: 22,
+        borderRadius: 7,
+        borderWidth: 1.5,
+        borderColor: COLORS.textDim,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden'
+    },
+    checkboxFill: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: COLORS.accentGreen,
+    },
+    honestyBadge: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+    },
+    honestyScore: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 18,
+    },
+    honestyLabel: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
+        marginTop: -2,
+    },
+    
+    // Evidence & Chip Styles
+    evidenceGroup: {
+        marginTop: 10,
+        gap: 8
+    },
+    evidenceLabelContainer: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6
+    },
+    evidenceLabelText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11
+    },
+    chipContainer: {
+        flexDirection: 'row-reverse',
+        flexWrap: 'wrap',
+        gap: 6
+    },
+    
+    // Primary Chip (Strong Evidence)
+    chipPrimary: {
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderColor: 'rgba(16, 185, 129, 0.3)',
+        borderWidth: 1,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4
+    },
+    chipTextPrimary: {
+        color: '#10b981', // Emerald Green
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+        textAlign: 'right'
+    },
+    chipBenefit: {
+        color: 'rgba(16, 185, 129, 0.7)',
+        fontSize: 10
+    },
+
+    // Trace Chip (Weak Evidence)
+    chipTrace: {
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+        borderWidth: 1,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4
+    },
+    chipTextTrace: {
+        color: '#f59e0b', // Amber
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+        textAlign: 'right'
+    },
+    chipBenefitTrace: {
+        color: 'rgba(245, 158, 11, 0.7)',
+        fontSize: 10
+    },
 });

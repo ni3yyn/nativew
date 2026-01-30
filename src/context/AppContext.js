@@ -147,8 +147,7 @@ export const AppProvider = ({ children }) => {
       if (currentUser) {
         console.log("🟢 User Detected:", currentUser.email);
         
-        // Check if this is a brand new account or a returning user
-        // We use this to prevent overwriting existing data if the network is slow
+        // Safety check for new vs returning users
         const isBrandNewAccount = currentUser.metadata.creationTime === currentUser.metadata.lastSignInTime;
 
         // 1. Load Cache
@@ -180,7 +179,7 @@ export const AppProvider = ({ children }) => {
             const updatesToApply = {};
             let needsUpdate = false;
 
-            // --- REPAIR FIELDS IF MISSING (BUT DON'T OVERWRITE WHOLE DOC) ---
+            // --- REPAIR FIELDS IF MISSING ---
             if (!data.email) {
                 updatesToApply.email = currentUser.email;
                 needsUpdate = true;
@@ -202,7 +201,7 @@ export const AppProvider = ({ children }) => {
                 needsUpdate = true;
             }
 
-            // Apply Patch only if fields are missing
+            // A. PATH 1: REPAIR NEEDED
             if (needsUpdate) {
                console.log("🛠 Patching missing fields in profile...");
                isRepairing.current = true; 
@@ -211,6 +210,13 @@ export const AppProvider = ({ children }) => {
                    const fixedProfile = { ...data, ...updatesToApply };
                    setUserProfile(fixedProfile);
                    setSelfProfileCache(fixedProfile);
+
+                   // ➤ FIXED: Check notifications here too, before returning!
+                   if (fixedProfile.onboardingComplete && !hasRegisteredNotifications.current) {
+                        hasRegisteredNotifications.current = true;
+                        registerForPushNotificationsAsync(currentUser.uid);
+                   }
+
                } catch (e) {
                    console.error("Repair failed", e);
                } finally {
@@ -219,20 +225,20 @@ export const AppProvider = ({ children }) => {
                return; 
             }
 
-            // Normal Data Path
+            // B. PATH 2: NORMAL DATA
             setUserProfile(data);
             setSelfProfileCache(data); 
             setLoading(false); 
 
+            // ➤ Check notifications here
             if (data.onboardingComplete && !hasRegisteredNotifications.current) {
                 hasRegisteredNotifications.current = true;
                 registerForPushNotificationsAsync(currentUser.uid);
             }
 
           } else {
-            // DOCUMENT DOES NOT EXIST ON SERVER
-            // We ONLY create a default profile if the user is BRAND NEW.
-            // If they are a returning user and the doc is missing, it's likely a network/sync error.
+            // DOCUMENT MISSING
+            // Only create default if brand new. If returning, wait for sync.
             if (isBrandNewAccount && !docSnap.metadata.fromCache) {
                 console.warn("🆕 Brand new user: Creating default profile...");
                 isRepairing.current = true; 
@@ -304,7 +310,6 @@ export const AppProvider = ({ children }) => {
       await signOut(auth);
       setUserProfile(null);
       setSavedProducts([]);
-      // Clear cache on logout to prevent next user seeing old data
       setSelfProfileCache(null);
       setSavedProductsCache([]);
     } catch (e) { console.error(e); }

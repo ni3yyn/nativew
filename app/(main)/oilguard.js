@@ -1019,8 +1019,8 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                             marginBottom: 10
                         }}>
                             {scanMode === 'accurate' 
-                                ? "يستغرق وقتاً أطول لكن ينصح به للنصوص العربية" 
-                                : "تحليل سريع ينصح به للصور ذات جودة عالية"}
+                                ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية" 
+                                : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
                         </Text>
                         {/* --- END NEW UI --- */}
 
