@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { 
-  View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback,
+  View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback, InteractionManager,
   ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
   Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
   RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
@@ -14,7 +14,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
 import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
-import { useRouter } from 'expo-router';
+import { useRouter, useIsFocused } from 'expo-router';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
@@ -44,7 +44,6 @@ import {
   ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
   DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
 } from '../../src/components/oilguard/oilguard.styles';
-
 
 // ENDPOINTS
 const VERCEL_BACKEND_URL = "https://oilguard-backend.vercel.app/api/analyze.js"; // OR api/scan
@@ -1295,6 +1294,7 @@ const MatchBreakdown = ({ reasons = [] }) => {
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
 export default function OilGuardEngine() {
+
   const router = useRouter();
   const { user, userProfile } = useAppContext();
   const insets = useSafeAreaInsets();
@@ -1331,6 +1331,8 @@ export default function OilGuardEngine() {
   const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
   const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
   const [scanMode, setScanMode] = useState('fast'); // 'fast' or 'accurate'
+  const [containerHeight, setContainerHeight] = useState(0);
+  const SCREEN_HEIGHT = Dimensions.get('window').height;
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateX = useRef(new Animated.Value(0)).current;
@@ -1364,6 +1366,8 @@ export default function OilGuardEngine() {
       duration: Math.random() * 3000 + 2000,
       delay: Math.random() * 2000,
   })), []);
+
+
 
   useEffect(() => {
     const breathAnimation = Animated.loop(
@@ -2368,162 +2372,187 @@ const renderClaimsStep = () => {
 };
   
 return (
-    <View style={styles.container}>
-        {/* 1. StatusBar & Background Elements fill the screen absolutely */}
+    <View 
+        style={[styles.container, { backgroundColor: '#1A2D27' }]}
+        // ROOT FIX: We measure the actual available space from the OS
+        onLayout={(e) => {
+            const { height } = e.nativeEvent.layout;
+            // Only accept measurements that look like a full screen
+            if (height > SCREEN_HEIGHT * 0.7) {
+                setContainerHeight(height);
+            }
+        }}
+    >
+        {/* 1. Permanent System Overlays */}
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <View style={styles.darkOverlay} />
         {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-        {/* 2. Content Wrapper handles the Safe Area Padding */}
-        <View style={{ flex: 1, paddingTop: insets.top }}>
-            
-            {step !== 2 && !isAnimatingTransition && (
-              <View style={[styles.header, { marginTop: insets.top }]}>
-                {step === 0 && <View style={styles.headerBlur} />}
+        {/* 
+            2. THE ROOT GATEKEEPER 
+            If containerHeight is 0, it means the OS hasn't finished 
+            calculating the layout. We show NOTHING (just background).
+        */}
+        {containerHeight === 0 ? (
+            <View style={{ flex: 1, backgroundColor: '#1A2D27' }} />
+        ) : (
+            <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
                 
-                {step > 0 && (
-                  <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                  </TouchableOpacity>
-                )}
-                
-                {step > 0 && <View style={{width: 40}}/>}
-              </View>
-            )}
-
-{step === 2 ? (
-                // --- CASE 1: Claims Step (Has its own FlatList) ---
-                <Animated.View style={{ 
-                    flex: 1, 
-                    opacity: contentOpacity,
-                    transform: [{ translateX: contentTranslateX }],
-                    width: '100%' 
-                }}>
-                    {renderClaimsStep()}
-                </Animated.View>
-            ) : step === 0 ? (
-                // --- CASE 2: Input Step (Immersive/No Scroll) ---
-                <Animated.View style={{ 
-                    flex: 1,
-                    width: '100%', // Use '100%' to be responsive
-                    opacity: contentOpacity,
-                    transform: [{ translateX: contentTranslateX }]
-                }}>
-                   <InputStepView onImageSelect={handleImageSelection} onManualSelect={() => setManualModalVisible(true)} scanMode={scanMode} setScanMode={setScanMode} />
-                </Animated.View>
-            ) : step === 1 ? (
-                // --- CASE 3: Review Step (FIXED - NO PARENT SCROLL) ---
-                // We apply paddingTop here so it sits correctly below the Header
-                <Animated.View style={{ 
-                    flex: 1, 
-                    opacity: contentOpacity,
-                    transform: [{ translateX: contentTranslateX }],
-                    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
-                    paddingHorizontal: 20
-                }}>
-                    <ReviewStep 
-                        productType={productType} 
-                        setProductType={setProductType} 
-                        onConfirm={() => changeStep(2)} 
-                    />
-                </Animated.View>
-            ) : (
-                // --- CASE 4: Scroll Steps (Loading & Results) ---
-                <ScrollView 
-                    ref={scrollRef} 
-                    contentContainerStyle={[
-                      styles.scrollContent, 
-                      { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
-                    ]} 
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Animated.View style={{ 
-                        opacity: contentOpacity, 
-                        width: '100%',
-                        transform: [{ translateX: contentTranslateX }]
-                    }}>
-                        {step === 3 && (
-                            <View style={{ height: height * 0.6, justifyContent: 'center' }}>
-                                <LoadingScreen />
-                            </View>
-                        )}
-
-{step === 4 && renderResultStep()}
+                {/* Header (Hidden on Step 2) */}
+                {step !== 2 && !isAnimatingTransition && (
+                    <View style={[styles.header, { marginTop: insets.top }]}>
+                        {step === 0 && <View style={styles.headerBlur} />}
                         
-                    </Animated.View>
-                </ScrollView>
-            )}
-        </View>
+                        {step > 0 && (
+                            <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                                <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+                            </TouchableOpacity>
+                        )}
+                        
+                        {step > 0 && <View style={{ width: 40 }} />}
+                    </View>
+                )}
 
-        {/* 3. Modals exist outside the content wrapper */}
+                {/* 
+                   CONTENT STACK 
+                   We use the EXACT measured height from the OS 
+                */}
+                <View style={{ flex: 1 }}>
+                    {step === 2 ? (
+                        <Animated.View style={{ 
+                            flex: 1, 
+                            opacity: contentOpacity,
+                            transform: [{ translateX: contentTranslateX }],
+                            width: '100%' 
+                        }}>
+                            {renderClaimsStep()}
+                        </Animated.View>
+                    ) : step === 0 ? (
+                        <Animated.View style={{ 
+                            flex: 1,
+                            width: '100%', 
+                            opacity: contentOpacity,
+                            transform: [{ translateX: contentTranslateX }]
+                        }}>
+                            <InputStepView 
+                                onImageSelect={handleImageSelection} 
+                                onManualSelect={() => setManualModalVisible(true)} 
+                                scanMode={scanMode}
+                                setScanMode={setScanMode}
+                            />
+                        </Animated.View>
+                    ) : step === 1 ? (
+                        <Animated.View style={{ 
+                            flex: 1, 
+                            width: '100%',
+                            opacity: contentOpacity,
+                            transform: [{ translateX: contentTranslateX }],
+                            paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+                            paddingHorizontal: 20
+                        }}>
+                            <ReviewStep 
+                                productType={productType} 
+                                setProductType={setProductType} 
+                                onConfirm={() => changeStep(2)} 
+                            />
+                        </Animated.View>
+                    ) : (
+                        <ScrollView 
+                            ref={scrollRef} 
+                            contentContainerStyle={[
+                                styles.scrollContent, 
+                                { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
+                            ]} 
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <Animated.View style={{ 
+                                opacity: contentOpacity, 
+                                width: '100%',
+                                transform: [{ translateX: contentTranslateX }]
+                            }}>
+                                {step === 3 && (
+                                    <View style={{ height: height * 0.6, justifyContent: 'center' }}>
+                                        <LoadingScreen />
+                                    </View>
+                                )}
+
+                                {step === 4 && renderResultStep()}
+                            </Animated.View>
+                        </ScrollView>
+                    )}
+                </View>
+            </View>
+        )}
+
+        {/* 3. MODALS (Floating outside the layout calculation) */}
+        
         <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            {/* ... Modal Content (No changes needed here) ... */}
-             <View style={styles.modalOverlay}>
-               <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
-                  <Animated.View style={styles.modalContent}>
-                      <View style={{alignItems:'center', marginBottom: 15}}>
-                          <Text style={styles.modalTitle}>حفظ النتيجة</Text>
-                          <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
-                      </View>
-                      
-                      <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
-                          {frontImageUri ? (
-                              <>
-                                <Image source={{uri: frontImageUri}} style={styles.frontImagePreview} />
+            <View style={styles.modalOverlay}>
+                <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
+                <Animated.View style={styles.modalContent}>
+                    <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                        <Text style={styles.modalTitle}>حفظ النتيجة</Text>
+                        <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
+                    </View>
+                    
+                    <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
+                        {frontImageUri ? (
+                            <>
+                                <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
                                 <View style={styles.editBadge}>
                                     <Feather name="edit-2" size={12} color="#FFF" />
                                 </View>
-                              </>
-                          ) : (
-                              <View style={{alignItems:'center', gap: 8}}>
-                                  <View style={styles.cameraIconCircle}>
-                                      <Feather name="camera" size={24} color={COLORS.accentGreen} />
-                                  </View>
-                                  <Text style={styles.pickerText}>صورة المنتج</Text>
-                              </View>
-                          )}
-                      </TouchableOpacity>
+                            </>
+                        ) : (
+                            <View style={{ alignItems: 'center', gap: 8 }}>
+                                <View style={styles.cameraIconCircle}>
+                                    <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                </View>
+                                <Text style={styles.pickerText}>صورة المنتج</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
 
-                      <View style={styles.inputWrapper}>
-                          <Text style={styles.inputLabel}>اسم المنتج</Text>
-                          <TextInput 
-                              style={styles.modalInput} 
-                              placeholder="مثال: غسول CeraVe الرغوي" 
-                              placeholderTextColor={COLORS.textSecondary} 
-                              value={productName} 
-                              onChangeText={setProductName} 
-                              textAlign="right"
-                          />
-                      </View>
-                      
-                      <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
-                          {isSaving ? (
-                              <ActivityIndicator color={COLORS.textOnAccent} />
-                          ) : (
-                              <View style={{flexDirection:'row', alignItems:'center', gap: 8}}>
-                                  <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
-                                  <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
-                              </View>
-                          )}
-                      </Pressable>
-                  </Animated.View>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.inputLabel}>اسم المنتج</Text>
+                        <TextInput 
+                            style={styles.modalInput} 
+                            placeholder="مثال: غسول CeraVe الرغوي" 
+                            placeholderTextColor={COLORS.textSecondary} 
+                            value={productName} 
+                            onChangeText={setProductName} 
+                            textAlign="right"
+                        />
+                    </View>
+                    
+                    <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
+                        {isSaving ? (
+                            <ActivityIndicator color={COLORS.textOnAccent} />
+                        ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
+                                <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
+                            </View>
+                        )}
+                    </Pressable>
+                </Animated.View>
             </View>
         </Modal>
         
         <ManualInputSheet
-    visible={isManualModalVisible}
-    onClose={() => setManualModalVisible(false)}
-    onSubmit={(text) => {
-        setManualInputText(text); // We still set state for backup/UI purposes
-        processManualText(text);  // FIX: Pass the text directly to the function
-    }}
-/>
+            visible={isManualModalVisible}
+            onClose={() => setManualModalVisible(false)}
+            onSubmit={(text) => {
+                setManualInputText(text);
+                processManualText(text);
+            }}
+        />
     
         <CustomCameraModal
-          isVisible={isCameraViewVisible}
-          onClose={() => setCameraViewVisible(false)}
-          onPictureTaken={handlePictureTaken}
+            isVisible={isCameraViewVisible}
+            onClose={() => setCameraViewVisible(false)}
+            onPictureTaken={handlePictureTaken}
         />
 
         <ImageCropperModal
@@ -2536,12 +2565,11 @@ return (
             }}
         />
 
-<ScoreBreakdownModal 
+        <ScoreBreakdownModal 
             visible={isBreakdownModalVisible}
             onClose={() => setBreakdownModalVisible(false)}
             data={finalAnalysis?.scoreBreakdown}
         />
-
     </View>
-  );
+);
 }

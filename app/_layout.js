@@ -536,7 +536,8 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   }
 
   return (
-    <>
+    // ADD THIS WRAPPER: It provides a stable, colored "floor" for all screens
+    <View style={{ flex: 1, backgroundColor: '#1A2D27' }}> 
       <StatusBar style="light" translucent={true} />
 
       <AppIntro visible={showAppIntro} onClose={() => setShowAppIntro(false)} />
@@ -556,10 +557,11 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
       <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} />
 
+      {/* The Stack now lives inside a flex:1 container */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
       </Stack>
-    </>
+    </View>
   );
 };
 
