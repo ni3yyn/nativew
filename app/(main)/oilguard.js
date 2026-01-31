@@ -1143,7 +1143,7 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
                   {displayScore}
               </Text>
               <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
-                  SCORE
+                  وثيق
               </Text>
           </View>
       </View>
@@ -2248,7 +2248,7 @@ const renderClaimsStep = () => {
                             <ComplexDashboardGauge score={finalAnalysis.oilGuardScore || 0} />
                             <View style={{ marginTop: -15, alignItems: 'center' }}>
                                 <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || "تم التحليل"}</Text>
-                                <Text style={styles.verdictLabel}>حكم وثيق</Text>
+                                <Text style={styles.verdictLabel}>هذه النتيجة حسب بروفايلك، قد تتغير عند شخص آخر.</Text>
                             </View>
                         </View>
 

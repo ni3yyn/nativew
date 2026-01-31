@@ -540,10 +540,20 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
 
 // 3. The new sophisticated Bottom Sheet for product details
 const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
+    const { user, savedProducts, setSavedProducts } = useAppContext(); // Get context to update list
     const animController = useRef(new Animated.Value(0)).current;
+
+    // -- Editing State --
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isVisible) {
+            // Reset edit state when opening a product
+            if (product) setEditedName(product.productName);
+            setIsEditing(false);
+
             Animated.spring(animController, {
                 toValue: 1,
                 damping: 15,
@@ -551,9 +561,10 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                 useNativeDriver: true,
             }).start();
         }
-    }, [isVisible]);
+    }, [isVisible, product]);
 
     const handleClose = () => {
+        Keyboard.dismiss();
         Animated.timing(animController, {
             toValue: 0,
             duration: 250,
@@ -562,6 +573,41 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
         }).start(({ finished }) => {
             if (finished) onClose();
         });
+    };
+
+    // -- Renaming Logic --
+    const handleSaveName = async () => {
+        if (!editedName.trim()) {
+            AlertService.show({ title: 'تنبيه', message: 'لا يمكن ترك الاسم فارغاً', type: 'warning' });
+            return;
+        }
+
+        if (editedName.trim() === product.productName) {
+            setIsEditing(false);
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // 1. Update Firebase
+            const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
+            await updateDoc(productRef, { productName: editedName.trim() });
+
+            // 2. Update Local State (Global Context)
+            const updatedList = savedProducts.map(p => 
+                p.id === product.id ? { ...p, productName: editedName.trim() } : p
+            );
+            setSavedProducts(updatedList);
+
+            // 3. UI Feedback
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Renaming Error:", error);
+            AlertService.error("خطأ", "تعذر تحديث الاسم، يرجى المحاولة لاحقاً");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!product) return null;
@@ -585,7 +631,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     // --- DATA EXTRACTION ---
-    const { productName, productImage } = product; // <--- Extract productImage
+    // Note: We use 'product.productName' for initial render, but 'editedName' for the input
+    const { productImage } = product; 
     const { 
         oilGuardScore = 0, 
         finalVerdict = 'غير معروف', 
@@ -610,10 +657,9 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
                         
-                        {/* 1. Header (Image or Icon) */}
+                        {/* 1. Header (Image + Editable Title) */}
                         <View style={{ alignItems: 'center', marginBottom: 25 }}>
                             {productImage ? (
-                                // --- NEW: PRODUCT IMAGE ---
                                 <View style={styles.productImageContainer}>
                                     <Image 
                                         source={{ uri: productImage }} 
@@ -625,7 +671,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                     </View>
                                 </View>
                             ) : (
-                                // --- OLD: FALLBACK ICON ---
                                 <View style={{ 
                                     width: 80, height: 80, borderRadius: 40, 
                                     backgroundColor: COLORS.background, 
@@ -633,23 +678,71 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                     marginBottom: 15, borderWidth: 2, borderColor: scoreColor 
                                 }}>
                                     <FontAwesome5 
-                                        name={PRODUCT_TYPES[product_type]?.icon || 'tint'} 
+                                        name={PRODUCT_TYPES.find(t => t.id === product_type)?.icon || 'tint'} 
                                         size={32} 
                                         color={scoreColor} 
                                     />
                                 </View>
                             )}
 
-                            <Text style={styles.sheetProductTitle}>{productName}</Text>
+                            {/* --- EDITABLE TITLE AREA --- */}
+                            {isEditing ? (
+                                <View style={styles.editTitleContainer}>
+                                    <TextInput 
+                                        value={editedName}
+                                        onChangeText={setEditedName}
+                                        style={styles.editTitleInput}
+                                        placeholder="اسم المنتج"
+                                        placeholderTextColor={COLORS.textDim}
+                                        autoFocus
+                                        textAlign="right"
+                                    />
+                                    <View style={styles.editActionsRow}>
+                                        <TouchableOpacity 
+                                            onPress={() => setIsEditing(false)} 
+                                            style={[styles.editActionBtn, {backgroundColor: COLORS.background, borderColor: COLORS.border}]}
+                                        >
+                                            <FontAwesome5 name="times" size={14} color={COLORS.textSecondary} />
+                                        </TouchableOpacity>
+                                        
+                                        <TouchableOpacity 
+                                            onPress={handleSaveName} 
+                                            disabled={isSaving}
+                                            style={[styles.editActionBtn, {backgroundColor: COLORS.accentGreen}]}
+                                        >
+                                            {isSaving ? (
+                                                <ActivityIndicator size="small" color={COLORS.textOnAccent} />
+                                            ) : (
+                                                <FontAwesome5 name="check" size={14} color={COLORS.textOnAccent} />
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ) : (
+                                <View style={styles.titleDisplayRow}>
+                                    <Text style={styles.sheetProductTitle}>{product.productName}</Text>
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            setIsEditing(true);
+                                        }} 
+                                        hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                                        style={styles.editIconBtn}
+                                    >
+                                        <Feather name="edit-2" size={16} color={COLORS.accentGreen} />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            {/* --------------------------- */}
+
                             <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, marginTop: 5 }}>
-    {PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج غير محدد'}
-</Text>
+                                {PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج غير محدد'}
+                            </Text>
                         </View>
 
                         {/* 2. Main Score Card */}
                         <View style={styles.sheetSection}>
                             <View style={[styles.alertBox, { backgroundColor: scoreColor + '15', borderColor: scoreColor }]}>
-                                {/* Only show large number here if we didn't show it on the image */}
                                 {!productImage && (
                                     <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
                                          <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: scoreColor }}>{oilGuardScore}</Text>
@@ -881,7 +974,7 @@ const AddStepModal = ({ isVisible, onClose, onAdd }) => {
 
             {/* LAYER 2: The Content (Z-Index: 100 - MUST BE HIGHER) */}
             <KeyboardAvoidingView 
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
+                behavior={Platform.OS === "ios" ? "padding" : "padding"}
                 style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }} // <--- CRITICAL FIX
                 pointerEvents="box-none"
             >
@@ -1425,6 +1518,7 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
 };
 
 // --- The Main Routine Section Component ---
+// --- UPDATED ROUTINE SECTION (Modern Floating UX) ---
 const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const { user } = useAppContext();
     const [routines, setRoutines] = useState({ am: [], pm: [] });
@@ -1439,7 +1533,6 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     useEffect(() => {
         const initialRoutines = userProfile?.routines || { am: [], pm: [] };
         setRoutines(initialRoutines);
-        // Only show onboarding if routines are completely empty
         if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
             setShowOnboarding(true);
         }
@@ -1493,109 +1586,64 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
         }
     };
   
-    // --- HANDLER: CONNECTED TO BACKEND ---
     const handleAutoBuildRoutine = () => {
       if (savedProducts.length < 2) {
-          AlertService.show({
-              title: "الرف غير كافٍ",
-              message: "نحتاج إلى منتجين على الأقل (غسول + مرطب) لبناء روتين ذكي.",
-              type: 'warning'
-          });
+          AlertService.show({ title: "الرف غير كافٍ", message: "نحتاج إلى منتجين على الأقل لبناء روتين ذكي.", type: 'warning' });
           return;
       }
-  
       const runArchitect = async () => {
         setIsBuilding(true);
-        setRoutineLogs([]); // Clear previous logs
-        
+        setRoutineLogs([]); 
         try {
-            // 1. Call Your Backend API
             const response = await fetch(`${PROFILE_API_URL}/generate-routine.js`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    products: savedProducts,
-                    settings: userProfile?.settings || {}
-                })
+                body: JSON.stringify({ products: savedProducts, settings: userProfile?.settings || {} })
             });
-  
             const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || "Server Error");
-            }
+            if (!response.ok) throw new Error(data.error || "Server Error");
 
-            // 2. Save the Routines
             const newRoutines = { am: data.am || [], pm: data.pm || [] };
             await saveRoutines(newRoutines);
-            
-            // 3. Set the Logs (This makes them appear in the Viewer)
-            if (data.logs && Array.isArray(data.logs)) {
-                setRoutineLogs(data.logs);
-            }
+            if (data.logs && Array.isArray(data.logs)) setRoutineLogs(data.logs);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناء على تحليل وثيق.");
-  
         } catch (error) {
             console.error("Routine Generation Error:", error);
-            AlertService.error("خطأ", "تعذر الاتصال بالخادم. يرجى المحاولة لاحقا.");
+            AlertService.error("خطأ", "تعذر الاتصال بالخادم.");
         } finally {
             setIsBuilding(false);
         }
       };
-  
-      AlertService.confirm(
-          "روتين وثيق التلقائي",
-          "سيتم إعادة ترتيب روتينك بالكامل بناء على تعارض المكونات وحالة بشرتك. موافق؟",
-          runArchitect
-      );
+      AlertService.confirm("روتين وثيق التلقائي", "سيتم إعادة ترتيب روتينك بالكامل. موافق؟", runArchitect);
     };
   
-    // --- RENDER ---
     const currentSteps = routines[activePeriod] || [];
 
     return (
       <View style={{ flex: 1 }}>
-          {/* Header Controls */}
+          {/* 1. Header: CLEANER (Just the Switcher) */}
           <View style={styles.routineHeaderContainer}>
                <View style={styles.routineSwitchContainer}>
-                  <TouchableOpacity 
-                      activeOpacity={0.8} 
-                      onPress={() => switchPeriod('pm')} 
-                      style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}
-                  >
+                  <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod==='pm' && styles.periodBtnActive]}>
                       <Text style={[styles.periodText, activePeriod==='pm' && styles.periodTextActive]}>المساء</Text>
                       <Feather name="moon" size={14} color={activePeriod==='pm' ? COLORS.textOnAccent : COLORS.textSecondary} />
                   </TouchableOpacity>
                   
-                  <TouchableOpacity 
-                      activeOpacity={0.8} 
-                      onPress={() => switchPeriod('am')} 
-                      style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}
-                  >
+                  <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod==='am' && styles.periodBtnActive]}>
                       <Text style={[styles.periodText, activePeriod==='am' && styles.periodTextActive]}>الصباح</Text>
                       <Feather name="sun" size={14} color={activePeriod==='am' ? COLORS.textOnAccent : COLORS.textSecondary} />
                   </TouchableOpacity>
               </View>
-               
-               <PressableScale onPress={handleAutoBuildRoutine} style={styles.autoBuildButton} disabled={isBuilding}>
-                  {isBuilding ? 
-                      <ActivityIndicator size="small" color={COLORS.accentGreen} /> : 
-                      <MaterialCommunityIcons name="auto-fix" size={20} color={COLORS.accentGreen} />
-                  }
-               </PressableScale>
           </View>
   
           {/* CONTENT AREA */}
           <View style={{ paddingBottom: 220, paddingTop: 10 }}>
-              
-              {/* 1. LOG VIEWER - Only shows if logs exist */}
               <View style={{ marginBottom: 10 }}>
                   <RoutineLogViewer logs={routineLogs} />
               </View>
 
-              {/* 2. Steps List */}
               {currentSteps.length > 0 ? (
                   currentSteps.map((item, index) => (
                       <StaggeredItem index={index} key={item.id}> 
@@ -1609,11 +1657,49 @@ const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
                       </StaggeredItem>
                   ))
               ) : (
-<RoutineEmptyState onPress={handleAutoBuildRoutine} />              )}
+                  <RoutineEmptyState onPress={handleAutoBuildRoutine} />              
+              )}
           </View>
           
-  
-          {/* Modals */}
+          {/* --- NEW: FLOATING ACTION CAPSULE --- */}
+          {/* Positioned at the bottom, above the Dock */}
+          <View style={styles.floatingControlsContainer}>
+              <View style={styles.floatingCapsule}>
+                  
+                  {/* Left Action: Auto Build */}
+                  <TouchableOpacity 
+                      style={styles.fabItem} 
+                      onPress={handleAutoBuildRoutine}
+                      disabled={isBuilding}
+                  >
+                        {isBuilding ? (
+                            <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                        ) : (
+                            <View style={styles.fabInner}>
+                                <MaterialCommunityIcons name="auto-fix" size={18} color={COLORS.accentGreen} />
+                                <Text style={styles.fabText}>ترتيب ذكي</Text>
+                            </View>
+                        )}
+                  </TouchableOpacity>
+
+                  {/* Visual Divider */}
+                  <View style={styles.fabDivider} />
+
+                  {/* Right Action: Add Step */}
+                  <TouchableOpacity 
+                      style={styles.fabItem} 
+                      onPress={() => onOpenAddStepModal(handleAddStep)}
+                  >
+                      <View style={styles.fabInner}>
+                          <Feather name="plus" size={18} color={COLORS.accentGreen} />
+                          <Text style={styles.fabText}>إضافة خطوة</Text>
+                      </View>
+                  </TouchableOpacity>
+
+              </View>
+          </View>
+
+          {/* MODALS */}
           {selectedStep && (
               <StepEditorModal 
                   isVisible={!!selectedStep} 
@@ -3381,6 +3467,53 @@ listImagePlaceholder: {
       color: COLORS.textSecondary,
       textAlign: 'center',
   },
+  titleDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    width: '100%',
+    
+},
+editIconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(90, 156, 132, 0.1)',
+    borderRadius: 8,
+    marginLeft: -12
+},
+editTitleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 10,
+    paddingHorizontal: 20,
+},
+editTitleInput: {
+    width: '100%',
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.accentGreen,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    textAlign: 'center', // Center text while editing
+},
+editActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 1,
+},
+editActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent', // Default no border
+},
     
     // ========================================================================
     // --- 7. SECTION: ANALYSIS & INSIGHTS ---
@@ -3752,7 +3885,56 @@ stepProductText: {
       borderColor: 'rgba(255,255,255,0.05)',
       maxWidth: 160,
   },
-    
+  floatingControlsContainer: {
+    position: 'absolute',
+    bottom: 125, 
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 50,
+},
+
+floatingCapsule: {
+    flexDirection: 'row-reverse', 
+    backgroundColor: COLORS.card, 
+    borderRadius: 100, 
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(90, 156, 132, 0.4)', // Subtle emerald border
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 0,
+    width: width * 0.85, // Symmetric width relative to screen
+},
+
+fabItem: {
+    flex: 1, // Forces both sides to be identical width
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+},
+
+fabInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+},
+
+fabText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 14,
+    color: COLORS.textPrimary,
+},
+
+fabDivider: {
+    width: 1,
+    height: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignSelf: 'center',
+},
     // ========================================================================
     // --- 9. SECTION: INGREDIENTS ---
     // ========================================================================

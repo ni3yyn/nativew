@@ -1137,8 +1137,9 @@ rs_HeroWrapperAnimated: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
     color: COLORS.textSecondary,
-    textTransform: 'uppercase',
+    textAlign: 'center',
     marginTop: 4,
+    marginBottom: 9
   },
   
   // The "Chemical DNA" Stats Row
@@ -1689,5 +1690,28 @@ rs_HeroWrapperAnimated: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
     textAlign: 'right',
+  },
+  personalNoteContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(90, 156, 132, 0.08)', // Very subtle green tint
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginTop: 5,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(90, 156, 132, 0.15)',
+    gap: 0
+  },
+  personalNoteText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    flexShrink: 1,
+    lineHeight: 16
   },
 });
