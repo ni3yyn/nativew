@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -32,8 +32,10 @@ export const AppProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [savedProducts, setSavedProducts] = useState([]);
   
-  // --- Refs & Control ---
+  // --- Control Flags (Semaphores) ---
+  // Locks the repair logic to prevent infinite write loops
   const isRepairing = useRef(false);
+  // Ensures we only try to register tokens once per session
   const hasRegisteredNotifications = useRef(false); 
 
   // --- System State ---
@@ -47,104 +49,97 @@ export const AppProvider = ({ children }) => {
   });
   const [activeAnnouncement, setActiveAnnouncement] = useState(null);
 
-  // --- Loading & Error States ---
+  // --- Loading States ---
   const [loading, setLoading] = useState(true);
-  const [profileError, setProfileError] = useState(null);
-  const [productsError, setProductsError] = useState(null);
 
   // ==================================================================
-  // 2. HELPER: REGISTER FOR PUSH NOTIFICATIONS
+  // 2. HELPER: DATA INTEGRITY CHECK
+  // ==================================================================
+  // This is the source of truth for "Does this user exist properly?"
+  const checkProfileHealth = (data) => {
+    if (!data) return false;
+    // Must have email (basic identity)
+    if (!data.email) return false;
+    // Must have settings object (skin type, name, etc)
+    if (!data.settings) return false;
+    // Must have onboarding flag (determines routing)
+    if (data.onboardingComplete === undefined) return false;
+    
+    return true;
+  };
+
+  // ==================================================================
+  // 3. NOTIFICATION REGISTRATION LOGIC
   // ==================================================================
   const registerForPushNotificationsAsync = async (uid) => {
-    console.log("🔔 [AppContext] Starting notification registration for user:", uid);
-    
-    if (!Device.isDevice) {
-      console.log("⚠️ [AppContext] Must use physical device for Push Notifications");
-      return;
-    }
+    if (!Device.isDevice) return;
 
     try {
+      // 1. Android Channel Setup
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF231F7C',
+          lightColor: '#5A9C84',
         });
-        console.log("🔔 [AppContext] Android Notification Channel 'default' set.");
       }
 
+      // 2. Check/Request Permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
       if (existingStatus !== 'granted') {
-        console.log("🔔 [AppContext] requesting permissions...");
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
-      console.log("🔔 [AppContext] Final Permission Status:", finalStatus);
 
-      const userRef = doc(db, 'profiles', uid);
-
+      // 3. HANDLE DENIAL: Respect user choice, but ensure DB record exists safely.
       if (finalStatus !== 'granted') {
-        console.log("❌ [AppContext] Permission denied! Updating profile to disable notifications.");
-        try {
-          await updateDoc(userRef, { notificationsEnabled: false });
-        } catch (error) {
-            console.error("❌ [AppContext] Error updating denied status:", error);
-        }
+        // We use merge: true so we don't accidentally wipe profile data 
+        // if this runs at the exact same time as profile creation.
+        await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
+        console.log("🔕 Notification permission denied. Recorded in DB.");
         return;
       }
 
-      const projectId = 
-        Constants?.expoConfig?.extra?.eas?.projectId ?? 
-        Constants?.easConfig?.projectId ?? 
-        "6ebdbfe1-08ea-4f21-9fa2-482f152a3266";
-
-      let expoTokenString = null;
+      // 4. Get Tokens (Only if granted)
+      const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "6ebdbfe1-08ea-4f21-9fa2-482f152a3266";
+      
+      let expoPushToken = undefined;
       try {
-          const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-          expoTokenString = expoTokenData.data;
-          console.log("✅ [AppContext] Expo Push Token:", expoTokenString);
-      } catch (e) {
-          console.error("❌ [AppContext] Failed to get Expo Token:", e);
-      }
+          const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+          expoPushToken = tokenData.data;
+      } catch (e) { console.log("Expo Token Error", e); }
 
-      let fcmTokenString = null;
+      let fcmToken = undefined;
       try {
-          const deviceTokenData = await Notifications.getDevicePushTokenAsync();
-          fcmTokenString = deviceTokenData.data;
-          console.log("✅ [AppContext] FCM/Device Token:", fcmTokenString);
-      } catch (e) {
-          console.error("❌ [AppContext] Failed to get Device Token:", e);
-      }
+        const deviceToken = await Notifications.getDevicePushTokenAsync();
+        fcmToken = deviceToken.data;
+      } catch (e) { console.log("Device Token Error", e); }
 
-      try {
-        await updateDoc(userRef, {
-          expoPushToken: expoTokenString, 
-          fcmToken: fcmTokenString,       
-          notificationsEnabled: true,
-          deviceType: Platform.OS,
-          lastTokenUpdate: new Date()
-        });
-        console.log("✅ [AppContext] Tokens successfully saved to Firestore!");
-      } catch (e) {
-         console.error("❌ [AppContext] Error saving tokens to Firestore:", e);
-      }
+      // 5. Save Tokens Safely
+      await setDoc(doc(db, 'profiles', uid), {
+        expoPushToken: expoPushToken || null, 
+        fcmToken: fcmToken || null,       
+        notificationsEnabled: true, // Only true here because they GRANTED it
+        deviceType: Platform.OS,
+        lastTokenUpdate: serverTimestamp() 
+      }, { merge: true });
+
+      console.log("🔔 Tokens saved successfully.");
 
     } catch (error) {
-      console.error("❌ [AppContext] Critical Error registering push tokens:", error);
+      console.error("Token Register Error:", error);
     }
   };
 
   // ==================================================================
-  // 3. MAIN EFFECT: INIT APP
+  // 4. MAIN INITIALIZATION EFFECT
   // ==================================================================
   useEffect(() => {
-    // A. System Config Listener
-    const configRef = doc(db, 'app_config', 'version_control'); 
-    const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
+    // --- A. System Config Listener ---
+    const unsubscribeConfig = onSnapshot(doc(db, 'app_config', 'version_control'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setAppConfig({
@@ -158,169 +153,128 @@ export const AppProvider = ({ children }) => {
       }
     });
 
-    // B. Auth Listener
+    // --- B. Authentication Listener ---
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      // Reset semaphores when user changes
       hasRegisteredNotifications.current = false; 
+      isRepairing.current = false; 
       
       if (currentUser) {
-        console.log("🟢 User Detected:", currentUser.email);
-        
-        // Safety check for new vs returning users
-        const isBrandNewAccount = currentUser.metadata.creationTime === currentUser.metadata.lastSignInTime;
+        console.log("🟢 User Authenticated:", currentUser.uid);
 
-        // 1. Load Cache
-        const loadCache = async () => {
-            try {
-                const cachedProfile = await getSelfProfileCache();
-                if (cachedProfile) setUserProfile(cachedProfile);
-    
-                const cachedProducts = await getSavedProductsCache();
-                if (cachedProducts && cachedProducts.length > 0) setSavedProducts(cachedProducts);
-    
-                if (cachedProfile || (cachedProducts && cachedProducts.length > 0)) {
-                    setLoading(false);
-                }
-            } catch (e) {
-                console.error("Cache load error:", e);
+        // 1. Load Local Cache (Speed Optimization)
+        try {
+            const cachedProfile = await getSelfProfileCache();
+            if (cachedProfile && checkProfileHealth(cachedProfile)) {
+                setUserProfile(cachedProfile);
+                setLoading(false); // Immediate UI access
             }
-        };
-        loadCache();
+            const cachedProducts = await getSavedProductsCache();
+            if (cachedProducts?.length) setSavedProducts(cachedProducts);
+        } catch (e) { /* Ignore cache errors */ }
     
-        // 2. Profile Real-time Listener
         const profileRef = doc(db, 'profiles', currentUser.uid);
+        
+        // 2. Profile Real-time Listener (The Brain)
         const unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
           
-          if (isRepairing.current) return;
+          const exists = docSnap.exists();
+          const data = exists ? docSnap.data() : null;
+          const isHealthy = checkProfileHealth(data);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const updatesToApply = {};
-            let needsUpdate = false;
+          // --- PATH 1: HEALTHY PROFILE (Normal Operation) ---
+          if (isHealthy) {
+              isRepairing.current = false; // Release lock
+              setUserProfile(data);
+              setSelfProfileCache(data); 
+              setLoading(false); 
 
-            // --- REPAIR FIELDS IF MISSING ---
-            if (!data.email) {
-                updatesToApply.email = currentUser.email;
-                needsUpdate = true;
-            }
-            if (!data.settings) {
-                updatesToApply.settings = { 
-                    name: '', gender: '', skinType: '', scalpType: '',
-                    goals: [], conditions: [], allergies: []
-                };
-                needsUpdate = true;
-            }
+              // Only register notifications if onboarding is done & not already registered
+              if (data.onboardingComplete && !hasRegisteredNotifications.current) {
+                  hasRegisteredNotifications.current = true;
+                  registerForPushNotificationsAsync(currentUser.uid);
+              }
+              return; 
+          }
 
-            if (data.notificationsEnabled === undefined) {
-                updatesToApply.notificationsEnabled = false;
-                needsUpdate = true;
-            }
-            if (!data.createdAt) {
-                updatesToApply.createdAt = new Date();
-                needsUpdate = true;
-            }
+          // --- PATH 2: UNHEALTHY PROFILE (Fixing the Ghost Docs) ---
+          
+          // Safety Check: If we are already repairing, don't spam writes
+          if (isRepairing.current) {
+              console.log("🛠 Repair pending... waiting for DB update.");
+              return;
+          }
 
-            // A. PATH 1: REPAIR NEEDED
-            if (needsUpdate) {
-               console.log("🛠 Patching missing fields in profile...");
-               isRepairing.current = true; 
-               try {
-                   await updateDoc(profileRef, updatesToApply);
-                   const fixedProfile = { ...data, ...updatesToApply };
-                   setUserProfile(fixedProfile);
-                   setSelfProfileCache(fixedProfile);
+          console.log("🚨 Profile Unhealthy (Missing or Corrupt). Initiating Safe Repair...");
+          isRepairing.current = true; // Lock
 
-                   if (fixedProfile.onboardingComplete && !hasRegisteredNotifications.current) {
-                        hasRegisteredNotifications.current = true;
-                        registerForPushNotificationsAsync(currentUser.uid);
-                   }
+          // Construct Repair Data
+          // We preserve existing data (like notificationsEnabled: false) if it exists.
+          const repairData = {
+             email: currentUser.email,
+             createdAt: data?.createdAt || serverTimestamp(),
+             // Default to FALSE forces user to go to Welcome screen to fix settings
+             onboardingComplete: data?.onboardingComplete || false, 
+             // Respect previous denial if it exists, otherwise default to false
+             notificationsEnabled: data?.notificationsEnabled || false,
+             // Ensure structure exists
+             settings: data?.settings || { 
+                 name: '', gender: '', skinType: '', scalpType: '',
+                 goals: [], conditions: [], allergies: []
+             },
+             routines: data?.routines || { am: [], pm: [] }
+          };
 
-               } catch (e) {
-                   console.error("Repair failed", e);
-               } finally {
-                   setTimeout(() => { isRepairing.current = false; }, 2000);
-               }
-               return; 
-            }
+          try {
+              // A. Optimistic Update (Unblock User Immediately)
+              setUserProfile(repairData); 
+              setLoading(false); 
 
-            // B. PATH 2: NORMAL DATA
-            setUserProfile(data);
-            setSelfProfileCache(data); 
-            setLoading(false); 
-
-            if (data.onboardingComplete && !hasRegisteredNotifications.current) {
-                console.log("🔔 [AppContext] Profile ready. Initiating token registration...");
-                hasRegisteredNotifications.current = true;
-                registerForPushNotificationsAsync(currentUser.uid);
-            }
-
-          } else {
-            // DOCUMENT MISSING
-            // Only create default if brand new. If returning, wait for sync.
-            if (isBrandNewAccount && !docSnap.metadata.fromCache) {
-                console.warn("🆕 Brand new user: Creating default profile...");
-                isRepairing.current = true; 
-                const defaultProfile = {
-                    email: currentUser.email,
-                    createdAt: new Date(),
-                    onboardingComplete: false,
-                    settings: { name: '', gender: '', skinType: '', scalpType: '', goals: [], conditions: [], allergies: [] }, 
-                    routines: { am: [], pm: [] },
-                    notificationsEnabled: false
-                };
-                try {
-                  await setDoc(profileRef, defaultProfile);
-                  setUserProfile(defaultProfile);
-                } catch (err) {
-                   console.error("Default profile creation failed", err);
-                } finally {
-                  setTimeout(() => { isRepairing.current = false; }, 2000);
-                }
-            } else {
-                console.log("⏳ Profile not found yet (returning user). Waiting for Firestore sync...");
-            }
+              // B. Atomic Merge Write (The Fix)
+              // merge: true ensures we don't overwrite partial data written by other logic
+              await setDoc(profileRef, repairData, { merge: true });
+              
+              // Note: We do NOT unlock isRepairing here. 
+              // We wait for onSnapshot to fire again with the corrected data.
+          } catch (e) {
+              console.error("Critical Repair Failed:", e);
+              isRepairing.current = false; // Release lock on error to allow retry
           }
         }, (err) => {
-            console.warn("⚠️ Firestore Listener Error:", err);
+            console.warn("Firestore Profile Listener Error:", err);
             setLoading(false);
         });
     
-        // 3. Products Listener
-        const productsRef = collection(db, 'profiles', currentUser.uid, 'savedProducts');
-        const unsubscribeProducts = onSnapshot(query(productsRef, orderBy('createdAt', 'desc')), 
+        // 3. Saved Products Listener
+        const unsubscribeProducts = onSnapshot(query(collection(db, 'profiles', currentUser.uid, 'savedProducts'), orderBy('createdAt', 'desc')), 
           (snapshot) => {
             const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setSavedProducts(currentSavedProducts => {
-                if (newProducts.length === 0 && snapshot.metadata.fromCache && currentSavedProducts.length > 0) {
-                    return currentSavedProducts;
-                }
-                const isDifferent = JSON.stringify(newProducts) !== JSON.stringify(currentSavedProducts);
-                if (isDifferent) {
+            
+            // Only update state if data actually changed (Optimization)
+            setSavedProducts(prev => {
+                if (JSON.stringify(newProducts) !== JSON.stringify(prev)) {
                     setSavedProductsCache(newProducts);
-                    return newProducts; 
+                    return newProducts;
                 }
-                return currentSavedProducts; 
+                return prev;
             });
             setLoading(false);
-          }, 
-          (err) => { setLoading(false); }
+          }
         );
     
-        return () => {
-          unsubscribeProfile();
-          unsubscribeProducts();
-        };
+        return () => { unsubscribeProfile(); unsubscribeProducts(); };
+
       } else {
+        // Logged Out
         setUserProfile(null);
         setSavedProducts([]);
         setLoading(false);
       }
     });
 
-    return () => {
-      unsubscribeConfig();
-      unsubscribeAuth();
-    };
+    return () => { unsubscribeConfig(); unsubscribeAuth(); };
   }, []);
 
   const logout = async () => {
@@ -338,8 +292,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{ 
       user, userProfile, savedProducts, setSavedProducts,
-      loading, profileError, productsError, logout,
-      appConfig, activeAnnouncement, dismissAnnouncement
+      loading, logout, appConfig, activeAnnouncement, dismissAnnouncement
     }}>
       {children}
     </AppContext.Provider>
