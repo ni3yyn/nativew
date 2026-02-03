@@ -26,6 +26,15 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const isOlderThan = (timestamp, days) => {
+  if (!timestamp) return true;
+  const now = new Date();
+  const dateToCheck = timestamp.toDate(); // Convert Firestore Timestamp to JS Date
+  const diffTime = Math.abs(now - dateToCheck);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  return diffDays > days;
+};
+
 export const AppProvider = ({ children }) => {
   // --- User State ---
   const [user, setUser] = useState(null);
@@ -71,63 +80,79 @@ export const AppProvider = ({ children }) => {
   // ==================================================================
   // 3. NOTIFICATION REGISTRATION LOGIC
   // ==================================================================
-  const registerForPushNotificationsAsync = async (uid) => {
+  const registerForPushNotificationsAsync = async (uid, currentProfile) => {
     if (!Device.isDevice) return;
 
     try {
-      // 1. Android Channel Setup
+      // 1. Setup Channel (Android) - Fast, local only
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#5A9C84',
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#5A9C84',
         });
       }
 
-      // 2. Check/Request Permissions
+      // 2. Check Permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
-      // 3. HANDLE DENIAL: Respect user choice, but ensure DB record exists safely.
+      // 3. Handle Denial
       if (finalStatus !== 'granted') {
-        // We use merge: true so we don't accidentally wipe profile data 
-        // if this runs at the exact same time as profile creation.
-        await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
-        console.log("🔕 Notification permission denied. Recorded in DB.");
+        // Only write to DB if the DB currently thinks it IS enabled
+        if (currentProfile?.notificationsEnabled !== false) {
+             await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
+        }
         return;
       }
 
-      // 4. Get Tokens (Only if granted)
+      // 4. Get New Token
       const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "6ebdbfe1-08ea-4f21-9fa2-482f152a3266";
       
-      let expoPushToken = undefined;
+      let expoPushToken = null;
       try {
           const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
           expoPushToken = tokenData.data;
-      } catch (e) { console.log("Expo Token Error", e); }
+      } catch (e) { console.log("Token Fetch Error", e); }
 
-      let fcmToken = undefined;
-      try {
-        const deviceToken = await Notifications.getDevicePushTokenAsync();
-        fcmToken = deviceToken.data;
-      } catch (e) { console.log("Device Token Error", e); }
+      // ============================================================
+      // 🛑 SCALABILITY CHECK (The "Thundering Herd" Fix)
+      // ============================================================
+      
+      // A. Check if token actually changed
+      const tokenChanged = currentProfile?.expoPushToken !== expoPushToken;
+      
+      // B. Check if it's been > 30 days since last update (Heartbeat)
+      const needsHeartbeat = isOlderThan(currentProfile?.lastTokenUpdate, 30);
+      
+      // C. Check if "Hadil Case" (Token was null, now we have one)
+      const isHealing = currentProfile?.expoPushToken === null && expoPushToken !== null;
 
-      // 5. Save Tokens Safely
+      // D. Check if we just enabled notifications
+      const statusChanged = currentProfile?.notificationsEnabled === false;
+
+      // ⚡️ SKIP WRITE if everything is same and fresh
+      if (!tokenChanged && !needsHeartbeat && !isHealing && !statusChanged) {
+          console.log("💤 Token clean & fresh. No DB write needed.");
+          return; 
+      }
+      
+      console.log("💾 Updating Token in DB (Change detected or Heartbeat needed)");
+
+      // 5. Save (Only runs if needed)
       await setDoc(doc(db, 'profiles', uid), {
         expoPushToken: expoPushToken || null, 
-        fcmToken: fcmToken || null,       
-        notificationsEnabled: true, // Only true here because they GRANTED it
+        // We don't save FCM separately usually unless you specifically use it manually, 
+        // Expo token maps to it internally. Saving it is optional.
+        notificationsEnabled: true,
         deviceType: Platform.OS,
         lastTokenUpdate: serverTimestamp() 
       }, { merge: true });
-
-      console.log("🔔 Tokens saved successfully.");
 
     } catch (error) {
       console.error("Token Register Error:", error);
@@ -191,11 +216,11 @@ export const AppProvider = ({ children }) => {
               setSelfProfileCache(data); 
               setLoading(false); 
 
-              // Only register notifications if onboarding is done & not already registered
               if (data.onboardingComplete && !hasRegisteredNotifications.current) {
-                  hasRegisteredNotifications.current = true;
-                  registerForPushNotificationsAsync(currentUser.uid);
-              }
+                hasRegisteredNotifications.current = true;
+                // Pass 'data' so we can compare!
+                registerForPushNotificationsAsync(currentUser.uid, data); 
+            }
               return; 
           }
 

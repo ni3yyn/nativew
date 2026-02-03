@@ -1082,8 +1082,7 @@ rs_HeroWrapperAnimated: {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    
     paddingBottom: 15,
   },
   matchBadge: {

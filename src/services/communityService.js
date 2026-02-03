@@ -102,15 +102,15 @@ import {
   };
   
   export const deletePost = async (postId) => {
-      try {
-          const { error } = await supabase.from('posts').delete().eq('id', postId);
-          if (error) throw error;
-      } catch (error) {
-          console.error("Delete Post Error:", error);
-          AlertService.error("خطأ", "تعذر حذف المنشور.");
-          throw error;
-      }
-  };
+    try {
+        const { error } = await supabase.from('posts').delete().eq('id', postId);
+        if (error) throw error;
+    } catch (error) {
+        console.error("Delete Post Error:", error);
+        AlertService.error("خطأ", "تعذر حذف المنشور.");
+        throw error;
+    }
+};
   
   export const toggleLikePost = async (postId, userId, isLiked) => {
       try {
@@ -185,3 +185,16 @@ import {
         return null;
     }
   };
+
+  export const deleteComment = async (commentId) => {
+    try {
+        const { error } = await supabase
+            .from('comments')
+            .delete()
+            .eq('id', commentId);
+        if (error) throw error;
+    } catch (error) {
+        console.error("Delete Comment Error:", error);
+        throw error;
+    }
+};

@@ -2234,13 +2234,7 @@ const renderClaimsStep = () => {
                         
                         {/* Header */}
                         <View style={styles.dashHeader}>
-                            <View style={[styles.matchBadge, { borderColor: matchConfig.color, backgroundColor: matchConfig.glow }]}>
-                                <Text style={[styles.matchText, { color: matchConfig.color }]}>{matchConfig.text}</Text>
-                                <FontAwesome5 name={matchConfig.icon} size={12} color={matchConfig.color} />
-                            </View>
-                            <Text style={styles.productTypeLabel}>
-                                {PRODUCT_TYPES.find(t => t.id === productType)?.label || 'GENERIC SCAN'}
-                            </Text>
+                            
                         </View>
 
                         {/* Gauge */}

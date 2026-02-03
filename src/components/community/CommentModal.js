@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, 
   FlatList, KeyboardAvoidingView, Platform, StyleSheet, 
   Animated, LayoutAnimation, Pressable, Keyboard 
 } from 'react-native';
-import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // --- CONFIG & SERVICES ---
 import { supabase } from '../../config/supabase';
@@ -15,59 +16,34 @@ import { db } from '../../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { COLORS } from '../../constants/theme';
 import { AlertService } from '../../services/alertService';
-
+import { deleteComment } from '../../services/communityService';
 
 // ==================================================================
-// 1. HELPER: ROBUST NOTIFICATION SENDER
+// 1. HELPER: SMART NOTIFICATION SENDER
 // ==================================================================
-const sendNotificationToOwner = async (postOwnerId, commenterName, postId, commentText) => {
-    console.log("\n🔵 --- START NOTIFICATION DEBUG --- 🔵");
-    
-    // 1. Validate Input
-    if (!postOwnerId) {
-        console.error("❌ Stopped: No Post Owner ID provided");
-        return;
-    }
+const sendPushNotification = async (targetUserId, title, body, dataPayload) => {
+    if (!targetUserId) return;
 
     try {
-        // 2. Fetch User Profile
-        const userDocRef = doc(db, 'profiles', postOwnerId);
+        const userDocRef = doc(db, 'profiles', targetUserId);
         const userSnap = await getDoc(userDocRef);
 
-        if (!userSnap.exists()) {
-            console.error("❌ Stopped: User profile not found in Firestore");
-            return;
-        }
+        if (!userSnap.exists()) return;
 
         const userData = userSnap.data();
         const pushToken = userData.expoPushToken;
 
-        console.log(`👤 Target User: ${userData.name || 'Unknown'}`);
-        console.log(`🔑 Target Token: ${pushToken}`);
+        if (!pushToken || !pushToken.startsWith('ExponentPushToken')) return;
 
-        // 3. Validate Token Local
-        if (!pushToken) {
-            console.error("❌ Stopped: User has NO 'expoPushToken' in Firestore.");
-            return;
-        }
-        if (!pushToken.startsWith('ExponentPushToken')) {
-            console.error("❌ Stopped: Token format is invalid. Must start with ExponentPushToken.");
-            return;
-        }
-
-        // 4. Construct Message
         const message = {
             to: pushToken,
             sound: 'default',
-            title: 'تعليق جديد 💬',
-            body: `${commenterName}: ${commentText}`,
-            data: { postId: postId, screen: 'PostDetails' }, 
+            title: title,
+            body: body,
+            data: dataPayload, 
         };
 
-        console.log("🚀 Sending request to Expo API...");
-
-        // 5. Send Request
-        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        await fetch('https://exp.host/--/api/v2/push/send', {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
@@ -76,39 +52,11 @@ const sendNotificationToOwner = async (postOwnerId, commenterName, postId, comme
             },
             body: JSON.stringify(message),
         });
-
-        // 6. READ RAW RESPONSE (Crucial Step)
-        const rawText = await response.text(); 
-        console.log("📡 RAW RESPONSE FROM EXPO:", rawText);
-
-        const result = JSON.parse(rawText);
-
-        // 7. Analyze Specific Errors
-        if (result.errors) {
-            // Top level errors (e.g., entire batch failed)
-            console.error("❌ API LEVEL ERROR:", JSON.stringify(result.errors, null, 2));
-        } 
-        else if (result.data && result.data.status === 'error') {
-            // Specific delivery error
-            console.error("❌ DELIVERY ERROR:");
-            console.error("👉 Code:", result.data.details?.error || "Unknown Code");
-            console.error("👉 Message:", result.data.message);
-            
-            if (result.data.details?.error === 'DeviceNotRegistered') {
-                console.warn("💡 FIX: The token is old/invalid. The user must open the app again to generate a new token.");
-            }
-            if (result.data.message?.includes('ExperienceId')) {
-                console.warn("💡 FIX: Mismatch between 'Expo Go' and 'Development Build'. Tokens generated in one won't work in the other.");
-            }
-        } 
-        else {
-            console.log("✅ SUCCESS! Notification Ticket ID:", result.data?.id);
-        }
+        console.log("🔔 Notification sent to:", userData.name);
 
     } catch (err) {
-        console.error("❌ NETWORK/CRASH ERROR:", err);
+        console.error("Notification Error:", err);
     }
-    console.log("🔵 --- END NOTIFICATION DEBUG --- 🔵\n");
 };
 
 const getRandomColor = (name) => {
@@ -126,85 +74,95 @@ const QUICK_REPLIES = [
     "البركوكس بنين"
 ];
 
-// --- SUB-COMPONENT: INTERACTIVE COMMENT ITEM ---
-const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress }) => {
+// Helper to pick random color for the pop animation
+const getRandomPopColor = () => {
+    return Math.random() > 0.5 ? COLORS.danger : COLORS.accentGreen;
+};
+
+// ==================================================================
+// 2. COMPONENT: COMMENT ROW (Advanced Design)
+// ==================================================================
+
+const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false }) => {
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
     
+    // --- STATE ---
     const [isLiked, setIsLiked] = useState(item.isLikedByCurrentUser || false);
     const [likesCount, setLikesCount] = useState(item.likesCount || 0);
     
+    // 🎨 STATE FOR POPPING HEART COLOR ONLY
+    const [popHeartColor, setPopHeartColor] = useState(COLORS.danger); // Default to red
+    
+    // --- ANIMATION REFS ---
+    const scaleAnim = useRef(new Animated.Value(1)).current; 
+    const popHeartScale = useRef(new Animated.Value(0)).current; 
+    const popHeartOpacity = useRef(new Animated.Value(0)).current; 
+    const lastTap = useRef(null); 
+
     useEffect(() => {
         setIsLiked(item.isLikedByCurrentUser);
         setLikesCount(item.likesCount);
     }, [item.isLikedByCurrentUser, item.likesCount]);
 
-    const displayName = item.userName || "مستخدم وثيق";
-    const initial = displayName.charAt(0).toUpperCase();
-
-    // Animations
-    const heartScale = useRef(new Animated.Value(1)).current; 
-    const popHeartScale = useRef(new Animated.Value(0)).current; 
-    const popHeartOpacity = useRef(new Animated.Value(0)).current;
-
-    const lastTap = useRef(null);
-
-    const toggleLikeApi = async (newStatus) => {
-        try {
-            if (newStatus) {
-                const { error } = await supabase
-                    .from('comment_likes')
-                    .insert([{ comment_id: item.id, user_id: currentUser.uid }]);
-                if (error && error.code !== '23505') throw error;
-            } else {
-                const { error } = await supabase
-                    .from('comment_likes')
-                    .delete()
-                    .match({ comment_id: item.id, user_id: currentUser.uid });
-                if (error) throw error;
-            }
-        } catch (error) {
-            console.error("Error toggling like:", error);
-        }
-    };
-
-    const handleLike = () => {
+    // --- HANDLERS ---
+    const handleLike = async (forceLike = false) => {
         if (!currentUser?.uid) return;
+
+        if (forceLike && isLiked) {
+             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+             return;
+        }
+
         Haptics.selectionAsync();
         
+        // Button Bounce Animation
         Animated.sequence([
-            Animated.spring(heartScale, { toValue: 1.3, useNativeDriver: true, speed: 50 }),
-            Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, speed: 50 })
+            Animated.timing(scaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
         ]).start();
 
-        const newStatus = !isLiked;
+        const newStatus = forceLike ? true : !isLiked;
+        
         setIsLiked(newStatus);
         setLikesCount(prev => newStatus ? prev + 1 : prev - 1);
-        toggleLikeApi(newStatus);
+
+        // Sync with DB
+        try {
+            if (newStatus) {
+                await supabase.from('comment_likes').insert([{ comment_id: item.id, user_id: currentUser.uid }]);
+            } else {
+                await supabase.from('comment_likes').delete().match({ comment_id: item.id, user_id: currentUser.uid });
+            }
+        } catch (error) { console.error("Like error", error); }
     };
 
-    const triggerDoubleTapLike = () => {
-        if (!currentUser?.uid || isLiked) return;
-        
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const triggerPopAnimation = () => {
         popHeartScale.setValue(0.5);
         popHeartOpacity.setValue(1);
         
         Animated.parallel([
-            Animated.spring(popHeartScale, { toValue: 1.2, friction: 5, useNativeDriver: true }),
+            Animated.spring(popHeartScale, { toValue: 1.2, friction: 6, useNativeDriver: true }),
             Animated.sequence([
-                Animated.delay(300),
+                Animated.delay(400),
                 Animated.timing(popHeartOpacity, { toValue: 0, duration: 200, useNativeDriver: true })
             ])
         ]).start();
-
-        handleLike();
     };
 
-    const handlePress = () => {
+    const handleDoubleTap = () => {
         const now = Date.now();
         const DOUBLE_PRESS_DELAY = 300;
+
         if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
-            triggerDoubleTapLike();
+            // 🎲 Set a new random color for the pop animation EVERY time
+            setPopHeartColor(getRandomPopColor());
+            
+            if (!isLiked) {
+                handleLike(true);
+            } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+            triggerPopAnimation();
         } else {
             lastTap.current = now;
         }
@@ -212,10 +170,10 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
 
     const handleLongPress = () => {
         if (!isMe) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         AlertService.delete(
-            "حذف التعليق",
-            "هل أنت متأكد؟ سيختفي هذا التعليق نهائيا.",
+            isReply ? "حذف الرد" : "حذف التعليق",
+            "هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.",
             () => onDelete(item.id)
         );
     };
@@ -225,71 +183,123 @@ const CommentItem = React.memo(({ item, currentUser, onDelete, onProfilePress })
         : 'الآن';
 
     return (
-        <View style={styles.commentRow}>
+        <View style={[styles.rowContainer, isReply && styles.rowContainerReply]}>
+            {isReply && <View style={styles.threadCurve} />}
+
             <TouchableOpacity 
-                onPress={() => onProfilePress && onProfilePress(item.userId, item.authorSettings)}
                 activeOpacity={0.8}
-                style={[styles.avatarContainer, { backgroundColor: getRandomColor(displayName) }]}
+                onPress={() => onProfilePress && onProfilePress(item.userId, item.authorSettings)}
+                style={styles.avatarWrap}
             >
-                <Text style={styles.avatarText}>{initial}</Text>
+                <LinearGradient
+                    colors={[getRandomColor(item.userName), COLORS.card]}
+                    style={[styles.avatar, isReply && styles.avatarSmall]}
+                >
+                    <Text style={[styles.avatarText, isReply && { fontSize: 12 }]}>
+                        {item.userName?.charAt(0).toUpperCase()}
+                    </Text>
+                </LinearGradient>
             </TouchableOpacity>
 
-            <Pressable 
-                onPress={handlePress} 
-                onLongPress={handleLongPress} 
-                delayLongPress={400}
-                style={styles.contentColumn}
-            >
-                <View style={styles.textBlock}>
-                    <Text style={styles.userName}>{displayName}</Text> 
+            <View style={styles.contentContainer}>
+                <Pressable 
+                    onPress={handleDoubleTap}
+                    onLongPress={handleLongPress} 
+                    delayLongPress={300} 
+                    style={({pressed}) => [
+                        styles.bubble, 
+                        isReply && styles.bubbleReply,
+                        pressed && { opacity: 0.95 }
+                    ]}
+                >
+                    <View style={styles.bubbleHeader}>
+                        <Text style={styles.userName}>{item.userName}</Text>
+                        {isMe && <View style={styles.meBadge}><Text style={styles.meBadgeText}>أنا</Text></View>}
+                    </View>
                     <Text style={styles.commentText}>{item.text}</Text>
-                    
-                    <Animated.View style={[styles.popHeartContainer, { transform: [{ scale: popHeartScale }], opacity: popHeartOpacity }]}>
-                        <Ionicons name="heart" size={40} color="rgba(255,255,255,0.9)" />
+
+                    {/* ❤️ BIG POP HEART (Uses the random popHeartColor state) */}
+                    <Animated.View 
+                        style={[
+                            styles.popHeartContainer, 
+                            { transform: [{ scale: popHeartScale }], opacity: popHeartOpacity }
+                        ]}
+                        pointerEvents="none"
+                    >
+                        <Ionicons name="heart" size={50} color={popHeartColor} style={styles.popHeartShadow} />
                     </Animated.View>
-                </View>
+                </Pressable>
 
-                <View style={styles.metaRow}>
-                    <Text style={styles.metaText}>{timeAgo}</Text>
-                    {likesCount > 0 && (
-                        <Text style={[styles.metaText, {color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold'}]}>
-                            {likesCount} إعجاب
-                        </Text>
-                    )}
-                </View>
-            </Pressable>
+                <View style={styles.actionBar}>
+                    <Text style={styles.timeText}>{timeAgo}</Text>
+                    
+                    <TouchableOpacity onPress={() => handleLike(false)} style={styles.actionBtn}>
+                         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                            {/* ❤️ SMALL BUTTON HEART (Always red when liked) */}
+                            <Ionicons 
+                                name={isLiked ? "heart" : "heart-outline"} 
+                                size={14} 
+                                color={isLiked ? COLORS.danger : COLORS.textSecondary} 
+                            />
+                         </Animated.View>
+                         
+                         {likesCount > 0 && (
+                             <Text style={[styles.actionText, isLiked && {color: COLORS.danger}]}>
+                                 {likesCount}
+                             </Text>
+                         )}
+                    </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleLike} style={styles.heartBtn} hitSlop={15}>
-                <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                    <Ionicons 
-                        name={isLiked ? "heart" : "heart-outline"} 
-                        size={14} 
-                        color={isLiked ? COLORS.danger : 'rgba(255,255,255,0.4)'} 
-                    />
-                </Animated.View>
-            </TouchableOpacity>
+                    <TouchableOpacity onPress={() => onReply(item)} style={styles.actionBtn}>
+                        <Text style={styles.actionText}>رد</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
         </View>
     );
 });
 
-// --- MAIN MODAL COMPONENT ---
+// ==================================================================
+// 3. MAIN COMPONENT: COMMENT MODAL
+// ==================================================================
 const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) => {
     const [comment, setComment] = useState('');
     const [commentsList, setCommentsList] = useState([]); 
     const [loading, setLoading] = useState(true);
+    
+    // Reply State
+    // replyingTo: { id, userName, parentId, userId (for notification) }
+    const [replyingTo, setReplyingTo] = useState(null); 
+
     const flatListRef = useRef();
+    const inputRef = useRef();
+
+    // Organize: Parents first, then their children
+    const structuredComments = useMemo(() => {
+        const parents = commentsList.filter(c => !c.parentId);
+        const replies = commentsList.filter(c => c.parentId);
+        
+        let result = [];
+        parents.forEach(parent => {
+            result.push({ ...parent, type: 'parent' });
+            const myReplies = replies.filter(r => r.parentId === parent.id);
+            myReplies.forEach(reply => {
+                result.push({ ...reply, type: 'reply' });
+            });
+        });
+        return result;
+    }, [commentsList]);
 
     const normalizeComment = (row, myLikesSet = null) => {
         let isLiked = false;
-        if (myLikesSet) {
-            isLiked = myLikesSet.has(row.id);
-        }
+        if (myLikesSet) isLiked = myLikesSet.has(row.id);
         
         return {
             id: row.id,
             text: row.content,
             createdAt: row.created_at,
             userId: row.firebase_user_id,
+            parentId: row.parent_id, 
             userName: row.author_snapshot?.name || 'مستخدم وثيق',
             authorSettings: row.author_snapshot || {},
             likesCount: row.likes_count || 0,
@@ -299,7 +309,6 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
     useEffect(() => {
         if (!post?.id || !visible) return;
-        
         fetchComments();
     
         const channel = supabase.channel(`comments:${post.id}`)
@@ -307,43 +316,34 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${post.id}` },
                 (payload) => {
-                    if (payload.new.firebase_user_id === currentUser.uid) return; 
+                    if (payload.new.firebase_user_id === currentUser.uid) return; // Ignore own echoes
 
                     const newComment = normalizeComment(payload.new);
-                    setCommentsList((currentComments) => {
-                        if (currentComments.some(c => c.id === newComment.id)) return currentComments;
+                    setCommentsList((prev) => {
+                        if (prev.some(c => c.id === newComment.id)) return prev;
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        return [...currentComments, newComment];
+                        return [...prev, newComment];
                     });
-                    
-                    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
                 }
             )
             .on(
                 'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'comments' },
                 (payload) => {
-                    const deletedId = payload.old.id;
-                    setCommentsList((currentComments) => {
-                        const exists = currentComments.some(c => c.id === deletedId);
-                        if (!exists) return currentComments;
-
+                    setCommentsList((prev) => {
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        return currentComments.filter(c => c.id !== deletedId);
+                        return prev.filter(c => c.id !== payload.old.id);
                     });
                 }
             )
             .subscribe();
     
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return () => supabase.removeChannel(channel);
     }, [post?.id, visible]);
 
     const fetchComments = async () => {
         setLoading(true);
         try {
-            // A. Get Comments
             const { data: commentsData, error: commentsError } = await supabase
                 .from('comments')
                 .select('*')
@@ -352,26 +352,18 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
             if (commentsError) throw commentsError;
 
-            // B. Get My Likes
             const commentIds = commentsData.map(c => c.id);
             const myLikesSet = new Set();
-
             if (commentIds.length > 0 && currentUser?.uid) {
-                const { data: likesData, error: likesError } = await supabase
+                const { data: likesData } = await supabase
                     .from('comment_likes')
                     .select('comment_id')
                     .eq('user_id', currentUser.uid)
                     .in('comment_id', commentIds);
-
-                if (!likesError && likesData) {
-                    likesData.forEach(like => myLikesSet.add(like.comment_id));
-                }
+                likesData?.forEach(like => myLikesSet.add(like.comment_id));
             }
 
-            // C. Merge
-            const normalized = commentsData.map(row => normalizeComment(row, myLikesSet));
-            setCommentsList(normalized);
-            
+            setCommentsList(commentsData.map(row => normalizeComment(row, myLikesSet)));
         } catch (err) {
             console.error(err);
         } finally {
@@ -379,6 +371,29 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         }
     };
 
+    // --- REPLY LOGIC ---
+    const handleInitiateReply = (targetComment) => {
+        // Flat hierarchy: If replying to a reply, act as if replying to the original parent
+        const rootParentId = targetComment.parentId || targetComment.id;
+        
+        setReplyingTo({
+            id: targetComment.id, // Display ID
+            parentId: rootParentId, // Database ID
+            userName: targetComment.userName,
+            targetUserId: targetComment.userId // Notification Target
+        });
+        
+        Haptics.selectionAsync();
+        inputRef.current?.focus();
+    };
+
+    const cancelReply = () => {
+        setReplyingTo(null);
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        Keyboard.dismiss();
+    };
+
+    // --- SEND COMMENT & NOTIFY ---
     const handleSend = async (textToSend = null) => {
         const finalComment = textToSend || comment;
         if (!finalComment.trim()) return;
@@ -386,23 +401,25 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         const tempText = finalComment.trim();
         setComment(''); 
         
+        // Capture context before clearing
+        const currentReplyContext = replyingTo; 
+        cancelReply(); 
+        
         const authorSnapshot = {
             name: currentUser.settings?.name || currentUser.name || 'مستخدم وثيق',
-            skinType: currentUser.settings?.skinType || null,
-            scalpType: currentUser.settings?.scalpType || null,
-            goals: currentUser.settings?.goals || [],
-            conditions: currentUser.settings?.conditions || []
+            skinType: currentUser.settings?.skinType || null
         };
 
         const tempId = Math.random().toString(); 
-
+        
+        // Optimistic Update
         const optimisticComment = {
             id: tempId,
             text: tempText,
             createdAt: new Date().toISOString(),
             userId: currentUser.uid,
             userName: authorSnapshot.name,
-            authorSettings: authorSnapshot,
+            parentId: currentReplyContext?.parentId || null,
             likesCount: 0,
             isLikedByCurrentUser: false
         };
@@ -410,15 +427,20 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setCommentsList(prev => [...prev, optimisticComment]);
         
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        // Auto Scroll
+        if (!currentReplyContext) {
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        }
 
         try {
+            // 1. Insert to DB
             const { data, error } = await supabase
                 .from('comments')
                 .insert([{
                     post_id: post.id,
                     firebase_user_id: currentUser.uid,
                     content: tempText,
+                    parent_id: currentReplyContext?.parentId || null,
                     author_snapshot: authorSnapshot
                 }])
                 .select()
@@ -426,19 +448,35 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
             if (error) throw error;
 
+            // 2. Normalize real data
             setCommentsList(prev => prev.map(c => c.id === tempId ? normalizeComment(data) : c));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-            // --- SEND NOTIFICATION ---
-            if (post.userId !== currentUser.uid) {
-                sendNotificationToOwner(
-                    post.userId, 
-                    authorSnapshot.name, 
-                    post.id, 
-                    tempText
-                );
+            // 3. 🔔 SMART NOTIFICATION LOGIC 🔔
+            const commenterName = authorSnapshot.name;
+            const notificationData = { postId: post.id, screen: 'PostDetails' };
+
+            if (currentReplyContext) {
+                // Scenario A: It is a REPLY. Notify the person being replied to.
+                // Avoid notifying self if replying to self
+                if (currentReplyContext.targetUserId !== currentUser.uid) {
+                    await sendPushNotification(
+                        currentReplyContext.targetUserId,
+                        `رد جديد من ${commenterName} ↩️`,
+                        `رد عليك: "${tempText}"`,
+                        notificationData
+                    );
+                }
             } else {
-                console.log("ℹ️ Notification skipped: User commented on their own post.");
+                // Scenario B: Top-level comment. Notify Post Owner.
+                if (post.userId !== currentUser.uid) {
+                    await sendPushNotification(
+                        post.userId,
+                        `تعليق جديد من ${commenterName} 💬`,
+                        `${tempText}`,
+                        notificationData
+                    );
+                }
             }
 
         } catch (error) { 
@@ -450,119 +488,128 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
     const handleDelete = async (commentId) => {
         const prevList = [...commentsList];
-        
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setCommentsList(prev => prev.filter(c => c.id !== commentId));
+        // Remove comment AND its children if any
+        setCommentsList(prev => prev.filter(c => c.id !== commentId && c.parentId !== commentId));
 
         try {
-            const { error } = await supabase
-                .from('comments')
-                .delete()
-                .eq('id', commentId);
-
-            if (error) throw error;
+            await deleteComment(commentId);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) { 
-            console.error("Delete Error:", error); 
-            AlertService.error("خطأ", "تعذر حذف التعليق");
             setCommentsList(prevList); 
+            AlertService.error("خطأ", "تعذر حذف التعليق");
         }
     };
-    
-    const QuickReplyChip = ({ text }) => (
-        <TouchableOpacity 
-            style={styles.quickReplyChip} 
-            onPress={() => handleSend(text)}
-        >
-            <Text style={styles.quickReplyText}>{text}</Text>
-        </TouchableOpacity>
-    );
 
     if (!post) return null;
 
     return (
-        <Modal 
-            visible={visible} 
-            animationType="slide" 
-            presentationStyle="pageSheet" 
-            onRequestClose={onClose}
-        >
+        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-                style={styles.modalContainer}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
+                style={styles.container}
             >
-                <View style={styles.modalHeader}>
-                    <View style={styles.handleBar} />
-                    <View style={styles.headerRow}>
-                        <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 10}}>
-                            <Text style={styles.modalTitle}>النقاش</Text>
-                            <View style={styles.countPill}>
-                                <Text style={styles.countText}>{commentsList.length}</Text>
+                {/* HEADER */}
+                <View style={styles.header}>
+                    <View style={styles.grabber} />
+                    <View style={styles.headerContent}>
+                        <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 8}}>
+                            <Text style={styles.title}>التعليقات</Text>
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{commentsList.length}</Text>
                             </View>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                            <Ionicons name="close" size={20} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
+                {/* LIST */}
                 <View style={{flex: 1}}>
                     {loading ? (
                         <ActivityIndicator color={COLORS.accentGreen} style={{ marginTop: 50 }} />
                     ) : (
                         <FlatList
                             ref={flatListRef}
-                            data={commentsList}
+                            data={structuredComments}
                             keyExtractor={item => item.id}
-                            contentContainerStyle={styles.listContent}
+                            contentContainerStyle={styles.listContainer}
                             renderItem={({ item }) => (
-                                <CommentItem 
+                                <CommentRow 
                                     item={item} 
                                     currentUser={currentUser} 
                                     onDelete={handleDelete}
-                                    onProfilePress={onProfilePress} 
+                                    onReply={handleInitiateReply}
+                                    onProfilePress={onProfilePress}
+                                    isReply={!!item.parentId}
                                 />
                             )}
                             keyboardShouldPersistTaps="handled" 
                             ListEmptyComponent={
                                 <View style={styles.emptyState}>
-                                    <View style={styles.emptyIconBox}>
-                                        <Feather name="message-circle" size={32} color={COLORS.textDim} />
+                                    <View style={styles.emptyIcon}>
+                                        <MaterialCommunityIcons name="comment-text-multiple-outline" size={40} color={COLORS.textDim} />
                                     </View>
-                                    <Text style={styles.emptyText}>كن أول من يشارك رأيه</Text>
-                                    <Text style={styles.emptySubText}>المساحة هادئة... ابدأ الحديث!</Text>
+                                    <Text style={styles.emptyTitle}>لا توجد تعليقات بعد</Text>
+                                    <Text style={styles.emptyDesc}>كن أول من يبدأ النقاش في هذا المنشور</Text>
                                 </View>
                             }
                         />
                     )}
                 </View>
 
-                <View style={styles.inputWrapper}>
-                    <View style={{height: 40, marginBottom: 8}}>
-                            <FlatList 
-                            horizontal 
-                            data={QUICK_REPLIES}
-                            keyExtractor={(item) => item}
-                            renderItem={({item}) => <QuickReplyChip text={item} />}
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{paddingHorizontal: 10, gap: 8}}
-                            keyboardShouldPersistTaps="handled"
-                            />
-                    </View>
+                {/* FOOTER */}
+                <View style={styles.footer}>
+                    {/* Reply Context Banner */}
+                    {replyingTo && (
+                        <Animated.View style={styles.replyBanner}>
+                            <View style={styles.replyBannerContent}>
+                                <View style={styles.replyVerticalLine}/>
+                                <View>
+                                    <Text style={styles.replyLabel}>الرد على</Text>
+                                    <Text style={styles.replyName}>{replyingTo.userName}</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity onPress={cancelReply} style={styles.replyClose}>
+                                <Ionicons name="close" size={18} color={COLORS.textSecondary} />
+                            </TouchableOpacity>
+                        </Animated.View>
+                    )}
 
-                    <View style={styles.inputContainer}>
+                    {/* Quick Chips (Only when not replying) */}
+                    {!replyingTo && (
+                        <View style={styles.chipsContainer}>
+                            <FlatList 
+                                horizontal 
+                                data={QUICK_REPLIES}
+                                keyExtractor={(item) => item}
+                                renderItem={({item}) => (
+                                    <TouchableOpacity style={styles.chip} onPress={() => handleSend(item)}>
+                                        <Text style={styles.chipText}>{item}</Text>
+                                    </TouchableOpacity>
+                                )}
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{paddingHorizontal: 20, gap: 8}}
+                                keyboardShouldPersistTaps="handled"
+                            />
+                        </View>
+                    )}
+
+                    {/* Input Bar */}
+                    <View style={styles.inputBar}>
                         <TouchableOpacity 
                             onPress={() => handleSend()} 
-                            style={[styles.sendBtn, !comment.trim() && styles.sendBtnDisabled]} 
+                            style={[styles.sendButton, !comment.trim() && styles.sendButtonDisabled]} 
                             disabled={!comment.trim()}
                         >
                             <FontAwesome5 name="arrow-up" size={14} color={COLORS.background} />
                         </TouchableOpacity>
 
                         <TextInput 
-                            style={styles.textInput} 
-                            placeholder={`رد باسم ${currentUser?.settings?.name?.split(' ')[0] || 'مستخدم وثيق'}...`}
+                            ref={inputRef}
+                            style={styles.input} 
+                            placeholder={replyingTo ? "اكتب ردك هنا..." : "أضف تعليقاً..."}
                             placeholderTextColor={COLORS.textDim}
                             value={comment}
                             onChangeText={setComment}
@@ -570,12 +617,14 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                             maxLength={500} 
                             textAlign="right"
                         />
-
-                        <View style={[styles.inputAvatar, { backgroundColor: COLORS.accentGreen }]}>
-                            <Text style={styles.inputAvatarText}>
-                                {currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}
-                            </Text>
-                        </View>
+                        
+                        {!replyingTo && (
+                            <View style={styles.inputAvatar}>
+                                <Text style={styles.inputAvatarText}>
+                                    {currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -583,226 +632,96 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     );
 };
 
+// ==================================================================
+// 4. SLEEK & ADVANCED STYLES
+// ==================================================================
 const styles = StyleSheet.create({
-    modalContainer: { flex: 1, backgroundColor: COLORS.background },
-    modalHeader: {
-        backgroundColor: COLORS.card,
-        paddingBottom: 15,
-        paddingTop: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
-        zIndex: 10,
+    container: { flex: 1, backgroundColor: COLORS.background },
+    
+    // Header
+    header: { backgroundColor: COLORS.card, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+    grabber: { width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+    headerContent: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 },
+    title: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary },
+    badge: { backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.2)' },
+    badgeText: { color: COLORS.accentGreen, fontSize: 12, fontFamily: 'Tajawal-Bold' },
+    closeBtn: { padding: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
+
+    // List
+    listContainer: { padding: 20, paddingBottom: 40 },
+    
+    // Comment Row
+    rowContainer: { flexDirection: 'row-reverse', marginBottom: 20, position: 'relative' },
+    rowContainerReply: { marginRight: 40, marginTop: -5, marginBottom: 15 },
+    
+    // The "Hook" Curve Line for Replies
+    threadCurve: {
+        position: 'absolute', right: -28, top: -25, bottom: 25, width: 20,
+        borderBottomWidth: 2, borderRightWidth: 2, borderColor: 'rgba(255,255,255,0.08)',
+        borderBottomRightRadius: 16, zIndex: 0
     },
-    handleBar: {
-        width: 40,
-        height: 4,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginBottom: 15,
-    },
-    headerRow: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-    },
-    modalTitle: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 18,
-        color: COLORS.textPrimary,
-    },
-    countPill: {
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        paddingHorizontal: 10,
-        paddingVertical: 2,
-        borderRadius: 12,
-    },
-    countText: {
-        color: COLORS.accentGreen,
-        fontSize: 12,
-        fontFamily: 'Tajawal-Bold',
-    },
-    closeBtn: {
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 20,
-    },
-    listContent: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 20, 
-        flexGrow: 1, 
-    },
-    commentRow: {
-        flexDirection: 'row-reverse',
-        marginBottom: 24,
-        alignItems: 'flex-start',
-    },
-    avatarContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginLeft: 14,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    avatarText: {
-        fontFamily: 'Tajawal-Bold',
-        color: '#fff',
-        fontSize: 16,
-    },
-    contentColumn: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    textBlock: {
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        position: 'relative',
-    },
+
+    avatarWrap: { marginLeft: 12, zIndex: 1 },
+    avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    avatarSmall: { width: 28, height: 28, borderRadius: 14 },
+    avatarText: { fontFamily: 'Tajawal-Bold', color: '#fff', fontSize: 14 },
+    
+    contentContainer: { flex: 1 },
+    bubble: { backgroundColor: COLORS.card, borderRadius: 18, borderTopRightRadius: 2, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
+    bubbleReply: { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'transparent' },
+    
+    bubbleHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4, gap: 6 },
+    userName: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 13 },
+    meBadge: { backgroundColor: COLORS.accentGreen, paddingHorizontal: 4, borderRadius: 4 },
+    meBadgeText: { fontSize: 9, color: '#000', fontFamily: 'Tajawal-Bold' },
+    
+    commentText: { color: 'rgba(255,255,255,0.9)', fontFamily: 'Tajawal-Regular', fontSize: 14, textAlign: 'right', lineHeight: 22 },
+    
+    actionBar: { flexDirection: 'row-reverse', alignItems: 'center', marginTop: 6, gap: 16, paddingRight: 4 },
+    timeText: { color: COLORS.textDim, fontSize: 11, fontFamily: 'Tajawal-Regular' },
+    actionBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
+    actionText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'Tajawal-Bold' },
+
+    // Footer & Input
+    footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingBottom: Platform.OS === 'ios' ? 40 : 15 },
+    
+    replyBanner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(34, 197, 94, 0.08)', paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: 12, marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.2)' },
+    replyBannerContent: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
+    replyVerticalLine: { width: 2, height: 24, backgroundColor: COLORS.accentGreen, borderRadius: 2 },
+    replyLabel: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold', textAlign: 'right' },
+    replyName: { color: COLORS.textPrimary, fontSize: 12, fontFamily: 'Tajawal-Bold', textAlign: 'right' },
+    replyClose: { padding: 4 },
+
+    chipsContainer: { height: 40, marginVertical: 10 },
+    chip: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', justifyContent: 'center' },
+    chipText: { color: COLORS.textSecondary, fontFamily: 'Tajawal-Regular', fontSize: 12 },
+
+    inputBar: { flexDirection: 'row-reverse', alignItems: 'flex-end', backgroundColor: COLORS.background, marginHorizontal: 12, borderRadius: 24, padding: 6, gap: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    input: { flex: 1, color: COLORS.textPrimary, fontFamily: 'Tajawal-Regular', fontSize: 14, maxHeight: 100, minHeight: 36, textAlignVertical: 'center', paddingHorizontal: 5, paddingTop: 8, paddingBottom: 8 },
+    inputAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accentGreen, alignItems: 'center', justifyContent: 'center', marginLeft: 4, marginBottom: 2 },
+    inputAvatarText: { color: '#000', fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    
+    sendButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.accentGreen, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+    sendButtonDisabled: { backgroundColor: 'rgba(255,255,255,0.1)' },
+
+    emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60, opacity: 0.7 },
+    emptyIcon: { marginBottom: 15, backgroundColor: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 40 },
+    emptyTitle: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 16, marginBottom: 5 },
+    emptyDesc: { color: COLORS.textDim, fontFamily: 'Tajawal-Regular', fontSize: 13 },
     popHeartContainer: {
         position: 'absolute',
-        top: '50%',
-        right: '50%',
-        marginTop: -20,
-        marginRight: -20,
+        top: 0, bottom: 0, left: 0, right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 10,
+    },
+    popHeartShadow: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowRadius: 5,
+        elevation: 5, // Android shadow
     },
-    userName: {
-        color: COLORS.textPrimary,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 13,
-        marginBottom: 4,
-        opacity: 0.9,
-    },
-    commentText: {
-        color: 'rgba(255,255,255,0.85)',
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
-        textAlign: 'right',
-        lineHeight: 22,
-    },
-    metaRow: {
-        flexDirection: 'row-reverse',
-        gap: 15,
-        marginTop: 6,
-        paddingRight: 2,
-    },
-    metaText: {
-        color: 'rgba(255,255,255,0.4)',
-        fontSize: 11,
-        fontFamily: 'Tajawal-Regular',
-    },
-    heartBtn: {
-        padding: 10,
-        marginTop: 10,
-    },
-    
-    // --- KEYBOARD & INPUT STYLES ---
-    inputWrapper: {
-        backgroundColor: COLORS.card,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 15, 
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.05)',
-    },
-    inputContainer: {
-        flexDirection: 'row-reverse',
-        alignItems: 'flex-end',
-        backgroundColor: COLORS.background,
-        borderRadius: 24,
-        padding: 6,
-        gap: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-    },
-    inputAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 2,
-        marginLeft: 4,
-    },
-    inputAvatarText: {
-        color: '#fff',
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 12,
-    },
-    textInput: {
-        flex: 1,
-        color: COLORS.textPrimary,
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
-        maxHeight: 100,
-        minHeight: 40,
-        textAlignVertical: 'center',
-        paddingTop: 8,
-        paddingBottom: 8,
-    },
-    sendBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: COLORS.accentGreen,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 2,
-    },
-    sendBtnDisabled: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    
-    // --- QUICK REPLY CHIPS ---
-    quickReplyChip: {
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center'
-    },
-    quickReplyText: {
-        color: COLORS.textSecondary,
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 12,
-    },
-
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 80,
-    },
-    emptyIconBox: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-    },
-    emptyText: {
-        color: COLORS.textPrimary,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 16,
-        marginBottom: 5,
-    },
-    emptySubText: {
-        color: COLORS.textDim,
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
-    }
 });
 
 export default CommentModal;
