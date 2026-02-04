@@ -26,13 +26,17 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// --- HELPER: Date Check for Heartbeat ---
+// Returns true if the timestamp is older than X days or invalid
 const isOlderThan = (timestamp, days) => {
-  if (!timestamp) return true;
-  const now = new Date();
-  const dateToCheck = timestamp.toDate(); // Convert Firestore Timestamp to JS Date
-  const diffTime = Math.abs(now - dateToCheck);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-  return diffDays > days;
+    if (!timestamp || !timestamp.toDate) return true;
+    try {
+        const now = new Date();
+        const dateToCheck = timestamp.toDate();
+        const diffTime = Math.abs(now - dateToCheck);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        return diffDays > days;
+    } catch (e) { return true; }
 };
 
 export const AppProvider = ({ children }) => {
@@ -41,11 +45,14 @@ export const AppProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [savedProducts, setSavedProducts] = useState([]);
   
-  // --- Control Flags (Semaphores) ---
-  // Locks the repair logic to prevent infinite write loops
+  // --- Control Flags & Cleanup Refs ---
+  // Locks repair logic to prevent loops
   const isRepairing = useRef(false);
-  // Ensures we only try to register tokens once per session
+  // Prevents re-running token registration in the same session
   const hasRegisteredNotifications = useRef(false); 
+  // Store unsubscribe functions so we can call them manually on logout
+  const profileUnsubscribeRef = useRef(null);
+  const productsUnsubscribeRef = useRef(null);
 
   // --- System State ---
   const [appConfig, setAppConfig] = useState({
@@ -57,34 +64,31 @@ export const AppProvider = ({ children }) => {
     changelog: [],                
   });
   const [activeAnnouncement, setActiveAnnouncement] = useState(null);
-
-  // --- Loading States ---
   const [loading, setLoading] = useState(true);
 
   // ==================================================================
   // 2. HELPER: DATA INTEGRITY CHECK
   // ==================================================================
-  // This is the source of truth for "Does this user exist properly?"
   const checkProfileHealth = (data) => {
     if (!data) return false;
-    // Must have email (basic identity)
+    // Must have email
     if (!data.email) return false;
-    // Must have settings object (skin type, name, etc)
+    // Must have settings object
     if (!data.settings) return false;
-    // Must have onboarding flag (determines routing)
+    // Must have onboarding flag (can be true or false, but must exist)
     if (data.onboardingComplete === undefined) return false;
     
     return true;
   };
 
   // ==================================================================
-  // 3. NOTIFICATION REGISTRATION LOGIC
+  // 3. OPTIMIZED NOTIFICATION REGISTRATION
   // ==================================================================
   const registerForPushNotificationsAsync = async (uid, currentProfile) => {
     if (!Device.isDevice) return;
 
     try {
-      // 1. Setup Channel (Android) - Fast, local only
+      // 1. Setup Channel (Android)
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
             name: 'default',
@@ -97,14 +101,15 @@ export const AppProvider = ({ children }) => {
       // 2. Check Permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
+      
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
-      // 3. Handle Denial
+      // 3. Handle Denial (Respect User Choice)
       if (finalStatus !== 'granted') {
-        // Only write to DB if the DB currently thinks it IS enabled
+        // Only write to DB if the DB currently thinks it IS enabled (save writes)
         if (currentProfile?.notificationsEnabled !== false) {
              await setDoc(doc(db, 'profiles', uid), { notificationsEnabled: false }, { merge: true });
         }
@@ -121,7 +126,7 @@ export const AppProvider = ({ children }) => {
       } catch (e) { console.log("Token Fetch Error", e); }
 
       // ============================================================
-      // 🛑 SCALABILITY CHECK (The "Thundering Herd" Fix)
+      // 🛑 OPTIMIZATION: THUNDERING HERD PROTECTION
       // ============================================================
       
       // A. Check if token actually changed
@@ -130,10 +135,10 @@ export const AppProvider = ({ children }) => {
       // B. Check if it's been > 30 days since last update (Heartbeat)
       const needsHeartbeat = isOlderThan(currentProfile?.lastTokenUpdate, 30);
       
-      // C. Check if "Hadil Case" (Token was null, now we have one)
+      // C. Check if "Healing" (Token was null/failed previously, now we have one)
       const isHealing = currentProfile?.expoPushToken === null && expoPushToken !== null;
 
-      // D. Check if we just enabled notifications
+      // D. Check if we just enabled notifications (previously false)
       const statusChanged = currentProfile?.notificationsEnabled === false;
 
       // ⚡️ SKIP WRITE if everything is same and fresh
@@ -147,8 +152,6 @@ export const AppProvider = ({ children }) => {
       // 5. Save (Only runs if needed)
       await setDoc(doc(db, 'profiles', uid), {
         expoPushToken: expoPushToken || null, 
-        // We don't save FCM separately usually unless you specifically use it manually, 
-        // Expo token maps to it internally. Saving it is optional.
         notificationsEnabled: true,
         deviceType: Platform.OS,
         lastTokenUpdate: serverTimestamp() 
@@ -163,7 +166,7 @@ export const AppProvider = ({ children }) => {
   // 4. MAIN INITIALIZATION EFFECT
   // ==================================================================
   useEffect(() => {
-    // --- A. System Config Listener ---
+    // --- Config Listener ---
     const unsubscribeConfig = onSnapshot(doc(db, 'app_config', 'version_control'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -178,7 +181,7 @@ export const AppProvider = ({ children }) => {
       }
     });
 
-    // --- B. Authentication Listener ---
+    // --- Auth Listener ---
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
@@ -189,62 +192,68 @@ export const AppProvider = ({ children }) => {
       if (currentUser) {
         console.log("🟢 User Authenticated:", currentUser.uid);
 
-        // 1. Load Local Cache (Speed Optimization)
+        // 1. Load Local Cache Immediately (Speed)
         try {
             const cachedProfile = await getSelfProfileCache();
             if (cachedProfile && checkProfileHealth(cachedProfile)) {
                 setUserProfile(cachedProfile);
-                setLoading(false); // Immediate UI access
+                setLoading(false);
             }
             const cachedProducts = await getSavedProductsCache();
             if (cachedProducts?.length) setSavedProducts(cachedProducts);
-        } catch (e) { /* Ignore cache errors */ }
+        } catch (e) {}
     
         const profileRef = doc(db, 'profiles', currentUser.uid);
         
-        // 2. Profile Real-time Listener (The Brain)
-        const unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
+        // ⭐️ CLEANUP OLD LISTENERS IF ANY (Safety check)
+        if (profileUnsubscribeRef.current) profileUnsubscribeRef.current();
+        if (productsUnsubscribeRef.current) productsUnsubscribeRef.current();
+
+        // 2. Start Profile Listener
+        profileUnsubscribeRef.current = onSnapshot(profileRef, async (docSnap) => {
           
           const exists = docSnap.exists();
           const data = exists ? docSnap.data() : null;
           const isHealthy = checkProfileHealth(data);
+          const fromCache = docSnap.metadata.fromCache; 
 
-          // --- PATH 1: HEALTHY PROFILE (Normal Operation) ---
+          // --- PATH 1: HEALTHY PROFILE ---
           if (isHealthy) {
-              isRepairing.current = false; // Release lock
+              isRepairing.current = false;
               setUserProfile(data);
               setSelfProfileCache(data); 
               setLoading(false); 
 
+              // Trigger Notification Check (optimized internally)
               if (data.onboardingComplete && !hasRegisteredNotifications.current) {
-                hasRegisteredNotifications.current = true;
-                // Pass 'data' so we can compare!
-                registerForPushNotificationsAsync(currentUser.uid, data); 
-            }
+                  hasRegisteredNotifications.current = true;
+                  registerForPushNotificationsAsync(currentUser.uid, data); 
+              }
               return; 
           }
 
-          // --- PATH 2: UNHEALTHY PROFILE (Fixing the Ghost Docs) ---
-          
-          // Safety Check: If we are already repairing, don't spam writes
-          if (isRepairing.current) {
-              console.log("🛠 Repair pending... waiting for DB update.");
-              return;
+          // --- 🛑 OFFLINE GUARD (Fixes Offline Overwrite) ---
+          // If we are offline (fromCache) and the doc is missing (!exists),
+          // it likely just means we haven't synced with the server yet.
+          // Do NOT start repair/defaults, just wait.
+          if (fromCache && !exists) {
+              console.log("📡 Offline & Doc missing in cache. Waiting for connection...");
+              // We intentionally do nothing here to preserve state until online
+              return; 
           }
 
-          console.log("🚨 Profile Unhealthy (Missing or Corrupt). Initiating Safe Repair...");
-          isRepairing.current = true; // Lock
+          // --- PATH 2: REPAIR (Confirmed Missing/Corrupt on Server) ---
+          if (isRepairing.current) return; // Prevent loops
 
-          // Construct Repair Data
-          // We preserve existing data (like notificationsEnabled: false) if it exists.
+          console.log("🚨 Profile Unhealthy (Server Confirmed). Initiating Safe Repair...");
+          isRepairing.current = true;
+
+          // Define Safe Defaults
           const repairData = {
              email: currentUser.email,
              createdAt: data?.createdAt || serverTimestamp(),
-             // Default to FALSE forces user to go to Welcome screen to fix settings
              onboardingComplete: data?.onboardingComplete || false, 
-             // Respect previous denial if it exists, otherwise default to false
              notificationsEnabled: data?.notificationsEnabled || false,
-             // Ensure structure exists
              settings: data?.settings || { 
                  name: '', gender: '', skinType: '', scalpType: '',
                  goals: [], conditions: [], allergies: []
@@ -253,31 +262,28 @@ export const AppProvider = ({ children }) => {
           };
 
           try {
-              // A. Optimistic Update (Unblock User Immediately)
+              // Optimistic Update
               setUserProfile(repairData); 
               setLoading(false); 
-
-              // B. Atomic Merge Write (The Fix)
-              // merge: true ensures we don't overwrite partial data written by other logic
-              await setDoc(profileRef, repairData, { merge: true });
               
-              // Note: We do NOT unlock isRepairing here. 
-              // We wait for onSnapshot to fire again with the corrected data.
+              // Atomic Write
+              await setDoc(profileRef, repairData, { merge: true });
           } catch (e) {
-              console.error("Critical Repair Failed:", e);
-              isRepairing.current = false; // Release lock on error to allow retry
+              console.error("Repair Failed:", e);
+              isRepairing.current = false;
           }
         }, (err) => {
-            console.warn("Firestore Profile Listener Error:", err);
-            setLoading(false);
+             // Silence permission error on logout
+             if (err.code !== 'permission-denied') console.warn("Firestore Profile Error:", err);
+             setLoading(false);
         });
     
-        // 3. Saved Products Listener
-        const unsubscribeProducts = onSnapshot(query(collection(db, 'profiles', currentUser.uid, 'savedProducts'), orderBy('createdAt', 'desc')), 
+        // 3. Start Products Listener
+        productsUnsubscribeRef.current = onSnapshot(
+            query(collection(db, 'profiles', currentUser.uid, 'savedProducts'), orderBy('createdAt', 'desc')), 
           (snapshot) => {
             const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Only update state if data actually changed (Optimization)
+            // Only update if changed
             setSavedProducts(prev => {
                 if (JSON.stringify(newProducts) !== JSON.stringify(prev)) {
                     setSavedProductsCache(newProducts);
@@ -286,25 +292,49 @@ export const AppProvider = ({ children }) => {
                 return prev;
             });
             setLoading(false);
+          }, 
+          (err) => {
+             if (err.code !== 'permission-denied') console.warn("Products listener error", err);
           }
         );
-    
-        return () => { unsubscribeProfile(); unsubscribeProducts(); };
-
+      
       } else {
-        // Logged Out
+        // --- 🔴 LOGGED OUT CLEANUP ---
+        
+        // 1. Immediately kill Listeners
+        if (profileUnsubscribeRef.current) {
+            profileUnsubscribeRef.current();
+            profileUnsubscribeRef.current = null;
+        }
+        if (productsUnsubscribeRef.current) {
+            productsUnsubscribeRef.current();
+            productsUnsubscribeRef.current = null;
+        }
+
+        // 2. Clear State
         setUserProfile(null);
         setSavedProducts([]);
         setLoading(false);
       }
     });
 
-    return () => { unsubscribeConfig(); unsubscribeAuth(); };
+    return () => { 
+        unsubscribeConfig(); 
+        unsubscribeAuth();
+        // Final Cleanup on Unmount
+        if (profileUnsubscribeRef.current) profileUnsubscribeRef.current();
+        if (productsUnsubscribeRef.current) productsUnsubscribeRef.current();
+    };
   }, []);
 
   const logout = async () => {
     try {
+      // Pre-emptive cleanup before SignOut prevents "Permission Denied" errors
+      if (profileUnsubscribeRef.current) profileUnsubscribeRef.current();
+      if (productsUnsubscribeRef.current) productsUnsubscribeRef.current();
+      
       await signOut(auth);
+      
       setUserProfile(null);
       setSavedProducts([]);
       setSelfProfileCache(null);

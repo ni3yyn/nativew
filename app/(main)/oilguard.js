@@ -1632,17 +1632,14 @@ export default function OilGuardEngine() {
         // 2. Convert to base64
         const base64Data = await uriToBase64(manipResult.uri);
 
-        // 3. Send to backend (backend now handles OCR.space + Groq)
-        console.log("📤 Sending image to backend for OCR processing...");
+        console.log("📤 Sending image to backend...");
         
         const response = await fetch(VERCEL_BACKEND_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 base64Data: base64Data,
-                localOcrText: "", // Empty string - backend handles OCR internally
+                localOcrText: "",
                 scanMode: scanMode
             }),
         });
@@ -1654,18 +1651,7 @@ export default function OilGuardEngine() {
             throw new Error(responseData.error || "Backend processing failed");
         }
 
-        // --- START OF NEW DEBUGGING BLOCK ---
-        const debugInfo = responseData._debug;
-        const processingMode = debugInfo?.processing_mode || "UNKNOWN";
-        const fallbackReason = debugInfo?.fallback_reason || "None"; // <--- Get the reason
-
-        const textPreview = debugInfo?.text_preview || "No preview";
-
-        console.log(`\n============== ANALYSIS REPORT ==============`);
-        console.log(`🛠️ MODE: ${processingMode}`);
-        console.log(`📝 TEXT: ${textPreview}`);
-        console.log(`=============================================\n`);
-
+        // Parse Result
         let jsonResponse;
         if (typeof responseData.result === 'object') {
             jsonResponse = responseData.result;
@@ -1674,30 +1660,70 @@ export default function OilGuardEngine() {
             jsonResponse = JSON.parse(text);
         }
 
-        // Check for front label detection
-        if (jsonResponse.status === 'front_label_detected') {
+        // --- ERROR HANDLING SWITCH ---
+        const status = jsonResponse.status || 'unknown';
+
+        if (status !== 'success') {
             setIsGeminiLoading(false);
             setLoading(false);
-            changeStep(0);
+            changeStep(0); // Go back to camera
             
+            // Wait for transition animation
             setTimeout(() => {
-                AlertService.show({
-                    title: "تنبيه",
-                    message: "يبدو أنك صورتي واجهة المنتج. من فضلك صوري قائمة المكونات (خلف العبوة) للتحليل.",
-                    type: "warning",
-                    buttons: [{ text: "حسنا", style: "primary" }]
-                });
+                switch (status) {
+                    case 'front_label_detected':
+                        AlertService.show({
+                            title: "واجهة المنتج",
+                            message: "يبدو أنك صورتي واجهة المنتج. يرجى تصوير قائمة المكونات فقط و قصيها (غالباً خلف العبوة).",
+                            type: "warning",
+                            buttons: [{ text: "حسنا", style: "primary" }]
+                        });
+                        break;
+                    
+                    case 'instructions_only':
+                        AlertService.show({
+                            title: "إرشادات فقط",
+                            message: "وجدنا نصاً، لكنه لا يحتوي على مكونات. ابحثي عن قسم يبدأ بكلمة Ingredients.",
+                            type: "warning",
+                            buttons: [{ text: "محاولة أخرى", style: "primary" }]
+                        });
+                        break;
+
+                    case 'not_cosmetic':
+                        AlertService.show({
+                            title: "ليس منتجاً",
+                            message: "الصورة لا تبدو لمنتج تجميلي. يرجى التأكد من تصوير عبوة المنتج.",
+                            type: "error"
+                        });
+                        break;
+
+                    case 'unreadable':
+                        AlertService.show({
+                            title: "صورة غير واضحة",
+                            message: "النص غير مقروء. يرجى تثبيت اليد وتوفير إضاءة جيدة.",
+                            type: "error"
+                        });
+                        break;
+
+                    default:
+                        AlertService.show({
+                            title: "تعذر التحليل",
+                            message: "لم نتمكن من استخراج المكونات. يرجى المحاولة مرة أخرى بصورة أوضح.",
+                            type: "error"
+                        });
+                        break;
+                }
             }, 500);
             return;
         }
 
+        // --- SUCCESS PATH ---
         const rawList = jsonResponse.ingredients_list || [];
         
         if (rawList.length === 0) {
-            throw new Error("No ingredients found in the image");
+            throw new Error("No ingredients list returned despite success status");
         }
 
-        // 4. Extract ingredients for next step
         const { ingredients } = await extractIngredientsFromAIText(rawList);
         
         setOcrText(rawList.join('\n'));
@@ -1717,8 +1743,8 @@ export default function OilGuardEngine() {
         changeStep(0);
         
         AlertService.show({
-            title: "خطأ في المسح",
-            message: "لم يتمكن وثيق من قراءة المكونات. التقطي صورة أقرب وأوضح.",
+            title: "خطأ في الاتصال",
+            message: "حدث خطأ غير متوقع. يرجى التحقق من الانترنت والمحاولة مرة أخرى.",
             type: "error"
         });
     }

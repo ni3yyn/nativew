@@ -1082,7 +1082,6 @@ rs_HeroWrapperAnimated: {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    
     paddingBottom: 15,
   },
   matchBadge: {
