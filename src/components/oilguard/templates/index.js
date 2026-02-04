@@ -1,3 +1,4 @@
+
 import Template01 from './Template01';
 import Template02 from './Template02';
 import Template03 from './Template03';
@@ -6,11 +7,10 @@ import Template05 from './Template05';
 import Template06 from './Template06';
 
 export const TEMPLATE_REGISTRY = [
-    { id: '01', name: 'الاستايل الكلاسيكي', component: Template01, icon: 'th-large' },
-    { id: '02', name: 'استايل البوتيك', component: Template02, icon: 'stop' },
-    { id: '03', name: 'استايل المجلة', component: Template03, icon: 'columns' },
-    { id: '04', name: 'استايل المجلة', component: Template04, icon: 'columns' },
-    { id: '05', name: 'الاستايل العصري', component: Template05, icon: 'square'},
-    { id: '06', name: 'الاستايل العلمي', component: Template06, icon: 'flask' }
-
+    { id: '01', name: 'خيريني', component: Template01, icon: 'numeric-1-box' },
+    { id: '02', name: 'لا خيريني أنا', component: Template02, icon: 'numeric-2-box' },
+    { id: '03', name: 'أنا خير منهم', component: Template03, icon: 'numeric-3-box' },
+    { id: '04', name: 'خيريني خيرلك', component: Template04, icon: 'numeric-4-box' },
+    { id: '05', name: 'وانا متخيرينيش؟', component: Template05, icon: 'numeric-5-box'},
+    { id: '06', name: 'تحبي تخيري تحبي لا', component: Template06, icon: 'numeric-6-box' }
 ];

@@ -8,7 +8,7 @@ import ViewShot from "react-native-view-shot";
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5, MaterialIcons, Feather, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
 
@@ -80,6 +80,39 @@ const PremiumShareButton = ({ analysis, typeLabel, customStyle, iconSize = 18, t
     const pan = useRef(new Animated.ValueXY({x: 0, y: 0})).current;
     const scale = useRef(new Animated.Value(1)).current;
     const internalState = useRef({ x: 0, y: 0, scale: 1, lastDist: null });
+
+    const pulseAnim = useRef(new Animated.Value(0)).current;
+
+useEffect(() => {
+    let animation;
+
+    if (modalVisible) {
+        // Reset the value to 0 before starting
+        pulseAnim.setValue(0);
+
+        animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 0,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        animation.start();
+    }
+
+    // Cleanup function: Stops the animation when modal is closed 
+    // or component is destroyed to prevent memory leaks.
+    return () => {
+        if (animation) animation.stop();
+    };
+}, [modalVisible]);
 
     const activeTemplateConfig = EXTENDED_REGISTRY.find(t => t.id === selectedTemplateId) || EXTENDED_REGISTRY[0];
     const CurrentTemplate = activeTemplateConfig.component;
@@ -236,16 +269,48 @@ const PremiumShareButton = ({ analysis, typeLabel, customStyle, iconSize = 18, t
                                 )}
                             </View>
 
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.list}>
-                                {EXTENDED_REGISTRY.map(t => (
-                                    <Pressable key={t.id} onPress={() => { setSelectedTemplateId(t.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.tempItem, selectedTemplateId === t.id && styles.tempActive]}>
-                                        <View style={[styles.tempIcon, selectedTemplateId === t.id && { backgroundColor: currentThemeData.accent }]}>
-                                            <FontAwesome5 name={t.icon} size={16} color={selectedTemplateId === t.id ? currentThemeData.primary : '#666'} />
-                                        </View>
-                                        <Text style={[styles.tempText, { color: selectedTemplateId === t.id ? currentThemeData.accent : '#666' }]}>{t.name}</Text>
-                                    </Pressable>
-                                ))}
-                            </ScrollView>
+                            {/* --- TEMPLATES SECTION --- */}
+<View style={styles.templatesWrapper}>
+    {/* Pulsating Arrow Hint (Absolute Positioned on the Left) */}
+    <Animated.View 
+        style={[
+            styles.scrollArrow, 
+            { 
+                opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+                transform: [{ translateX: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }]
+            }
+        ]}
+        pointerEvents="none"
+    >
+        <Ionicons name="chevron-forward-circle" size={24} color={currentThemeData.accent} />
+    </Animated.View>
+
+    <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.list}
+        contentContainerStyle={{ paddingLeft: 40 }} // Space so icons don't go under the arrow
+    >
+        {EXTENDED_REGISTRY.map(t => (
+            <Pressable 
+                key={t.id} 
+                onPress={() => { setSelectedTemplateId(t.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
+                style={[styles.tempItem, selectedTemplateId === t.id && styles.tempActive]}
+            >
+                <View style={[styles.tempIcon, selectedTemplateId === t.id && { backgroundColor: currentThemeData.accent }]}>
+                    <MaterialCommunityIcons 
+                        name={t.icon} 
+                        size={24} 
+                        color={selectedTemplateId === t.id ? currentThemeData.primary : '#666'} 
+                    />
+                </View>
+                <Text style={[styles.tempText, { color: selectedTemplateId === t.id ? currentThemeData.accent : '#666' }]}>
+                    {t.name}
+                </Text>
+            </Pressable>
+        ))}
+    </ScrollView>
+</View>
 
                             <TextInput 
                                 style={[
@@ -269,7 +334,7 @@ const PremiumShareButton = ({ analysis, typeLabel, customStyle, iconSize = 18, t
 
                             <Pressable onPress={handleShare} disabled={isGenerating} style={{width:'100%'}}>
                                 <LinearGradient colors={currentThemeData.btn} style={styles.finalBtn}>
-                                    {isGenerating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.finalBtnText}>مشاركة البطاقة</Text>}
+                                    {isGenerating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.finalBtnText}>شاركي الوعي بضغطة</Text>}
                                 </LinearGradient>
                             </Pressable>
                         </ScrollView>
@@ -379,7 +444,7 @@ const styles = StyleSheet.create({
     list: { marginVertical: 20, width: '100%' },
     tempItem: { alignItems: 'center', marginRight: 25 },
     tempIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
-    tempText: { fontFamily: 'Tajawal-Bold', fontSize: 11 },
+    tempText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
     swatches: { flexDirection: 'row', gap: 12, marginBottom: 25 },
     swatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', padding: 2 },
     input: { width: '100%', backgroundColor: '#161616', color: '#FFF', padding: 18, borderRadius: 15, marginBottom: 20, fontFamily: 'Tajawal-Bold' },
@@ -394,7 +459,22 @@ const styles = StyleSheet.create({
     edSliderContainer: { width: '80%', marginTop: 30 },
     edFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 30, paddingBottom: 50, gap: 15 },
     edFooterBtn: { flex: 1, padding: 18, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-    edBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16 }
+    edBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16 },
+    templatesWrapper: {
+        width: '100%',
+        position: 'relative', // Necessary for absolute positioning of arrow
+        marginVertical: 10,
+    },
+    scrollArrow: {
+        position: 'absolute',
+        right: 0,           // Position on the left for RTL scrolling
+        top: '25%',        // Align with the icons
+        zIndex: 10,
+        backgroundColor: 'rgba(10,10,10,0.8)', // Dark background to pop
+        borderRadius: 20,
+        padding: 2,
+    },
+    
 });
 
 export default PremiumShareButton;

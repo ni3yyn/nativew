@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// --- DECORATIVE LAYER (Boosted Visibility) ---
+// --- DECORATIVE LAYER ---
 const BackgroundDecor = ({ theme }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: 'absolute', top: 150, left: 20, width: 560, height: 560, borderRadius: 280, backgroundColor: theme.accent, opacity: 0.15, }} />
@@ -14,6 +15,15 @@ const BackgroundDecor = ({ theme }) => (
         <MaterialCommunityIcons name="star-four-points" size={20} color={theme.text} style={{ position: 'absolute', bottom: 100, right: 50, opacity: 0.4 }} />
     </View>
 );
+
+// --- HELPER FOR CLAIMS ---
+const getClaimStyle = (status) => {
+    if (status.includes('✅')) return { color: '#10B981', icon: 'check', bg: '#10B981' };
+    if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf', bg: '#06B6D4' };
+    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', bg: '#F59E0B', note: '(نسبة غير فعالة)' };
+    // Red for both Lies and No Evidence
+    return { color: '#EF4444', icon: 'times', bg: '#EF4444' };
+};
 
 export default function Template03({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
     const safe = analysis || {};
@@ -54,13 +64,31 @@ export default function Template03({ analysis, typeLabel, productName, imageUri,
             </View>
 
             <View style={styles.miniStatsRow}>
-                <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}><Ionicons name="shield-checkmark" size={18} color={theme.accent} /><Text style={[styles.statVal, { color: theme.text }]}>أمان {safetyScore}%</Text></View>
-                <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}><Ionicons name="star" size={18} color={theme.accent} /><Text style={[styles.statVal, { color: theme.text }]}>فعالية {efficacyScore}%</Text></View>
+                <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}>
+                    <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                    <Text style={[styles.statVal, { color: theme.text }]}>أمان {safetyScore}%</Text>
+                </View>
+                <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}>
+                    <Ionicons name="star" size={20} color={theme.accent} />
+                    <Text style={[styles.statVal, { color: theme.text }]}>فعالية {efficacyScore}%</Text>
+                </View>
             </View>
 
             <View style={styles.claimsArea}>
                 <View style={styles.claimsGrid}>
-                    {claims.map((c, i) => (<View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}><View style={[styles.claimIcon, { backgroundColor: theme.accent }]}><FontAwesome5 name="check" size={10} color={theme.primary} /></View><Text style={[styles.claimText, { color: theme.text }]} numberOfLines={1}>{c.claim}</Text></View>))}
+                    {claims.map((c, i) => {
+                        const style = getClaimStyle(c.status);
+                        return (
+                            <View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
+                                <View style={[styles.claimIcon, { backgroundColor: style.bg }]}>
+                                    <FontAwesome5 name={style.icon} size={12} color={theme.primary} />
+                                </View>
+                                <Text style={[styles.claimText, { color: theme.text }]} numberOfLines={2}>
+                                    {c.claim} {style.note && <Text style={{color: style.color, fontSize: 10}}>{style.note}</Text>}
+                                </Text>
+                            </View>
+                        );
+                    })}
                 </View>
             </View>
 
@@ -70,11 +98,11 @@ export default function Template03({ analysis, typeLabel, productName, imageUri,
                     <Text style={[styles.ctaText, { color: theme.primary }]}>WATHIQ.WEB.APP حللي منتجك الآن عبر</Text>
                 </View>
                 <View style={styles.socialRow}>
-                    <View style={styles.socialItem}><FontAwesome5 name="instagram" size={12} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
+                    <View style={styles.socialItem}><FontAwesome5 name="instagram" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />
-                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={12} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text></View>
+                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text></View>
                 </View>
-                <Text style={[styles.disclaimerText, { color: theme.text }]}>* هذه النتيجة شخصية؛ قد تختلف الاستجابة بناءً على حالة البشرة الفردية.</Text>
+                <Text style={[styles.disclaimerText, { color: theme.text }]}>*هذه النتيجة شخصية؛ قد تختلف الاستجابة حسب المستخدم.</Text>
             </View>
         </View>
     );
@@ -83,31 +111,31 @@ export default function Template03({ analysis, typeLabel, productName, imageUri,
 const styles = StyleSheet.create({
     container: { width: 600, height: 1066, padding: 40, alignItems: 'center', justifyContent: 'space-between' },
     header: { alignItems: 'center', marginTop: 10 },
-    logoPill: { paddingHorizontal: 25, paddingVertical: 8, borderRadius: 30, marginBottom: 10 },
-    logoText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, letterSpacing: 2 },
+    logoPill: { paddingHorizontal: 30, paddingVertical: 10, borderRadius: 30, marginBottom: 10 },
+    logoText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 26, letterSpacing: 2 },
     heroSection: { width: 450, height: 450, justifyContent: 'center', alignItems: 'center', position: 'relative' },
     imageCloud: { width: 420, height: 420, borderRadius: 210, borderWidth: 3, overflow: 'hidden', justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed' },
-    scoreSticker: { position: 'absolute', bottom: 10, left: 10, width: 130, height: 130, borderRadius: 65, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: '-10deg' }], elevation: 10, shadowOpacity: 0.3, shadowRadius: 10 },
-    stickerScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 42 },
-    infoBox: { width: '100%', alignItems: 'center', paddingHorizontal: 20 },
-    pName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 40, textAlign: 'center', marginBottom: 15 },
+    scoreSticker: { position: 'absolute', bottom: 10, left: 10, width: 140, height: 140, borderRadius: 70, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: '-10deg' }], elevation: 10, shadowOpacity: 0.3, shadowRadius: 10 },
+    stickerScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 56 },
+    infoBox: { width: '100%', alignItems: 'center', paddingHorizontal: 15 },
+    pName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 46, textAlign: 'center', marginBottom: 15 },
     verdictBubble: { paddingHorizontal: 25, paddingVertical: 15, borderRadius: 25, width: '100%' },
-    verdictText: { fontFamily: 'Tajawal-Bold', fontSize: 20, textAlign: 'center', lineHeight: 28 },
-    miniStatsRow: { flexDirection: 'row-reverse', gap: 15, marginTop: 10 },
-    statPill: { flexDirection: 'row-reverse', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, alignItems: 'center', gap: 8 },
-    statVal: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
-    claimsArea: { width: '100%', paddingHorizontal: 10, marginTop: 10 },
+    verdictText: { fontFamily: 'Tajawal-Bold', fontSize: 24, textAlign: 'center', lineHeight: 32 },
+    miniStatsRow: { flexDirection: 'row-reverse', gap: 20, marginTop: 15 },
+    statPill: { flexDirection: 'row-reverse', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', gap: 10 },
+    statVal: { fontFamily: 'Tajawal-Bold', fontSize: 18 },
+    claimsArea: { width: '100%', paddingHorizontal: 5, marginTop: 10 },
     claimsGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
-    claimCard: { width: '45%', flexDirection: 'row-reverse', alignItems: 'center', padding: 12, borderRadius: 18, borderWidth: 1, gap: 10 },
-    claimIcon: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    claimText: { fontFamily: 'Tajawal-Bold', fontSize: 12, flex: 1, textAlign: 'right' },
+    claimCard: { width: '45%', flexDirection: 'row-reverse', alignItems: 'center', padding: 15, borderRadius: 20, borderWidth: 1.5, gap: 10 },
+    claimIcon: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    claimText: { fontFamily: 'Tajawal-Bold', fontSize: 18, flex: 1, textAlign: 'right' },
     // --- NEW FOOTER STYLES ---
-    footer: { width: '100%', alignItems: 'center', gap: 12, marginBottom: 10 },
-    ctaButton: { paddingHorizontal: 25, paddingVertical: 12, borderRadius: 30, width: '100%' },
-    ctaText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, textAlign: 'center' },
-    socialRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 15 },
-    socialItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
-    socialText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-    socialSep: { width: 1, height: 12, opacity: 0.3 },
-    disclaimerText: { fontFamily: 'Tajawal-Medium', fontSize: 10, textAlign: 'center', opacity: 0.6, marginTop: 5 },
+    footer: { width: '100%', alignItems: 'center', gap: 15, marginBottom: 15 },
+    ctaButton: { paddingHorizontal: 25, paddingVertical: 14, borderRadius: 30, width: '100%', marginTop: 10},
+    ctaText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 19, textAlign: 'center' },
+    socialRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 20 },
+    socialItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+    socialText: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
+    socialSep: { width: 2, height: 16, opacity: 0.3 },
+    disclaimerText: { fontFamily: 'Tajawal-Regular', fontSize: 17, textAlign: 'center', opacity: 0.6, marginTop: 5 },
 });
