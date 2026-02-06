@@ -2,11 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const POSTS_CACHE_KEY = 'community_posts_cache_v1';
 const PROFILES_CACHE_KEY = 'user_profiles_cache_v1';
-const SAVED_PRODUCTS_CACHE_KEY = 'saved_products_cache_v1'; // <--- NEW KEY
-const SELF_PROFILE_CACHE_KEY = 'self_profile_cache_v1'; // <--- NEW KEY FOR SETTINGS
+const SAVED_PRODUCTS_CACHE_KEY = 'saved_products_cache_v1';
+const SELF_PROFILE_CACHE_KEY = 'self_profile_cache_v1';
 
-const PROFILE_TTL = 24 * 60 * 60 * 1000; 
-
+const PROFILE_TTL = 24 * 60 * 60 * 1000; // 24 Hours
 
 /**
  * Saves posts and timestamp to local storage.
@@ -96,13 +95,17 @@ export const getCachedUserProfile = async (userId) => {
         return {
             profile: userData.profile,
             shelf: userData.shelf || [],
-            timestamp: userData.timestamp // 🟢 FIX 2: THIS WAS MISSING
+            timestamp: userData.timestamp
         };
     } catch (error) {
         console.error("Error getting cached profile:", error);
         return null;
     }
 };
+
+// ==========================================
+// NEW: OFFLINE-FIRST SELF CACHING LOGIC
+// ==========================================
 
 export const setSavedProductsCache = async (products) => {
     try {
@@ -113,9 +116,6 @@ export const setSavedProductsCache = async (products) => {
     }
 };
 
-/** 
- * NEW: Retrieve the user's shelf from local storage 
- */
 export const getSavedProductsCache = async () => {
     try {
         const itemString = await AsyncStorage.getItem(SAVED_PRODUCTS_CACHE_KEY);
@@ -129,15 +129,13 @@ export const getSavedProductsCache = async () => {
 
 export const setSelfProfileCache = async (profileData) => {
     try {
+        if (!profileData) return;
         await AsyncStorage.setItem(SELF_PROFILE_CACHE_KEY, JSON.stringify(profileData));
     } catch (error) {
         console.error("Error setting self profile cache:", error);
     }
 };
 
-/**
- * NEW: Get the CURRENT user's profile
- */
 export const getSelfProfileCache = async () => {
     try {
         const itemString = await AsyncStorage.getItem(SELF_PROFILE_CACHE_KEY);

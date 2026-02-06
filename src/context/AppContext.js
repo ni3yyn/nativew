@@ -192,16 +192,27 @@ export const AppProvider = ({ children }) => {
       if (currentUser) {
         console.log("🟢 User Authenticated:", currentUser.uid);
 
-        // 1. Load Local Cache Immediately (Speed)
+        // -----------------------------------------------------------
+        // 🚀 CACHE-FIRST LOAD (OFFLINE SUPPORT)
+        // -----------------------------------------------------------
         try {
+            // 1. Load Profile
             const cachedProfile = await getSelfProfileCache();
             if (cachedProfile && checkProfileHealth(cachedProfile)) {
+                console.log("📱 Loaded Profile from Cache (Offline First)");
                 setUserProfile(cachedProfile);
-                setLoading(false);
+                setLoading(false); // Immediate UI render
             }
+            
+            // 2. Load Products
             const cachedProducts = await getSavedProductsCache();
-            if (cachedProducts?.length) setSavedProducts(cachedProducts);
-        } catch (e) {}
+            if (cachedProducts && cachedProducts.length > 0) {
+                console.log("📱 Loaded Products from Cache (Offline First)");
+                setSavedProducts(cachedProducts);
+            }
+        } catch (e) {
+            console.warn("Error loading offline cache:", e);
+        }
     
         const profileRef = doc(db, 'profiles', currentUser.uid);
         
@@ -220,8 +231,18 @@ export const AppProvider = ({ children }) => {
           // --- PATH 1: HEALTHY PROFILE ---
           if (isHealthy) {
               isRepairing.current = false;
-              setUserProfile(data);
-              setSelfProfileCache(data); 
+
+              // Only update state & cache if data actually changed (Deep Compare)
+              // This prevents infinite loops if setting cache triggers re-renders
+              setUserProfile(prev => {
+                  if (JSON.stringify(prev) !== JSON.stringify(data)) {
+                      console.log(`♻️ Profile Updated (${fromCache ? 'Local' : 'Server'})`);
+                      setSelfProfileCache(data); // Sync to Async Storage
+                      return data;
+                  }
+                  return prev;
+              });
+
               setLoading(false); 
 
               // Trigger Notification Check (optimized internally)
@@ -237,7 +258,7 @@ export const AppProvider = ({ children }) => {
           // it likely just means we haven't synced with the server yet.
           // Do NOT start repair/defaults, just wait.
           if (fromCache && !exists) {
-              console.log("📡 Offline & Doc missing in cache. Waiting for connection...");
+              console.log("📡 Offline & Doc missing in snapshot. Waiting for connection...");
               // We intentionally do nothing here to preserve state until online
               return; 
           }
@@ -283,14 +304,17 @@ export const AppProvider = ({ children }) => {
             query(collection(db, 'profiles', currentUser.uid, 'savedProducts'), orderBy('createdAt', 'desc')), 
           (snapshot) => {
             const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
             // Only update if changed
             setSavedProducts(prev => {
                 if (JSON.stringify(newProducts) !== JSON.stringify(prev)) {
-                    setSavedProductsCache(newProducts);
+                    setSavedProductsCache(newProducts); // Update Cache
                     return newProducts;
                 }
                 return prev;
             });
+            
+            // Ensure loading is disabled if we didn't have cache before
             setLoading(false);
           }, 
           (err) => {
@@ -315,6 +339,10 @@ export const AppProvider = ({ children }) => {
         setUserProfile(null);
         setSavedProducts([]);
         setLoading(false);
+
+        // 3. Optional: Clear local user cache on logout for security
+        setSelfProfileCache(null);
+        setSavedProductsCache([]);
       }
     });
 
@@ -337,6 +365,8 @@ export const AppProvider = ({ children }) => {
       
       setUserProfile(null);
       setSavedProducts([]);
+      
+      // Clear cache references
       setSelfProfileCache(null);
       setSavedProductsCache([]);
     } catch (e) { console.error(e); }
