@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
 import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useRouter, useIsFocused } from 'expo-router';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -1290,6 +1290,20 @@ const MatchBreakdown = ({ reasons = [] }) => {
     );
 };
 
+const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
+  return (
+    <TouchableOpacity onPress={() => onToggle(item)} activeOpacity={0.7}>
+      <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
+        <AnimatedCheckbox isSelected={isSelected} />
+        <Text style={styles.claimItemText}>{item}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if selection state changes
+  return prevProps.isSelected === nextProps.isSelected;
+});
+
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
@@ -1750,6 +1764,44 @@ export default function OilGuardEngine() {
     }
 };
 
+const reportUndiscoveredIngredients = async (missingList) => {
+    try {
+        // Validation
+        if (!missingList || missingList.length === 0) return;
+
+        console.log(`📝 Server identified ${missingList.length} unknown ingredients. Uploading...`);
+
+        const batch = writeBatch(db);
+        let batchCount = 0;
+
+        missingList.forEach(rawName => {
+            // Clean up the ID
+            const cleanName = rawName.trim();
+            const docId = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (docId.length > 2) {
+                const ref = doc(db, "missing_ingredients", docId);
+                batch.set(ref, {
+                    originalName: cleanName,
+                    normalizedId: docId,
+                    count: increment(1),
+                    lastReported: Timestamp.now(),
+                    status: 'pending'
+                }, { merge: true });
+                batchCount++;
+            }
+        });
+
+        if (batchCount > 0) {
+            await batch.commit();
+            console.log("🚀 Uploaded missing ingredients to WathiqAdmin.");
+        }
+
+    } catch (error) {
+        console.error("❌ Error reporting missing ingredients:", error);
+    }
+};
+
 const executeAnalysis = async () => {
     // 1. Trigger Transition INSTANTLY (Fast Mode: true)
     // We remove the Haptics call here because TouchableOpacity already handles it
@@ -1785,9 +1837,14 @@ const executeAnalysis = async () => {
             if (!response.ok) throw new Error("Server analysis failed");
             
             const fullAnalysisData = await response.json();
-            
             setFinalAnalysis(fullAnalysisData);
-            // Normal transition for results (nice reveal)
+
+              // --- NEW LOGIC: Use Server Response Directly ---
+              // The server has already calculated exactly which ingredients failed to match.
+            if (fullAnalysisData.unknown_ingredients && fullAnalysisData.unknown_ingredients.length > 0) {
+                 reportUndiscoveredIngredients(fullAnalysisData.unknown_ingredients);
+            }
+
             changeStep(4);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -2005,28 +2062,30 @@ const pickFrontImage = () => {
     );
   };
 
-  const renderClaimItem = useCallback(({ item }) => {
-    const isSelected = selectedClaims.includes(item);
-    
-    // The handler function is now defined inside the memoized callback
-    const handlePress = () => {
-        setSelectedClaims(prev => 
-            prev.includes(item) 
-            ? prev.filter(c => c !== item) 
-            : [...prev, item]
-        );
-        // Optional: Haptics.selectionAsync();
-    };
+  const handleClaimToggle = useCallback((item) => {
+    setSelectedClaims(prev => {
+        const isSelected = prev.includes(item);
+        if (isSelected) {
+            return prev.filter(c => c !== item);
+        } else {
+            return [...prev, item];
+        }
+    });
+  }, []);
 
+  const renderClaimItem = useCallback(({ item }) => {
     return (
-        <TouchableOpacity onPress={handlePress}>
-            <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
-                <AnimatedCheckbox isSelected={isSelected} />
-                <Text style={styles.claimItemText}>{item}</Text>
-            </View>
-        </TouchableOpacity>
+      <MemoizedClaimItem 
+        item={item}
+        isSelected={selectedClaims.includes(item)}
+        onToggle={handleClaimToggle}
+      />
     );
-}, [selectedClaims]);
+  }, [selectedClaims, handleClaimToggle]);
+
+  const getItemLayout = useCallback((data, index) => (
+    { length: 60, offset: 60 * index, index }
+  ), []);
   
 const renderClaimsStep = () => {
     const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
@@ -2067,21 +2126,24 @@ const renderClaimsStep = () => {
       <View style={{ flex: 1, width: '100%' }}>
         <Animated.FlatList
           data={displayedClaims}
-          renderItem={renderClaimItem} // <--- NOW USING THE MEMOIZED FUNCTION
+          renderItem={renderClaimItem}
           keyExtractor={(item) => item}
+          extraData={selectedClaims} // <--- CRITICAL: Tells list to update when selection changes
+          
+          // --- PERFORMANCE PROPS ---
+          initialNumToRender={12}     // How many items to show immediately
+          maxToRenderPerBatch={10}    // How many to render per scroll batch
+          windowSize={5}              // Reduced from default (21) to save memory
+          removeClippedSubviews={true} // Unmounts off-screen items (Huge speedup)
+          getItemLayout={getItemLayout} // Skips measurement calculations
+          updateCellsBatchingPeriod={50} // Delays updates slightly to batch them
+          
           showsVerticalScrollIndicator={false}
-          
-          // FIX: Add these performance props to prevent memory spikes and flashing
-          initialNumToRender={10}     // Only render top 10 first
-          maxToRenderPerBatch={10}    // Render more in small batches
-          windowSize={5}              // Keep memory usage low
-          removeClippedSubviews={true} // Unmount items off-screen (Android fix)
-          
           contentContainerStyle={{
             paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
             paddingBottom: 120, 
             paddingHorizontal: 10, 
-            gap: 12
+            gap: 12 // Matches the gap in getItemLayout
           }}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
