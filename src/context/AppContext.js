@@ -120,9 +120,18 @@ export const AppProvider = ({ children }) => {
       const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "6ebdbfe1-08ea-4f21-9fa2-482f152a3266";
       
       let expoPushToken = null;
+      let fcmToken = null; // <--- NEW VARIABLE
+
       try {
+          // A. Get Expo Token
           const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
           expoPushToken = tokenData.data;
+
+          // B. Get Device Token (FCM for Android / APNs for iOS) <--- NEW LOGIC
+          if (Platform.OS === 'android') {
+            const deviceTokenData = await Notifications.getDevicePushTokenAsync();
+            fcmToken = deviceTokenData.data;
+          }
       } catch (e) { console.log("Token Fetch Error", e); }
 
       // ============================================================
@@ -130,8 +139,9 @@ export const AppProvider = ({ children }) => {
       // ============================================================
       
       // A. Check if token actually changed
-      const tokenChanged = currentProfile?.expoPushToken !== expoPushToken;
-      
+      const expoTokenChanged = currentProfile?.expoPushToken !== expoPushToken;
+      const fcmTokenChanged = currentProfile?.fcmToken !== fcmToken; // <--- CHECK FCM CHANGE
+            
       // B. Check if it's been > 30 days since last update (Heartbeat)
       const needsHeartbeat = isOlderThan(currentProfile?.lastTokenUpdate, 30);
       
@@ -142,20 +152,21 @@ export const AppProvider = ({ children }) => {
       const statusChanged = currentProfile?.notificationsEnabled === false;
 
       // ⚡️ SKIP WRITE if everything is same and fresh
-      if (!tokenChanged && !needsHeartbeat && !isHealing && !statusChanged) {
-          console.log("💤 Token clean & fresh. No DB write needed.");
-          return; 
-      }
-      
-      console.log("💾 Updating Token in DB (Change detected or Heartbeat needed)");
+      if (!expoTokenChanged && !fcmTokenChanged && !needsHeartbeat && !isHealing && !statusChanged) {
+        console.log("💤 Token clean & fresh. No DB write needed.");
+        return; 
+    }
 
-      // 5. Save (Only runs if needed)
-      await setDoc(doc(db, 'profiles', uid), {
-        expoPushToken: expoPushToken || null, 
-        notificationsEnabled: true,
-        deviceType: Platform.OS,
-        lastTokenUpdate: serverTimestamp() 
-      }, { merge: true });
+    console.log("💾 Updating Token in DB");
+
+    // 5. Save
+    await setDoc(doc(db, 'profiles', uid), {
+      expoPushToken: expoPushToken || null,
+      fcmToken: fcmToken || null, // <--- SAVE TO DB
+      notificationsEnabled: true,
+      deviceType: Platform.OS,
+      lastTokenUpdate: serverTimestamp() 
+    }, { merge: true });
 
     } catch (error) {
       console.error("Token Register Error:", error);
