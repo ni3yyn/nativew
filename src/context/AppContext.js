@@ -141,7 +141,7 @@ export const AppProvider = ({ children }) => {
       // A. Check if token actually changed
       const expoTokenChanged = currentProfile?.expoPushToken !== expoPushToken;
       const fcmTokenChanged = currentProfile?.fcmToken !== fcmToken; // <--- CHECK FCM CHANGE
-            
+
       // B. Check if it's been > 30 days since last update (Heartbeat)
       const needsHeartbeat = isOlderThan(currentProfile?.lastTokenUpdate, 30);
       
@@ -242,21 +242,18 @@ export const AppProvider = ({ children }) => {
           // --- PATH 1: HEALTHY PROFILE ---
           if (isHealthy) {
               isRepairing.current = false;
-
-              // Only update state & cache if data actually changed (Deep Compare)
-              // This prevents infinite loops if setting cache triggers re-renders
+              
+              // ... existing healthy logic (setUserProfile, caching, notifications) ...
               setUserProfile(prev => {
                   if (JSON.stringify(prev) !== JSON.stringify(data)) {
                       console.log(`♻️ Profile Updated (${fromCache ? 'Local' : 'Server'})`);
-                      setSelfProfileCache(data); // Sync to Async Storage
+                      setSelfProfileCache(data); 
                       return data;
                   }
                   return prev;
               });
-
               setLoading(false); 
 
-              // Trigger Notification Check (optimized internally)
               if (data.onboardingComplete && !hasRegisteredNotifications.current) {
                   hasRegisteredNotifications.current = true;
                   registerForPushNotificationsAsync(currentUser.uid, data); 
@@ -264,23 +261,34 @@ export const AppProvider = ({ children }) => {
               return; 
           }
 
-          // --- 🛑 OFFLINE GUARD (Fixes Offline Overwrite) ---
-          // If we are offline (fromCache) and the doc is missing (!exists),
-          // it likely just means we haven't synced with the server yet.
-          // Do NOT start repair/defaults, just wait.
+          // --- 🛑 OFFLINE GUARD ---
           if (fromCache && !exists) {
-              console.log("📡 Offline & Doc missing in snapshot. Waiting for connection...");
-              // We intentionally do nothing here to preserve state until online
+              console.log("📡 Offline & Doc missing. Waiting...");
               return; 
           }
 
-          // --- PATH 2: REPAIR (Confirmed Missing/Corrupt on Server) ---
-          if (isRepairing.current) return; // Prevent loops
+          // ============================================================
+          // 👶 NEW: FRESH SIGNUP GUARD (The Fix)
+          // ============================================================
+          // If the user account is less than 15 seconds old, the profile 
+          // is likely still being created by login.js. Do NOT repair yet.
+          const creationTime = new Date(currentUser.metadata.creationTime).getTime();
+          const now = new Date().getTime();
+          const isBrandNewUser = (now - creationTime) < 15000; // 15 seconds buffer
 
-          console.log("🚨 Profile Unhealthy (Server Confirmed). Initiating Safe Repair...");
+          if (isBrandNewUser) {
+            console.log("👶 New User Detected - Waiting for Profile Creation...");
+            return; // Exit and let login.js finish its job
+          }
+          // ============================================================
+
+          // --- PATH 2: REPAIR ---
+          if (isRepairing.current) return; 
+
+          console.log("🚨 Profile Unhealthy. Initiating Safe Repair...");
           isRepairing.current = true;
 
-          // Define Safe Defaults
+          // repair logic 
           const repairData = {
              email: currentUser.email,
              createdAt: data?.createdAt || serverTimestamp(),
