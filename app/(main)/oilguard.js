@@ -35,7 +35,8 @@ import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adju
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
 import ScoreBreakdownModal from '../../src/components/oilguard/ScoreBreakdownModal'; // <--- ADD THIS
-
+import  {VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoiceCard'; // Adjust path if needed
+import { VerifiedDetailModal} from '../../src/components/oilguard/VerifiedDetailModal'; 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
 // --- STYLE & CONSTANT IMPORTS ---
@@ -1304,6 +1305,118 @@ const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
   return prevProps.isSelected === nextProps.isSelected;
 });
 
+const AgentLoadingView = () => {
+    const [msgIndex, setMsgIndex] = useState(0);
+    // Use standard Animated values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const progressAnim = useRef(new Animated.Value(0)).current;
+
+    const messages = [
+        { text: "تحليل ملفك الشخصي...", icon: "user-cog" },
+        { text: "البحث في Tarzaali و Sephora...", icon: "search-location" },
+        { text: "فحص قوائم المكونات...", icon: "file-medical-alt" },
+        { text: "التحقق من معايير الأمان...", icon: "shield-alt" },
+        { text: "اختيار البديل الأفضل...", icon: "star" }
+    ];
+
+    useEffect(() => {
+        // Message rotation timer
+        const interval = setInterval(() => {
+            setMsgIndex(prev => (prev + 1) % messages.length);
+        }, 2500);
+
+        // Infinite progress bar animation
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(progressAnim, {
+                    toValue: 1,
+                    duration: 1500,
+                    useNativeDriver: true, // Native driver supported for transform
+                }),
+                Animated.timing(progressAnim, {
+                    toValue: -1,
+                    duration: 0,
+                    useNativeDriver: true,
+                })
+            ])
+        );
+        loop.start();
+
+        return () => {
+            clearInterval(interval);
+            loop.stop();
+        };
+    }, []);
+
+    // Trigger text fade animation when message changes
+    useEffect(() => {
+        fadeAnim.setValue(0);
+        Animated.spring(fadeAnim, {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true
+        }).start();
+    }, [msgIndex]);
+
+    const activeMsg = messages[msgIndex];
+
+    // Interpolate progress bar movement
+    const translateX = progressAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-100, 200] // Move from left to right
+    });
+
+    return (
+        <View style={{ 
+            marginVertical: 20, marginHorizontal: 20, 
+            padding: 20, borderRadius: 16, 
+            backgroundColor: 'rgba(0,0,0,0.2)', 
+            borderWidth: 1, borderColor: 'rgba(90, 156, 132, 0.2)',
+            alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden'
+        }}>
+            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{marginBottom: 15}} />
+            
+            <Animated.View 
+                style={{
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    gap: 10,
+                    opacity: fadeAnim,
+                    transform: [{ 
+                        translateY: fadeAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [10, 0] // Slide up slightly
+                        })
+                    }]
+                }}
+            >
+                <Text style={{
+                    fontFamily: 'Tajawal-Bold', 
+                    color: COLORS.accentGreen, 
+                    fontSize: 13,
+                    letterSpacing: 0.5
+                }}>
+                    {activeMsg.text}
+                </Text>
+                <FontAwesome5 name={activeMsg.icon} size={12} color={COLORS.accentGreen} />
+            </Animated.View>
+
+            {/* Progress Bar Visual */}
+            <View style={{
+                height: 2, width: '60%', backgroundColor: 'rgba(255,255,255,0.1)', 
+                marginTop: 15, borderRadius: 2, overflow: 'hidden'
+            }}>
+                <Animated.View style={{
+                    height: '100%', width: '30%', backgroundColor: COLORS.accentGreen,
+                    transform: [{ translateX }]
+                }} />
+            </View>
+        </View>
+    );
+};
+
 // ============================================================================
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
@@ -1346,6 +1459,12 @@ export default function OilGuardEngine() {
   const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
   const [scanMode, setScanMode] = useState('fast'); // 'fast' or 'accurate'
   const [containerHeight, setContainerHeight] = useState(0);
+  const [verifiedRec, setVerifiedRec] = useState(null); 
+const [isVerifiedLoading, setIsVerifiedLoading] = useState(false);
+  const [recError, setRecError] = useState(false); // New state to track if search found nothing
+  const [selectedRec, setSelectedRec] = useState(null);
+  const [isDetailVisible, setDetailVisible] = useState(false);
+  
   const SCREEN_HEIGHT = Dimensions.get('window').height;
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -1763,6 +1882,49 @@ export default function OilGuardEngine() {
         });
     }
 };
+
+const fetchVerifiedRecommendation = async (analysis) => {
+    // 1. Don't search if the product is already excellent (88+)
+    if (analysis.oilGuardScore >= 88 && analysis.personalMatch?.status === 'good') return;
+
+    setIsVerifiedLoading(true);
+    setVerifiedRec(null);
+
+    try {
+        const response = await fetch("https://oilguard-backend.vercel.app/api/db-recommend.js", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                productType: productType,
+                issues: analysis.user_specific_alerts.map(a => a.text).slice(0, 1),
+                userProfile: userProfile?.settings || {},
+                selectedClaims: selectedClaims || []
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.recommendation) {
+            // 2. Only show if it improves the score by at least 5 points
+            if (data.recommendation.real_score > (analysis.oilGuardScore + 5)) {
+                setVerifiedRec(data.recommendation);
+            }
+        }
+    } catch (e) {
+        // Silently fail in production or log to analytics
+        console.warn("Recs failed:", e.message);
+    } finally {
+        setIsVerifiedLoading(false);
+    }
+};
+
+// Update UseEffect to ensure it fires
+useEffect(() => {
+    if (step === 4 && finalAnalysis) {
+        console.log("✅ [DEBUG] Step 4 reached. Triggering fetch...");
+        fetchVerifiedRecommendation(finalAnalysis);
+    }
+}, [step, finalAnalysis]);
 
 const reportUndiscoveredIngredients = async (missingList) => {
     try {
@@ -2275,6 +2437,13 @@ const renderClaimsStep = () => {
     );
   };
 
+  const handleSuggestAnother = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Re-run the recommendation fetch
+    fetchVerifiedRecommendation(finalAnalysis); 
+};
+
+
   // ... inside oilguard.js
 
   const renderResultStep = () => {
@@ -2406,6 +2575,44 @@ const renderClaimsStep = () => {
                 </View>
             </StaggeredItem>
 
+           {/* --- THE VERIFIED RECOMMENDATION SECTION --- */}
+
+{/* 1. LOADING STATE */}
+{isVerifiedLoading && (
+    <View style={{ padding: 30, alignItems: 'center' }}>
+        <ActivityIndicator color={COLORS.accentGreen} size="small" />
+        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12, marginTop: 10 }}>
+            جاري البحث عن بديل في قاعدة البيانات...
+        </Text>
+    </View>
+)}
+
+{/* 2. SUCCESS STATE (Single Card) */}
+{/* FIX: Removed .length check. Just check if 'verifiedRec' exists */}
+{!isVerifiedLoading && verifiedRec && (
+    <StaggeredItem index={1}>
+        <VerifiedChoiceCard 
+            item={verifiedRec} 
+            currentScore={finalAnalysis.oilGuardScore} 
+            onPress={(item) => {
+                setSelectedRec(item);
+                setDetailVisible(true);
+            }}
+            onSuggestAnother={handleSuggestAnother} // <--- Pass the new handler
+            loading={isVerifiedLoading}
+        />
+    </StaggeredItem>
+)}
+
+{/* 3. NO RESULTS STATE (Optional) */}
+{/* FIX: Check explicitly if loading finished and verifiedRec is still null */}
+{!isVerifiedLoading && !verifiedRec && step === 4 && (
+    <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
+        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
+            لم نجد بديلاً أفضل في قاعدة البيانات حالياً.
+        </Text>
+    </View>
+)}
             {/* --- 2. MARKETING CLAIMS --- */}
             {marketingResults.length > 0 && (
                 <StaggeredItem index={1}>
@@ -2652,6 +2859,12 @@ return (
             onClose={() => setBreakdownModalVisible(false)}
             data={finalAnalysis?.scoreBreakdown}
         />
+
+<VerifiedDetailModal 
+    visible={isDetailVisible} 
+    onClose={() => setDetailVisible(false)} 
+    item={selectedRec} 
+/>
     </View>
 );
 }
