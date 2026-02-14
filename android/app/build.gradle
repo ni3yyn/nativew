@@ -145,8 +145,9 @@ android {
             
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         
-            def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
-            crunchPngs enablePngCrunchInRelease.toBoolean()
+            ddef enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
+            // CHANGE THIS LINE: add the '='
+            crunchPngs = enablePngCrunchInRelease.toBoolean()
         }
     }
 
