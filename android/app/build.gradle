@@ -96,6 +96,7 @@ android {
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
         versionCode 3 
         versionName "1.1.0"
+        resConfigs "en", "ar" 
         
         missingDimensionStrategy 'react-native-camera', 'general'
 
@@ -104,6 +105,12 @@ android {
         ndk {
             // These cover 99% of modern Android phones
             abiFilters "arm64-v8a", "armeabi-v7a"
+        }
+    }
+
+    splits {
+        abi {
+            enable false
         }
     }
 
@@ -140,21 +147,17 @@ android {
             signingConfig signingConfigs.release
             
             // Optimization settings for Play Store
-            minifyEnabled = enableMinifyInReleaseBuilds
-             shrinkResources = (findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'true').toBoolean()
-            
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-        
-            ddef enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
-            // CHANGE THIS LINE: add the '='
-            crunchPngs = enablePngCrunchInRelease.toBoolean()
+            def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
+            crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
 
     packagingOptions {
         jniLibs {
-            def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
-            useLegacyPackaging enableLegacyPackaging.toBoolean()
+            useLegacyPackaging = false
         }
     }
     
