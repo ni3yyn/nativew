@@ -1,4 +1,4 @@
-name: Build Release AAB
+name: Build Release APK
 
 on:
   workflow_dispatch: # Allows manual run
@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: 🚀 Build Android AAB
+    name: 🚀 Build Android APK
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout Code
@@ -56,24 +56,22 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
-      # 7. Build the Signed AAB
-      - name: 📱 Build AAB
+      # 7. Build the Signed APK
+      - name: 📱 Build APK
         working-directory: android
         env:
           MYAPP_UPLOAD_STORE_FILE: release.keystore
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Boost memory for Gradle
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
-          run: |
+        run: |
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      # 8. Upload AAB as Artifact
+      # 8. Upload APK as Artifact
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wathiq-release-package
-          path: |
-            android/app/build/outputs/apk/release/app-release.apk
+          name: wathiq-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
