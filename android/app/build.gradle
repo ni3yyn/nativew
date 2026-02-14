@@ -140,10 +140,11 @@ android {
             signingConfig signingConfigs.release
             
             // Optimization settings for Play Store
-            minifyEnabled enableMinifyInReleaseBuilds
-            shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'true').toBoolean()
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            minifyEnabled = enableMinifyInReleaseBuilds
+             shrinkResources = (findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'true').toBoolean()
             
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        
             def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
