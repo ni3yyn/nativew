@@ -12,71 +12,53 @@ on:
       - 'README.md'   # Don't build if you only change documentation
       - '.gitignore'
 
-jobs:
-  build:
-    name: 🚀 Build Android APK
-    runs-on: ubuntu-latest
-    steps:
-      # 1. Checkout Code
-      - name: 🏗 Checkout Repository
-        uses: actions/checkout@v4
+      jobs:
+        build:
+          name: 🚀 Build Android AAB
+          runs-on: ubuntu-latest
+          steps:
+            - name: 🏗 Checkout Repository
+              uses: actions/checkout@v4
+      
+            - name: ☕ Setup JDK 17
+              uses: actions/setup-java@v4
+              with:
+                distribution: 'temurin'
+                java-version: '17'
+      
+            - name: 🟢 Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+      
+            - name: 📦 Install Dependencies
+              run: |
+                rm -f package-lock.json
+                npm install
+      
+            # NEW STEP: Decode Keystore
+            # You must base64 encode your .keystore file and add it to GitHub Secrets
+            # Command to encode: base64 -i wathiq-release.keystore -o keystore_base64.txt
+            - name: 🔐 Decode Keystore
+              env:
+                ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+                run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
-      # 2. Setup Java (Required for Android Gradle)
-      - name: ☕ Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      # 3. Gradle Caching (The Speed Booster)
-      - name: 🐘 Cache Gradle
-        uses: actions/cache@v4
-        with:
-          # The Pipe symbol '|' below is MANDATORY for multiple lines
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          # Ensure this key line is indented exactly under 'path'
-          key: ${{ runner.os }}-gradle-v5-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-v5-
-
-      # 4. Setup Node & NPM Cache
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-
-      # 5. Install Global Tools
-      - name: 🛠 Install EAS CLI
-        run: npm install -g eas-cli
-
-      # 6. Install Dependencies (Robust Mode)
-      # We delete package-lock first to prevent sync errors
-      - name: 📦 Install Dependencies
-        run: |
-          rm -f package-lock.json
-          npm install
-
-      # 7. Build the APK
-      # We explicitly pass EXPO_TOKEN env var to this step
-      - name: 📱 Build APK (Local Mode)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Boost Java memory to 4GB to prevent "Unknown" crashes
-          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "Error: EXPO_TOKEN is missing! Check your GitHub Secrets."
-            exit 1
-          fi
-          # Clear EAS cache to ensure it generates fresh android folders
-          eas build --local --clear-cache --platform android --profile preview --non-interactive --output ./wathiq.apk
-
-      # 8. Upload Result
-      - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wathiq-release-apk
-          path: wathiq.apk
+            # CHANGED: Build AAB using Gradle directly
+            - name: 📱 Build AAB
+              working-directory: android
+              env:
+                # Define these in GitHub Repo -> Settings -> Secrets and variables -> Actions
+                MYAPP_UPLOAD_STORE_FILE: release.keystore # Matches the filename above
+                MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+                MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+                MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+              run: ./gradlew bundleRelease
+      
+            # CHANGED: Upload AAB
+            - name: 📤 Upload Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: wathiq-release-aab
+                path: android/app/build/outputs/bundle/release/app-release.aab

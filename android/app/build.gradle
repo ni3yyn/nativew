@@ -92,16 +92,21 @@ android {
         applicationId 'com.wathiq.app'
         minSdkVersion 24  
         targetSdkVersion 34
-        versionCode 2
+        
+        // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
+        versionCode 3 
         versionName "1.1.0"
+        
         missingDimensionStrategy 'react-native-camera', 'general'
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-    ndk {
-            // This forces the final APK to ONLY contain arm64-v8a binaries
+        
+        ndk {
+            // These cover 99% of modern Android phones
             abiFilters "arm64-v8a", "armeabi-v7a"
         }
     }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -109,29 +114,48 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (System.getenv("MYAPP_UPLOAD_STORE_FILE")) {
+                storeFile file(System.getenv("MYAPP_UPLOAD_STORE_FILE"))
+                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
+                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
+                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
+            } else {
+                // This is your local fallback
+                storeFile file('wathiq-release.keystore')
+                storePassword 'YOUR_PASSWORD_HERE' // Put your actual password here for local builds
+                keyAlias 'wathiq-key-alias'
+                keyPassword 'YOUR_PASSWORD_HERE'
+            }
+        }
     }
+
+    // THIS IS THE BLOCK YOU WERE MISSING:
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
-            def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
-            shrinkResources enableShrinkResources.toBoolean()
+            // This line tells Gradle to use your new Release Keystore
+            signingConfig signingConfigs.release
+            
+            // Optimization settings for Play Store
             minifyEnabled enableMinifyInReleaseBuilds
+            shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'true').toBoolean()
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            
             def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
+
     packagingOptions {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
             useLegacyPackaging enableLegacyPackaging.toBoolean()
         }
     }
+    
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
