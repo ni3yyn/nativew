@@ -4,8 +4,9 @@ import {
     View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet, 
     Dimensions, Linking, Animated, Easing, Pressable, Image 
 } from 'react-native';
-import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome5, MaterialIcons, Ionicons, CommunityIcons } from '@expo/vector-icons';
 import { COLORS } from './oilguard.styles';
+import FullImageViewer from '../common/FullImageViewer';
 
 const { height, width } = Dimensions.get('window');
 
@@ -24,17 +25,30 @@ const ClaimRow = ({ result, index, isLast }) => {
 
     const getStatusConfig = (statusRaw) => {
         const s = statusRaw ? statusRaw.toString() : '';
-        if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) {
-            return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)' };
+        
+        // BLUE: Significant (بنسبة معتبرة)
+        if (s.includes('معتبرة')) {
+            return { color: '#4D96FF', icon: 'check-double', bg: 'rgba(77, 150, 255, 0.1)', label: 'قوي وفعال', bars: 3 };
         }
-        if (s.includes('🌿') || s.includes('✅')) {
-            return { color: COLORS.accentGreen, icon: 'check-circle', bg: 'rgba(90, 156, 132, 0.1)' };
+        // GREEN: Moderate (بنسبة متوسطة)
+        if (s.includes('متوسطة') || s.includes('✅') || s.includes('🌿')) {
+            return { color: COLORS.accentGreen, icon: 'check', bg: 'rgba(90, 156, 132, 0.1)', label: 'فعالية جيدة', bars: 2 };
         }
-        return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)' };
+        // YELLOW: Low (منخفض)
+        if (s.includes('منخفض') || s.includes('⚠️')) {
+            return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)', label: 'تأثير هامشي', bars: 1 };
+        }
+        // RED: Deception
+        if (s.includes('❌') || s.includes('كذب') || s.includes('🚫')) {
+            return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)', label: 'غير موجود', bars: 0 };
+        }
+        return { color: COLORS.textDim, icon: 'info-circle', bg: 'rgba(255, 255, 255, 0.05)', label: 'تحليل جاري', bars: 0 };
     };
 
     const config = getStatusConfig(result.status);
     const cleanStatus = cleanStatusText(result.status);
+
+    const allIngredients = [...(result.proven || []), ...(result.traditionallyProven || [])];
 
     const toggle = () => {
         const targetValue = expanded ? 0 : 1;
@@ -47,19 +61,27 @@ const ClaimRow = ({ result, index, isLast }) => {
     const rotateArrow = animController.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
     const heightInterpolate = animController.interpolate({ 
         inputRange: [0, 1], 
-        outputRange: [0, contentHeight || 120], 
+        outputRange: [0, contentHeight || 180], 
         extrapolate: 'clamp' 
     });
 
     return (
         <View style={[s.claimRowWrapper, !isLast && s.claimRowBorder]}>
             <TouchableOpacity onPress={toggle} activeOpacity={0.8} style={s.claimRowMain}>
-                <View style={s.claimIconCol}>
-                    <FontAwesome5 name={config.icon} size={16} color={config.color} />
+                <View style={s.claimStatusIndicator}>
+                    <View style={s.barContainer}>
+                        {[1, 2, 3].map(b => (
+                            <View key={b} style={[s.statusBar, { backgroundColor: b <= config.bars ? config.color : 'rgba(255,255,255,0.05)' }]} />
+                        ))}
+                    </View>
                 </View>
                 <View style={s.claimTextCol}>
                     <Text style={[s.claimTextTitle, { color: COLORS.textPrimary }]}>{result.claim}</Text>
-                    <Text style={[s.claimTextStatus, { color: config.color }]}>{cleanStatus}</Text>
+                    <View style={s.statusBadgeRow}>
+                        <Text style={[s.claimTextStatus, { color: config.color }]}>{cleanStatus}</Text>
+                        <View style={[s.dotSeparator, { backgroundColor: config.color }]} />
+                        <Text style={[s.claimMicroLabel, { color: config.color }]}>{config.label}</Text>
+                    </View>
                 </View>
                 <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
                     <FontAwesome5 name="chevron-down" size={12} color={COLORS.textDim} />
@@ -67,16 +89,25 @@ const ClaimRow = ({ result, index, isLast }) => {
             </TouchableOpacity>
 
             <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
-                <View 
-                    style={s.claimDetails}
-                    onLayout={(e) => { if (e.nativeEvent.layout.height > 0) setContentHeight(e.nativeEvent.layout.height); }}
-                >
-                    <Text style={s.claimExplanation}>{result.explanation}</Text>
-                    {result.proven?.length > 0 && (
-                        <View style={s.chipContainer}>
-                            {result.proven.map((ing, i) => (
-                                <View key={i} style={s.chip}><Text style={s.chipText}>{typeof ing === 'object' ? ing.name : ing}</Text></View>
-                            ))}
+                <View style={s.claimDetails} onLayout={(e) => { if (e.nativeEvent.layout.height > 0) setContentHeight(e.nativeEvent.layout.height); }}>
+                    <View style={[s.explanationBox, { borderRightColor: config.color }]}>
+                        <Text style={s.claimExplanation}>{result.explanation}</Text>
+                    </View>
+                    {allIngredients.length > 0 && (
+                        <View style={s.ingSection}>
+                            <Text style={s.ingSectionTitle}>المكونات المسؤولة:</Text>
+                            <View style={s.chipContainer}>
+                                {allIngredients.map((ing, i) => {
+                                    const isTrace = result.traditionallyProven?.includes(ing);
+                                    return (
+                                        <View key={i} style={[s.chip, { backgroundColor: config.bg, borderColor: `${config.color}${isTrace ? '20' : '40'}`, borderStyle: isTrace ? 'dashed' : 'solid', borderWidth: 1 }]}>
+                                            <Text style={[s.chipText, { color: config.color, opacity: isTrace ? 0.7 : 1 }]}>
+                                                {typeof ing === 'object' ? ing.name : ing}{isTrace && ' (أثر)'}
+                                            </Text>
+                                        </View>
+                                    );
+                                })}
+                            </View>
                         </View>
                     )}
                 </View>
@@ -89,214 +120,278 @@ const ClaimRow = ({ result, index, isLast }) => {
 // MAIN COMPONENT
 // ==========================================
 export const VerifiedDetailModal = ({ visible, onClose, item }) => {
+    const [isViewerVisible, setIsViewerVisible] = useState(false);
+    
+    // Ingredients Collapse Logic
+    const [ingExpanded, setIngExpanded] = useState(false);
+    const ingAnim = useRef(new Animated.Value(0)).current;
+    const [ingContentHeight, setIngContentHeight] = useState(0);
+
     if (!item) return null;
+
+    const toggleIngredients = () => {
+        const target = ingExpanded ? 0 : 1;
+        setIngExpanded(!ingExpanded);
+        Animated.timing(ingAnim, {
+            toValue: target,
+            duration: 350,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: false
+        }).start();
+    };
+
+    const rotateIngArrow = ingAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+    const ingHeight = ingAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, ingContentHeight || 300],
+        extrapolate: 'clamp'
+    });
 
     const getScoreColor = (score) => {
         if (score >= 85) return COLORS.success;
         if (score >= 70) return COLORS.info;
-        return COLORS.warning;
+        if (score >= 50) return COLORS.warning;
+        return COLORS.danger;
     };
 
-    // Calculate Marketing Score from results
     const mResults = item.marketing_results || [];
-    const validClaims = mResults.filter(r => r.status.includes('✅') || r.status.includes('🌿')).length;
-    const marketingScore = mResults.length > 0  ? Math.round((validClaims / mResults.length) * 100) : 100; 
+    const validClaims = mResults.filter(r => r.status.includes('✅') || r.status.includes('🌿') || r.status.includes('معتبرة')).length;
+    const marketingScore = mResults.length > 0 ? Math.round((validClaims / mResults.length) * 100) : 100;
+
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
             <View style={s.modalOverlay}>
                 <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
-                
                 <View style={s.sheet}>
                     <View style={s.dragHandle} />
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
                         
-                        {/* 1. PRODUCT HEADER */}
-                        <View style={s.headerCard}>
-                            <View style={s.imageContainer}>
-                                {item.image ? (
-                                    <Image source={{ uri: item.image }} style={s.productImg} resizeMode="contain" />
-                                ) : (
-                                    <FontAwesome5 name="box" size={40} color={COLORS.textDim} />
-                                )}
-                            </View>
-                            <View style={s.headerInfo}>
-                                <Text style={s.brandText}>{item.brand}</Text>
-                                <Text style={s.nameText}>{item.name}</Text>
-                                <View style={s.badgeRow}>
-                                    <View style={[s.scoreBadge, { backgroundColor: getScoreColor(item.real_score) }]}>
-                                        <Text style={s.scoreBadgeText}>{item.real_score}% موثق</Text>
+                        {/* 1. HERO HEADER */}
+                        <View style={s.heroCard}>
+                            <TouchableOpacity style={s.imageBox} onPress={() => item.image && setIsViewerVisible(true)} activeOpacity={0.9}>
+                                {item.image ? <Image source={{ uri: item.image }} style={s.productImg} resizeMode="contain" /> 
+                                : <View style={s.placeholderImg}><FontAwesome5 name="box" size={30} color={COLORS.textDim} /></View>}
+                                <View style={s.zoomIcon}><Ionicons name="expand" size={14} color="#000" /></View>
+                            </TouchableOpacity>
+                            <View style={s.heroTextContainer}>
+                                <Text style={s.brandTag}>{item.brand}</Text>
+                                <Text style={s.productNameLarge}>{item.name}</Text>
+                                <View style={s.mainBadgeRow}>
+                                    <View style={[s.premiumScoreBadge, { backgroundColor: getScoreColor(item.real_score) }]}>
+                                        <Text style={s.premiumScoreText}>{item.real_score}% موثوق</Text>
                                     </View>
-                                    <View style={s.dbBadge}>
-                                        <MaterialIcons name="verified" size={14} color={COLORS.success} />
-                                        <Text style={s.dbBadgeText}>Database Match</Text>
+                                    <View style={s.verifiedIndicator}>
+                                        <MaterialIcons name="verified-user" size={14} color={COLORS.success} />
+                                        <Text style={s.verifiedIndicatorText}>تحليل مخبري</Text>
                                     </View>
                                 </View>
                             </View>
                         </View>
 
-                        {/* 2. LAB STATS GRID */}
+                        {/* 2. SCIENTIFIC STATS GRID */}
                         <View style={s.statsGrid}>
-                            <View style={s.statBox}>
+                            <View style={s.statGlassCard}>
+                                <View style={s.statIconCircle}><FontAwesome5 name="shield-alt" size={14} color={COLORS.success} /></View>
                                 <Text style={s.statLabel}>درجة الأمان</Text>
-                                <Text style={[s.statVal, { color: COLORS.success }]}>{item.safety}%</Text>
-                                <View style={s.miniProgress}><View style={[s.miniFill, { width: `${item.safety}%`, backgroundColor: COLORS.success }]} /></View>
+                                <Text style={[s.statValue, { color: COLORS.success }]}>{item.safety}%</Text>
+                                <View style={s.progressBar}><View style={[s.progressFill, { width: `${item.safety}%`, backgroundColor: COLORS.success }]} /></View>
                             </View>
-                            <View style={s.statBox}>
+                            <View style={s.statGlassCard}>
+                                <View style={s.statIconCircle}><FontAwesome5 name="flask" size={14} color={COLORS.info} /></View>
                                 <Text style={s.statLabel}>فعالية التركيبة</Text>
-                                <Text style={[s.statVal, { color: COLORS.info }]}>{item.efficacy}%</Text>
-                                <View style={s.miniProgress}><View style={[s.miniFill, { width: `${item.efficacy}%`, backgroundColor: COLORS.info }]} /></View>
+                                <Text style={[s.statValue, { color: COLORS.info }]}>{item.efficacy}%</Text>
+                                <View style={s.progressBar}><View style={[s.progressFill, { width: `${item.efficacy}%`, backgroundColor: COLORS.info }]} /></View>
                             </View>
                         </View>
 
-                        {/* 3. PERSONAL COMPATIBILITY */}
+                        {/* 3. PERSONAL COMPATIBILITY (RESTORED & IMPROVED) */}
                         {item.reasons?.length > 0 && (
-    <View style={s.sectionCard}>
-        <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>ملاحظات شخصية</Text>
-            <FontAwesome5 name="user-check" size={14} color={COLORS.accentGreen} />
-        </View>
-        {item.reasons.map((reason, i) => {
-            // 🔥 ADD THIS LINE: extract text if it's an object {type, text}
-            const displayReason = typeof reason === 'object' ? reason.text : reason;
-            
-            return (
-                <View key={i} style={s.reasonRow}>
-                    <View style={s.dot} />
-                    <Text style={s.reasonText}>{displayReason}</Text>
-                </View>
-            );
-        })}
-    </View>
-)}
-
-                        {/* 4. MARKETING HONESTY */}
-                        {mResults.length > 0 && (
-        <View style={s.sectionCard}>
-            <View style={s.sectionHeader}>
-                <View style={s.honestyBadge}>
-                    <Text style={[s.honestyScore, { color: getScoreColor(marketingScore) }]}>
-                        {marketingScore}%
-                    </Text>
-                    <Text style={s.honestyLabel}>مصداقية</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={s.sectionTitle}>تحليل الادعاءات</Text>
-                    <Text style={s.sectionSub}>هل وعود الشركة حقيقية؟</Text>
-                </View>
-            </View>
-            {mResults.map((res, i) => (
-                <ClaimRow key={i} result={res} index={i} isLast={i === mResults.length - 1} />
-            ))}
-        </View>
-    )}
-
-                        {/* 5. INGREDIENTS LIST */}
-                        <View style={s.sectionCard}>
-                            <View style={s.sectionHeader}>
-                                <Text style={s.sectionTitle}>المكونات الأساسية</Text>
-                                <FontAwesome5 name="flask" size={14} color={COLORS.accentGreen} />
+                            <View style={s.sectionCard}>
+                                <View style={s.sectionHeader}>
+                                    <Text style={s.sectionTitle}>التوافق الشخصي</Text>
+                                    <FontAwesome5 name="user-check" size={14} color={COLORS.accentGreen} />
+                                </View>
+                                <View style={s.compatibilityList}>
+                                    {item.reasons.map((reason, i) => {
+                                        const displayReason = typeof reason === 'object' ? reason.text : reason;
+                                        return (
+                                            <View key={i} style={s.reasonRow}>
+                                                <View style={s.reasonIcon}>
+                                                    <Ionicons name="checkmark-done" size={16} color={COLORS.accentGreen} />
+                                                </View>
+                                                <Text style={s.reasonText}>{displayReason}</Text>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
                             </View>
-                            <View style={s.ingGrid}>
-    {item.ingredients?.map((ing, i) => {
-        // Safe extraction of the ingredient name
-        const ingName = typeof ing === 'object' ? (ing.name || ing.id) : ing;
-        return (
-            <View key={i} style={s.ingTag}>
-                <Text style={s.ingTagText}>{ingName}</Text>
-            </View>
-        );
-    })}
-</View>
+                        )}
+
+                        {/* 4. MARKETING ANALYSIS */}
+                        {mResults.length > 0 && (
+                            <View style={s.sectionCard}>
+                                <View style={s.marketingHeader}>
+                                    <View style={s.honestyCircle}>
+                                        <Text style={[s.honestyValue, { color: getScoreColor(marketingScore) }]}>{marketingScore}%</Text>
+                                        <Text style={s.honestySub}>صدق</Text>
+                                    </View>
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        <Text style={s.sectionTitle}>تحليل الادعاءات</Text>
+                                        <Text style={s.sectionSubtitle}>مقارنة الوعود بالتركيبة الكيميائية</Text>
+                                    </View>
+                                </View>
+                                <View style={s.claimsList}>
+                                    {mResults.map((res, i) => (
+                                        <ClaimRow key={i} result={res} index={i} isLast={i === mResults.length - 1} />
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* 5. COLLAPSIBLE INGREDIENTS */}
+                        <View style={s.sectionCard}>
+                            <TouchableOpacity style={s.collapsibleHeader} onPress={toggleIngredients} activeOpacity={0.7}>
+                                <Animated.View style={{ transform: [{ rotate: rotateIngArrow }] }}>
+                                    <Ionicons name="chevron-down" size={20} color={COLORS.accentGreen} />
+                                </Animated.View>
+                                <View style={s.ingHeaderInfo}>
+                                    <Text style={s.sectionTitle}>قائمة المكونات</Text>
+                                    <Text style={s.ingCountLabel}>{item.ingredients?.length || 0} مكون تم تحليله</Text>
+                                </View>
+                                <View style={[s.statIconCircle, { marginBottom: 0, backgroundColor: 'rgba(90, 156, 132, 0.1)' }]}>
+                                    <FontAwesome5 name="dna" size={14} color={COLORS.accentGreen} />
+                                </View>
+                            </TouchableOpacity>
+
+                            <Animated.View style={{ height: ingHeight, overflow: 'hidden' }}>
+                                <View style={s.ingExpandedContent} onLayout={(e) => { if (e.nativeEvent.layout.height > 0) setIngContentHeight(e.nativeEvent.layout.height); }}>
+                                    <View style={s.ingGrid}>
+                                        {item.ingredients?.map((ing, i) => {
+                                            const ingName = typeof ing === 'object' ? (ing.name || ing.id) : ing;
+                                            return (
+                                                <View key={i} style={s.ingTag}>
+                                                    <Text style={s.ingTagText}>{ingName}</Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                    <View style={s.ingSourceNote}>
+                                        <Ionicons name="information-circle-outline" size={12} color={COLORS.textDim} />
+                                        <Text style={s.ingSourceText}>تم استخراج هذه القائمة برمجياً من عبوة المنتج.</Text>
+                                    </View>
+                                </View>
+                            </Animated.View>
+                            {!ingExpanded && (
+                                <TouchableOpacity onPress={toggleIngredients} style={s.expandHint}>
+                                    <Text style={s.expandHintText}>اضغط لعرض القائمة الكاملة</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
 
-                        <View style={{ height: 120 }} />
+                        <View style={{ height: 140 }} />
                     </ScrollView>
 
                     {/* CTA FOOTER */}
-                    <View style={s.footer}>
-                        <TouchableOpacity style={s.buyBtn} onPress={() => Linking.openURL(item.link)}>
-                            <Text style={s.buyBtnText}>البحث عن السعر في الجزائر</Text>
-                            <FontAwesome5 name="external-link-alt" size={14} color={COLORS.background} />
+                    <View style={s.stickyFooter}>
+                        <TouchableOpacity style={s.primaryBtn} onPress={() => Linking.openURL(item.link)}>
+                            <Text style={s.primaryBtnText}>عرض السعر في الجزائر</Text>
+                            <FontAwesome5 name="shopping-bag" size={16} color={COLORS.background} />
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
+
+            <FullImageViewer visible={isViewerVisible} imageUrl={item.image} onClose={() => setIsViewerVisible(false)} />
         </Modal>
     );
 };
 
 const s = StyleSheet.create({
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-    sheet: { 
-        backgroundColor: '#111D1A', 
-        height: height * 0.85, 
-        borderTopLeftRadius: 32, 
-        borderTopRightRadius: 32, 
-        borderWidth: 1, 
-        borderColor: 'rgba(255,255,255,0.05)' 
-    },
-    dragHandle: { width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', alignSelf: 'center', borderRadius: 2, marginVertical: 15 },
-    scrollContent: { paddingHorizontal: 20 },
-    
-    // Header
-    headerCard: { flexDirection: 'row-reverse', gap: 15, marginBottom: 25, alignItems: 'center' },
-    imageContainer: { width: 90, height: 90, backgroundColor: '#fff', borderRadius: 20, padding: 10, justifyContent: 'center', alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
+    sheet: { backgroundColor: COLORS.background, height: height * 0.9, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderWidth: 1, borderColor: COLORS.border },
+    dragHandle: { width: 45, height: 5, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', borderRadius: 10, marginVertical: 18 },
+    scrollContent: { paddingHorizontal: 22 },
+
+    // Header UI
+    heroCard: { flexDirection: 'row-reverse', alignItems: 'center', gap: 20, marginBottom: 30 },
+    imageBox: { width: 110, height: 110, backgroundColor: '#fff', borderRadius: 25, padding: 12, justifyContent: 'center', alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10 },
     productImg: { width: '100%', height: '100%' },
-    headerInfo: { flex: 1, alignItems: 'flex-end' },
-    brandText: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 13 },
-    nameText: { fontFamily: 'Tajawal-ExtraBold', color: '#fff', fontSize: 20, textAlign: 'right' },
-    badgeRow: { flexDirection: 'row-reverse', gap: 10, marginTop: 8, alignItems: 'center' },
-    scoreBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    scoreBadgeText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
-    dbBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    dbBadgeText: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim },
+    zoomIcon: { position: 'absolute', bottom: 5, right: 5, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 5, padding: 2 },
+    heroTextContainer: { flex: 1, alignItems: 'flex-end' },
+    brandTag: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 14 },
+    productNameLarge: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, fontSize: 22, textAlign: 'right', marginBottom: 10 },
+    mainBadgeRow: { flexDirection: 'row-reverse', gap: 12, alignItems: 'center' },
+    premiumScoreBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    premiumScoreText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#fff' },
+    verifiedIndicator: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    verifiedIndicatorText: { fontFamily: 'Tajawal-Medium', fontSize: 11, color: COLORS.textDim },
 
-    // Stats
-    statsGrid: { flexDirection: 'row-reverse', gap: 12, marginBottom: 20 },
-    statBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 20, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    statLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textDim, fontSize: 10, marginBottom: 5 },
-    statVal: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, marginBottom: 8 },
-    miniProgress: { height: 4, width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2 },
-    miniFill: { height: '100%', borderRadius: 2 },
+    // Stats Grid
+    statsGrid: { flexDirection: 'row-reverse', gap: 15, marginBottom: 25 },
+    statGlassCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', padding: 18, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border },
+    statIconCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+    statLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textDim, fontSize: 11, marginBottom: 4 },
+    statValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, marginBottom: 10 },
+    progressBar: { height: 4, width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10 },
+    progressFill: { height: '100%', borderRadius: 10 },
 
-    // Sections
-    sectionCard: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, padding: 18, marginBottom: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
-    sectionHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    sectionTitle: { fontFamily: 'Tajawal-Bold', color: '#fff', fontSize: 16 },
-    sectionSub: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 11 },
-    
-    // Match Reasons
-    reasonRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 8 },
-    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accentGreen },
-    reasonText: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, textAlign: 'right', flex: 1 },
+    // Compatibility (Restored Style)
+    compatibilityList: { gap: 10, marginTop: 10 },
+    reasonRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: 'rgba(90, 156, 132, 0.05)', padding: 14, borderRadius: 16 },
+    reasonIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(90, 156, 132, 0.1)', justifyContent: 'center', alignItems: 'center' },
+    reasonText: { fontFamily: 'Tajawal-Medium', color: COLORS.textSecondary, fontSize: 14, textAlign: 'right', flex: 1, lineHeight: 20 },
 
-    // Honesty
-    honestyBadge: { alignItems: 'center', padding: 5, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', minWidth: 60 },
-    honestyScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
-    honestyLabel: { fontFamily: 'Tajawal-Bold', fontSize: 8, color: COLORS.textDim },
+    // Sections General
+    sectionCard: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 28, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: COLORS.border },
+    sectionHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+    sectionTitle: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, fontSize: 17 },
+    sectionSubtitle: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 },
 
-    // Claim Row
+    // Marketing UI
+    marketingHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    honestyCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+    honestyValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
+    honestySub: { fontFamily: 'Tajawal-Bold', fontSize: 8, color: COLORS.textDim, marginTop: -2 },
+
+    // Claim Row UX
     claimRowWrapper: { width: '100%' },
     claimRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    claimRowMain: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 12 },
-    claimIconCol: { width: 30, alignItems: 'center' },
-    claimTextCol: { flex: 1, paddingHorizontal: 10 },
-    claimTextTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, textAlign: 'right' },
-    claimTextStatus: { fontFamily: 'Tajawal-Bold', fontSize: 11, textAlign: 'right' },
-    claimDetails: { paddingBottom: 15, paddingTop: 5, paddingHorizontal: 10 },
-    claimExplanation: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 13, textAlign: 'right', lineHeight: 20, marginBottom: 10 },
-    chipContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6 },
-    chip: { backgroundColor: 'rgba(90, 156, 132, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    chipText: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 10 },
+    claimRowMain: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 16 },
+    claimStatusIndicator: { width: 40, alignItems: 'center' },
+    barContainer: { gap: 3 },
+    statusBar: { width: 12, height: 4, borderRadius: 2 },
+    claimTextCol: { flex: 1, paddingHorizontal: 15 },
+    claimTextTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, textAlign: 'right', marginBottom: 2 },
+    statusBadgeRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
+    claimTextStatus: { fontFamily: 'Tajawal-ExtraBold', fontSize: 11 },
+    dotSeparator: { width: 3, height: 3, borderRadius: 1.5 },
+    claimMicroLabel: { fontFamily: 'Tajawal-Bold', fontSize: 10, textTransform: 'uppercase' },
+    claimDetails: { paddingBottom: 20, paddingHorizontal: 10 },
+    explanationBox: { borderRightWidth: 3, paddingRight: 15, marginBottom: 15 },
+    claimExplanation: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, textAlign: 'right', lineHeight: 22 },
+    ingSectionTitle: { fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 12, textAlign: 'right', marginBottom: 10 },
+    chipContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
+    chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    chipText: { fontFamily: 'Tajawal-Bold', fontSize: 11 },
 
-    // Ingredients
-    ingGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-    ingTag: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-    ingTagText: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 11 },
+    // Collapsible Ingredients UI
+    collapsibleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    ingHeaderInfo: { flex: 1, alignItems: 'flex-end', paddingHorizontal: 15 },
+    ingCountLabel: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textDim },
+    ingExpandedContent: { paddingTop: 20 },
+    expandHint: { marginTop: 15, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 12 },
+    expandHintText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.accentGreen },
+    ingSourceNote: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 20, opacity: 0.5 },
+    ingSourceText: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim },
+
+    // Ingredients Grid
+    ingGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 10 },
+    ingTag: { backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 14 },
+    ingTagText: { fontFamily: 'Tajawal-Medium', color: COLORS.textSecondary, fontSize: 12 },
 
     // Footer
-    footer: { position: 'absolute', bottom: 0, width: '100%', padding: 25, backgroundColor: '#111D1A', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
-    buyBtn: { backgroundColor: COLORS.accentGreen, height: 55, borderRadius: 16, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 12 },
-    buyBtnText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.background, fontSize: 15 }
+    stickyFooter: { position: 'absolute', bottom: 0, width: '100%', padding: 25, backgroundColor: COLORS.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+    primaryBtn: { backgroundColor: COLORS.accentGreen, height: 60, borderRadius: 20, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 15, elevation: 5 },
+    primaryBtnText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.background, fontSize: 16 }
 });
