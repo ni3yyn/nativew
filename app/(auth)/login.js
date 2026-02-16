@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
   Dimensions, KeyboardAvoidingView, Platform, ScrollView, 
-  Animated, Easing, ImageBackground, StatusBar, 
+  Animated, Easing, ImageBackground, StatusBar, Linking,
   LayoutAnimation, UIManager, ActivityIndicator, Image
 } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -313,6 +313,20 @@ export default function LoginScreen() {
                             textAlign="right"
                         />
 
+{!isLogin && (
+    <View style={styles.privacyContainer}>
+        <Text style={styles.privacyText}>
+            بالتسجيل، أنت توافق على{' '}
+            <Text 
+                style={styles.privacyLink} 
+                onPress={() => Linking.openURL('https://wathiq.web.app/privacy')}
+            >
+                سياسة الخصوصية
+            </Text>
+        </Text>
+    </View>
+)}
+
                         <TouchableOpacity 
                             style={[styles.mainBtn, loading && {opacity: 0.7}]} 
                             onPress={handleAuth} 
@@ -426,5 +440,22 @@ const styles = StyleSheet.create({
   },
   toastContent: { flex: 1 },
   toastTitle: { color: COLORS.textPrimary, fontSize: 14, fontFamily: 'Tajawal-Bold', marginBottom: 2, textAlign: 'right' },
-  toastMessage: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Regular', textAlign: 'right' }
+  toastMessage: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Regular', textAlign: 'right' },
+  privacyContainer: {
+    marginTop: 5,
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  privacyText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontFamily: 'Tajawal-Regular',
+    textAlign: 'right',
+    lineHeight: 18,
+  },
+  privacyLink: {
+    color: COLORS.accentGreen,
+    fontFamily: 'Tajawal-Bold',
+    textDecorationLine: 'underline',
+  },
 });
