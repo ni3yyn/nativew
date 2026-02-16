@@ -377,6 +377,7 @@ const styles = StyleSheet.create({
   brandContainer: { alignItems: 'center', marginBottom: 40 },
   logoWrapper: {
       alignItems: 'center', justifyContent: 'center', marginBottom: 15,
+      top: 15, 
   },
   logoGlow: {
       position: 'absolute', width: 60, height: 60, borderRadius: 30,
