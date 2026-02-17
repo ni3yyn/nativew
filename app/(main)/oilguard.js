@@ -1908,6 +1908,14 @@ const fetchVerifiedRecommendation = async (analysis) => {
             // 2. Only show if it improves the score by at least 5 points
             if (data.recommendation.real_score > (analysis.oilGuardScore + 5)) {
                 setVerifiedRec(data.recommendation);
+
+                // --- NEW LOGIC: Check for and report unknown ingredients ---
+                if (data.recommendation.unknown_ingredients && data.recommendation.unknown_ingredients.length > 0) {
+                    console.log(`[DB Rec] Found ${data.recommendation.unknown_ingredients.length} unknown ingredients. Reporting...`);
+                    // This re-uses your existing function to send data to Firestore
+                    await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients);
+                }
+                // --- END OF NEW LOGIC ---
             }
         }
     } catch (e) {
