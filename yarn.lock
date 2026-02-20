@@ -7790,13 +7790,6 @@ react-native-worklets-core@^1.6.3:
   dependencies:
     string-hash-64 "^1.0.3"
 
-"react-native-worklets@npm:react-native-worklets-core":
-  version "1.6.3"
-  resolved "https://registry.yarnpkg.com/react-native-worklets-core/-/react-native-worklets-core-1.6.3.tgz#e95d879b28890bf27f019797aa3d8538532b4f4e"
-  integrity sha512-r3Q40XQBccx/iAI5tlyiua+micvO1UGzzUOskNweZUXyfrrE+rb5aqxqruBPqXf90rO+bBiplylLMEAXCLTyGA==
-  dependencies:
-    string-hash-64 "^1.0.3"
-
 react-native@0.81.5:
   version "0.81.5"
   resolved "https://registry.npmjs.org/react-native/-/react-native-0.81.5.tgz"

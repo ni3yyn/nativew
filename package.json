@@ -55,7 +55,6 @@
     "react-native-url-polyfill": "^3.0.0",
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "^0.21.0",
-    "react-native-worklets": "npm:react-native-worklets-core",
     "react-native-worklets-core": "^1.6.3",
     "zustand": "4"
   },
