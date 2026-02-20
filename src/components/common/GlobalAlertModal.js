@@ -1,16 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Modal, View, Text, TouchableOpacity, StyleSheet, 
-    Animated, Dimensions, Easing 
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+    Modal, View, Text, TouchableOpacity, StyleSheet,
+    Animated, Dimensions, Easing
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { COLORS } from '../../constants/theme';
+import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { AlertService } from '../../services/alertService';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
 const GlobalAlertModal = () => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     const [visible, setVisible] = useState(false);
     const [config, setConfig] = useState({
         title: '',
@@ -30,7 +35,7 @@ const GlobalAlertModal = () => {
                 setConfig(newConfig);
                 setVisible(true);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                
+
                 // FIX: Use Timing + Easing instead of Spring for instant clickability
                 Animated.parallel([
                     Animated.timing(slideAnim, {
@@ -48,7 +53,7 @@ const GlobalAlertModal = () => {
             },
             close: handleClose
         });
-        
+
         return () => AlertService.setRef(null);
     }, []);
 
@@ -79,21 +84,21 @@ const GlobalAlertModal = () => {
     if (!visible) return null;
 
     // --- THEME LOGIC ---
-    const getTheme = () => {
+    const getAlertTheme = () => {
         switch (config.type) {
-            case 'success': return { icon: 'check-circle', color: COLORS.accentGreen, bg: COLORS.accentGreen + '20' };
+            case 'success': return { icon: 'check-circle', color: COLORS.success || COLORS.accentGreen, bg: (COLORS.success || COLORS.accentGreen) + '20' };
             case 'error': return { icon: 'times-circle', color: COLORS.danger, bg: COLORS.danger + '20' };
-            case 'warning': return { icon: 'exclamation-triangle', color: COLORS.gold, bg: COLORS.gold + '20' };
+            case 'warning': return { icon: 'exclamation-triangle', color: COLORS.warning || COLORS.gold, bg: (COLORS.warning || COLORS.gold) + '20' };
             case 'delete': return { icon: 'trash-alt', color: COLORS.danger, bg: COLORS.danger + '20' };
-            default: return { icon: 'info-circle', color: COLORS.blue, bg: COLORS.blue + '20' };
+            default: return { icon: 'info-circle', color: COLORS.info || COLORS.blue, bg: (COLORS.info || COLORS.blue) + '20' };
         }
     };
-    const theme = getTheme();
+    const alertTheme = getAlertTheme();
 
     return (
         <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose} statusBarTranslucent>
             <View style={styles.overlay} pointerEvents="box-none">
-                
+
                 {/* Backdrop */}
                 <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
                     <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
@@ -101,13 +106,13 @@ const GlobalAlertModal = () => {
 
                 {/* Modal Card */}
                 <Animated.View style={[
-                    styles.alertContainer, 
+                    styles.alertContainer,
                     { transform: [{ translateY: slideAnim }], opacity: opacityAnim }
                 ]}>
-                    
+
                     {/* Icon */}
-                    <View style={[styles.iconContainer, { backgroundColor: theme.bg }]}>
-                        <FontAwesome5 name={theme.icon} size={32} color={theme.color} />
+                    <View style={[styles.iconContainer, { backgroundColor: alertTheme.bg }]}>
+                        <FontAwesome5 name={alertTheme.icon} size={32} color={alertTheme.color} />
                     </View>
 
                     {/* Text */}
@@ -125,17 +130,17 @@ const GlobalAlertModal = () => {
 
                                 if (btn.style === 'primary') {
                                     btnBg = COLORS.accentGreen;
-                                    btnText = '#ffffff'; // Ensure high contrast
+                                    btnText = COLORS.textOnAccent || '#ffffff'; // Use theme textOnAccent if available
                                     btnBorder = COLORS.accentGreen;
                                 } else if (btn.style === 'destructive') {
-                                    btnBg = 'rgba(239, 68, 68, 0.2)';
+                                    btnBg = COLORS.danger + '20';
                                     btnText = COLORS.danger;
                                     btnBorder = COLORS.danger;
                                 }
 
                                 return (
-                                    <TouchableOpacity 
-                                        key={index} 
+                                    <TouchableOpacity
+                                        key={index}
                                         style={[styles.button, { backgroundColor: btnBg, borderColor: btnBorder }]}
                                         onPress={() => handleButtonPress(btn)}
                                         activeOpacity={0.7}
@@ -147,13 +152,13 @@ const GlobalAlertModal = () => {
                             })
                         ) : (
                             // Default OK button if none provided
-                            <TouchableOpacity 
-                                style={[styles.button, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} 
+                            <TouchableOpacity
+                                style={[styles.button, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]}
                                 onPress={handleClose}
                                 activeOpacity={0.8}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.buttonText, { color: '#ffffff' }]}>حسنا</Text>
+                                <Text style={[styles.buttonText, { color: COLORS.textOnAccent || '#ffffff' }]}>حسنا</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -163,7 +168,7 @@ const GlobalAlertModal = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'center',
@@ -178,7 +183,7 @@ const styles = StyleSheet.create({
     },
     alertContainer: {
         width: width * 0.85,
-        backgroundColor: COLORS.card, // Ensure match with dark theme
+        backgroundColor: COLORS.card,
         borderRadius: 24,
         padding: 25,
         alignItems: 'center',

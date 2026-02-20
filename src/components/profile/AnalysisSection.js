@@ -1,47 +1,48 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from './analysis/AnalysisShared';
+import { useTheme } from '../../context/ThemeContext';
 
 // Sub-Component Imports
 import { AnalysisHero, AnalysisCarousel } from './analysis/InsightCards';
 import { BarrierCard, BarrierDetailsModal } from './analysis/BarrierSection';
 import { OverviewDashboard } from './analysis/OverviewDashboard';
 import { InsightDetailsModal } from './analysis/InsightDetailsModal';
-import { AnalysisEmptyState } from '../../components/profile/EmptyStates'; 
+import { AnalysisEmptyState } from '../../components/profile/EmptyStates';
 
-export const AnalysisSection = ({ 
-    loadingProfile, 
-    loadingWeather, 
-    savedProducts = [], 
-    analysisData, 
-    weatherResults, 
-    weatherErrorType, 
-    dismissedInsightIds, 
-    onRetryWeather, 
-    onShowPermissionAlert, 
-    router 
+export const AnalysisSection = ({
+    loadingProfile,
+    loadingWeather,
+    savedProducts = [],
+    analysisData,
+    weatherResults,
+    weatherErrorType,
+    dismissedInsightIds,
+    onRetryWeather,
+    onShowPermissionAlert,
+    router
 }) => {
+    const { colors: COLORS } = useTheme();
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
 
     const handleSelectInsight = useCallback((insight) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedInsight(insight);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setSelectedInsight(insight);
     }, []);
-  
+
     // ========================================================================
     // --- INSIGHTS ENGINE ---
     // ========================================================================
     const { heroInsight, carouselInsights, barrierData } = useMemo(() => {
         // 1. Safety Check
-        if (!analysisData) return { 
-            heroInsight: null, carouselInsights: [], barrierData: null 
+        if (!analysisData) return {
+            heroInsight: null, carouselInsights: [], barrierData: null
         };
 
         // 2. Base Profile Insights (Filter dismissed)
         const rawInsights = analysisData.aiCoachInsights?.filter(insight => !dismissedInsightIds.includes(insight.id)) || [];
-        
+
         // 3. Prepare Insights Pool
         // Start with raw insights
         let otherInsights = [...rawInsights];
@@ -51,7 +52,7 @@ export const AnalysisSection = ({
 
         if (loadingWeather) {
             weatherDashboard = { id: 'weather-loading-placeholder', isPlaceholder: true, severity: 'critical' };
-        } 
+        }
         else if (weatherErrorType === 'permission') {
             weatherDashboard = {
                 id: 'weather-permission-denied',
@@ -73,7 +74,7 @@ export const AnalysisSection = ({
         else if (weatherResults && weatherResults.length > 0) {
             // FORCE: The first result is ALWAYS the main dashboard
             weatherDashboard = weatherResults[0];
-            
+
             // Any additional weather alerts (indices 1+) go to the carousel pool
             if (weatherResults.length > 1) {
                 const specificWeatherAlerts = weatherResults.slice(1);
@@ -92,11 +93,11 @@ export const AnalysisSection = ({
 
         // Fallback: If weather is completely broken/missing, grab the most critical alert
         if (!hero) {
-             hero = otherInsights.find(i => i.severity === 'critical') || otherInsights[0];
-             // Remove chosen hero from pool
-             if (hero) {
-                 otherInsights = otherInsights.filter(i => i.id !== hero.id);
-             }
+            hero = otherInsights.find(i => i.severity === 'critical') || otherInsights[0];
+            // Remove chosen hero from pool
+            if (hero) {
+                otherInsights = otherInsights.filter(i => i.id !== hero.id);
+            }
         }
 
         // 7. Construct Carousel
@@ -108,22 +109,22 @@ export const AnalysisSection = ({
         });
 
         let finalCarousel = [...sortedRemaining];
-        
+
         // Inject Night Prep at the START of the carousel
         if (nightPrepInsight) {
             finalCarousel = [nightPrepInsight, ...finalCarousel];
         }
 
         // 8. Barrier Data
-        const barrier = analysisData.barrierHealth || { 
-            score: 0, status: '...', color: COLORS.textSecondary, desc: '', 
+        const barrier = analysisData.barrierHealth || {
+            score: 0, status: '...', color: COLORS.textSecondary, desc: '',
             totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: []
         };
 
-        return { 
-            heroInsight: hero, 
-            carouselInsights: finalCarousel, 
-            barrierData: barrier 
+        return {
+            heroInsight: hero,
+            carouselInsights: finalCarousel,
+            barrierData: barrier
         };
 
     }, [analysisData, loadingWeather, weatherResults, weatherErrorType, dismissedInsightIds]);
@@ -139,50 +140,50 @@ export const AnalysisSection = ({
     if (loadingProfile || !analysisData) {
         return <ActivityIndicator size="large" color={COLORS.accentGreen} style={styles.loadingIndicator} />;
     }
-  
+
     return (
         <View style={styles.container}>
-            <View style={styles.scrollContent}> 
-                
+            <View style={styles.scrollContent}>
+
                 {/* 1. HERO SECTION (Always Weather Dashboard unless error) */}
-                <AnalysisHero 
-                    focusInsight={heroInsight} 
-                    onSelect={handleSelectInsight} 
+                <AnalysisHero
+                    focusInsight={heroInsight}
+                    onSelect={handleSelectInsight}
                     onRetryWeather={onRetryWeather}
                     onShowPermissionAlert={onShowPermissionAlert}
                 />
 
                 {/* 2. INSIGHT CAROUSEL (Starts with Night Prep if available) */}
                 {carouselInsights.length > 0 && (
-                    <AnalysisCarousel 
-                        insights={carouselInsights} 
-                        onSelect={handleSelectInsight} 
+                    <AnalysisCarousel
+                        insights={carouselInsights}
+                        onSelect={handleSelectInsight}
                     />
                 )}
-  
+
                 {/* 3. BARRIER & DASHBOARD */}
-                <BarrierCard 
-                    barrier={barrierData} 
-                    onPress={() => setShowBarrierDetails(true)} 
+                <BarrierCard
+                    barrier={barrierData}
+                    onPress={() => setShowBarrierDetails(true)}
                 />
-                
+
                 <OverviewDashboard analysisData={analysisData} />
 
             </View>
-  
+
             {/* --- MODALS --- */}
             {selectedInsight && (
-                <InsightDetailsModal 
-                    visible={!!selectedInsight} 
-                    insight={selectedInsight} 
-                    onClose={() => setSelectedInsight(null)} 
+                <InsightDetailsModal
+                    visible={!!selectedInsight}
+                    insight={selectedInsight}
+                    onClose={() => setSelectedInsight(null)}
                 />
             )}
 
-            <BarrierDetailsModal 
-                visible={showBarrierDetails} 
-                onClose={() => setShowBarrierDetails(false)} 
-                data={barrierData} 
+            <BarrierDetailsModal
+                visible={showBarrierDetails}
+                onClose={() => setShowBarrierDetails(false)}
+                data={barrierData}
             />
         </View>
     );

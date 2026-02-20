@@ -1,16 +1,21 @@
 // src/components/oilguard/ReviewStep.js
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, Easing } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 // Import shared styles and data
-import { styles, COLORS } from './oilguard.styles'; // Adjust path to where your styles file is
+import { createStyles, COLORS as DEFAULT_COLORS } from './oilguard.styles'; // Adjust path to where your styles file is
 import { PRODUCT_TYPES } from '../../constants/productData'; // Adjust path to constants
+import { useTheme } from '../../context/ThemeContext';
 
 export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     const [showGrid, setShowGrid] = useState(false);
     const [listContentHeight, setListContentHeight] = useState(350);
     const gridHeight = useRef(new Animated.Value(0)).current;
@@ -18,12 +23,12 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
     const toggleGrid = () => {
         const target = showGrid ? 0 : 1;
         setShowGrid(!showGrid);
-        
-        Animated.spring(gridHeight, { 
-            toValue: target, 
-            useNativeDriver: false, 
-            friction: 9, 
-            tension: 50 
+
+        Animated.spring(gridHeight, {
+            toValue: target,
+            useNativeDriver: false,
+            friction: 9,
+            tension: 50
         }).start();
     };
 
@@ -64,33 +69,33 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
             </View>
 
             <Animated.View style={[
-                styles.rs_GridWrapper, 
-                { 
-                    height: gridHeight.interpolate({ 
-                        inputRange: [0, 1], 
-                        outputRange: [0, dropdownHeight], 
-                        extrapolate: 'clamp' 
+                styles.rs_GridWrapper,
+                {
+                    height: gridHeight.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, dropdownHeight],
+                        extrapolate: 'clamp'
                     }),
-                    marginTop: gridHeight.interpolate({ 
-                        inputRange: [0, 1], 
-                        outputRange: [0, 20], 
-                        extrapolate: 'clamp' 
+                    marginTop: gridHeight.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 20],
+                        extrapolate: 'clamp'
                     }),
                     opacity: gridHeight,
-                    overflow: 'hidden' 
+                    overflow: 'hidden' // Important!
                 }
             ]}>
-                <ScrollView 
-                    nestedScrollEnabled 
-                    showsVerticalScrollIndicator={true} 
+                <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={true}
                     contentContainerStyle={styles.rs_ChipGrid}
                     onContentSizeChange={(_, h) => setListContentHeight(h)}
                 >
                     {PRODUCT_TYPES.map(t => (
-                        <TouchableOpacity 
-                            activeOpacity={0.7} 
-                            key={t.id} 
-                            onPress={() => handleSelect(t.id)} 
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            key={t.id}
+                            onPress={() => handleSelect(t.id)}
                             style={[styles.rs_TypeChip, productType === t.id && styles.rs_TypeChipActive]}
                         >
                             <FontAwesome5 name={t.icon} size={14} color={productType === t.id ? COLORS.textOnAccent : COLORS.textSecondary} />
@@ -101,21 +106,21 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
             </Animated.View>
 
             <View style={styles.rs_Footer}>
-                <TouchableOpacity 
-                    activeOpacity={0.7} 
+                <TouchableOpacity
+                    activeOpacity={0.7}
                     onPress={() => {
                         Haptics.selectionAsync();
                         onConfirm();
-                    }} 
+                    }}
                     style={styles.rs_ConfirmBtn}
                 >
-                     <LinearGradient
-                        colors={[COLORS.accentGreen, '#4a8570']}
-                        start={{x:0, y:0}} end={{x:1, y:0}}
+                    <LinearGradient
+                        colors={[COLORS.accentGreen, COLORS.accentGreen + 'BF']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={styles.rs_ConfirmGradient}
                     >
                         <Text style={styles.rs_ConfirmText}>نعم، تابع للتحليل</Text>
-                        <FontAwesome5 name="arrow-left" color={COLORS.background} />
+                        <FontAwesome5 name="arrow-left" color={COLORS.textOnAccent} />
                     </LinearGradient>
                 </TouchableOpacity>
             </View>

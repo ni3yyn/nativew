@@ -26,12 +26,12 @@ export const COLORS = {
 
   accentGreen: '#5A9C84',
   accentGlow: 'rgba(90, 156, 132, 0.4)',
-  
+
   // Compatibility Mappings
-  primary: '#5A9C84', 
-  primaryGlow: 'rgba(90, 156, 132, 0.4)', 
-  darkGreen: '#1A2D27', 
-  textDim: '#A3B1AC', 
+  primary: '#5A9C84',
+  primaryGlow: 'rgba(90, 156, 132, 0.4)',
+  darkGreen: '#1A2D27',
+  textDim: '#A3B1AC',
 
   // Text Colors
   textPrimary: '#F1F3F2',
@@ -50,7 +50,7 @@ export const COLORS = {
 //                               STYLESHEET
 // ============================================================================
 
-export const styles = StyleSheet.create({
+export const createStyles = (COLORS) => StyleSheet.create({
 
   // --------------------------------------------------------------------------
   // 1. CORE LAYOUT & GLOBAL WRAPPERS
@@ -109,7 +109,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  
+
   // Collapsible Header Styles (Step 2)
   fixedHeaderBlock: {
     position: 'absolute',
@@ -163,7 +163,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Scanning Laser Animation
   scanFrame: {
     width: 200,
@@ -197,6 +197,7 @@ export const styles = StyleSheet.create({
   // Bottom Action Deck
   bottomDeck: {
     width: '100%',
+    top: 23,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     overflow: 'hidden',
@@ -220,7 +221,7 @@ export const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: 5,
   },
-  
+
   // Primary Action Button (Camera)
   primaryActionBtn: {
     width: '100%',
@@ -257,7 +258,7 @@ export const styles = StyleSheet.create({
     color: 'rgba(21, 37, 32, 0.8)',
     textAlign: 'right',
   },
-  
+
   // Secondary Actions (Gallery/Search)
   secondaryActionsRow: {
     flexDirection: 'row-reverse',
@@ -294,190 +295,190 @@ export const styles = StyleSheet.create({
   heroSub: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, minHeight: 22 },
 
   // --------------------------------------------------------------------------
-// 4. STEP 1: PREDICTION REVIEW
-// --------------------------------------------------------------------------
-rs_Container: {
-  flex: 1,
-  width: '100%',
-  justifyContent: 'center',
-  paddingHorizontal: 10,
-  gap: 20,
-},
-rs_CenterContent: {
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-rs_Title: {
-  fontFamily: 'Tajawal-ExtraBold',
-  fontSize: 28,
-  color: COLORS.textPrimary,
-  textAlign: 'center',
-  marginBottom: 8,
-},
-rs_Subtitle: {
-  fontFamily: 'Tajawal-Regular',
-  fontSize: 15,
-  color: COLORS.textSecondary,
-  textAlign: 'center',
-  lineHeight: 22,
-},
-rs_HeroWrapper: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginVertical: 20,
-},
-rs_VisualCircleContainer: {
-  position: 'relative',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 140,
-  height: 140,
-},
-rs_GlowRing: {
-  position: 'absolute',
-  width: 140,
-  height: 140,
-  borderRadius: 70,
-  backgroundColor: `${COLORS.accentGreen}20`,
-},
-rs_GlassCircle: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderWidth: 1,
-  borderColor: 'rgba(90, 156, 132, 0.3)',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backdropFilter: 'blur(10px)',
-},
-rs_LabelContainer: {
-  alignItems: 'center',
-  marginTop: 20,
-  gap: 12,
-},
-rs_LabelText: {
-  fontFamily: 'Tajawal-Bold',
-  fontSize: 18,
-  color: COLORS.textPrimary,
-  textAlign: 'center',
-},
-rs_EditBtn: {
-  flexDirection: 'row-reverse', // RTL alignment
-  alignItems: 'center',
-  gap: 8,
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  backgroundColor: 'rgba(90, 156, 132, 0.1)',
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: COLORS.accentGreen,
-},
-rs_EditBtnText: {
-  fontFamily: 'Tajawal-Bold',
-  fontSize: 13,
-  color: COLORS.accentGreen,
-},
-rs_GridWrapper: {
-  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  borderRadius: 20,
-  padding: 15,
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  marginTop: 10,
-  // Remove fixed height, will be animated
-},
-rs_ChipGrid: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  justifyContent: 'center',
-  gap: 10,
-},
-rs_TypeChip: {
-  flexDirection: 'row-reverse', // Icon on LEFT, text on RIGHT (RTL)
-  alignItems: 'center',
-  paddingHorizontal: 16,
-  paddingVertical: 10,
-  borderRadius: 12,
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  gap: 8,
-},
-rs_TypeChipActive: {
-  backgroundColor: COLORS.accentGreen,
-  borderColor: COLORS.accentGreen,
-},
-rs_TypeChipText: {
-  fontFamily: 'Tajawal-Bold',
-  fontSize: 13,
-  color: COLORS.textPrimary,
-},
-rs_TypeChipTextActive: {
-  color: COLORS.textOnAccent,
-},
-rs_CloseGridBtn: {
-  alignItems: 'center',
-  marginTop: 15,
-  paddingVertical: 8,
-},
-rs_Footer: {
-  marginTop: 30,
-  paddingHorizontal: 20,
-},
-rs_ConfirmBtn: {
-  width: '100%',
-  // REMOVED: elevation, shadows, overflow, and borderRadius from here.
-  // This container is now purely for layout, preventing the Android transparency glitch.
-  backgroundColor: 'transparent',
-},
-rs_ConfirmGradient: {
-  flexDirection: 'row-reverse',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical: 16,
-  paddingHorizontal: 20,
-  gap: 12,
-  minHeight: 56,
-  
-  // MOVED VISUAL STYLES HERE:
-  borderRadius: 16, 
-  overflow: 'hidden', 
-  
-  // Shadow/Elevation now lives on the visual element, not the touchable container
-  elevation: 5,
-  shadowColor: COLORS.accentGreen,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.4,
-  shadowRadius: 8,
-},
-rs_ConfirmText: {
-  fontFamily: 'Tajawal-Bold',
-  fontSize: 16,
-  color: COLORS.background,
-},
-rs_GridWrapperAnimated: {
-  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  borderRadius: 20,
-  padding: 15,
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.1)',
-  marginTop: 10,
-},
+  // 4. STEP 1: PREDICTION REVIEW
+  // --------------------------------------------------------------------------
+  rs_Container: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    gap: 20,
+  },
+  rs_CenterContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rs_Title: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 28,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  rs_Subtitle: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  rs_HeroWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  rs_VisualCircleContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 140,
+    height: 140,
+  },
+  rs_GlowRing: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: `${COLORS.accentGreen}20`,
+  },
+  rs_GlassCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: COLORS.accentGreen + '4D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+  rs_LabelContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 12,
+  },
+  rs_LabelText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  rs_EditBtn: {
+    flexDirection: 'row-reverse', // RTL alignment
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.accentGreen + '1A',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.accentGreen,
+  },
+  rs_EditBtnText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.accentGreen,
+  },
+  rs_GridWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 20,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 10,
+    // Remove fixed height, will be animated
+  },
+  rs_ChipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  rs_TypeChip: {
+    flexDirection: 'row-reverse', // Icon on LEFT, text on RIGHT (RTL)
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 8,
+  },
+  rs_TypeChipActive: {
+    backgroundColor: COLORS.accentGreen,
+    borderColor: COLORS.accentGreen,
+  },
+  rs_TypeChipText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+  },
+  rs_TypeChipTextActive: {
+    color: COLORS.textOnAccent,
+  },
+  rs_CloseGridBtn: {
+    alignItems: 'center',
+    marginTop: 15,
+    paddingVertical: 8,
+  },
+  rs_Footer: {
+    marginTop: 30,
+    paddingHorizontal: 20,
+  },
+  rs_ConfirmBtn: {
+    width: '100%',
+    // REMOVED: elevation, shadows, overflow, and borderRadius from here.
+    // This container is now purely for layout, preventing the Android transparency glitch.
+    backgroundColor: 'transparent',
+  },
+  rs_ConfirmGradient: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 12,
+    minHeight: 56,
 
-// For the checkmark animation
-rs_CheckIcon: {
-  opacity: 0,
-  transform: [{ scale: 0.5 }],
-},
+    // MOVED VISUAL STYLES HERE:
+    borderRadius: 16,
+    overflow: 'hidden',
 
-// Smooth transition for the hero section
-rs_HeroWrapperAnimated: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginVertical: 20,
-  transform: [{ translateY: 0 }], // Will be animated
-},
+    // Shadow/Elevation now lives on the visual element, not the touchable container
+    elevation: 5,
+    shadowColor: COLORS.accentGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  rs_ConfirmText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+    color: COLORS.background,
+  },
+  rs_GridWrapperAnimated: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 20,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 10,
+  },
+
+  // For the checkmark animation
+  rs_CheckIcon: {
+    opacity: 0,
+    transform: [{ scale: 0.5 }],
+  },
+
+  // Smooth transition for the hero section
+  rs_HeroWrapperAnimated: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+    transform: [{ translateY: 0 }], // Will be animated
+  },
   // --------------------------------------------------------------------------
   // 5. STEP 2: CLAIMS SELECTION & SEARCH
   // --------------------------------------------------------------------------
@@ -772,6 +773,8 @@ rs_HeroWrapperAnimated: {
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   ingHeader: { alignItems: 'flex-end' },
   ingName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, textAlign: 'right' },
@@ -1055,27 +1058,27 @@ rs_HeroWrapperAnimated: {
     fontSize: 12,
     direction: 'ltr',
   },
-  
+
   // --------------------------------------------------------------------------
   // NEW: ADVANCED RESULTS DASHBOARD STYLES
   // --------------------------------------------------------------------------
-  
+
   // The Main Dashboard Container (HUD)
   dashboardContainer: {
     borderRadius: 24,
     overflow: 'hidden',
     width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(90, 156, 132, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     marginBottom: 20,
     position: 'relative',
   },
   dashboardGlass: {
     padding: 20,
     paddingHorizontal: 15,
-    backgroundColor: 'rgba(26, 45, 39, 0.6)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
-  
+
   // Dashboard Header (Personal Match)
   dashHeader: {
     flexDirection: 'row-reverse',
@@ -1095,7 +1098,7 @@ rs_HeroWrapperAnimated: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     maxWidth: 100, // Prevents it from taking more than half the header
-    alignSelf: 'center', 
+    alignSelf: 'center',
   },
   matchText: {
     fontFamily: 'Tajawal-Bold',
@@ -1127,7 +1130,7 @@ rs_HeroWrapperAnimated: {
     fontSize: 28,
     color: COLORS.textPrimary,
     textAlign: 'center',
-    textShadowColor: 'rgba(90, 156, 132, 0.5)',
+    textShadowColor: COLORS.accentGreen + '80',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
@@ -1139,7 +1142,7 @@ rs_HeroWrapperAnimated: {
     marginTop: 4,
     marginBottom: 9
   },
-  
+
   // The "Chemical DNA" Stats Row
   statsGrid: {
     flexDirection: 'row-reverse',
@@ -1148,14 +1151,14 @@ rs_HeroWrapperAnimated: {
     marginTop: 5, // Space from verdict
     paddingHorizontal: 5,
   },
-  
+
   // The Glass Capsule
   pillarContainer: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.03)', // Ultra-subtle fill
     borderRadius: 16,
     padding: 12,
-    
+
     justifyContent: 'center',
   },
 
@@ -1202,7 +1205,7 @@ rs_HeroWrapperAnimated: {
     height: '100%',
     borderRadius: 10,
     // Add shadow to the bar itself for a "neon" look
-    shadowColor: "#000", 
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 5,
@@ -1275,7 +1278,7 @@ rs_HeroWrapperAnimated: {
     lineHeight: 20,
     textAlign: 'right',
   },
-  
+
   // Individual Items
   matchRow: {
     flexDirection: 'row-reverse',
@@ -1296,25 +1299,27 @@ rs_HeroWrapperAnimated: {
     lineHeight: 20,
     textAlign: 'right',
   },
-  
+
   // Divider between Good and Bad sections
   matchSeparator: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginHorizontal: 15,
   },
-  
- 
+
+
   // --------------------------------------------------------------------------
   // MODERN CLAIMS (Transparent & Clean)
   // --------------------------------------------------------------------------
-  
+
   claimsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)', // Subtle glass effect
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     marginTop: 0,
     marginBottom: 20,
     borderRadius: 20,
     paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
 
   claimsHeader: {
@@ -1366,7 +1371,7 @@ rs_HeroWrapperAnimated: {
   claimsBody: {
     paddingHorizontal: 0, // Padding is now on the row itself
   },
-  
+
   // Row
   claimRowWrapper: {
     width: '100%',
@@ -1376,7 +1381,7 @@ rs_HeroWrapperAnimated: {
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  
+
   // Clickable Row Area
   claimRowMain: {
     flexDirection: 'row-reverse', // Align Right to Left
@@ -1386,7 +1391,7 @@ rs_HeroWrapperAnimated: {
     paddingHorizontal: 10,
     width: '100%',                // Ensure it takes full width
   },
-  
+
   // 1. Right Column (Status Icon)
   claimIconCol: {
     width: 24,
@@ -1444,7 +1449,7 @@ rs_HeroWrapperAnimated: {
     flexWrap: 'wrap',
     gap: 8,
   },
-  
+
   evidenceLabel: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
@@ -1473,8 +1478,7 @@ rs_HeroWrapperAnimated: {
   guideSection: {
     width: '100%',
     paddingHorizontal: 10,
-    marginTop: -15,
-    marginBottom: 25,
+    marginBottom: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'stretch', // Ensures both cards match height
@@ -1489,7 +1493,7 @@ rs_HeroWrapperAnimated: {
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    
+
     // Modern Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -1503,7 +1507,7 @@ rs_HeroWrapperAnimated: {
     borderColor: 'rgba(239, 68, 68, 0.4)', // Dim Red
   },
   cardSuccess: {
-    borderColor: 'rgba(90, 156, 132, 0.6)', // Sharp Teal/Green
+    borderColor: COLORS.accentGreen + '99',
   },
 
   // --- THE IMAGE DISPLAY ---
@@ -1519,7 +1523,7 @@ rs_HeroWrapperAnimated: {
   },
 
   // --- OVERLAYS & EFFECTS ---
-  
+
   // Left Side: "Signal Lost" Effect
   noiseOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1561,7 +1565,7 @@ rs_HeroWrapperAnimated: {
     backgroundColor: '#00ffaa', // Neon Green
     zIndex: 10,
     shadowColor: '#00ffaa',
-    shadowOffset: {width: 0, height: 0},
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10, // Glowing effect
   },
@@ -1622,20 +1626,20 @@ rs_HeroWrapperAnimated: {
     lineHeight: 20,
     textAlign: 'right', // Or 'right' if RTL
   },
-  
+
   // --- NEW EVIDENCE LAYOUT STYLES ---
   evidenceGroup: {
     marginBottom: 12,
     alignItems: 'flex-end', // Let the container handle wrapping from the start (right)
   },
-  
+
   chipContainer: {
     flexDirection: 'row-reverse', // RTL (Chips start from the right)
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'flex-start',
   },
-  
+
   // Primary (Strong) Chips
   chipPrimary: {
     backgroundColor: 'rgba(77, 150, 255, 0.15)', // Blue tint
@@ -1693,7 +1697,7 @@ rs_HeroWrapperAnimated: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(90, 156, 132, 0.08)', // Very subtle green tint
+    backgroundColor: COLORS.accentGreen + '14', // Very subtle green tint
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -1701,7 +1705,7 @@ rs_HeroWrapperAnimated: {
     marginTop: 5,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(90, 156, 132, 0.15)',
+    borderColor: COLORS.accentGreen + '26',
     gap: 0
   },
   personalNoteText: {
@@ -1713,3 +1717,5 @@ rs_HeroWrapperAnimated: {
     lineHeight: 16
   },
 });
+
+export const styles = createStyles(COLORS);

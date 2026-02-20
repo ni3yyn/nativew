@@ -1,14 +1,15 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Animated, Keyboard, Easing } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../../constants/theme';
+import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
 // --- SPORE PARTICLE ---
 const SporeParticle = ({ animateTrigger }) => {
     const anim = useRef(new Animated.Value(0)).current;
-    
+
     // Random direction for each spore
     const randomX = Math.random() * 60 - 30; // -30 to 30
     const randomY = Math.random() * -60 - 20; // Upwards -20 to -80
@@ -34,16 +35,19 @@ const SporeParticle = ({ animateTrigger }) => {
 
     return (
         <Animated.View style={[
-            styles.spore, 
+            { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: DEFAULT_COLORS.accentGreen },
             { opacity, transform: [{ translateX }, { translateY }, { scale }] }
         ]} />
     );
 };
 
 const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onToggleBioFilter }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const slideAnim = useRef(new Animated.Value(-20)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    
+
     // Bio Button Animations
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const [sporeTrigger, setSporeTrigger] = useState(0); // Increments to trigger animation
@@ -79,7 +83,7 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
 
     return (
         <Animated.View style={[styles.container, { transform: [{ translateY: slideAnim }], opacity: opacityAnim }]}>
-            
+
             {/* Search Input */}
             <View style={styles.searchBox}>
                 <Ionicons name="search" size={18} color={COLORS.textDim} style={{ marginLeft: 10 }} />
@@ -99,33 +103,38 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
             </View>
 
             {/* THE FLASHY BIO BUTTON */}
-            <TouchableOpacity 
+            <TouchableOpacity
                 onPress={handleBioPress}
                 activeOpacity={0.9}
                 style={styles.bioButtonWrapper}
             >
                 {/* Spores Layer */}
-                <View style={StyleSheet.absoluteFill} pointerEvents="none" style={styles.sporesContainer}>
+                <View style={[StyleSheet.absoluteFill, styles.sporesContainer]} pointerEvents="none">
                     {[...Array(6)].map((_, i) => <SporeParticle key={i} animateTrigger={sporeTrigger} />)}
                 </View>
 
                 <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                     <LinearGradient
-                        colors={isBioFilterActive ? [COLORS.accentGreen, '#047857'] : [COLORS.card, COLORS.card]}
+                        colors={[
+                            String(isBioFilterActive ? COLORS.accentGreen : COLORS.card),
+                            String(isBioFilterActive ? COLORS.accentGreen : COLORS.card) + (isBioFilterActive ? 'CC' : '')
+                        ]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
                         style={[
-                            styles.bioButton, 
+                            styles.bioButton,
                             isBioFilterActive ? styles.bioButtonActive : styles.bioButtonInactive
                         ]}
                     >
-                        <FontAwesome5 
-                            name="fingerprint" 
-                            size={18} 
-                            color={isBioFilterActive ? '#FFF' : COLORS.accentGreen} 
+                        <FontAwesome5
+                            name="fingerprint"
+                            size={18}
+                            color={isBioFilterActive ? '#FFF' : COLORS.accentGreen}
                         />
                         {isBioFilterActive && (
                             <Text style={styles.bioText}>مطابق لي</Text>
                         )}
-                        
+
                         {/* Notify Dot if Inactive */}
                         {!isBioFilterActive && (
                             <View style={styles.notifyDot} />
@@ -138,7 +147,7 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -168,7 +177,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
         height: '100%',
     },
-    
+
     // Bio Button Styles
     bioButtonWrapper: {
         alignItems: 'center',

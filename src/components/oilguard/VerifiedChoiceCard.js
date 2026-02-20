@@ -1,12 +1,17 @@
 // src/components/oilguard/VerifiedChoiceCard.js
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { COLORS } from './oilguard.styles';
+import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnother, loading }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const s = useMemo(() => createStyles(COLORS), [COLORS]);
+
     if (!item) return null;
 
     // Calculate the jump in quality
@@ -15,23 +20,23 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
 
     return (
         <View style={s.container}>
-            <TouchableOpacity 
-                activeOpacity={0.9} 
-                onPress={() => onPress(item)}  
+            <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => onPress(item)}
                 style={s.cardFrame}
             >
                 {/* 1. TOP HUD BAR */}
                 <View style={s.topBar}>
                     <View style={s.matchBadge}>
                         <Ionicons name="sparkles" size={12} color={COLORS.background} />
-                        <Text style={s.matchBadgeText}>بديل ذكي مقترح</Text>
+                        <Text style={s.matchBadgeText}>بديل مقترح</Text>
                     </View>
                     <Text style={s.brandLabel}>{item.brand}</Text>
                 </View>
 
                 {/* 2. MAIN CONTENT AREA */}
                 <View style={s.mainContent}>
-                    
+
                     {/* Image Section */}
                     <View style={s.imageContainer}>
                         {item.image ? (
@@ -44,33 +49,33 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                     {/* Info Section */}
                     <View style={s.infoColumn}>
                         <Text numberOfLines={1} style={s.productName}>{item.name}</Text>
-                        
+
                         <View style={s.dataRow}>
                             <View style={s.scoreBox}>
                                 <Text style={s.scoreText}>{item.real_score}%</Text>
-                                <Text style={s.scoreLabel}>موثوقية</Text>
+                                <Text style={s.scoreLabel}>درجة وثيق</Text>
                             </View>
 
                             <View style={s.divider} />
 
                             <View style={s.improvementBadge}>
                                 <FontAwesome5 name="arrow-up" size={10} color={COLORS.success} />
-                                <Text style={s.improvementText}>تطور +{improvement}%</Text>
+                                <Text style={s.improvementText}>زيادة +{improvement}%</Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Action Pillar */}
-                    <TouchableOpacity 
-                        style={s.shuffleAction} 
+                    <TouchableOpacity
+                        style={s.shuffleAction}
                         onPress={onSuggestAnother}
                         disabled={loading}
                     >
                         <View style={s.shuffleCircle}>
-                            <MaterialCommunityIcons 
-                                name={loading ? "loading" : "shuffle-variant"} 
-                                size={22} 
-                                color={COLORS.accentGreen} 
+                            <MaterialCommunityIcons
+                                name={loading ? "loading" : "shuffle-variant"}
+                                size={22}
+                                color={COLORS.accentGreen}
                                 style={loading ? s.rotating : null}
                             />
                         </View>
@@ -92,7 +97,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
     );
 };
 
-const s = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     container: {
         width: '100%',
         marginVertical: 10,
@@ -180,7 +185,7 @@ const s = StyleSheet.create({
         lineHeight: 22,
     },
     scoreLabel: {
-        fontFamily: 'Tajawal-Medium',
+        fontFamily: 'Tajawal-Regular',
         fontSize: 9,
         color: COLORS.textDim,
     },
@@ -193,7 +198,7 @@ const s = StyleSheet.create({
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        backgroundColor: COLORS.success + '1A',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -215,12 +220,12 @@ const s = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(90, 156, 132, 0.1)',
+        backgroundColor: COLORS.accentGreen + '1A',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 4,
         borderWidth: 1,
-        borderColor: 'rgba(90, 156, 132, 0.2)',
+        borderColor: COLORS.accentGreen + '33',
     },
     shuffleText: {
         fontFamily: 'Tajawal-Bold',

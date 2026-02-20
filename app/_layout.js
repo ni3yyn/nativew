@@ -2,18 +2,20 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState, Platform } from 'react-native';
 import { Stack, useRouter } from "expo-router";
 import { AppProvider, useAppContext } from "../src/context/AppContext";
+import { ThemeProvider } from "../src/context/ThemeContext";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
-import * as Updates from 'expo-updates'; 
+import * as Updates from 'expo-updates';
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'; 
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // ADJUST THIS PATH to match where your 'db' variable is exported in your app
 import { db } from '../src/config/firebase';
 
@@ -31,15 +33,15 @@ const useDailyPresence = (user) => {
       try {
         // 1. Get today's date as a string (e.g., "2023-10-25")
         const todayStr = new Date().toISOString().split('T')[0];
-        
+
         // 2. Check what we stored last time
         const lastRecordedDate = await AsyncStorage.getItem('last_presence_date');
 
         // 3. If dates are different, it's a new day -> Update Firestore
         if (lastRecordedDate !== todayStr) {
-          
+
           const userRef = doc(db, "profiles", user.uid);
-          
+
           await updateDoc(userRef, {
             lastSeen: serverTimestamp(),
             // Optional: You can add 'appVersion' here too so you know which version they use
@@ -74,34 +76,34 @@ const useDailyPresence = (user) => {
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
 const useSilentUpdates = () => {
-    useEffect(() => {
-        if (__DEV__) return; 
+  useEffect(() => {
+    if (__DEV__) return;
 
-        let isUpdatePending = false;
+    let isUpdatePending = false;
 
-        const checkAndDownload = async () => {
-            try {
-                const update = await Updates.checkForUpdateAsync();
-                if (update.isAvailable) {
-                    await Updates.fetchUpdateAsync();
-                    isUpdatePending = true;
-                    console.log("Silent OTA Update downloaded.");
-                }
-            } catch (e) {
-                // Ignore errors silently (network issues, etc.)
-            }
-        };
+    const checkAndDownload = async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          isUpdatePending = true;
+          console.log("Silent OTA Update downloaded.");
+        }
+      } catch (e) {
+        // Ignore errors silently (network issues, etc.)
+      }
+    };
 
-        checkAndDownload();
+    checkAndDownload();
 
-        const subscription = AppState.addEventListener('change', (nextAppState) => {
-            if (nextAppState === 'background' && isUpdatePending) {
-                Updates.reloadAsync();
-            }
-        });
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' && isUpdatePending) {
+        Updates.reloadAsync();
+      }
+    });
 
-        return () => subscription.remove();
-    }, []);
+    return () => subscription.remove();
+  }, []);
 };
 
 // ============================================================================
@@ -109,60 +111,60 @@ const useSilentUpdates = () => {
 // ============================================================================
 const useAppOpenAd = () => {
   useEffect(() => {
-      // 1. Safety Check: Ensure AdMob module is linked
-      const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
-      if (!isAdMobLinked) return;
+    // 1. Safety Check: Ensure AdMob module is linked
+    const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+    if (!isAdMobLinked) return;
 
-      try {
-          const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
+    try {
+      const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
 
-          // 2. Config: Use Test ID in Dev, Real ID in Prod
-          // REPLACE 'ca-app-pub-...' with your actual AD UNIT ID for App Open
-          const adUnitId = __DEV__ 
-              ? TestIds.APP_OPEN 
-              : 'ca-app-pub-6010052879824695/7889332295'; 
+      // 2. Config: Use Test ID in Dev, Real ID in Prod
+      // REPLACE 'ca-app-pub-...' with your actual AD UNIT ID for App Open
+      const adUnitId = __DEV__
+        ? TestIds.APP_OPEN
+        : 'ca-app-pub-6010052879824695/7889332295';
 
-          const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
-              requestNonPersonalizedAdsOnly: true,
-          });
+      const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
+        requestNonPersonalizedAdsOnly: true,
+      });
 
-          // 3. Listener: When Loaded, Show it!
-          const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-              // console.log('App Open Ad Loaded - Showing now');
-              appOpenAd.show();
-          });
+      // 3. Listener: When Loaded, Show it!
+      const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+        // console.log('App Open Ad Loaded - Showing now');
+        appOpenAd.show();
+      });
 
-          // 4. Listener: When Closed, Load the Next one
-          const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-              // console.log('App Open Ad Closed - Loading next');
-              appOpenAd.load();
-          });
+      // 4. Listener: When Closed, Load the Next one
+      const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+        // console.log('App Open Ad Closed - Loading next');
+        appOpenAd.load();
+      });
 
-          // 5. Listener: Handle Errors
-          const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
-              console.log('App Open Ad Error:', error);
-          });
+      // 5. Listener: Handle Errors
+      const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
+        console.log('App Open Ad Error:', error);
+      });
 
-          // 6. Initial Load
+      // 6. Initial Load
+      appOpenAd.load();
+
+      // 7. Handle App Resume (Background -> Active)
+      const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'active') {
           appOpenAd.load();
+        }
+      });
 
-          // 7. Handle App Resume (Background -> Active)
-          const appStateSub = AppState.addEventListener('change', (nextAppState) => {
-              if (nextAppState === 'active') {
-                  appOpenAd.load(); 
-              }
-          });
+      return () => {
+        unsubscribeLoaded();
+        unsubscribeClosed();
+        unsubscribeError();
+        appStateSub.remove();
+      };
 
-          return () => {
-              unsubscribeLoaded();
-              unsubscribeClosed();
-              unsubscribeError();
-              appStateSub.remove();
-          };
-
-      } catch (e) {
-          console.log("AdMob Init Error:", e);
-      }
+    } catch (e) {
+      console.log("AdMob Init Error:", e);
+    }
   }, []);
 };
 
@@ -197,39 +199,39 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.optionalCard}>
           <View style={styles.iconGlowContainer}>
-             <View style={styles.optionalIconBox}>
-                <Feather name="gift" size={32} color="#5A9C84" />
-             </View>
+            <View style={styles.optionalIconBox}>
+              <Feather name="gift" size={32} color="#5A9C84" />
+            </View>
           </View>
           <Text style={styles.optionalTitle}>تحديث جديد متوفر</Text>
           <Text style={styles.optionalSub}>إصدار جديد جاهز للتحميل. استمتعوا بأحدث الميزات!</Text>
 
           <View style={styles.changelogContainer}>
             <Text style={styles.whatsNewHeader}>ما الجديد؟</Text>
-            <ScrollView style={styles.changelogList} contentContainerStyle={{gap: 8}}>
-                {changelog && changelog.length > 0 ? (
-                    changelog.map((item, index) => (
-                        <View key={index} style={styles.changelogItem}>
-                            <FontAwesome5 name="check" size={12} color="#5A9C84" />
-                            <Text style={styles.changelogText}>{item}</Text>
-                        </View>
-                    ))
-                ) : (
-                    <View style={styles.changelogItem}>
-                        <FontAwesome5 name="check" size={12} color="#5A9C84" />
-                        <Text style={styles.changelogText}>تحسينات عامة على الأداء.</Text>
-                    </View>
-                )}
+            <ScrollView style={styles.changelogList} contentContainerStyle={{ gap: 8 }}>
+              {changelog && changelog.length > 0 ? (
+                changelog.map((item, index) => (
+                  <View key={index} style={styles.changelogItem}>
+                    <FontAwesome5 name="check" size={12} color="#5A9C84" />
+                    <Text style={styles.changelogText}>{item}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.changelogItem}>
+                  <FontAwesome5 name="check" size={12} color="#5A9C84" />
+                  <Text style={styles.changelogText}>تحسينات عامة على الأداء.</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
 
           <View style={styles.optionalActions}>
-            <Pressable style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onUpdate}>
-                <Text style={styles.updateButtonTextSmall}>تحديث من المتجر</Text>
-                <Feather name="download-cloud" size={18} color="#1A2D27" />
+            <Pressable style={({ pressed }) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onUpdate}>
+              <Text style={styles.updateButtonTextSmall}>تحديث من المتجر</Text>
+              <Feather name="download-cloud" size={18} color="#1A2D27" />
             </Pressable>
             <Pressable style={styles.skipButton} onPress={onSkip}>
-                <Text style={styles.skipText}>ليس الآن</Text>
+              <Text style={styles.skipText}>ليس الآن</Text>
             </Pressable>
           </View>
         </View>
@@ -262,11 +264,11 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.optionalCard}>
           <View style={styles.iconGlowContainer}>
-             <View style={[styles.optionalIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                <Animated.View style={{ transform: [{ rotate: shakeAnim.interpolate({ inputRange: [-10, 10], outputRange: ['-15deg', '15deg'] }) }] }}>
-                  <Feather name="bell-off" size={32} color="#ef4444" />
-                </Animated.View>
-             </View>
+            <View style={[styles.optionalIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+              <Animated.View style={{ transform: [{ rotate: shakeAnim.interpolate({ inputRange: [-10, 10], outputRange: ['-15deg', '15deg'] }) }] }}>
+                <Feather name="bell-off" size={32} color="#ef4444" />
+              </Animated.View>
+            </View>
           </View>
           <Text style={styles.optionalTitle}>التنبيهات معطلة</Text>
           <Text style={styles.optionalSub}>
@@ -274,12 +276,12 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
             و لن يتمكن من إرسال نصائح يومية لبشرتك.
           </Text>
           <View style={styles.optionalActions}>
-            <Pressable style={({pressed}) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onEnable}>
-                <Text style={styles.updateButtonTextSmall}>تفعيل من الإعدادات</Text>
-                <Feather name="settings" size={18} color="#1A2D27" />
+            <Pressable style={({ pressed }) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onEnable}>
+              <Text style={styles.updateButtonTextSmall}>تفعيل من الإعدادات</Text>
+              <Feather name="settings" size={18} color="#1A2D27" />
             </Pressable>
             <Pressable style={styles.skipButton} onPress={onDismiss}>
-                <Text style={styles.skipText}>سأفعلها لاحقا</Text>
+              <Text style={styles.skipText}>سأفعلها لاحقا</Text>
             </Pressable>
           </View>
         </View>
@@ -332,23 +334,23 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 const RootLayoutNav = ({ fontsLoaded }) => {
   // 1. ADD 'loading' to the destructuring here:
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts, loading } = useAppContext();
-  
+
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showAppIntro, setShowAppIntro] = useState(false);
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.1.0'; 
+  const APP_VERSION = '1.1.0';
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
 
   // ➤ ACTIVATE APP OPEN ADS
   useAppOpenAd();
-  
+
   // ➤ ACTIVATE DAILY TRACKING
-  useDailyPresence(user); 
+  useDailyPresence(user);
 
   // --- VERSION CHECKING LOGIC ---
   const getUpdateSignature = (config) => `${config.latestVersion}_${JSON.stringify(config.changelog || [])}`;
@@ -368,10 +370,10 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // --- INTRO CHECK ---
   useEffect(() => {
     const checkIntro = async () => {
-        try {
-            const hasSeen = await AsyncStorage.getItem('has_seen_app_intro');
-            if (hasSeen !== 'true') setTimeout(() => setShowAppIntro(true), 500);
-        } catch (e) { console.error(e); }
+      try {
+        const hasSeen = await AsyncStorage.getItem('has_seen_app_intro');
+        if (hasSeen !== 'true') setTimeout(() => setShowAppIntro(true), 500);
+      } catch (e) { console.error(e); }
     };
     if (fontsLoaded) checkIntro();
   }, [fontsLoaded]);
@@ -384,40 +386,40 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // --- INIT ADMOB ---
   useEffect(() => {
     try {
-        const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
-        if (isAdMobLinked) {
-            const mobileAds = require('react-native-google-mobile-ads').default;
-            mobileAds().initialize();
-        }
+      const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+      if (isAdMobLinked) {
+        const mobileAds = require('react-native-google-mobile-ads').default;
+        mobileAds().initialize();
+      }
     } catch (e) {
-        console.warn("AdMob initialize failed", e);
+      console.warn("AdMob initialize failed", e);
     }
   }, []);
 
   // --- CHECK OPTIONAL UPDATE ---
   useEffect(() => {
     const checkOptionalUpdate = async () => {
-        if (!appConfig.latestVersion) return;
-        const isNewer = compareVersions(appConfig.latestVersion, APP_VERSION) === 1;
-        if (isNewer) {
-            const currentSignature = getUpdateSignature(appConfig);
-            const storedSignature = await AsyncStorage.getItem('skipped_update_signature');
-            if (currentSignature !== storedSignature) {
-                setShowOptionalUpdate(true);
-            }
+      if (!appConfig.latestVersion) return;
+      const isNewer = compareVersions(appConfig.latestVersion, APP_VERSION) === 1;
+      if (isNewer) {
+        const currentSignature = getUpdateSignature(appConfig);
+        const storedSignature = await AsyncStorage.getItem('skipped_update_signature');
+        if (currentSignature !== storedSignature) {
+          setShowOptionalUpdate(true);
         }
+      }
     };
     checkOptionalUpdate();
   }, [appConfig]);
 
   const handleSkipUpdate = async () => {
-      setShowOptionalUpdate(false);
-      const signature = getUpdateSignature(appConfig);
-      await AsyncStorage.setItem('skipped_update_signature', signature);
+    setShowOptionalUpdate(false);
+    const signature = getUpdateSignature(appConfig);
+    await AsyncStorage.setItem('skipped_update_signature', signature);
   };
 
   const handleUpdateClick = () => {
-      if(appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
+    if (appConfig.latestVersionUrl) Linking.openURL(appConfig.latestVersionUrl);
   };
 
   // =========================================================
@@ -425,7 +427,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // =========================================================
   useEffect(() => {
     // 1. If we are still loading, do nothing
-    if (loading) return; 
+    if (loading) return;
 
     if (user && userProfile) {
       // 2. If the user exists but onboarding is FALSE (because we just repaired it)
@@ -433,10 +435,10 @@ const RootLayoutNav = ({ fontsLoaded }) => {
         // 3. Force them to the Welcome screen immediately
         router.replace({
           pathname: '/(onboarding)/welcome',
-          params: { reason: 'repair' } 
-      });
+          params: { reason: 'repair' }
+        });
       }
-    } 
+    }
   }, [user, userProfile, loading]);
 
   // =========================================================
@@ -446,76 +448,76 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     if (!fontsLoaded) return;
 
     const checkPermissionAndSchedule = async () => {
-        const { status } = await Notifications.getPermissionsAsync();
-        
-        if (status !== 'granted') {
-             const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
-             if (hasSkipped !== 'true') {
-                 setShowNotificationModal(true);
-             }
-        } else {
-             if (user && userProfile) {
-                // ➤ SAFETY CHECK: Only proceed if onboarding is done
-                if (!userProfile.onboardingComplete) return;
+      const { status } = await Notifications.getPermissionsAsync();
 
-                try {
-                    // =========================================================================
-                    // ➤ 1. EXPLICITLY CREATE THE CHANNEL (The Fix for Disappearing Category)
-                    // =========================================================================
-                    if (Platform.OS === 'android') {
-                        await Notifications.setNotificationChannelAsync('oilguard-smart', {
-                            name: 'Smart Skincare Reminders',
-                            importance: Notifications.AndroidImportance.MAX,
-                            vibrationPattern: [0, 250, 250, 250],
-                            lightColor: '#5A9C84',
-                        });
-                        console.log("🔔 [Layout] 'oilguard-smart' channel created/verified.");
-                    }
-
-                    // =========================================================================
-                    // ➤ 2. SCHEDULE THE AUTHENTIC MESSAGES
-                    // =========================================================================
-                    const name = userProfile.settings?.name || 'غالية';
-                    const settings = userProfile.settings || {};
-                    const products = savedProducts || [];
-                    
-                    if (scheduleAuthenticNotifications) {
-                        await scheduleAuthenticNotifications(name, products, settings);
-                        console.log("📅 [Layout] Smart notifications scheduled.");
-                    }
-                } catch (e) {
-                    console.log("Error scheduling local notifications:", e);
-                }
-            }
+      if (status !== 'granted') {
+        const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
+        if (hasSkipped !== 'true') {
+          setShowNotificationModal(true);
         }
+      } else {
+        if (user && userProfile) {
+          // ➤ SAFETY CHECK: Only proceed if onboarding is done
+          if (!userProfile.onboardingComplete) return;
+
+          try {
+            // =========================================================================
+            // ➤ 1. EXPLICITLY CREATE THE CHANNEL (The Fix for Disappearing Category)
+            // =========================================================================
+            if (Platform.OS === 'android') {
+              await Notifications.setNotificationChannelAsync('oilguard-smart', {
+                name: 'Smart Skincare Reminders',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#5A9C84',
+              });
+              console.log("🔔 [Layout] 'oilguard-smart' channel created/verified.");
+            }
+
+            // =========================================================================
+            // ➤ 2. SCHEDULE THE AUTHENTIC MESSAGES
+            // =========================================================================
+            const name = userProfile.settings?.name || 'غالية';
+            const settings = userProfile.settings || {};
+            const products = savedProducts || [];
+
+            if (scheduleAuthenticNotifications) {
+              await scheduleAuthenticNotifications(name, products, settings);
+              console.log("📅 [Layout] Smart notifications scheduled.");
+            }
+          } catch (e) {
+            console.log("Error scheduling local notifications:", e);
+          }
+        }
+      }
     };
 
     const handleNotificationNavigation = (response) => {
-        const data = response.notification.request.content.data;
-        console.log("🔔 Notification Data Received:", data);
+      const data = response.notification.request.content.data;
+      console.log("🔔 Notification Data Received:", data);
 
-        setTimeout(() => {
-            if (data?.screen === 'oilguard') {
-                router.push('/oilguard');
-            } 
-            else if (data?.screen === 'routine') {
-                router.push('/profile');
-            } 
-            else if (data?.postId || (data?.screen === 'PostDetails' && data?.postId)) {
-                router.push({ 
-                    pathname: "/community", 
-                    params: { openPostId: data.postId } 
-                });
-            }
-        }, 800);
+      setTimeout(() => {
+        if (data?.screen === 'oilguard') {
+          router.push('/oilguard');
+        }
+        else if (data?.screen === 'routine') {
+          router.push('/profile');
+        }
+        else if (data?.postId || (data?.screen === 'PostDetails' && data?.postId)) {
+          router.push({
+            pathname: "/community",
+            params: { openPostId: data.postId }
+          });
+        }
+      }, 800);
     };
 
     const checkInitialNotification = async () => {
-        const response = await Notifications.getLastNotificationResponseAsync();
-        if (response) {
-            console.log("🧊 App opened from Cold Start via notification");
-            handleNotificationNavigation(response);
-        }
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (response) {
+        console.log("🧊 App opened from Cold Start via notification");
+        handleNotificationNavigation(response);
+      }
     };
 
     checkPermissionAndSchedule();
@@ -524,20 +526,20 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationNavigation);
 
     return () => subscription.remove();
-}, [user, userProfile, savedProducts, fontsLoaded]);
+  }, [user, userProfile, savedProducts, fontsLoaded]);
 
   const handleEnableNotifications = async () => {
-      setShowNotificationModal(false);
-      if (Platform.OS === 'ios') {
-          Linking.openURL('app-settings:');
-      } else {
-          Linking.openSettings();
-      }
+    setShowNotificationModal(false);
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
   };
 
   const handleDismissNotifications = async () => {
-      setShowNotificationModal(false);
-      await AsyncStorage.setItem('skipped_notif_permission', 'true');
+    setShowNotificationModal(false);
+    await AsyncStorage.setItem('skipped_notif_permission', 'true');
   };
 
   if (!fontsLoaded) return null;
@@ -553,19 +555,19 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   return (
     // ADD THIS WRAPPER: It provides a stable, colored "floor" for all screens
-    <View style={{ flex: 1, backgroundColor: '#1A2D27' }}> 
+    <View style={{ flex: 1, backgroundColor: '#1A2D27' }}>
       <StatusBar style="light" translucent={true} />
 
       <AppIntro visible={showAppIntro} onClose={() => setShowAppIntro(false)} />
-      
-      <OptionalUpdateModal 
+
+      <OptionalUpdateModal
         visible={showOptionalUpdate}
         changelog={appConfig.changelog}
         onUpdate={handleUpdateClick}
         onSkip={handleSkipUpdate}
       />
-      
-      <NotificationRequestModal 
+
+      <NotificationRequestModal
         visible={showNotificationModal}
         onEnable={handleEnableNotifications}
         onDismiss={handleDismissNotifications}
@@ -593,10 +595,12 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <RootLayoutNav fontsLoaded={fontsLoaded} />
-        <GlobalAlertModal />
-      </AppProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <RootLayoutNav fontsLoaded={fontsLoaded} />
+          <GlobalAlertModal />
+        </AppProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -619,23 +623,23 @@ const styles = StyleSheet.create({
   updateButtonText: { fontFamily: 'Tajawal-Bold', color: '#1A2D27', fontSize: 16 },
 
   // --- MODAL COMMON ---
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.85)', 
-    justifyContent: 'center', 
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20
   },
-  optionalCard: { 
-    width: '100%', 
+  optionalCard: {
+    width: '100%',
     maxWidth: 340,
-    backgroundColor: '#253D34', 
-    borderRadius: 24, 
-    padding: 24, 
+    backgroundColor: '#253D34',
+    borderRadius: 24,
+    padding: 24,
     paddingTop: 30,
-    borderWidth: 1, 
+    borderWidth: 1,
     borderColor: 'rgba(90, 156, 132, 0.3)',
-    alignItems: 'center', 
+    alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
@@ -647,30 +651,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  optionalIconBox: { 
+  optionalIconBox: {
     width: 64,
     height: 64,
-    backgroundColor: 'rgba(90, 156, 132, 0.15)', 
-    borderRadius: 32, 
+    backgroundColor: 'rgba(90, 156, 132, 0.15)',
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(90, 156, 132, 0.3)',
   },
-  optionalTitle: { 
-    fontFamily: 'Tajawal-ExtraBold', 
-    fontSize: 22, 
-    color: '#fff', 
-    textAlign: 'center', 
-    marginBottom: 8 
+  optionalTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 22,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8
   },
-  optionalSub: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 14, 
-    color: '#A3B1AC', 
-    textAlign: 'center', 
+  optionalSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+    color: '#A3B1AC',
+    textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 24 
+    marginBottom: 24
   },
   changelogContainer: {
     width: '100%',
@@ -684,54 +688,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#5A9C84',
     marginBottom: 8,
-    textAlign: 'right', 
+    textAlign: 'right',
     paddingRight: 4
   },
-  changelogList: { 
-    maxHeight: 120, 
+  changelogList: {
+    maxHeight: 120,
   },
-  changelogItem: { 
+  changelogItem: {
     flexDirection: 'row-reverse',
-    gap: 10, 
-    alignItems: 'flex-start', 
-    marginBottom: 6 
+    gap: 10,
+    alignItems: 'flex-start',
+    marginBottom: 6
   },
-  changelogText: { 
-    fontFamily: 'Tajawal-Regular', 
-    fontSize: 13, 
-    color: '#D1D5DB', 
-    textAlign: 'right', 
+  changelogText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: '#D1D5DB',
+    textAlign: 'right',
     flex: 1,
     lineHeight: 18
   },
-  optionalActions: { 
+  optionalActions: {
     width: '100%',
-    gap: 12 
+    gap: 12
   },
-  updateButtonSmall: { 
-    backgroundColor: '#5A9C84', 
-    paddingVertical: 14, 
-    borderRadius: 14, 
+  updateButtonSmall: {
+    backgroundColor: '#5A9C84',
+    paddingVertical: 14,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     width: '100%'
   },
-  updateButtonTextSmall: { 
-    fontFamily: 'Tajawal-Bold', 
+  updateButtonTextSmall: {
+    fontFamily: 'Tajawal-Bold',
     color: '#1A2D27',
     fontSize: 15
   },
-  skipButton: { 
-    paddingVertical: 10, 
+  skipButton: {
+    paddingVertical: 10,
     alignItems: 'center',
     width: '100%'
   },
-  skipText: { 
-    fontFamily: 'Tajawal-Bold', 
+  skipText: {
+    fontFamily: 'Tajawal-Bold',
     color: '#6B7C76',
-    fontSize: 14 
+    fontSize: 14
   },
 
   // --- ANNOUNCEMENT ---

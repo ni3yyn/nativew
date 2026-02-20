@@ -1,21 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-
-// --- APP THEME COLORS ---
-const COLORS = {
-  background: '#1A2D27',
-  accentGreen: '#5A9C84',       // Main Teal
-  accentLight: '#8CD1B9',       // Highlights
-  accentDark: '#2C5E4F',        // Depth
-  
-  // Liquid Layers (Dark -> Light)
-  liquidBack: '#1F3A33',        // Darkest (Deep background)
-  liquidMiddle: '#3B6B5E',      // Mid-tone (Mixing layer)
-  liquidFront: '#5A9C84',       // Front (Brightest)
-  
-  textPrimary: '#F1F3F2',
-};
+import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
+import { useTheme } from '../../context/ThemeContext';
 
 const LOADING_STAGES = [
   "تحليل التركيبة...",
@@ -29,16 +16,16 @@ const GentleBubble = ({ delay }) => {
   const animY = useRef(new Animated.Value(0)).current;
   const animOp = useRef(new Animated.Value(0)).current;
   const animX = useRef(new Animated.Value(0)).current;
-  
+
   const startX = (Math.random() - 0.5) * 50;
-  const size = 3 + Math.random() * 4; 
+  const size = 3 + Math.random() * 4;
 
   useEffect(() => {
     let isMounted = true;
 
     const runBubble = () => {
       if (!isMounted) return;
-      
+
       animY.setValue(0);
       animOp.setValue(0);
       animX.setValue(startX);
@@ -48,29 +35,29 @@ const GentleBubble = ({ delay }) => {
         Animated.timing(animY, {
           toValue: -90,
           duration: 2500 + Math.random() * 1500,
-          easing: Easing.linear, 
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
         // Slight Wiggle
         Animated.sequence([
-            Animated.timing(animX, { toValue: startX + 8, duration: 1500, easing: Easing.linear, useNativeDriver: true }),
-            Animated.timing(animX, { toValue: startX - 8, duration: 1500, easing: Easing.linear, useNativeDriver: true })
+          Animated.timing(animX, { toValue: startX + 8, duration: 1500, easing: Easing.linear, useNativeDriver: true }),
+          Animated.timing(animX, { toValue: startX - 8, duration: 1500, easing: Easing.linear, useNativeDriver: true })
         ]),
         // Fade In/Out
         Animated.sequence([
-            Animated.timing(animOp, { toValue: 0.6, duration: 500, easing: Easing.ease, useNativeDriver: true }),
-            Animated.delay(1000),
-            Animated.timing(animOp, { toValue: 0, duration: 1000, easing: Easing.ease, useNativeDriver: true }),
+          Animated.timing(animOp, { toValue: 0.6, duration: 500, easing: Easing.ease, useNativeDriver: true }),
+          Animated.delay(1000),
+          Animated.timing(animOp, { toValue: 0, duration: 1000, easing: Easing.ease, useNativeDriver: true }),
         ])
       ]).start(() => {
-          if (isMounted) runBubble();
+        if (isMounted) runBubble();
       });
     };
 
     const timer = setTimeout(runBubble, delay);
     return () => {
-        isMounted = false;
-        clearTimeout(timer);
+      isMounted = false;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -93,10 +80,14 @@ const GentleBubble = ({ delay }) => {
 
 // --- MAIN COMPONENT ---
 const LoadingScreen = () => {
+  const { colors } = useTheme();
+  const COLORS = colors || DEFAULT_COLORS;
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const [stageIndex, setStageIndex] = useState(0);
 
   // --- ANIMATIONS ---
-  const waveAnim = useRef(new Animated.Value(0)).current; 
+  const waveAnim = useRef(new Animated.Value(0)).current;
   const fadeText = useRef(new Animated.Value(1)).current;
 
   // Bubbles array
@@ -105,15 +96,15 @@ const LoadingScreen = () => {
   useEffect(() => {
     // 1. Endless Wave Rotation
     const startWave = () => {
-        waveAnim.setValue(0);
-        Animated.loop(
-            Animated.timing(waveAnim, {
-                toValue: 1,
-                duration: 5000, // 5 seconds per full mixing cycle
-                easing: Easing.linear, 
-                useNativeDriver: true
-            })
-        ).start();
+      waveAnim.setValue(0);
+      Animated.loop(
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 5000, // 5 seconds per full mixing cycle
+          easing: Easing.linear,
+          useNativeDriver: true
+        })
+      ).start();
     };
     startWave();
 
@@ -133,76 +124,80 @@ const LoadingScreen = () => {
 
   // --- INTERPOLATIONS ---
   // We use different rotation directions and offsets to create chaos/mixing
-  
+
   const rotateFront = waveAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const rotateMiddle = waveAnim.interpolate({ inputRange: [0, 1], outputRange: ['100deg', '460deg'] }); // Offset start
   const rotateBack = waveAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] }); // Reverse direction
 
+  // Liquid colors derived from theme accent
+  const liquidBack = COLORS.background + 'E6';
+  const liquidMiddle = COLORS.accentGreen + '99';
+  const liquidFront = COLORS.accentGreen;
+
   return (
     <View style={styles.container}>
-      
+
       {/* Circle Container */}
       <View style={styles.circleContainer}>
-        
+
         {/* 1. Background Placeholder */}
         <View style={styles.circleBackground} />
 
         {/* 2. Mask Container (Clips waves to circle) */}
         <View style={styles.maskContainer}>
-            
-            {/* LAYER 1: BACK WAVE (Darkest, moves opposite) */}
-            <Animated.View 
-                style={[
-                    styles.waveShape, 
-                    { 
-                        backgroundColor: COLORS.liquidBack,
-                        top: 42, 
-                        left: -40,
-                        transform: [{ rotate: rotateBack }] 
-                    }
-                ]} 
-            />
 
-            {/* LAYER 2: MIDDLE WAVE (Mid-tone, offset phase) */}
-            {/* This layer creates the "churning" look between front and back */}
-            <Animated.View 
-                style={[
-                    styles.waveShape, 
-                    { 
-                        backgroundColor: COLORS.liquidMiddle,
-                        top: 46, 
-                        left: -35,
-                        opacity: 0.9,
-                        transform: [{ rotate: rotateMiddle }] 
-                    }
-                ]} 
-            />
+          {/* LAYER 1: BACK WAVE (Darkest, moves opposite) */}
+          <Animated.View
+            style={[
+              styles.waveShape,
+              {
+                backgroundColor: liquidBack,
+                top: 42,
+                left: -40,
+                transform: [{ rotate: rotateBack }]
+              }
+            ]}
+          />
 
-            {/* LAYER 3: FRONT WAVE (Brightest, defines surface) */}
-            <Animated.View 
-                style={[
-                    styles.waveShape, 
-                    { 
-                        backgroundColor: COLORS.liquidFront,
-                        top: 52, 
-                        left: -42,
-                        transform: [{ rotate: rotateFront }] 
-                    }
-                ]} 
-            />
+          {/* LAYER 2: MIDDLE WAVE (Mid-tone, offset phase) */}
+          <Animated.View
+            style={[
+              styles.waveShape,
+              {
+                backgroundColor: liquidMiddle,
+                top: 46,
+                left: -35,
+                opacity: 0.9,
+                transform: [{ rotate: rotateMiddle }]
+              }
+            ]}
+          />
 
-             {/* 3. Bubbles */}
-             <View style={StyleSheet.absoluteFill}>
-                <View style={{position: 'absolute', bottom: 0, width: '100%', alignItems: 'center'}}>
-                    {bubbles.map(b => <GentleBubble key={b.id} delay={b.delay} />)}
-                </View>
-             </View>
+          {/* LAYER 3: FRONT WAVE (Brightest, defines surface) */}
+          <Animated.View
+            style={[
+              styles.waveShape,
+              {
+                backgroundColor: liquidFront,
+                top: 52,
+                left: -42,
+                transform: [{ rotate: rotateFront }]
+              }
+            ]}
+          />
+
+          {/* 3. Bubbles */}
+          <View style={StyleSheet.absoluteFill}>
+            <View style={{ position: 'absolute', bottom: 0, width: '100%', alignItems: 'center' }}>
+              {bubbles.map(b => <GentleBubble key={b.id} delay={b.delay} />)}
+            </View>
+          </View>
 
         </View>
 
         {/* 4. Flask Icon (Window Overlay) */}
         <View style={styles.iconLayer}>
-             <FontAwesome5 name="flask" size={40} color={COLORS.textPrimary} />
+          <FontAwesome5 name="flask" size={40} color={COLORS.textPrimary} />
         </View>
 
         {/* 5. Clean Outer Ring */}
@@ -221,13 +216,13 @@ const LoadingScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+
   circleContainer: {
     width: 120,
     height: 120,
@@ -235,14 +230,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 30,
   },
-  
+
   // Background depth
   circleBackground: {
     position: 'absolute',
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(0,0,0,0.25)', 
+    backgroundColor: 'rgba(0,0,0,0.25)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.05)'
   },
@@ -255,13 +250,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'absolute',
   },
-  
+
   // THE WAVE SHAPE (Rounded Square)
   waveShape: {
     position: 'absolute',
     width: 180,
     height: 180,
-    borderRadius: 78, // High border radius makes it a "squircle"
+    borderRadius: 78,
     opacity: 1,
   },
 
@@ -281,7 +276,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 1,
-    borderColor: 'rgba(90, 156, 132, 0.2)',
+    borderColor: COLORS.accentGreen + '33',
     zIndex: -1,
   },
 

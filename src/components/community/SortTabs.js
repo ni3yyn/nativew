@@ -1,9 +1,14 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { COLORS } from '../../constants/theme';
+import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const SortTabs = ({ currentSort, onSelect }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     // 0 = Popular (Left), 1 = Recent (Right)
     // We default to 1 because 'recent' is the default view
     const animationValue = useRef(new Animated.Value(currentSort === 'recent' ? 1 : 0)).current;
@@ -13,7 +18,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
         // Animate based on selection
         // In our logical layout (Left=0, Right=1)
         const toValue = currentSort === 'recent' ? 1 : 0;
-        
+
         Animated.spring(animationValue, {
             toValue,
             stiffness: 150,
@@ -31,35 +36,35 @@ const SortTabs = ({ currentSort, onSelect }) => {
 
     return (
         <View style={styles.outerContainer}>
-            <View 
-                style={styles.innerContainer} 
+            <View
+                style={styles.innerContainer}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
                 {/* --- THE SLIDING INDICATOR --- */}
-                <Animated.View 
+                <Animated.View
                     style={[
-                        styles.indicator, 
-                        { 
+                        styles.indicator,
+                        {
                             width: (containerWidth / 2) - 4, // Half width minus padding
-                            transform: [{ translateX }] 
+                            transform: [{ translateX }]
                         }
-                    ]} 
+                    ]}
                 />
 
                 {/* --- POPULAR TAB (Left Side Physically) --- */}
-                <TouchableOpacity 
-                    style={styles.tabItem} 
+                <TouchableOpacity
+                    style={styles.tabItem}
                     onPress={() => onSelect('popular')}
                     activeOpacity={0.8}
                 >
                     <View style={styles.tabContent}>
-                        <Feather 
-                            name="trending-up" 
-                            size={14} 
-                            color={currentSort === 'popular' ? COLORS.textOnAccent : COLORS.textSecondary} 
+                        <Feather
+                            name="trending-up"
+                            size={14}
+                            color={currentSort === 'popular' ? COLORS.textOnAccent : COLORS.textSecondary}
                         />
                         <Text style={[
-                            styles.tabText, 
+                            styles.tabText,
                             currentSort === 'popular' ? styles.textActive : styles.textInactive
                         ]}>
                             الأكثر تفاعلا
@@ -68,19 +73,19 @@ const SortTabs = ({ currentSort, onSelect }) => {
                 </TouchableOpacity>
 
                 {/* --- RECENT TAB (Right Side Physically) --- */}
-                <TouchableOpacity 
-                    style={styles.tabItem} 
+                <TouchableOpacity
+                    style={styles.tabItem}
                     onPress={() => onSelect('recent')}
                     activeOpacity={0.8}
                 >
                     <View style={styles.tabContent}>
-                        <Feather 
-                            name="clock" 
-                            size={14} 
-                            color={currentSort === 'recent' ? COLORS.textOnAccent : COLORS.textSecondary} 
+                        <Feather
+                            name="clock"
+                            size={14}
+                            color={currentSort === 'recent' ? COLORS.textOnAccent : COLORS.textSecondary}
                         />
                         <Text style={[
-                            styles.tabText, 
+                            styles.tabText,
                             currentSort === 'recent' ? styles.textActive : styles.textInactive
                         ]}>
                             الأحدث
@@ -92,7 +97,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     outerContainer: {
         paddingHorizontal: 20,
         paddingBottom: 10,
@@ -135,7 +140,7 @@ const styles = StyleSheet.create({
     },
     tabText: {
         fontSize: 12,
-        marginBottom: 2, 
+        marginBottom: 2,
     },
     textActive: {
         fontFamily: 'Tajawal-Bold',

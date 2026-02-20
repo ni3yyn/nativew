@@ -1,28 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../../../context/ThemeContext';
 
-// Define the theme locally or ensure your AnalysisShared.js matches this
-const COLORS = {
-  background: '#1A2D27', 
-  card: '#253D34',      
-  border: 'rgba(90, 156, 132, 0.25)', 
-  textDim: '#6B7C76',   
-  accentGreen: '#5A9C84', 
-  textPrimary: '#F1F3F2',   
-  textSecondary: '#A3B1AC', 
-  danger: '#ef4444', 
-  warning: '#f59e0b', 
-  success: '#22c55e',
-  info: '#3b82f6', // Added for generic info logs
+const FALLBACK_COLORS = {
+    background: '#1A2D27',
+    card: '#253D34',
+    border: 'rgba(90, 156, 132, 0.25)',
+    textDim: '#6B7C76',
+    accentGreen: '#5A9C84',
+    textPrimary: '#F1F3F2',
+    textSecondary: '#A3B1AC',
+    danger: '#ef4444',
+    warning: '#f59e0b',
+    success: '#22c55e',
+    info: '#3b82f6',
 };
 
 export const RoutineLogViewer = ({ logs }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [expanded, setExpanded] = useState(false);
 
     if (!logs || logs.length === 0) return null;
 
-    const displayLogs = logs; 
+    const displayLogs = logs;
 
     const toggleExpand = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -59,22 +62,22 @@ export const RoutineLogViewer = ({ logs }) => {
                     </View>
                     <Text style={styles.title}>تقرير روتين وثيق</Text>
                 </View>
-                
+
                 <View style={styles.headerRight}>
                     {errorCount > 0 && (
-                        <View style={[styles.badge, { backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.4)' }]}>
+                        <View style={[styles.badge, { backgroundColor: COLORS.danger + '33', borderColor: COLORS.danger + '66' }]}>
                             <Text style={[styles.badgeText, { color: COLORS.danger }]}>{errorCount} استبعاد</Text>
                         </View>
                     )}
                     {warningCount > 0 && (
-                        <View style={[styles.badge, { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: 'rgba(245, 158, 11, 0.4)' }]}>
+                        <View style={[styles.badge, { backgroundColor: COLORS.warning + '33', borderColor: COLORS.warning + '66' }]}>
                             <Text style={[styles.badgeText, { color: COLORS.warning }]}>{warningCount} تنبيه</Text>
                         </View>
                     )}
-                    <MaterialCommunityIcons 
-                        name={expanded ? "chevron-up" : "chevron-down"} 
-                        size={24} 
-                        color={COLORS.textSecondary} 
+                    <MaterialCommunityIcons
+                        name={expanded ? "chevron-up" : "chevron-down"}
+                        size={24}
+                        color={COLORS.textSecondary}
                     />
                 </View>
             </TouchableOpacity>
@@ -85,31 +88,29 @@ export const RoutineLogViewer = ({ logs }) => {
                         <View key={index} style={[styles.logItem, { borderRightColor: getColor(log.type) }]}>
                             <View style={styles.logHeader}>
                                 <Text style={[styles.logType, { color: getColor(log.type) }]}>
-                                    {log.type === 'error' ? 'استبعاد ⛔' : 
-                                     log.type === 'warning' ? 'تعديل ⚠️' : 
-                                     log.type === 'success' ? 'اعتماد ✅' : 'ملاحظة ℹ️'}
+                                    {log.type === 'error' ? 'استبعاد ⛔' :
+                                        log.type === 'warning' ? 'تعديل ⚠️' :
+                                            log.type === 'success' ? 'اعتماد ✅' : 'ملاحظة ℹ️'}
                                 </Text>
                             </View>
-                            
+
                             <Text style={styles.logMessage}>
                                 {log.message}
                             </Text>
-                            
-                            {log.product && (
-    <View style={styles.productTag}>
-        <MaterialCommunityIcons name="flask-outline" size={12} color={COLORS.textDim} style={{ marginLeft: 4 }} />
-        <Text style={styles.productText}>
-            {/* FIX IS HERE: Check if it's an object first */}
-            {typeof log.product === 'object' && log.product !== null 
-                ? log.product.productName 
-                : log.product}
-        </Text>
-    </View>
-)}
 
+                            {log.product && (
+                                <View style={styles.productTag}>
+                                    <MaterialCommunityIcons name="flask-outline" size={12} color={COLORS.textDim} style={{ marginLeft: 4 }} />
+                                    <Text style={styles.productText}>
+                                        {typeof log.product === 'object' && log.product !== null
+                                            ? log.product.productName
+                                            : log.product}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     ))}
-                    
+
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>تم البناء بواسطة الخوارزمية الطبية v2.0</Text>
                     </View>
@@ -119,9 +120,9 @@ export const RoutineLogViewer = ({ logs }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     container: {
-        backgroundColor: COLORS.card, // Dark Green Card
+        backgroundColor: COLORS.card,
         borderRadius: 16,
         marginBottom: 20,
         overflow: 'hidden',
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        backgroundColor: COLORS.card, // Seamless header
+        backgroundColor: COLORS.card,
     },
     headerLeft: {
         flexDirection: 'row-reverse',
@@ -144,14 +145,14 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: 'rgba(90, 156, 132, 0.15)', // Subtle accent bg
+        backgroundColor: COLORS.accentGreen + '26',
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 16,
-        color: COLORS.textPrimary, // Near White
+        color: COLORS.textPrimary,
     },
     headerRight: {
         flexDirection: 'row-reverse',
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
-        borderWidth: 1, // Added border for better visibility on dark
+        borderWidth: 1,
     },
     badgeText: {
         fontFamily: 'Tajawal-Bold',
@@ -172,12 +173,12 @@ const styles = StyleSheet.create({
         padding: 16,
         borderTopWidth: 1,
         borderTopColor: COLORS.border,
-        backgroundColor: 'rgba(0,0,0,0.1)', // Slightly darker for inner content
+        backgroundColor: COLORS.background,
     },
     logItem: {
         marginBottom: 16,
         paddingRight: 12,
-        borderRightWidth: 3, // Arabic layout prefers right border
+        borderRightWidth: 3,
         paddingVertical: 2,
     },
     logHeader: {
@@ -193,15 +194,15 @@ const styles = StyleSheet.create({
     logMessage: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 14,
-        color: COLORS.textSecondary, // Muted Green-Gray
+        color: COLORS.textSecondary,
         textAlign: 'right',
         lineHeight: 22,
     },
     productTag: {
-        alignSelf: 'flex-start', // Left align in Arabic context looks better for tags
+        alignSelf: 'flex-start',
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        backgroundColor: COLORS.background, // Deep Forest Green (Recessed look)
+        backgroundColor: COLORS.background,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 8,

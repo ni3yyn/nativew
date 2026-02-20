@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { 
-  View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback, InteractionManager,
-  ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
-  Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-  RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
+import {
+    View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback, InteractionManager,
+    ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
+    Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
+    RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +24,7 @@ import Fuse from 'fuse.js';
 
 // ... other imports
 import { PremiumShareButton } from '../../src/components/oilguard/ShareComponent'; // Adjust path if needed
-import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService'; 
+import { uploadImageToCloudinary, compressImage } from '../../src/services/imageService';
 import { AlertService } from '../../src/services/alertService';
 import { uriToBase64 } from '../../src/utils/formatters';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
@@ -35,15 +35,17 @@ import LoadingScreen from '../../src/components/oilguard/LoadingScreen'; // Adju
 import { ReviewStep } from '../../src/components/oilguard/ReviewStep'; // Adjust path
 import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
 import ScoreBreakdownModal from '../../src/components/oilguard/ScoreBreakdownModal'; // <--- ADD THIS
-import  {VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoiceCard'; // Adjust path if needed
-import { VerifiedDetailModal} from '../../src/components/oilguard/VerifiedDetailModal'; 
+import { VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoiceCard'; // Adjust path if needed
+import { VerifiedDetailModal } from '../../src/components/oilguard/VerifiedDetailModal';
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
+import { useTheme } from '../../src/context/ThemeContext';
+
 // --- STYLE & CONSTANT IMPORTS ---
-import { 
-  styles, COLORS, width, height, 
-  ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
-  DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
+import {
+    createStyles, styles as defaultStyles, COLORS as DEFAULT_COLORS, width, height,
+    ITEM_WIDTH, SEPARATOR_WIDTH, CARD_WIDTH,
+    DOT_SIZE, PAGINATION_DOTS, DOT_SPACING
 } from '../../src/components/oilguard/oilguard.styles';
 
 // ENDPOINTS
@@ -53,13 +55,13 @@ const VERCEL_PARSE_TEXT_URL = "https://oilguard-backend.vercel.app/api/parse-tex
 
 // --- HELPER FUNCTIONS ---
 const normalizeForMatching = (name) => {
-  if (!name) return '';
-  return name.toString().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
-    .replace(/[.,،؛:()|[\]/%!@#$^&*_+={}<>?~`"'\\]/g, ' ') 
-    .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ' ') 
-    .replace(/\s+/g, ' ') 
-    .trim();
+    if (!name) return '';
+    return name.toString().toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[.,،؛:()|[\]/%!@#$^&*_+={}<>?~`"'\\]/g, ' ')
+        .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 };
 let useInterstitialAd;
 let TestIds = { INTERSTITIAL: 'ca-app-pub-7808816060487731/8992297454' }; // Default dummy ID
@@ -90,44 +92,51 @@ if (isAdMobLinked) {
 //                       ANIMATION & UI COMPONENTS
 // ============================================================================
 const Spore = ({ size, startX, duration, delay }) => {
-  const animY = useRef(new Animated.Value(0)).current; 
-  const animX = useRef(new Animated.Value(0)).current; 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const animY = useRef(new Animated.Value(0)).current;
+    const animX = useRef(new Animated.Value(0)).current;
+    const opacity = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    const floatLoop = Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.bezier(0.4, 0, 0.2, 1), useNativeDriver: true }));
-    const driftLoop = Animated.loop(Animated.sequence([ Animated.timing(animX, { toValue: 1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }), Animated.timing(animX, { toValue: -1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }), Animated.timing(animX, { toValue: 0, duration: duration * 0.3, useNativeDriver: true, easing: Easing.sin }), ]));
-    const opacityPulse = Animated.loop(Animated.sequence([ Animated.timing(opacity, { toValue: 0.6, duration: duration * 0.2, useNativeDriver: true }), Animated.delay(duration * 0.6), Animated.timing(opacity, { toValue: 0.2, duration: duration * 0.2, useNativeDriver: true }), ]));
-    const scaleIn = Animated.spring(scale, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true, delay });
-    const timeout = setTimeout(() => { scaleIn.start(); floatLoop.start(); driftLoop.start(); opacityPulse.start(); }, delay);
-    return () => { clearTimeout(timeout); floatLoop.stop(); driftLoop.stop(); opacityPulse.stop(); };
-  }, []);
+    useEffect(() => {
+        const floatLoop = Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.bezier(0.4, 0, 0.2, 1), useNativeDriver: true }));
+        const driftLoop = Animated.loop(Animated.sequence([Animated.timing(animX, { toValue: 1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }), Animated.timing(animX, { toValue: -1, duration: duration * 0.35, useNativeDriver: true, easing: Easing.sin }), Animated.timing(animX, { toValue: 0, duration: duration * 0.3, useNativeDriver: true, easing: Easing.sin }),]));
+        const opacityPulse = Animated.loop(Animated.sequence([Animated.timing(opacity, { toValue: 0.6, duration: duration * 0.2, useNativeDriver: true }), Animated.delay(duration * 0.6), Animated.timing(opacity, { toValue: 0.2, duration: duration * 0.2, useNativeDriver: true }),]));
+        const scaleIn = Animated.spring(scale, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true, delay });
+        const timeout = setTimeout(() => { scaleIn.start(); floatLoop.start(); driftLoop.start(); opacityPulse.start(); }, delay);
+        return () => { clearTimeout(timeout); floatLoop.stop(); driftLoop.stop(); opacityPulse.stop(); };
+    }, []);
 
-  const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 100, -100] });
-  const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
+    const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 100, -100] });
+    const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
 
-  return ( <Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} /> );
+    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);
 };
 
 const ContentCard = ({ children, style, delay = 0 }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
-  return (
-    <Animated.View style={[styles.cardBase, { opacity }, style]}>
-      {children}
-    </Animated.View>
-  );
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const opacity = useRef(new Animated.Value(0)).current;
+    useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
+    return (
+        <Animated.View style={[styles.cardBase, { opacity }, style]}>
+            {children}
+        </Animated.View>
+    );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
     const anim = useRef(new Animated.Value(0)).current;
     const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
     useEffect(() => { Animated.spring(anim, { toValue: 1, friction: 7, tension: 40, delay: index * 60, useNativeDriver: true }).start(); }, []);
-    return ( <Animated.View style={[{ opacity: anim, transform: [{ translateY }] }, style]}>{children}</Animated.View> );
+    return (<Animated.View style={[{ opacity: anim, transform: [{ translateY }] }, style]}>{children}</Animated.View>);
 };
 
 const ScoreRing = ({ score = 0, size = 160 }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
     const animatedValue = useRef(new Animated.Value(0)).current;
     const r = (size / 2) - 10;
     const circ = 2 * Math.PI * r;
@@ -143,72 +152,74 @@ const ScoreRing = ({ score = 0, size = 160 }) => {
     const ringColor = score >= 80 ? COLORS.success : score >= 65 ? COLORS.warning : COLORS.danger;
 
     return (
-        <View style={{width: size, height: size, alignItems:'center', justifyContent:'center'}}>
-            <Svg width={size} height={size} style={{transform:[{rotate:'-90deg'}]}}>
-                <Circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth="14" fill="none"/>
-                <Circle cx={size/2} cy={size/2} r={r} stroke={ringColor} strokeWidth="14" fill="none" strokeDasharray={circ} strokeDashoffset={strokeDashoffset} strokeLinecap="round"/>
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+                <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth="14" fill="none" />
+                <Circle cx={size / 2} cy={size / 2} r={r} stroke={ringColor} strokeWidth="14" fill="none" strokeDasharray={circ} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
             </Svg>
-            <View style={{position:'absolute', alignItems:'center'}}>
-                <Text style={{fontFamily:'Tajawal-ExtraBold', fontSize: size * 0.25, color: ringColor}}>{displayScore}%</Text>
+            <View style={{ position: 'absolute', alignItems: 'center' }}>
+                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: size * 0.25, color: ringColor }}>{displayScore}%</Text>
             </View>
         </View>
     );
 };
 
 const ConfidenceRing = ({ confidence }) => {
-  const animatedValue = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const animatedValue = useRef(new Animated.Value(0)).current;
 
-  const confidenceMap = {
-      'عالية': { value: 100, color: COLORS.success },
-      'متوسطة': { value: 65, color: COLORS.gold },
-      'منخفضة': { value: 35, color: COLORS.warning },
-      'منخفضة جدا': { value: 15, color: COLORS.warning },
-      'معدومة': { value: 0, color: COLORS.danger },
-  };
+    const confidenceMap = {
+        'عالية': { value: 100, color: COLORS.success },
+        'متوسطة': { value: 65, color: COLORS.gold },
+        'منخفضة': { value: 35, color: COLORS.warning },
+        'منخفضة جدا': { value: 15, color: COLORS.warning },
+        'معدومة': { value: 0, color: COLORS.danger },
+    };
 
-  const { value, color } = confidenceMap[confidence] || { value: 0, color: COLORS.danger };
-  const size = 32;
-  const strokeWidth = 3;
-  const r = (size / 2) - strokeWidth;
-  const circ = 2 * Math.PI * r;
-  
-  useEffect(() => {
-      Animated.timing(animatedValue, {
-          toValue: value,
-          duration: 800,
-          delay: 400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-      }).start();
-  }, [confidence]);
+    const { value, color } = confidenceMap[confidence] || { value: 0, color: COLORS.danger };
+    const size = 32;
+    const strokeWidth = 3;
+    const r = (size / 2) - strokeWidth;
+    const circ = 2 * Math.PI * r;
 
-  const strokeDashoffset = animatedValue.interpolate({
-      inputRange: [0, 100],
-      outputRange: [circ, 0],
-  });
+    useEffect(() => {
+        Animated.timing(animatedValue, {
+            toValue: value,
+            duration: 800,
+            delay: 400,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+        }).start();
+    }, [confidence]);
 
-  return (
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-              <Circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} fill="none" />
-              <Animated.View style={StyleSheet.absoluteFill}>
-                  <Svg width={size} height={size}>
-                      <AnimatedCircle
-                          cx={size/2}
-                          cy={size/2}
-                          r={r}
-                          stroke={color}
-                          strokeWidth={strokeWidth}
-                          fill="none"
-                          strokeDasharray={circ}
-                          strokeDashoffset={strokeDashoffset}
-                          strokeLinecap="round"
-                      />
-                  </Svg>
-              </Animated.View>
-          </Svg>
-      </View>
-  );
+    const strokeDashoffset = animatedValue.interpolate({
+        inputRange: [0, 100],
+        outputRange: [circ, 0],
+    });
+
+    return (
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+                <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} fill="none" />
+                <Animated.View style={StyleSheet.absoluteFill}>
+                    <Svg width={size} height={size}>
+                        <AnimatedCircle
+                            cx={size / 2}
+                            cy={size / 2}
+                            r={r}
+                            stroke={color}
+                            strokeWidth={strokeWidth}
+                            fill="none"
+                            strokeDasharray={circ}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                        />
+                    </Svg>
+                </Animated.View>
+            </Svg>
+        </View>
+    );
 };
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -217,7 +228,10 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 // --- IN FILE: oilguard.js ---
 
 const MarketingClaimsSection = ({ results }) => {
-    
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     // Helper to Clean Emojis from Backend Text
     const cleanStatusText = (text) => {
         if (!text) return '';
@@ -245,15 +259,15 @@ const MarketingClaimsSection = ({ results }) => {
         const getStatusConfig = (statusRaw) => {
             const s = statusRaw ? statusRaw.toString() : '';
             if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
-                return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)' };
+                return { color: COLORS.danger, icon: 'times-circle', bg: COLORS.danger + '1A' };
             }
             if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) {
-                return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)' };
+                return { color: COLORS.warning, icon: 'exclamation-circle', bg: COLORS.warning + '1A' };
             }
             if (s.includes('🌿') || s.includes('تقليديا')) {
-                return { color: '#6BCB77', icon: 'leaf', bg: 'rgba(107, 203, 119, 0.1)' };
+                return { color: COLORS.success, icon: 'leaf', bg: COLORS.success + '1A' };
             }
-            return { color: '#4D96FF', icon: 'check-circle', bg: 'rgba(77, 150, 255, 0.1)' };
+            return { color: COLORS.info, icon: 'check-circle', bg: COLORS.info + '1A' };
         };
 
         const config = getStatusConfig(result.status);
@@ -261,7 +275,7 @@ const MarketingClaimsSection = ({ results }) => {
 
         // --- DATA PROCESSING FOR LAYOUT ---
         const rawEvidence = [...(result.proven || []), ...(result.traditionallyProven || [])];
-        
+
         // Split into Strong (Primary) vs Weak (Trace)
         const strongEvidence = [];
         const weakEvidence = [];
@@ -280,8 +294,8 @@ const MarketingClaimsSection = ({ results }) => {
         const toggle = () => {
             const targetValue = expanded ? 0 : 1;
             setExpanded(!expanded);
-            Animated.timing(animController, { 
-                toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false 
+            Animated.timing(animController, {
+                toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false
             }).start();
         };
 
@@ -292,7 +306,7 @@ const MarketingClaimsSection = ({ results }) => {
             <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
                 <TouchableOpacity onPress={toggle} activeOpacity={0.7}>
                     <Animated.View style={[
-                        styles.claimRowMain, 
+                        styles.claimRowMain,
                         { backgroundColor: animController.interpolate({ inputRange: [0, 1], outputRange: ['transparent', config.bg] }) }
                     ]}>
                         <View style={styles.claimIconCol}>
@@ -313,13 +327,13 @@ const MarketingClaimsSection = ({ results }) => {
                 </TouchableOpacity>
 
                 <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
-                    <View 
+                    <View
                         style={[styles.claimDetails, { position: 'absolute', width: '100%' }]}
                         onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}
                     >
                         {/* Explanation Text */}
                         <Text style={styles.claimExplanation}>{result.explanation}</Text>
-                        
+
                         {/* --- SECTION 1: PRIMARY DRIVERS (Strong) --- */}
                         {strongEvidence.length > 0 && (
                             <View style={styles.evidenceGroup}>
@@ -363,7 +377,7 @@ const MarketingClaimsSection = ({ results }) => {
         const s = r.status.toString();
         return s.includes('✅') || s.includes('🌿');
     }).length;
-    
+
     const score = total > 0 ? Math.round((validCount / total) * 100) : 0;
     const scoreColor = score >= 70 ? COLORS.success : (score >= 40 ? COLORS.warning : COLORS.danger);
 
@@ -384,7 +398,7 @@ const MarketingClaimsSection = ({ results }) => {
                 {sortedResults.length > 0 ? (
                     sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)
                 ) : (
-                    <Text style={{color: COLORS.textDim, textAlign: 'center', marginVertical: 20}}>
+                    <Text style={{ color: COLORS.textDim, textAlign: 'center', marginVertical: 20 }}>
                         لم يتم تحديد ادعاءات للتحليل.
                     </Text>
                 )}
@@ -394,398 +408,422 @@ const MarketingClaimsSection = ({ results }) => {
 };
 
 const SwipeHint = () => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const opacity = useRef(new Animated.Value(0)).current;
+    const translateX = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-      const animation = Animated.loop(
-          Animated.sequence([
-              Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-              Animated.timing(translateX, {
-                  toValue: -35,
-                  duration: 1000,
-                  delay: 100,
-                  easing: Easing.inOut(Easing.ease),
-                  useNativeDriver: true,
-              }),
-              Animated.timing(opacity, { toValue: 0, duration: 400, delay: 200, useNativeDriver: true }),
-              Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }), 
-              Animated.delay(1000), 
-          ])
-      );
-      animation.start();
-      return () => animation.stop();
-  }, []);
-
-  return (
-      <Animated.View style={[styles.swipeHintContainer, { opacity, transform: [{ translateX }] }]}>
-          <MaterialCommunityIcons name="gesture-swipe-horizontal" size={65} color={COLORS.primary} />
-      </Animated.View>
-  );
-};
-
-const Pagination = ({ data, scrollX }) => {
-  if (data.length <= PAGINATION_DOTS) {
-      return (
-          <View style={styles.paginationSimpleContainer}>
-              {data.map((_, idx) => {
-                  const inputRange = [(idx - 1) * ITEM_WIDTH, idx * ITEM_WIDTH, (idx + 1) * ITEM_WIDTH];
-                  const scale = scrollX.interpolate({
-                      inputRange,
-                      outputRange: [1, 1.5, 1],
-                      extrapolate: 'clamp',
-                  });
-                  const opacity = scrollX.interpolate({
-                      inputRange,
-                      outputRange: [0.5, 1, 0.5],
-                      extrapolate: 'clamp',
-                  });
-                  return (
-                      <Animated.View
-                          key={`simple-dot-${idx}`}
-                          style={[styles.paginationDot, { transform: [{ scale }], opacity, backgroundColor: COLORS.primary }]}
-                      />
-                  );
-              })}
-          </View>
-      );
-  }
-
-  const indicatorTranslateX = scrollX.interpolate({
-      inputRange: [0, (data.length - 1) * ITEM_WIDTH],
-      outputRange: [0, (data.length - 1) * (DOT_SIZE + DOT_SPACING)],
-      extrapolate: 'clamp',
-  });
-
-  const containerWidth = PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING;
-  const centerPoint = (containerWidth / 2) - (DOT_SIZE / 2); 
-
-  const containerTranslateX = scrollX.interpolate({
-      inputRange: [
-          0,
-          (data.length - 1) * ITEM_WIDTH 
-      ],
-      outputRange: [
-          0,
-          -((data.length - 1) * (DOT_SIZE + DOT_SPACING) - centerPoint) + centerPoint 
-      ],
-      extrapolate: 'clamp'
-  });
-
-  return (
-      <View style={styles.paginationContainer}>
-          <Animated.View style={[ { transform: [{ translateX: containerTranslateX }] }]}>
-              <View style={styles.paginationTrack}>
-                  {data.map((_, idx) => (
-                      <View key={`track-dot-${idx}`} style={styles.paginationDot} />
-                  ))}
-              </View>
-
-              <Animated.View
-                  style={[
-                      styles.paginationIndicator,
-                      { transform: [{ translateX: indicatorTranslateX }] }
-                  ]}
-              />
-          </Animated.View>
-      </View>
-  );
-};
-
-const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
-  const getWarningStyle = (level) => {
-    // Normalize input to lowercase to ensure matching works even if backend sends "Risk" instead of "risk"
-    const safeLevel = level ? level.toLowerCase() : '';
-    
-    switch (safeLevel) {
-      case 'risk':
-        return { color: COLORS.danger, icon: 'exclamation-circle' };
-      case 'caution':
-        return { color: COLORS.warning, icon: 'exclamation-triangle' };
-      default: 
-        // Default (Info) - usually blue/green depending on your theme
-        return { color: COLORS.info, icon: 'info-circle' };
-    }
-  };
-
-  const benefits = ingredient.benefits ? Object.keys(ingredient.benefits) : [];
-
-  const inputRange = [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH];
-  const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.9, 1, 0.9],
-      extrapolate: 'clamp',
-  });
-  const opacity = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.6, 1, 0.6],
-      extrapolate: 'clamp',
-  });
-  
-  return (
-    <StaggeredItem index={index}>
-      <Animated.View style={{ transform: [{ scale }], opacity }}>
-            <View intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
-        <View style={styles.ingHeader}>
-          <Text style={styles.ingName}>{ingredient.name}</Text>
-          <View style={styles.ingTagsContainer}>
-            {ingredient.functionalCategory && (
-              <View style={[styles.ingTag, styles.ingFuncTag]}>
-                <Text style={styles.ingTagText}>{ingredient.functionalCategory}</Text>
-              </View>
-            )}
-            {ingredient.chemicalType && (
-              <View style={[styles.ingTag, styles.ingChemTag]}>
-                <Text style={styles.ingTagText}>{ingredient.chemicalType}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {benefits.length > 0 && (
-          <View style={styles.ingBenefitsContainer}>
-            {benefits.map(benefit => (
-              <View key={benefit} style={styles.ingBenefitChip}>
-                <Text style={styles.ingBenefitText}>{benefit}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {ingredient.warnings && ingredient.warnings.length > 0 && (
-          <>
-            <View style={styles.ingDivider} />
-            {ingredient.warnings.map((warning, idx) => {
-              const style = getWarningStyle(warning.level);
-              return (
-                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
-                  <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
-                  {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
-                  <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
-                </View>
-              );
-            })}
-          </>
-        )}
-      </View>
-      </Animated.View>
-    </StaggeredItem>
-  );
-};
-
-const AnimatedCheckbox = ({ isSelected }) => {
-  const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-  const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-
-  useEffect(() => {
-      Animated.spring(scale, {
-          toValue: isSelected ? 1 : 0,
-          friction: 5,
-          tension: 80,
-          useNativeDriver: true,
-      }).start();
-      Animated.timing(checkScale, {
-          toValue: isSelected ? 1 : 0,
-          duration: 200,
-          delay: isSelected ? 100 : 0, 
-          useNativeDriver: true,
-      }).start();
-  }, [isSelected]);
-
-  return (
-      <View style={styles.checkboxBase}>
-          <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
-          <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-              <FontAwesome5 name="check" size={14} color={COLORS.darkGreen} />
-          </Animated.View>
-      </View>
-  );
-};
-
-const Wave = ({ isFilling }) => {
-  const waveAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-      const animation = Animated.loop(
-          Animated.timing(waveAnim, {
-              toValue: 1,
-              duration: 2000,
-              useNativeDriver: true,
-              easing: Easing.linear
-          })
-      );
-      if (isFilling) {
-          animation.start();
-      }
-      return () => animation.stop();
-  }, [isFilling]);
-
-  const translateX = waveAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, -width * 0.8], 
-  });
-
-  return (
-      <Animated.View style={{ width: '200%', height: 40, transform: [{ translateX }] }}>
-          <Svg height="40" width={width * 1.6} style={{ width: '100%' }}>
-              <Circle cx="50%" cy="50%" r="50%" fill={COLORS.primaryGlow} />
-          </Svg>
-      </Animated.View>
-  );
-};
-
-const Bubble = ({ size, x, duration, delay }) => {
-  const animY = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
+    useEffect(() => {
         const animation = Animated.loop(
-            Animated.timing(animY, {
-                toValue: 1,
-                duration,
-                useNativeDriver: true, 
-                easing: Easing.linear,
-            })
+            Animated.sequence([
+                Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+                Animated.timing(translateX, {
+                    toValue: -35,
+                    duration: 1000,
+                    delay: 100,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(opacity, { toValue: 0, duration: 400, delay: 200, useNativeDriver: true }),
+                Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }),
+                Animated.delay(1000),
+            ])
         );
         animation.start();
         return () => animation.stop();
-    }, delay);
-    return () => clearTimeout(timer);
-  }, []);
+    }, []);
+
+    return (
+        <Animated.View style={[styles.swipeHintContainer, { opacity, transform: [{ translateX }] }]}>
+            <MaterialCommunityIcons name="gesture-swipe-horizontal" size={65} color={COLORS.primary} />
+        </Animated.View>
+    );
+};
+
+const Pagination = ({ data, scrollX }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    if (data.length <= PAGINATION_DOTS) {
+        return (
+            <View style={styles.paginationSimpleContainer}>
+                {data.map((_, idx) => {
+                    const inputRange = [(idx - 1) * ITEM_WIDTH, idx * ITEM_WIDTH, (idx + 1) * ITEM_WIDTH];
+                    const scale = scrollX.interpolate({
+                        inputRange,
+                        outputRange: [1, 1.5, 1],
+                        extrapolate: 'clamp',
+                    });
+                    const opacity = scrollX.interpolate({
+                        inputRange,
+                        outputRange: [0.5, 1, 0.5],
+                        extrapolate: 'clamp',
+                    });
+                    return (
+                        <Animated.View
+                            key={`simple-dot-${idx}`}
+                            style={[styles.paginationDot, { transform: [{ scale }], opacity, backgroundColor: COLORS.primary }]}
+                        />
+                    );
+                })}
+            </View>
+        );
+    }
+
+    const indicatorTranslateX = scrollX.interpolate({
+        inputRange: [0, (data.length - 1) * ITEM_WIDTH],
+        outputRange: [0, (data.length - 1) * (DOT_SIZE + DOT_SPACING)],
+        extrapolate: 'clamp',
+    });
+
+    const containerWidth = PAGINATION_DOTS * DOT_SIZE + (PAGINATION_DOTS - 1) * DOT_SPACING;
+    const centerPoint = (containerWidth / 2) - (DOT_SIZE / 2);
+
+    const containerTranslateX = scrollX.interpolate({
+        inputRange: [
+            0,
+            (data.length - 1) * ITEM_WIDTH
+        ],
+        outputRange: [
+            0,
+            -((data.length - 1) * (DOT_SIZE + DOT_SPACING) - centerPoint) + centerPoint
+        ],
+        extrapolate: 'clamp'
+    });
+
+    return (
+        <View style={styles.paginationContainer}>
+            <Animated.View style={[{ transform: [{ translateX: containerTranslateX }] }]}>
+                <View style={styles.paginationTrack}>
+                    {data.map((_, idx) => (
+                        <View key={`track-dot-${idx}`} style={styles.paginationDot} />
+                    ))}
+                </View>
+
+                <Animated.View
+                    style={[
+                        styles.paginationIndicator,
+                        { transform: [{ translateX: indicatorTranslateX }] }
+                    ]}
+                />
+            </Animated.View>
+        </View>
+    );
+};
+
+const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const getWarningStyle = (level) => {
+        // Normalize input to lowercase to ensure matching works even if backend sends "Risk" instead of "risk"
+        const safeLevel = level ? level.toLowerCase() : '';
+
+        switch (safeLevel) {
+            case 'risk':
+                return { color: COLORS.danger, icon: 'exclamation-circle' };
+            case 'caution':
+                return { color: COLORS.warning, icon: 'exclamation-triangle' };
+            default:
+                // Default (Info) - usually blue/green depending on your theme
+                return { color: COLORS.info, icon: 'info-circle' };
+        }
+    };
+
+    const benefits = ingredient.benefits ? Object.keys(ingredient.benefits) : [];
+
+    const inputRange = [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH];
+    const scale = scrollX.interpolate({
+        inputRange,
+        outputRange: [0.9, 1, 0.9],
+        extrapolate: 'clamp',
+    });
+    const opacity = scrollX.interpolate({
+        inputRange,
+        outputRange: [0.6, 1, 0.6],
+        extrapolate: 'clamp',
+    });
+
+    return (
+        <StaggeredItem index={index}>
+            <Animated.View style={{ transform: [{ scale }], opacity }}>
+                <View intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+                    <View style={styles.ingHeader}>
+                        <Text style={styles.ingName}>{ingredient.name}</Text>
+                        <View style={styles.ingTagsContainer}>
+                            {ingredient.functionalCategory && (
+                                <View style={[styles.ingTag, styles.ingFuncTag]}>
+                                    <Text style={styles.ingTagText}>{ingredient.functionalCategory}</Text>
+                                </View>
+                            )}
+                            {ingredient.chemicalType && (
+                                <View style={[styles.ingTag, styles.ingChemTag]}>
+                                    <Text style={styles.ingTagText}>{ingredient.chemicalType}</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {benefits.length > 0 && (
+                        <View style={styles.ingBenefitsContainer}>
+                            {benefits.map(benefit => (
+                                <View key={benefit} style={styles.ingBenefitChip}>
+                                    <Text style={styles.ingBenefitText}>{benefit}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
+                    {ingredient.warnings && ingredient.warnings.length > 0 && (
+                        <>
+                            <View style={styles.ingDivider} />
+                            {ingredient.warnings.map((warning, idx) => {
+                                const style = getWarningStyle(warning.level);
+                                return (
+                                    <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
+                                        <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
+                                        {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
+                                        <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
+                                    </View>
+                                );
+                            })}
+                        </>
+                    )}
+                </View>
+            </Animated.View>
+        </StaggeredItem>
+    );
+};
+
+const AnimatedCheckbox = ({ isSelected }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+    const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+    useEffect(() => {
+        Animated.spring(scale, {
+            toValue: isSelected ? 1 : 0,
+            friction: 5,
+            tension: 80,
+            useNativeDriver: true,
+        }).start();
+        Animated.timing(checkScale, {
+            toValue: isSelected ? 1 : 0,
+            duration: 200,
+            delay: isSelected ? 100 : 0,
+            useNativeDriver: true,
+        }).start();
+    }, [isSelected]);
+
+    return (
+        <View style={styles.checkboxBase}>
+            <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
+            <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+                <FontAwesome5 name="check" size={14} color={COLORS.darkGreen} />
+            </Animated.View>
+        </View>
+    );
+};
+
+const Wave = ({ isFilling }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const waveAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const animation = Animated.loop(
+            Animated.timing(waveAnim, {
+                toValue: 1,
+                duration: 2000,
+                useNativeDriver: true,
+                easing: Easing.linear
+            })
+        );
+        if (isFilling) {
+            animation.start();
+        }
+        return () => animation.stop();
+    }, [isFilling]);
+
+    const translateX = waveAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, -width * 0.8],
+    });
+
+    return (
+        <Animated.View style={{ width: '200%', height: 40, transform: [{ translateX }] }}>
+            <Svg height="40" width={width * 1.6} style={{ width: '100%' }}>
+                <Circle cx="50%" cy="50%" r="50%" fill={COLORS.primaryGlow} />
+            </Svg>
+        </Animated.View>
+    );
+};
+
+const Bubble = ({ size, x, duration, delay }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const animY = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const animation = Animated.loop(
+                Animated.timing(animY, {
+                    toValue: 1,
+                    duration,
+                    useNativeDriver: true,
+                    easing: Easing.linear,
+                })
+            );
+            animation.start();
+            return () => animation.stop();
+        }, delay);
+        return () => clearTimeout(timer);
+    }, []);
 
 
-  const animatedCy = animY.interpolate({ 
-    inputRange: [0, 1], 
-    outputRange: [90, 15] 
-});
+    const animatedCy = animY.interpolate({
+        inputRange: [0, 1],
+        outputRange: [90, 15]
+    });
 
-return <AnimatedCircle
-cx={x}
-cy={animatedCy} 
-r={size}
-fill={COLORS.primaryGlow}
-opacity={0.7}
-/>;
+    return <AnimatedCircle
+        cx={x}
+        cy={animatedCy}
+        r={size}
+        fill={COLORS.primaryGlow}
+        opacity={0.7}
+    />;
 };
 
 const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1500, style }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [textIndex, setTextIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showCursor, setShowCursor] = useState(true);
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const [displayedText, setDisplayedText] = useState('');
+    const [textIndex, setTextIndex] = useState(0);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showCursor, setShowCursor] = useState(true);
 
-  useEffect(() => {
-      const cursorInterval = setInterval(() => {
-          setShowCursor(prev => !prev);
-      }, 500);
+    useEffect(() => {
+        const cursorInterval = setInterval(() => {
+            setShowCursor(prev => !prev);
+        }, 500);
 
-      const handleTyping = () => {
-          const currentText = texts[textIndex];
-          
-          if (isDeleting) {
-              if (displayedText.length > 0) {
-                  const timeout = setTimeout(() => {
-                      setDisplayedText(currentText.substring(0, displayedText.length - 1));
-                  }, deletingSpeed);
-                  return () => clearTimeout(timeout);
-              } else {
-                  setIsDeleting(false);
-                  setTextIndex((prevIndex) => (prevIndex + 1) % texts.length);
-              }
-          } 
-          else {
-              if (displayedText.length < currentText.length) {
-                  const timeout = setTimeout(() => {
-                      setDisplayedText(currentText.substring(0, displayedText.length + 1));
-                  }, typingSpeed);
-                  return () => clearTimeout(timeout);
-              } else {
-                  const timeout = setTimeout(() => {
-                      setIsDeleting(true);
-                  }, pauseDuration);
-                  return () => clearTimeout(timeout);
-              }
-          }
-      };
+        const handleTyping = () => {
+            const currentText = texts[textIndex];
 
-      const typingTimeout = handleTyping();
+            if (isDeleting) {
+                if (displayedText.length > 0) {
+                    const timeout = setTimeout(() => {
+                        setDisplayedText(currentText.substring(0, displayedText.length - 1));
+                    }, deletingSpeed);
+                    return () => clearTimeout(timeout);
+                } else {
+                    setIsDeleting(false);
+                    setTextIndex((prevIndex) => (prevIndex + 1) % texts.length);
+                }
+            }
+            else {
+                if (displayedText.length < currentText.length) {
+                    const timeout = setTimeout(() => {
+                        setDisplayedText(currentText.substring(0, displayedText.length + 1));
+                    }, typingSpeed);
+                    return () => clearTimeout(timeout);
+                } else {
+                    const timeout = setTimeout(() => {
+                        setIsDeleting(true);
+                    }, pauseDuration);
+                    return () => clearTimeout(timeout);
+                }
+            }
+        };
 
-      return () => {
-          if(typingTimeout) typingTimeout();
-          clearInterval(cursorInterval);
-      };
+        const typingTimeout = handleTyping();
 
-  }, [displayedText, isDeleting, textIndex, texts, typingSpeed, deletingSpeed, pauseDuration]);
+        return () => {
+            if (typingTimeout) typingTimeout();
+            clearInterval(cursorInterval);
+        };
 
-  return (
-      <View style={style.container}>
-          <Text style={style.text}>
-              {displayedText}
-              {showCursor && <Text style={{ color: COLORS.primary }}>▋</Text>}
-          </Text>
-      </View>
-  );
+    }, [displayedText, isDeleting, textIndex, texts, typingSpeed, deletingSpeed, pauseDuration]);
+
+    return (
+        <View style={style.container}>
+            <Text style={style.text}>
+                {displayedText}
+                {showCursor && <Text style={{ color: COLORS.primary }}>▋</Text>}
+            </Text>
+        </View>
+    );
 };
 
 const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
-  const anim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const anim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
 
-  useEffect(() => {
-    Animated.spring(anim, {
-      toValue: isSelected ? 1 : 0,
-      friction: 7,
-      tension: 50,
-      useNativeDriver: false, 
-    }).start();
-  }, [isSelected]);
+    useEffect(() => {
+        Animated.spring(anim, {
+            toValue: isSelected ? 1 : 0,
+            friction: 7,
+            tension: 50,
+            useNativeDriver: false,
+        }).start();
+    }, [isSelected]);
 
-  const backgroundColor = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [COLORS.card, COLORS.accentGreen], 
-  });
+    const backgroundColor = anim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [COLORS.card, COLORS.accentGreen],
+    });
 
-  const textColor = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [COLORS.textSecondary, COLORS.textOnAccent], 
-  });
+    const textColor = anim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [COLORS.textSecondary, COLORS.textOnAccent],
+    });
 
-  const iconColor = isSelected ? COLORS.textOnAccent : COLORS.textSecondary;
+    const iconColor = isSelected ? COLORS.textOnAccent : COLORS.textSecondary;
 
-  return (
-    <StaggeredItem index={index}>
-      <TouchableOpacity onPress={onPress}>
-        <Animated.View style={[styles.typeChip, { backgroundColor }]}>
-          <FontAwesome5 name={type.icon} color={iconColor} size={14} />
-          <Animated.Text style={[styles.typeText, { color: textColor }]}>
-            {type.label}
-          </Animated.Text>
-        </Animated.View>
-      </TouchableOpacity>
-    </StaggeredItem>
-  );
+    return (
+        <StaggeredItem index={index}>
+            <TouchableOpacity onPress={onPress}>
+                <Animated.View style={[styles.typeChip, { backgroundColor }]}>
+                    <FontAwesome5 name={type.icon} color={iconColor} size={14} />
+                    <Animated.Text style={[styles.typeText, { color: textColor }]}>
+                        {type.label}
+                    </Animated.Text>
+                </Animated.View>
+            </TouchableOpacity>
+        </StaggeredItem>
+    );
 };
 
 const extractIngredientsFromAIText = async (inputData) => {
-  let candidates = [];
-  if (Array.isArray(inputData)) {
-    candidates = inputData;
-  } else if (typeof inputData === 'string') {
-    candidates = inputData.split('\n');
-  }
+    let candidates = [];
+    if (Array.isArray(inputData)) {
+        candidates = inputData;
+    } else if (typeof inputData === 'string') {
+        candidates = inputData.split('\n');
+    }
 
-  const simpleIngredients = candidates.map((name, index) => ({
-      id: `temp-${index}`, 
-      name: name.trim(),
-      functionalCategory: 'جاري التحليل...', 
-      chemicalType: ''
-  })).filter(i => i.name.length > 1);
+    const simpleIngredients = candidates.map((name, index) => ({
+        id: `temp-${index}`,
+        name: name.trim(),
+        functionalCategory: 'جاري التحليل...',
+        chemicalType: ''
+    })).filter(i => i.name.length > 1);
 
-  return { ingredients: simpleIngredients };
+    return { ingredients: simpleIngredients };
 };
 
 // --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
 const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, setScanMode }) => {
-    
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     // 1. Calculate height for perfect scan loop
     const { width } = Dimensions.get('window');
     const CARD_WIDTH = (width - 40) / 2; // (Screen - Padding) / 2 cards
@@ -801,7 +839,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
             Animated.sequence([
                 Animated.timing(scanAnim, {
                     toValue: 1,
-                    duration: 2200, 
+                    duration: 2200,
                     easing: Easing.linear,
                     useNativeDriver: true
                 }),
@@ -828,20 +866,20 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
     const scanTranslateY = scanAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [-5, SCAN_HEIGHT + 5] 
+        outputRange: [-5, SCAN_HEIGHT + 5]
     });
 
     return (
         <View style={styles.inputStepContainer}>
-            
+
             <View style={styles.heroVisualContainer}>
                 <View style={styles.guideSection}>
-                    
+
                     {/* =============================================
                         LEFT CARD: "SIGNAL LOST" (Wrong)
                        ============================================= */}
                     <View style={[styles.opticalCard, styles.cardError]}>
-                        
+
                         {/* HUD Corners */}
                         <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.danger }]} />
                         <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.danger }]} />
@@ -850,11 +888,11 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
                         <View style={styles.scannerScreen}>
                             {/* YOUR LOCAL IMAGE HERE */}
-                            <Image 
+                            <Image
                                 source={require('../../assets/images/front.jpg')}
                                 style={styles.guideImage}
                             />
-                            
+
                             {/* Dark Noise Overlay */}
                             <View style={styles.noiseOverlay}>
                                 {/* Pulsing Icon */}
@@ -877,7 +915,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                         RIGHT CARD: "INTELLIGENCE FOUND" (Correct)
                        ============================================= */}
                     <View style={[styles.opticalCard, styles.cardSuccess]}>
-                        
+
                         {/* HUD Corners */}
                         <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.accentGreen }]} />
                         <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.accentGreen }]} />
@@ -886,11 +924,11 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
                         <View style={styles.scannerScreen}>
                             {/* YOUR LOCAL IMAGE HERE */}
-                            <Image 
+                            <Image
                                 source={require('../../assets/images/inci.jpg')}
                                 style={styles.guideImage}
                             />
-                            
+
                             {/* Tech Grid Overlay (SVG pattern simulation) */}
                             <View style={styles.gridOverlay}>
                                 <Svg height="100%" width="100%">
@@ -903,14 +941,14 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                     </Defs>
                                     <Rect x="0" y="0" width="100%" height="100%" fill="url(#gridGrad)" />
                                     {/* Horizontal grid lines */}
-                                    <Path d={`M0 ${SCAN_HEIGHT*0.33} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
-                                    <Path d={`M0 ${SCAN_HEIGHT*0.66} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
+                                    <Path d={`M0 ${SCAN_HEIGHT * 0.33} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
+                                    <Path d={`M0 ${SCAN_HEIGHT * 0.66} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
                                 </Svg>
                             </View>
 
                             {/* The Laser Beam */}
                             <Animated.View style={[
-                                styles.laserBeam, 
+                                styles.laserBeam,
                                 { transform: [{ translateY: scanTranslateY }] }
                             ]}>
                                 {/* Trail Gradient */}
@@ -924,7 +962,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
                         <View style={styles.cardFooter}>
                             <View style={[styles.indicatorDot, { backgroundColor: COLORS.accentGreen }]} />
-                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
+                            <Text style={[styles.footerLabel, { color: COLORS.textDim }]}>
                                 المكونات فقط (صح)
                             </Text>
                         </View>
@@ -936,7 +974,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
             {/* BOTTOM DECK (Unchanged) */}
             <StaggeredItem index={0} style={styles.bottomDeck}>
                 <LinearGradient
-                    colors={[COLORS.card, '#152520']}
+                    colors={[COLORS.card, COLORS.background]}
                     style={styles.bottomDeckGradient}
                 >
                     <View style={styles.deckHeader}>
@@ -955,92 +993,92 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                         />
                     </View>
 
-                     {/* --- NEW: SCAN MODE TOGGLE --- */}
-                     <View style={{
-                            flexDirection: 'row',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            borderRadius: 12,
-                            padding: 4,
-                            marginTop: 'auto',
-                            marginBottom: 5,
-                            borderWidth: 1,
-                            borderColor: 'rgba(255,255,255,0.1)'
-                        }}>
-                            {/* Fast Mode Button */}
-                            <TouchableOpacity 
-                                onPress={() => setScanMode('fast')}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                    backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'row',
-                                    gap: 6
-                                }}
-                            >
-                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? '#1A2D27' : COLORS.textDim} />
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold',
-                                    fontSize: 13,
-                                    color: scanMode === 'fast' ? '#1A2D27' : COLORS.textDim
-                                }}>وضع السرعة</Text>
-                            </TouchableOpacity>
+                    {/* --- NEW: SCAN MODE TOGGLE --- */}
+                    <View style={{
+                        flexDirection: 'row',
+                        backgroundColor: 'rgba(0,0,0,0.05)',
+                        borderRadius: 12,
+                        padding: 4,
+                        marginTop: 'auto',
+                        marginBottom: 5,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.1)'
+                    }}>
+                        {/* Fast Mode Button */}
+                        <TouchableOpacity
+                            onPress={() => setScanMode('fast')}
+                            style={{
+                                flex: 1,
+                                paddingVertical: 8,
+                                borderRadius: 8,
+                                backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexDirection: 'row',
+                                gap: 6
+                            }}
+                        >
+                            <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim} />
+                            <Text style={{
+                                fontFamily: 'Tajawal-Bold',
+                                fontSize: 13,
+                                color: scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim
+                            }}>وضع السرعة</Text>
+                        </TouchableOpacity>
 
-                            {/* Accurate Mode Button */}
-                            <TouchableOpacity 
-                                onPress={() => setScanMode('accurate')}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                    backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'row',
-                                    gap: 6
-                                }}
-                            >
-                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim} />
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold',
-                                    fontSize: 13,
-                                    color: scanMode === 'accurate' ? '#1A2D27' : COLORS.textDim
-                                }}>وضع الدقة</Text>
-                            </TouchableOpacity>
-                        </View>
-                        
-                        {/* Info Note based on selection */}
-                        <Text style={{ 
-                            fontFamily: 'Tajawal-Regular', 
-                            color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen, 
-                            fontSize: 12,
-                            textAlign: 'center',
-                            marginBottom: 10
-                        }}>
-                            {scanMode === 'accurate' 
-                                ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية" 
-                                : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
-                        </Text>
-                        {/* --- END NEW UI --- */}
+                        {/* Accurate Mode Button */}
+                        <TouchableOpacity
+                            onPress={() => setScanMode('accurate')}
+                            style={{
+                                flex: 1,
+                                paddingVertical: 8,
+                                borderRadius: 8,
+                                backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexDirection: 'row',
+                                gap: 6
+                            }}
+                        >
+                            <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim} />
+                            <Text style={{
+                                fontFamily: 'Tajawal-Bold',
+                                fontSize: 13,
+                                color: scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim
+                            }}>وضع الدقة</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                    
+                    {/* Info Note based on selection */}
+                    <Text style={{
+                        fontFamily: 'Tajawal-Regular',
+                        color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen,
+                        fontSize: 12,
+                        textAlign: 'center',
+                        marginBottom: 10
+                    }}>
+                        {scanMode === 'accurate'
+                            ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية"
+                            : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
+                    </Text>
+                    {/* --- END NEW UI --- */}
+
+
 
                     <TouchableOpacity onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
                         <LinearGradient
-                            colors={[COLORS.accentGreen, '#4a8570']}
+                            colors={[String(COLORS.accentGreen), String(COLORS.accentGreen) + 'BF']}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                             style={styles.primaryActionGradient}
                         >
                             <View style={styles.iconCircle}>
-                                <Ionicons name="camera" size={28} color={COLORS.background} />
+                                <Ionicons name="camera" size={28} color={COLORS.textOnAccent} />
                             </View>
                             <View>
                                 <Text style={styles.primaryActionTitle}>تصوير المكونات</Text>
                                 <Text style={styles.primaryActionSub}>اضغط لفتح الكاميرا</Text>
                             </View>
-                            <Ionicons name="chevron-back" size={24} color={COLORS.background} style={{ opacity: 0.6, marginRight: 'auto' }} />
+                            <Ionicons name="chevron-back" size={24} color={COLORS.textOnAccent} style={{ opacity: 0.6, marginRight: 'auto' }} />
                         </LinearGradient>
                     </TouchableOpacity>
 
@@ -1063,177 +1101,189 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
 // --- COMPLEX GAUGE COMPONENT (Replaces simple ScoreRing) ---
 const ComplexDashboardGauge = ({ score, size = 220 }) => {
-  const animatedScore = useRef(new Animated.Value(0)).current;
-  const [displayScore, setDisplayScore] = useState(0);
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const animatedScore = useRef(new Animated.Value(0)).current;
+    const [displayScore, setDisplayScore] = useState(0);
 
-  const center = size / 2;
-  const radius = size * 0.38; // Radius of main ring
-  const circum = 2 * Math.PI * radius;
-  
-  // Determine color based on score
-  const getColor = (s) => {
-      if (s >= 80) return COLORS.success;
-      if (s >= 60) return COLORS.gold;
-      return COLORS.danger;
-  };
-  
-  const activeColor = getColor(displayScore);
+    const center = size / 2;
+    const radius = size * 0.38; // Radius of main ring
+    const circum = 2 * Math.PI * radius;
 
-  useEffect(() => {
-      const listener = animatedScore.addListener(({ value }) => setDisplayScore(Math.round(value)));
-      Animated.timing(animatedScore, {
-          toValue: score,
-          duration: 2000,
-          easing: Easing.bezier(0.25, 1, 0.5, 1),
-          useNativeDriver: false
-      }).start();
-      return () => animatedScore.removeListener(listener);
-  }, [score]);
+    // Determine color based on score
+    const getColor = (s) => {
+        if (s >= 80) return COLORS.success;
+        if (s >= 60) return COLORS.gold;
+        return COLORS.danger;
+    };
 
-  // Calculate Stroke Dash
-  const strokeDashoffset = animatedScore.interpolate({
-      inputRange: [0, 100],
-      outputRange: [circum, 0]
-  });
+    const activeColor = getColor(displayScore);
 
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-      Animated.loop(
-          Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
-      ).start();
-  }, []);
+    useEffect(() => {
+        const listener = animatedScore.addListener(({ value }) => setDisplayScore(Math.round(value)));
+        Animated.timing(animatedScore, {
+            toValue: score,
+            duration: 2000,
+            easing: Easing.bezier(0.25, 1, 0.5, 1),
+            useNativeDriver: false
+        }).start();
+        return () => animatedScore.removeListener(listener);
+    }, [score]);
 
-  const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const spinReverse = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
+    // Calculate Stroke Dash
+    const strokeDashoffset = animatedScore.interpolate({
+        inputRange: [0, 100],
+        outputRange: [circum, 0]
+    });
 
-  return (
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          {/* 1. Outer Tech Ring (Spinning Slow) */}
-          <Animated.View style={{ position: 'absolute', transform: [{ rotate: spin }] }}>
-               <Svg width={size} height={size}>
-                  <Circle cx={center} cy={center} r={size * 0.48} stroke="rgba(90, 156, 132, 0.1)" strokeWidth="1" strokeDasharray="5, 10" fill="none" />
-               </Svg>
-          </Animated.View>
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
+        ).start();
+    }, []);
 
-          
+    const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+    const spinReverse = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
 
-          {/* 3. Main Gauge Track */}
-          <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-              <Defs>
-                   {/* FIX: Use SvgLinearGradient here instead of LinearGradient */}
-                   <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-                      <Stop offset="0" stopColor={activeColor} stopOpacity="0.2" />
-                      <Stop offset="1" stopColor={activeColor} stopOpacity="1" />
-                   </SvgLinearGradient>
-              </Defs>
-              {/* Background Track */}
-              <Circle cx={center} cy={center} r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="18" fill="none" strokeLinecap="round"/>
-              
-              {/* Progress Value */}
-              <AnimatedCircle 
-                  cx={center} cy={center} r={radius} 
-                  stroke={`url(#grad)`} strokeWidth="18" fill="none" 
-                  strokeDasharray={circum} strokeDashoffset={strokeDashoffset} 
-                  strokeLinecap="round" 
-              />
-          </Svg>
+    return (
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+            {/* 1. Outer Tech Ring (Spinning Slow) */}
+            <Animated.View style={{ position: 'absolute', transform: [{ rotate: spin }] }}>
+                <Svg width={size} height={size}>
+                    <Circle cx={center} cy={center} r={size * 0.48} stroke="rgba(90, 156, 132, 0.1)" strokeWidth="1" strokeDasharray="5, 10" fill="none" />
+                </Svg>
+            </Animated.View>
 
-          {/* 4. Center Number */}
-          <View style={styles.absoluteCenter}>
-              <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 52, color: COLORS.textPrimary }}>
-                  {displayScore}
-              </Text>
-              <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
-                  وثيق
-              </Text>
-          </View>
-      </View>
-  );
+
+
+            {/* 3. Main Gauge Track */}
+            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+                <Defs>
+                    {/* FIX: Use SvgLinearGradient here instead of LinearGradient */}
+                    <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                        <Stop offset="0" stopColor={activeColor} stopOpacity="0.2" />
+                        <Stop offset="1" stopColor={activeColor} stopOpacity="1" />
+                    </SvgLinearGradient>
+                </Defs>
+                {/* Background Track */}
+                <Circle cx={center} cy={center} r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="18" fill="none" strokeLinecap="round" />
+
+                {/* Progress Value */}
+                <AnimatedCircle
+                    cx={center} cy={center} r={radius}
+                    stroke={`url(#grad)`} strokeWidth="18" fill="none"
+                    strokeDasharray={circum} strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                />
+            </Svg>
+
+            {/* 4. Center Number */}
+            <View style={styles.absoluteCenter}>
+                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 52, color: COLORS.textPrimary }}>
+                    {displayScore}
+                </Text>
+                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
+                    وثيق
+                </Text>
+            </View>
+        </View>
+    );
 };
 
 // --- STAT BAR COMPONENT ---
 const StatBar = ({ label, score, color, icon }) => {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-      Animated.timing(widthAnim, {
-          toValue: score,
-          duration: 1500,
-          delay: 500,
-          useNativeDriver: false 
-      }).start();
-  }, [score]);
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const widthAnim = useRef(new Animated.Value(0)).current;
 
-  const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+    useEffect(() => {
+        Animated.timing(widthAnim, {
+            toValue: score,
+            duration: 1500,
+            delay: 500,
+            useNativeDriver: false
+        }).start();
+    }, [score]);
 
-  return (
-      <View style={styles.statBox}>
-          <View style={styles.statHeader}>
-              <Text style={styles.statValue}>{score}/100</Text>
-              <View style={{flexDirection:'row', alignItems:'center', gap:5}}>
-                  <Text style={styles.statLabel}>{label}</Text>
-                  <FontAwesome5 name={icon} size={10} color={COLORS.textDim} />
-              </View>
-          </View>
-          <View style={styles.progressBarBg}>
-              <Animated.View style={[styles.progressBarFill, { width: widthPercent, backgroundColor: color }]} />
-          </View>
-      </View>
-  );
+    const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+
+    return (
+        <View style={styles.statBox}>
+            <View style={styles.statHeader}>
+                <Text style={styles.statValue}>{score}/100</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Text style={styles.statLabel}>{label}</Text>
+                    <FontAwesome5 name={icon} size={10} color={COLORS.textDim} />
+                </View>
+            </View>
+            <View style={styles.progressBarBg}>
+                <Animated.View style={[styles.progressBarFill, { width: widthPercent, backgroundColor: color }]} />
+            </View>
+        </View>
+    );
 };
 
 const GlassPillar = ({ label, score, color, icon }) => {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-      Animated.timing(widthAnim, {
-          toValue: score,
-          duration: 1200,
-          delay: 300,
-          easing: Easing.out(Easing.cubic), // Smooth deceleration
-          useNativeDriver: false 
-      }).start();
-  }, [score]);
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const widthAnim = useRef(new Animated.Value(0)).current;
 
-  const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+    useEffect(() => {
+        Animated.timing(widthAnim, {
+            toValue: score,
+            duration: 1200,
+            delay: 300,
+            easing: Easing.out(Easing.cubic), // Smooth deceleration
+            useNativeDriver: false
+        }).start();
+    }, [score]);
 
-  return (
-      <View style={styles.pillarContainer}>
-          <View style={styles.pillarHeader}>
-              
-              {/* Right Side: Icon & Label */}
-              <View style={styles.pillarLabelRow}>
-                  <View style={[styles.pillarIconBox, { backgroundColor: `${color}15` }]}>
-                      <FontAwesome5 name={icon} size={10} color={color} />
-                  </View>
-                  <Text style={styles.pillarLabel}>{label}</Text>
-              </View>
+    const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
 
-              {/* Left Side: Score Number */}
-              <Text style={styles.pillarValue}>{score}%</Text>
-          </View>
+    return (
+        <View style={styles.pillarContainer}>
+            <View style={styles.pillarHeader}>
 
-          {/* Progress Bar */}
-          <View style={styles.pillarTrack}>
-              <Animated.View 
-                  style={[
-                      styles.pillarFill, 
-                      { 
-                          width: widthPercent, 
-                          backgroundColor: color,
-                          // Dynamic shadow color for glow effect
-                          shadowColor: color 
-                      }
-                  ]} 
-              />
-          </View>
-      </View>
-  );
+                {/* Right Side: Icon & Label */}
+                <View style={styles.pillarLabelRow}>
+                    <View style={[styles.pillarIconBox, { backgroundColor: `${color}15` }]}>
+                        <FontAwesome5 name={icon} size={10} color={color} />
+                    </View>
+                    <Text style={styles.pillarLabel}>{label}</Text>
+                </View>
+
+                {/* Left Side: Score Number */}
+                <Text style={styles.pillarValue}>{score}%</Text>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.pillarTrack}>
+                <Animated.View
+                    style={[
+                        styles.pillarFill,
+                        {
+                            width: widthPercent,
+                            backgroundColor: color,
+                            // Dynamic shadow color for glow effect
+                            shadowColor: color
+                        }
+                    ]}
+                />
+            </View>
+        </View>
+    );
 };
 
 // --- NEW SPLIT MATCH COMPONENT ---
 const MatchBreakdown = ({ reasons = [] }) => {
-    
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     if (!reasons || reasons.length === 0) return null;
 
     // --- UI Helpers ---
@@ -1249,10 +1299,10 @@ const MatchBreakdown = ({ reasons = [] }) => {
     const getIcon = (text, type) => {
         const lowerText = text ? text.toLowerCase() : '';
         // Map keywords to FontAwesome5 icons
-        if (lowerText.includes('مسام') || lowerText.includes('بثور')) return 'dot-circle'; 
-        if (lowerText.includes('فطريات') || lowerText.includes('قشرة')) return 'spider'; 
-        if (lowerText.includes('حساسية')) return 'hand-paper'; 
-        if (lowerText.includes('تعارض')) return 'flask'; 
+        if (lowerText.includes('مسام') || lowerText.includes('بثور')) return 'dot-circle';
+        if (lowerText.includes('فطريات') || lowerText.includes('قشرة')) return 'spider';
+        if (lowerText.includes('حساسية')) return 'hand-paper';
+        if (lowerText.includes('تعارض')) return 'flask';
         // Default icons based on severity
         return type === 'good' ? 'check' : (type === 'danger' ? 'times' : 'exclamation-triangle');
     };
@@ -1271,7 +1321,7 @@ const MatchBreakdown = ({ reasons = [] }) => {
                     // Handle both object format {type, text} and simple string format
                     const type = typeof item === 'object' ? item.type : 'info';
                     const text = typeof item === 'object' ? item.text : item;
-                    
+
                     const config = getConfig(type);
                     const iconName = getIcon(text, type);
 
@@ -1292,20 +1342,25 @@ const MatchBreakdown = ({ reasons = [] }) => {
 };
 
 const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
-  return (
-    <TouchableOpacity onPress={() => onToggle(item)} activeOpacity={0.7}>
-      <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
-        <AnimatedCheckbox isSelected={isSelected} />
-        <Text style={styles.claimItemText}>{item}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    return (
+        <TouchableOpacity onPress={() => onToggle(item)} activeOpacity={0.7}>
+            <View style={[styles.claimItem, isSelected && styles.claimItemActive]}>
+                <AnimatedCheckbox isSelected={isSelected} />
+                <Text style={styles.claimItemText}>{item}</Text>
+            </View>
+        </TouchableOpacity>
+    );
 }, (prevProps, nextProps) => {
-  // Only re-render if selection state changes
-  return prevProps.isSelected === nextProps.isSelected;
+    // Only re-render if selection state changes
+    return prevProps.isSelected === nextProps.isSelected;
 });
 
 const AgentLoadingView = () => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
     const [msgIndex, setMsgIndex] = useState(0);
     // Use standard Animated values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1368,23 +1423,23 @@ const AgentLoadingView = () => {
     });
 
     return (
-        <View style={{ 
-            marginVertical: 20, marginHorizontal: 20, 
-            padding: 20, borderRadius: 16, 
-            backgroundColor: 'rgba(0,0,0,0.2)', 
+        <View style={{
+            marginVertical: 20, marginHorizontal: 20,
+            padding: 20, borderRadius: 16,
+            backgroundColor: 'rgba(0,0,0,0.2)',
             borderWidth: 1, borderColor: 'rgba(90, 156, 132, 0.2)',
             alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden'
         }}>
-            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{marginBottom: 15}} />
-            
-            <Animated.View 
+            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginBottom: 15 }} />
+
+            <Animated.View
                 style={{
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     gap: 10,
                     opacity: fadeAnim,
-                    transform: [{ 
+                    transform: [{
                         translateY: fadeAnim.interpolate({
                             inputRange: [0, 1],
                             outputRange: [10, 0] // Slide up slightly
@@ -1393,8 +1448,8 @@ const AgentLoadingView = () => {
                 }}
             >
                 <Text style={{
-                    fontFamily: 'Tajawal-Bold', 
-                    color: COLORS.accentGreen, 
+                    fontFamily: 'Tajawal-Bold',
+                    color: COLORS.accentGreen,
                     fontSize: 13,
                     letterSpacing: 0.5
                 }}>
@@ -1405,7 +1460,7 @@ const AgentLoadingView = () => {
 
             {/* Progress Bar Visual */}
             <View style={{
-                height: 2, width: '60%', backgroundColor: 'rgba(255,255,255,0.1)', 
+                height: 2, width: '60%', backgroundColor: 'rgba(255,255,255,0.1)',
                 marginTop: 15, borderRadius: 2, overflow: 'hidden'
             }}>
                 <Animated.View style={{
@@ -1421,1458 +1476,1461 @@ const AgentLoadingView = () => {
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
 export default function OilGuardEngine() {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-  const router = useRouter();
-  const { user, userProfile } = useAppContext();
-  const insets = useSafeAreaInsets();
-  const interstitialId = TestIds.INTERSTITIAL;
-
-
-  const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
-
-  const [step, setStep] = useState(0); 
-  const [loading, setLoading] = useState(false);
-  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
-  const [ocrText, setOcrText] = useState('');
-  const [manualIngredients, setManualIngredients] = useState('');
-  const [preProcessedIngredients, setPreProcessedIngredients] = useState([]);
-  const [productType, setProductType] = useState('other');
-  const [selectedClaims, setSelectedClaims] = useState([]);
-  const [finalAnalysis, setFinalAnalysis] = useState(null);
-  const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
-  const [isSaveModalVisible, setSaveModalVisible] = useState(false);
-  const [productName, setProductName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSwipeHint, setShowSwipeHint] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isCameraViewVisible, setCameraViewVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [fabPosition, setFabPosition] = useState({ x: 0, y: 0 });
-  const [activeTab, setActiveTab] = useState('claims');
-  const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
-  const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [cropperVisible, setCropperVisible] = useState(false);
-  const [tempImageUri, setTempImageUri] = useState(null);
-  const [frontImageUri, setFrontImageUri] = useState(null); 
-  const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
-  const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
-  const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
-  const [scanMode, setScanMode] = useState('fast'); // 'fast' or 'accurate'
-  const [containerHeight, setContainerHeight] = useState(0);
-  const [verifiedRec, setVerifiedRec] = useState(null); 
-const [isVerifiedLoading, setIsVerifiedLoading] = useState(false);
-  const [recError, setRecError] = useState(false); // New state to track if search found nothing
-  const [selectedRec, setSelectedRec] = useState(null);
-  const [isDetailVisible, setDetailVisible] = useState(false);
-  
-  const SCREEN_HEIGHT = Dimensions.get('window').height;
-
-  const contentOpacity = useRef(new Animated.Value(1)).current;
-  const contentTranslateX = useRef(new Animated.Value(0)).current;
-  const scrollRef = useRef(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const introIconScale = useRef(new Animated.Value(1)).current;
-  const introShineAnim = useRef(new Animated.Value(0)).current;
-  const fabAnim = useRef(new Animated.Value(0)).current;
-  const fabPulseAnim = useRef(new Animated.Value(1)).current;
-  const heroTransitionAnim = useRef(new Animated.Value(0)).current; 
-  const fabIconRef = useRef(null);
-  const fabRef = useRef(null);
-  const revealAnim = useRef(new Animated.Value(0)).current;
-  const loadingFillAnim = useRef(new Animated.Value(0)).current;
-  const loadingDropAnim = useRef(new Animated.Value(0)).current;
-  const loadingTextOpacityAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(0)).current;
-  
-  const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random()*5+3, startX: Math.random()*width, duration: 8000+Math.random()*7000, delay: Math.random()*5000 })), []);
-  
-  const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
-  const fuse = useMemo(() => new Fuse(claimsForType, {
-      includeScore: false,
-      threshold: 0.4,
-  }), [claimsForType]);
-  const loadingBubbles = useMemo(() => [...Array(15)].map((_, i) => ({
-      id: i,
-      size: Math.random() * 15 + 5,
-      x: `${Math.random() * 80 + 10}%`,
-      duration: Math.random() * 3000 + 2000,
-      delay: Math.random() * 2000,
-  })), []);
+    const router = useRouter();
+    const { user, userProfile } = useAppContext();
+    const insets = useSafeAreaInsets();
+    const interstitialId = TestIds.INTERSTITIAL;
 
 
+    const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
 
-  useEffect(() => {
-    const breathAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(introIconScale, { toValue: 1.05, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-        Animated.timing(introIconScale, { toValue: 1, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
-      ])
-    );
-    const shineAnimation = Animated.loop(
-        Animated.timing(introShineAnim, {
-            toValue: 1,
-            duration: 3500,
-            useNativeDriver: true,
-            easing: Easing.linear,
-            delay: 500,
-        })
-    );
-    const drop = Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(loadingDropAnim, { toValue: 1, duration: 600, useNativeDriver: true, easing: Easing.bounce })
-    ]);
-    const fill = Animated.sequence([
-        Animated.delay(800),
-        Animated.timing(loadingFillAnim, { toValue: 1, duration: 2500, useNativeDriver: false, easing: Easing.inOut(Easing.ease) })
-    ]);
-    const textPulse = Animated.loop(Animated.sequence([
-        Animated.timing(loadingTextOpacityAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(loadingTextOpacityAnim, { toValue: 0.6, duration: 1000, useNativeDriver: true })
-    ]));
+    const [step, setStep] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+    const [ocrText, setOcrText] = useState('');
+    const [manualIngredients, setManualIngredients] = useState('');
+    const [preProcessedIngredients, setPreProcessedIngredients] = useState([]);
+    const [productType, setProductType] = useState('other');
+    const [selectedClaims, setSelectedClaims] = useState([]);
+    const [finalAnalysis, setFinalAnalysis] = useState(null);
+    const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
+    const [isSaveModalVisible, setSaveModalVisible] = useState(false);
+    const [productName, setProductName] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [showSwipeHint, setShowSwipeHint] = useState(true);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [isCameraViewVisible, setCameraViewVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [fabPosition, setFabPosition] = useState({ x: 0, y: 0 });
+    const [activeTab, setActiveTab] = useState('claims');
+    const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
+    const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    const [cropperVisible, setCropperVisible] = useState(false);
+    const [tempImageUri, setTempImageUri] = useState(null);
+    const [frontImageUri, setFrontImageUri] = useState(null);
+    const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
+    const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
+    const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
+    const [scanMode, setScanMode] = useState('fast'); // 'fast' or 'accurate'
+    const [containerHeight, setContainerHeight] = useState(0);
+    const [verifiedRec, setVerifiedRec] = useState(null);
+    const [isVerifiedLoading, setIsVerifiedLoading] = useState(false);
+    const [recError, setRecError] = useState(false); // New state to track if search found nothing
+    const [selectedRec, setSelectedRec] = useState(null);
+    const [isDetailVisible, setDetailVisible] = useState(false);
 
-    if (step === 0) {
-      breathAnimation.start();
-      shineAnimation.start();
-    } else if (step === 3) {
-      if (isGeminiLoading) {
-        loadingTextOpacityAnim.setValue(0.6); 
-        textPulse.start();
-      } else {
-        loadingDropAnim.setValue(0);
-        loadingFillAnim.setValue(0);
-        loadingTextOpacityAnim.setValue(0);
-        drop.start();
-        fill.start();
-        textPulse.start();
-      }
-    }
+    const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-    return () => {
-        breathAnimation.stop();
-        shineAnimation.stop();
-        drop.stop();
-        fill.stop();
-        textPulse.stop();
-    };
-  }, [step, isGeminiLoading]);
+    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const contentTranslateX = useRef(new Animated.Value(0)).current;
+    const scrollRef = useRef(null);
+    const scrollX = useRef(new Animated.Value(0)).current;
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const introIconScale = useRef(new Animated.Value(1)).current;
+    const introShineAnim = useRef(new Animated.Value(0)).current;
+    const fabAnim = useRef(new Animated.Value(0)).current;
+    const fabPulseAnim = useRef(new Animated.Value(1)).current;
+    const heroTransitionAnim = useRef(new Animated.Value(0)).current;
+    const fabIconRef = useRef(null);
+    const fabRef = useRef(null);
+    const revealAnim = useRef(new Animated.Value(0)).current;
+    const loadingFillAnim = useRef(new Animated.Value(0)).current;
+    const loadingDropAnim = useRef(new Animated.Value(0)).current;
+    const loadingTextOpacityAnim = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    const pulseAnimation = Animated.loop(
-        Animated.sequence([
-            Animated.timing(fabPulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-            Animated.timing(fabPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
-        ])
-    );
+    const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random() * 5 + 3, startX: Math.random() * width, duration: 8000 + Math.random() * 7000, delay: Math.random() * 5000 })), []);
 
-    if (selectedClaims.length > 0) {
-      Animated.spring(fabAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
-      pulseAnimation.start();
-    } else {
-      Animated.timing(fabAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-    }
-
-    return () => pulseAnimation.stop();
-  }, [selectedClaims.length]);
-
-  useEffect(() => {
-    const pulseAnimation = Animated.loop(
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      })
-    );
-
-    if (isAnimatingTransition) {
-      pulseAnimation.start();
-    }
-
-    return () => {
-      pulseAnimation.stop();
-      pulseAnim.setValue(0);
-    };
-  }, [isAnimatingTransition]);
-
-  // ---------------------------------------------------------
-  // --- ADS DISABLED START ----------------------------------
-  // ---------------------------------------------------------
-  
-  /* 
-  // ORIGINAL CODE COMMENTED OUT:
-  const { isLoaded, isClosed, load, show } = useInterstitialAd(interstitialId, {
-    requestNonPersonalizedAdsOnly: true,
-  });
-
-  // 2. LOAD AD WHEN COMPONENT MOUNTS
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // 3. RELOAD AD AFTER IT IS CLOSED
-  useEffect(() => {
-    if (isClosed) {
-      load();
-      // Actually reset the app flow after ad closes
-      performReset(); 
-    }
-  }, [isClosed, load]);
-  */
-
-  // DUMMY OBJECT (Prevents crashes if variables are referenced elsewhere)
-  const { isLoaded, isClosed, load, show } = { 
-    isLoaded: false, 
-    isClosed: false, 
-    load: () => console.log("Ad loading disabled"), 
-    show: () => console.log("Ad showing disabled") 
-  };
-
-  // ---------------------------------------------------------
-  // --- ADS DISABLED END ------------------------------------
-  // ---------------------------------------------------------
-
-  const changeStep = useCallback((next) => {
-    const isForward = next > step;
-    const slideDist = 20; // Reduced distance for subtler movement
-
-    // 1. Immediate Feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    // 2. EXIT ANIMATION (Fast)
-    Animated.parallel([
-        Animated.timing(contentOpacity, { 
-            toValue: 0, 
-            duration: 150, 
-            useNativeDriver: true,
-            easing: Easing.out(Easing.quad)
-        }),
-        Animated.timing(contentTranslateX, { 
-            toValue: isForward ? -slideDist : slideDist, 
-            duration: 150, 
-            useNativeDriver: true 
-        })
-    ]).start(() => {
-        
-        // 3. LOGIC & RESET (While Invisible)
-        setStep(next);
-        
-        // Reset the Y-scroll animation value used in Step 2 (Claims)
-        // This prevents the header from appearing "collapsed" if you return to the step
-        scrollY.setValue(0); 
-
-        // Reset main scrollview if it exists
-        if (scrollRef.current) {
-            scrollRef.current.scrollTo({ y: 0, animated: false });
-        }
-
-        // Snap X position to the "entry" side immediately
-        contentTranslateX.setValue(isForward ? slideDist : -slideDist);
-
-        // 4. MICRO-DELAY & ENTRY
-        // We wait 50ms to allow React to mount the new component tree completely
-        // while opacity is still 0. This eliminates the "flash" of the old step.
-        setTimeout(() => {
-            Animated.parallel([
-                Animated.timing(contentOpacity, { 
-                    toValue: 1, 
-                    duration: 300, 
-                    useNativeDriver: true,
-                    easing: Easing.out(Easing.cubic)
-                }),
-                Animated.spring(contentTranslateX, { 
-                    toValue: 0, 
-                    friction: 9, 
-                    tension: 50, 
-                    useNativeDriver: true 
-                })
-            ]).start();
-        }, 50); 
-    });
-}, [step, contentOpacity, contentTranslateX, scrollY]);
+    const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
+    const fuse = useMemo(() => new Fuse(claimsForType, {
+        includeScore: false,
+        threshold: 0.4,
+    }), [claimsForType]);
+    const loadingBubbles = useMemo(() => [...Array(15)].map((_, i) => ({
+        id: i,
+        size: Math.random() * 15 + 5,
+        x: `${Math.random() * 80 + 10}%`,
+        duration: Math.random() * 3000 + 2000,
+        delay: Math.random() * 2000,
+    })), []);
 
 
-  const handleImageSelection = useCallback(async (mode) => {
-    try {
-        if (mode === 'camera') {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('عذرا', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
-                return;
-            }
-            setCameraViewVisible(true);
-            return; 
-        }
 
-        if (mode === 'gallery') {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('عذرا', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
-                return;
-            }
+    useEffect(() => {
+        const breathAnimation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(introIconScale, { toValue: 1.05, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+                Animated.timing(introIconScale, { toValue: 1, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+            ])
+        );
+        const shineAnimation = Animated.loop(
+            Animated.timing(introShineAnim, {
+                toValue: 1,
+                duration: 3500,
+                useNativeDriver: true,
+                easing: Easing.linear,
+                delay: 500,
+            })
+        );
+        const drop = Animated.sequence([
+            Animated.delay(400),
+            Animated.timing(loadingDropAnim, { toValue: 1, duration: 600, useNativeDriver: true, easing: Easing.bounce })
+        ]);
+        const fill = Animated.sequence([
+            Animated.delay(800),
+            Animated.timing(loadingFillAnim, { toValue: 1, duration: 2500, useNativeDriver: false, easing: Easing.inOut(Easing.ease) })
+        ]);
+        const textPulse = Animated.loop(Animated.sequence([
+            Animated.timing(loadingTextOpacityAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+            Animated.timing(loadingTextOpacityAnim, { toValue: 0.6, duration: 1000, useNativeDriver: true })
+        ]));
 
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                quality: 1, // High quality for OCR
-                allowsEditing: false, // DISABLE Native Editor
-            });
-
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-                const selectedUri = result.assets[0].uri;
-                if (selectedUri) {
-                    setTempImageUri(selectedUri);
-                    // Add a small timeout to ensure modal transition is smooth
-                    setTimeout(() => setCropperVisible(true), 100);
-                }
+        if (step === 0) {
+            breathAnimation.start();
+            shineAnimation.start();
+        } else if (step === 3) {
+            if (isGeminiLoading) {
+                loadingTextOpacityAnim.setValue(0.6);
+                textPulse.start();
+            } else {
+                loadingDropAnim.setValue(0);
+                loadingFillAnim.setValue(0);
+                loadingTextOpacityAnim.setValue(0);
+                drop.start();
+                fill.start();
+                textPulse.start();
             }
         }
-    } catch (error) {
-        console.error("Image selection error:", error);
-        Alert.alert("خطأ", "حدث خطأ أثناء اختيار الصورة. حاول مرة أخرى.");
-    }
-  }, []);
 
+        return () => {
+            breathAnimation.stop();
+            shineAnimation.stop();
+            drop.stop();
+            fill.stop();
+            textPulse.stop();
+        };
+    }, [step, isGeminiLoading]);
 
-  const handlePictureTaken = useCallback((photo) => {
-    setCameraViewVisible(false);
-    
-    if (photo && photo.uri) {
-        // OLD CODE: 
-        // setTempImageUri(photo.uri);
-        // setTimeout(() => setCropperVisible(true), 300);
-
-        // NEW CODE: Skip cropper and go straight to processing
-        // We add a small delay to let the Camera Modal close animation finish smoothly
-        setTimeout(() => {
-            processImageWithGemini(photo.uri);
-        }, 50); 
-    }
-  }, []);
-
-  const processImageWithGemini = async (uri) => {
-    setLoading(true);
-    setIsGeminiLoading(true);
-    changeStep(3);
-
-    try {
-        // 1. Process image for upload
-        const manipResult = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 1500 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    useEffect(() => {
+        const pulseAnimation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(fabPulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+                Animated.timing(fabPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
+            ])
         );
 
-        // 2. Convert to base64
-        const base64Data = await uriToBase64(manipResult.uri);
-
-        console.log("📤 Sending image to backend...");
-        
-        const response = await fetch(VERCEL_BACKEND_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                base64Data: base64Data,
-                localOcrText: "",
-                scanMode: scanMode
-            }),
-        });
-
-        const responseData = await response.json();
-        console.log("🧠 Backend response:", JSON.stringify(responseData, null, 2));
-
-        if (!response.ok) {
-            throw new Error(responseData.error || "Backend processing failed");
-        }
-
-        // Parse Result
-        let jsonResponse;
-        if (typeof responseData.result === 'object') {
-            jsonResponse = responseData.result;
+        if (selectedClaims.length > 0) {
+            Animated.spring(fabAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+            pulseAnimation.start();
         } else {
-            const text = responseData.result.replace(/```json|```/g, '').trim();
-            jsonResponse = JSON.parse(text);
+            Animated.timing(fabAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
         }
 
-        // --- ERROR HANDLING SWITCH ---
-        const status = jsonResponse.status || 'unknown';
+        return () => pulseAnimation.stop();
+    }, [selectedClaims.length]);
 
-        if (status !== 'success') {
-            setIsGeminiLoading(false);
-            setLoading(false);
-            changeStep(0); // Go back to camera
-            
-            // Wait for transition animation
-            setTimeout(() => {
-                switch (status) {
-                    case 'front_label_detected':
-                        AlertService.show({
-                            title: "واجهة المنتج",
-                            message: "يبدو أنك صورتي واجهة المنتج. يرجى تصوير قائمة المكونات فقط و قصيها (غالباً خلف العبوة).",
-                            type: "warning",
-                            buttons: [{ text: "حسنا", style: "primary" }]
-                        });
-                        break;
-                    
-                    case 'instructions_only':
-                        AlertService.show({
-                            title: "إرشادات فقط",
-                            message: "وجدنا نصاً، لكنه لا يحتوي على مكونات. ابحثي عن قسم يبدأ بكلمة Ingredients.",
-                            type: "warning",
-                            buttons: [{ text: "محاولة أخرى", style: "primary" }]
-                        });
-                        break;
-
-                    case 'not_cosmetic':
-                        AlertService.show({
-                            title: "ليس منتجاً",
-                            message: "الصورة لا تبدو لمنتج تجميلي. يرجى التأكد من تصوير عبوة المنتج.",
-                            type: "error"
-                        });
-                        break;
-
-                    case 'unreadable':
-                        AlertService.show({
-                            title: "صورة غير واضحة",
-                            message: "النص غير مقروء. يرجى تثبيت اليد وتوفير إضاءة جيدة.",
-                            type: "error"
-                        });
-                        break;
-
-                    default:
-                        AlertService.show({
-                            title: "تعذر التحليل",
-                            message: "لم نتمكن من استخراج المكونات. يرجى المحاولة مرة أخرى بصورة أوضح.",
-                            type: "error"
-                        });
-                        break;
-                }
-            }, 500);
-            return;
-        }
-
-        // --- SUCCESS PATH ---
-        const rawList = jsonResponse.ingredients_list || [];
-        
-        if (rawList.length === 0) {
-            throw new Error("No ingredients list returned despite success status");
-        }
-
-        const { ingredients } = await extractIngredientsFromAIText(rawList);
-        
-        setOcrText(rawList.join('\n'));
-        setPreProcessedIngredients(ingredients);
-        setProductType(jsonResponse.detected_type || 'other');
-
-        setIsGeminiLoading(false);
-        setLoading(false);
-        changeStep(1);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    } catch (error) {
-        console.error("Image Processing Error:", error);
-        
-        setIsGeminiLoading(false);
-        setLoading(false);
-        changeStep(0);
-        
-        AlertService.show({
-            title: "خطأ في الاتصال",
-            message: "حدث خطأ غير متوقع. يرجى التحقق من الانترنت والمحاولة مرة أخرى.",
-            type: "error"
-        });
-    }
-};
-
-const fetchVerifiedRecommendation = async (analysis) => {
-    // 1. Don't search if the product is already excellent (88+)
-    if (analysis.oilGuardScore >= 88 && analysis.personalMatch?.status === 'good') return;
-
-    setIsVerifiedLoading(true);
-    setVerifiedRec(null);
-
-    try {
-        const response = await fetch("https://oilguard-backend.vercel.app/api/db-recommend.js", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                productType: productType,
-                issues: analysis.user_specific_alerts.map(a => a.text).slice(0, 1),
-                userProfile: userProfile?.settings || {},
-                selectedClaims: selectedClaims || []
+    useEffect(() => {
+        const pulseAnimation = Animated.loop(
+            Animated.timing(pulseAnim, {
+                toValue: 1,
+                duration: 1500,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
             })
-        });
+        );
 
-        const data = await response.json();
-        
-        if (data.recommendation) {
-            // 2. Only show if it improves the score by at least 5 points
-            if (data.recommendation.real_score > (analysis.oilGuardScore + 5)) {
-                setVerifiedRec(data.recommendation);
-
-                // --- NEW LOGIC: Check for and report unknown ingredients ---
-                if (data.recommendation.unknown_ingredients && data.recommendation.unknown_ingredients.length > 0) {
-                    console.log(`[DB Rec] Found ${data.recommendation.unknown_ingredients.length} unknown ingredients. Reporting...`);
-                    // This re-uses your existing function to send data to Firestore
-                    await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients);
-                }
-                // --- END OF NEW LOGIC ---
-            }
-        }
-    } catch (e) {
-        // Silently fail in production or log to analytics
-        console.warn("Recs failed:", e.message);
-    } finally {
-        setIsVerifiedLoading(false);
-    }
-};
-
-// Update UseEffect to ensure it fires
-useEffect(() => {
-    if (step === 4 && finalAnalysis) {
-        console.log("✅ [DEBUG] Step 4 reached. Triggering fetch...");
-        fetchVerifiedRecommendation(finalAnalysis);
-    }
-}, [step, finalAnalysis]);
-
-const reportUndiscoveredIngredients = async (missingList) => {
-    try {
-        // Validation
-        if (!missingList || missingList.length === 0) return;
-
-        console.log(`📝 Server identified ${missingList.length} unknown ingredients. Uploading...`);
-
-        const batch = writeBatch(db);
-        let batchCount = 0;
-
-        missingList.forEach(rawName => {
-            // Clean up the ID
-            const cleanName = rawName.trim();
-            const docId = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-            if (docId.length > 2) {
-                const ref = doc(db, "missing_ingredients", docId);
-                batch.set(ref, {
-                    originalName: cleanName,
-                    normalizedId: docId,
-                    count: increment(1),
-                    lastReported: Timestamp.now(),
-                    status: 'pending'
-                }, { merge: true });
-                batchCount++;
-            }
-        });
-
-        if (batchCount > 0) {
-            await batch.commit();
-            console.log("🚀 Uploaded missing ingredients to WathiqAdmin.");
+        if (isAnimatingTransition) {
+            pulseAnimation.start();
         }
 
-    } catch (error) {
-        console.error("❌ Error reporting missing ingredients:", error);
-    }
-};
+        return () => {
+            pulseAnimation.stop();
+            pulseAnim.setValue(0);
+        };
+    }, [isAnimatingTransition]);
 
-const executeAnalysis = async () => {
-    // 1. Trigger Transition INSTANTLY (Fast Mode: true)
-    // We remove the Haptics call here because TouchableOpacity already handles it
-    changeStep(3, { fast: true });
+    // ---------------------------------------------------------
+    // --- ADS DISABLED START ----------------------------------
+    // ---------------------------------------------------------
 
-    // 2. Defer the heavy network/logic to the next tick
-    // This allows the UI to paint the Loading Screen immediately without freezing
-    setTimeout(async () => {
+    /* 
+    // ORIGINAL CODE COMMENTED OUT:
+    const { isLoaded, isClosed, load, show } = useInterstitialAd(interstitialId, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+  
+    // 2. LOAD AD WHEN COMPONENT MOUNTS
+    useEffect(() => {
+      load();
+    }, [load]);
+  
+    // 3. RELOAD AD AFTER IT IS CLOSED
+    useEffect(() => {
+      if (isClosed) {
+        load();
+        // Actually reset the app flow after ad closes
+        performReset(); 
+      }
+    }, [isClosed, load]);
+    */
+
+    // DUMMY OBJECT (Prevents crashes if variables are referenced elsewhere)
+    const { isLoaded, isClosed, load, show } = {
+        isLoaded: false,
+        isClosed: false,
+        load: () => console.log("Ad loading disabled"),
+        show: () => console.log("Ad showing disabled")
+    };
+
+    // ---------------------------------------------------------
+    // --- ADS DISABLED END ------------------------------------
+    // ---------------------------------------------------------
+
+    const changeStep = useCallback((next) => {
+        const isForward = next > step;
+        const slideDist = 20; // Reduced distance for subtler movement
+
+        // 1. Immediate Feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        // 2. EXIT ANIMATION (Fast)
+        Animated.parallel([
+            Animated.timing(contentOpacity, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.quad)
+            }),
+            Animated.timing(contentTranslateX, {
+                toValue: isForward ? -slideDist : slideDist,
+                duration: 150,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+
+            // 3. LOGIC & RESET (While Invisible)
+            setStep(next);
+
+            // Reset the Y-scroll animation value used in Step 2 (Claims)
+            // This prevents the header from appearing "collapsed" if you return to the step
+            scrollY.setValue(0);
+
+            // Reset main scrollview if it exists
+            if (scrollRef.current) {
+                scrollRef.current.scrollTo({ y: 0, animated: false });
+            }
+
+            // Snap X position to the "entry" side immediately
+            contentTranslateX.setValue(isForward ? slideDist : -slideDist);
+
+            // 4. MICRO-DELAY & ENTRY
+            // We wait 50ms to allow React to mount the new component tree completely
+            // while opacity is still 0. This eliminates the "flash" of the old step.
+            setTimeout(() => {
+                Animated.parallel([
+                    Animated.timing(contentOpacity, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: true,
+                        easing: Easing.out(Easing.cubic)
+                    }),
+                    Animated.spring(contentTranslateX, {
+                        toValue: 0,
+                        friction: 9,
+                        tension: 50,
+                        useNativeDriver: true
+                    })
+                ]).start();
+            }, 50);
+        });
+    }, [step, contentOpacity, contentTranslateX, scrollY]);
+
+
+    const handleImageSelection = useCallback(async (mode) => {
         try {
-            const rawList = preProcessedIngredients.map(i => i.name);
+            if (mode === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('عذرا', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
+                    return;
+                }
+                setCameraViewVisible(true);
+                return;
+            }
 
-            const response = await fetch(VERCEL_EVALUATE_URL, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                },
-                body: JSON.stringify({
-                    ingredients_list: rawList,
-                    product_type: productType,
-                    selected_claims: selectedClaims,
-                    user_profile: {
-                        allergies: userProfile?.settings?.allergies || [],
-                        conditions: userProfile?.settings?.conditions || [],
-                        skinType: userProfile?.settings?.skinType,
-                        scalpType: userProfile?.settings?.scalpType
+            if (mode === 'gallery') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('عذرا', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
+                    return;
+                }
+
+                const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    quality: 1, // High quality for OCR
+                    allowsEditing: false, // DISABLE Native Editor
+                });
+
+                if (!result.canceled && result.assets && result.assets.length > 0) {
+                    const selectedUri = result.assets[0].uri;
+                    if (selectedUri) {
+                        setTempImageUri(selectedUri);
+                        // Add a small timeout to ensure modal transition is smooth
+                        setTimeout(() => setCropperVisible(true), 100);
                     }
-                })
+                }
+            }
+        } catch (error) {
+            console.error("Image selection error:", error);
+            Alert.alert("خطأ", "حدث خطأ أثناء اختيار الصورة. حاول مرة أخرى.");
+        }
+    }, []);
+
+
+    const handlePictureTaken = useCallback((photo) => {
+        setCameraViewVisible(false);
+
+        if (photo && photo.uri) {
+            // OLD CODE: 
+            // setTempImageUri(photo.uri);
+            // setTimeout(() => setCropperVisible(true), 300);
+
+            // NEW CODE: Skip cropper and go straight to processing
+            // We add a small delay to let the Camera Modal close animation finish smoothly
+            setTimeout(() => {
+                processImageWithGemini(photo.uri);
+            }, 50);
+        }
+    }, []);
+
+    const processImageWithGemini = async (uri) => {
+        setLoading(true);
+        setIsGeminiLoading(true);
+        changeStep(3);
+
+        try {
+            // 1. Process image for upload
+            const manipResult = await ImageManipulator.manipulateAsync(
+                uri,
+                [{ resize: { width: 1500 } }],
+                { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
+            // 2. Convert to base64
+            const base64Data = await uriToBase64(manipResult.uri);
+
+            console.log("📤 Sending image to backend...");
+
+            const response = await fetch(VERCEL_BACKEND_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    base64Data: base64Data,
+                    localOcrText: "",
+                    scanMode: scanMode
+                }),
             });
 
-            if (!response.ok) throw new Error("Server analysis failed");
-            
-            const fullAnalysisData = await response.json();
-            setFinalAnalysis(fullAnalysisData);
+            const responseData = await response.json();
+            console.log("🧠 Backend response:", JSON.stringify(responseData, null, 2));
 
-              // --- NEW LOGIC: Use Server Response Directly ---
-              // The server has already calculated exactly which ingredients failed to match.
-            if (fullAnalysisData.unknown_ingredients && fullAnalysisData.unknown_ingredients.length > 0) {
-                 reportUndiscoveredIngredients(fullAnalysisData.unknown_ingredients);
+            if (!response.ok) {
+                throw new Error(responseData.error || "Backend processing failed");
             }
 
-            changeStep(4);
+            // Parse Result
+            let jsonResponse;
+            if (typeof responseData.result === 'object') {
+                jsonResponse = responseData.result;
+            } else {
+                const text = responseData.result.replace(/```json|```/g, '').trim();
+                jsonResponse = JSON.parse(text);
+            }
+
+            // --- ERROR HANDLING SWITCH ---
+            const status = jsonResponse.status || 'unknown';
+
+            if (status !== 'success') {
+                setIsGeminiLoading(false);
+                setLoading(false);
+                changeStep(0); // Go back to camera
+
+                // Wait for transition animation
+                setTimeout(() => {
+                    switch (status) {
+                        case 'front_label_detected':
+                            AlertService.show({
+                                title: "واجهة المنتج",
+                                message: "يبدو أنك صورتي واجهة المنتج. يرجى تصوير قائمة المكونات فقط و قصيها (غالباً خلف العبوة).",
+                                type: "warning",
+                                buttons: [{ text: "حسنا", style: "primary" }]
+                            });
+                            break;
+
+                        case 'instructions_only':
+                            AlertService.show({
+                                title: "إرشادات فقط",
+                                message: "وجدنا نصاً، لكنه لا يحتوي على مكونات. ابحثي عن قسم يبدأ بكلمة Ingredients.",
+                                type: "warning",
+                                buttons: [{ text: "محاولة أخرى", style: "primary" }]
+                            });
+                            break;
+
+                        case 'not_cosmetic':
+                            AlertService.show({
+                                title: "ليس منتجاً",
+                                message: "الصورة لا تبدو لمنتج تجميلي. يرجى التأكد من تصوير عبوة المنتج.",
+                                type: "error"
+                            });
+                            break;
+
+                        case 'unreadable':
+                            AlertService.show({
+                                title: "صورة غير واضحة",
+                                message: "النص غير مقروء. يرجى تثبيت اليد وتوفير إضاءة جيدة.",
+                                type: "error"
+                            });
+                            break;
+
+                        default:
+                            AlertService.show({
+                                title: "تعذر التحليل",
+                                message: "لم نتمكن من استخراج المكونات. يرجى المحاولة مرة أخرى بصورة أوضح.",
+                                type: "error"
+                            });
+                            break;
+                    }
+                }, 500);
+                return;
+            }
+
+            // --- SUCCESS PATH ---
+            const rawList = jsonResponse.ingredients_list || [];
+
+            if (rawList.length === 0) {
+                throw new Error("No ingredients list returned despite success status");
+            }
+
+            const { ingredients } = await extractIngredientsFromAIText(rawList);
+
+            setOcrText(rawList.join('\n'));
+            setPreProcessedIngredients(ingredients);
+            setProductType(jsonResponse.detected_type || 'other');
+
+            setIsGeminiLoading(false);
+            setLoading(false);
+            changeStep(1);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
+            console.error("Image Processing Error:", error);
+
+            setIsGeminiLoading(false);
+            setLoading(false);
+            changeStep(0);
+
+            AlertService.show({
+                title: "خطأ في الاتصال",
+                message: "حدث خطأ غير متوقع. يرجى التحقق من الانترنت والمحاولة مرة أخرى.",
+                type: "error"
+            });
+        }
+    };
+
+    const fetchVerifiedRecommendation = async (analysis) => {
+        // 1. Don't search if the product is already excellent (88+)
+        if (analysis.oilGuardScore >= 88 && analysis.personalMatch?.status === 'good') return;
+
+        setIsVerifiedLoading(true);
+        setVerifiedRec(null);
+
+        try {
+            const response = await fetch("https://oilguard-backend.vercel.app/api/db-recommend.js", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    productType: productType,
+                    issues: analysis.user_specific_alerts.map(a => a.text).slice(0, 1),
+                    userProfile: userProfile?.settings || {},
+                    selectedClaims: selectedClaims || []
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.recommendation) {
+                // 2. Only show if it improves the score by at least 5 points
+                if (data.recommendation.real_score > (analysis.oilGuardScore + 5)) {
+                    setVerifiedRec(data.recommendation);
+
+                    // --- NEW LOGIC: Check for and report unknown ingredients ---
+                    if (data.recommendation.unknown_ingredients && data.recommendation.unknown_ingredients.length > 0) {
+                        console.log(`[DB Rec] Found ${data.recommendation.unknown_ingredients.length} unknown ingredients. Reporting...`);
+                        // This re-uses your existing function to send data to Firestore
+                        await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients);
+                    }
+                    // --- END OF NEW LOGIC ---
+                }
+            }
+        } catch (e) {
+            // Silently fail in production or log to analytics
+            console.warn("Recs failed:", e.message);
+        } finally {
+            setIsVerifiedLoading(false);
+        }
+    };
+
+    // Update UseEffect to ensure it fires
+    useEffect(() => {
+        if (step === 4 && finalAnalysis) {
+            console.log("✅ [DEBUG] Step 4 reached. Triggering fetch...");
+            fetchVerifiedRecommendation(finalAnalysis);
+        }
+    }, [step, finalAnalysis]);
+
+    const reportUndiscoveredIngredients = async (missingList) => {
+        try {
+            // Validation
+            if (!missingList || missingList.length === 0) return;
+
+            console.log(`📝 Server identified ${missingList.length} unknown ingredients. Uploading...`);
+
+            const batch = writeBatch(db);
+            let batchCount = 0;
+
+            missingList.forEach(rawName => {
+                // Clean up the ID
+                const cleanName = rawName.trim();
+                const docId = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                if (docId.length > 2) {
+                    const ref = doc(db, "missing_ingredients", docId);
+                    batch.set(ref, {
+                        originalName: cleanName,
+                        normalizedId: docId,
+                        count: increment(1),
+                        lastReported: Timestamp.now(),
+                        status: 'pending'
+                    }, { merge: true });
+                    batchCount++;
+                }
+            });
+
+            if (batchCount > 0) {
+                await batch.commit();
+                console.log("🚀 Uploaded missing ingredients to WathiqAdmin.");
+            }
+
+        } catch (error) {
+            console.error("❌ Error reporting missing ingredients:", error);
+        }
+    };
+
+    const executeAnalysis = async () => {
+        // 1. Trigger Transition INSTANTLY (Fast Mode: true)
+        // We remove the Haptics call here because TouchableOpacity already handles it
+        changeStep(3, { fast: true });
+
+        // 2. Defer the heavy network/logic to the next tick
+        // This allows the UI to paint the Loading Screen immediately without freezing
+        setTimeout(async () => {
+            try {
+                const rawList = preProcessedIngredients.map(i => i.name);
+
+                const response = await fetch(VERCEL_EVALUATE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    body: JSON.stringify({
+                        ingredients_list: rawList,
+                        product_type: productType,
+                        selected_claims: selectedClaims,
+                        user_profile: {
+                            allergies: userProfile?.settings?.allergies || [],
+                            conditions: userProfile?.settings?.conditions || [],
+                            skinType: userProfile?.settings?.skinType,
+                            scalpType: userProfile?.settings?.scalpType
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error("Server analysis failed");
+
+                const fullAnalysisData = await response.json();
+                setFinalAnalysis(fullAnalysisData);
+
+                // --- NEW LOGIC: Use Server Response Directly ---
+                // The server has already calculated exactly which ingredients failed to match.
+                if (fullAnalysisData.unknown_ingredients && fullAnalysisData.unknown_ingredients.length > 0) {
+                    reportUndiscoveredIngredients(fullAnalysisData.unknown_ingredients);
+                }
+
+                changeStep(4);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            } catch (error) {
+                console.error(error);
+                Alert.alert("Analysis Error", "Could not connect to analysis server.");
+                changeStep(2); // Go back to claims
+            }
+        }, 100); // 100ms delay gives the animation enough time to start
+    };
+
+    const processManualText = async (directInputText) => {
+        // FIX: Use the argument passed directly, fallback to state only if argument is missing
+        const textToProcess = directInputText || manualInputText;
+
+        if (!textToProcess || !textToProcess.trim()) {
+            Alert.alert("تنبيه", "الرجاء إدخال المكونات.");
+            return;
+        }
+
+        setManualModalVisible(false);
+        setLoading(true);
+        setIsGeminiLoading(true);
+        changeStep(3);
+
+        try {
+            const response = await fetch(VERCEL_PARSE_TEXT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // FIX: Send the local variable, not the state
+                body: JSON.stringify({ text: textToProcess }),
+            });
+
+            const responseData = await response.json();
+            console.log("✅ [OilGuard] Manual Analysis Result:", JSON.stringify(responseData, null, 2));
+
+            if (!response.ok) throw new Error(responseData.error || "Failed");
+
+            const jsonResponse = responseData.result;
+            const rawList = jsonResponse.ingredients_list || [];
+
+            const { ingredients } = await extractIngredientsFromAIText(rawList);
+
+            setOcrText(rawList.join('\n'));
+            setPreProcessedIngredients(ingredients);
+            setProductType(jsonResponse.detected_type || 'other');
+
+            setIsGeminiLoading(false);
+            setLoading(false);
+            setManualInputText('');
+            changeStep(1);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        } catch (error) {
+            console.error("Text Parse Error:", error);
+            Alert.alert("خطأ", "لم نتمكن من تحليل النص، يرجى المحاولة مرة أخرى.");
+            setIsGeminiLoading(false);
+            setLoading(false);
+            changeStep(0);
+        }
+    };
+
+    const handleSaveProduct = async () => {
+        if (!productName.trim()) {
+            AlertService.error("تنبيه", "يرجى كتابة اسم المنتج.");
+            return;
+        }
+
+        // Optional: Force image
+        if (!frontImageUri) {
+            AlertService.error("تنبيه", "يرجى إضافة صورة لواجهة المنتج لسهولة التعرف عليه.");
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            // 1. Upload Front Image
+            let productImageUrl = null;
+            if (frontImageUri) {
+                productImageUrl = await uploadImageToCloudinary(frontImageUri);
+            }
+
+            // 2. Save
+            await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), {
+                userId: user.uid,
+                productName: productName.trim(),
+                productImage: productImageUrl,
+                marketingClaims: selectedClaims,
+                productType: productType,
+                analysisData: finalAnalysis,
+                createdAt: Timestamp.now()
+            });
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setIsSaving(false);
+            setSaveModalVisible(false);
+
+            AlertService.success(
+                "تم الحفظ",
+                "تمت إضافة المنتج إلى رفّك.",
+                () => router.replace('/profile')
+            );
+
+        } catch (error) {
             console.error(error);
-            Alert.alert("Analysis Error", "Could not connect to analysis server.");
-            changeStep(2); // Go back to claims
+            AlertService.error("خطأ", "تعذر حفظ المنتج.");
+            setIsSaving(false);
         }
-    }, 100); // 100ms delay gives the animation enough time to start
-};
+    };
 
-const processManualText = async (directInputText) => {
-    // FIX: Use the argument passed directly, fallback to state only if argument is missing
-    const textToProcess = directInputText || manualInputText;
-
-    if (!textToProcess || !textToProcess.trim()) {
-        Alert.alert("تنبيه", "الرجاء إدخال المكونات.");
-        return;
-    }
-
-    setManualModalVisible(false); 
-    setLoading(true);
-    setIsGeminiLoading(true);
-    changeStep(3); 
-
-    try {
-        const response = await fetch(VERCEL_PARSE_TEXT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // FIX: Send the local variable, not the state
-            body: JSON.stringify({ text: textToProcess }), 
-        });
-
-        const responseData = await response.json();
-        console.log("✅ [OilGuard] Manual Analysis Result:", JSON.stringify(responseData, null, 2));
-
-        if (!response.ok) throw new Error(responseData.error || "Failed");
-
-        const jsonResponse = responseData.result;
-        const rawList = jsonResponse.ingredients_list || [];
-        
-        const { ingredients } = await extractIngredientsFromAIText(rawList);
-
-        setOcrText(rawList.join('\n'));
-        setPreProcessedIngredients(ingredients);
-        setProductType(jsonResponse.detected_type || 'other');
-
+    const performReset = () => {
         setIsGeminiLoading(false);
-        setLoading(false);
-        setManualInputText(''); 
-        changeStep(1); 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setStep(0);
+        setFinalAnalysis(null);
+        setOcrText('');
+        setPreProcessedIngredients([]);
+        setSelectedClaims([]);
+        setShowSwipeHint(true);
+        setSearchQuery('');
+        setProductName('');
+        setShowManualTypeGrid(false);
+        setManualIngredients('');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setFrontImageUri(null);
+    };
 
-    } catch (error) {
-        console.error("Text Parse Error:", error);
-        Alert.alert("خطأ", "لم نتمكن من تحليل النص، يرجى المحاولة مرة أخرى.");
-        setIsGeminiLoading(false);
-        setLoading(false);
-        changeStep(0);
-    }
-};
-  
-  const handleSaveProduct = async () => {
-    if (!productName.trim()) { 
-        AlertService.error("تنبيه", "يرجى كتابة اسم المنتج."); 
-        return; 
-    }
-    
-    // Optional: Force image
-    if (!frontImageUri) {
-        AlertService.error("تنبيه", "يرجى إضافة صورة لواجهة المنتج لسهولة التعرف عليه.");
-        return;
-    }
-    
-    setIsSaving(true);
-    
-    try {
-        // 1. Upload Front Image
-        let productImageUrl = null;
-        if (frontImageUri) {
-            productImageUrl = await uploadImageToCloudinary(frontImageUri);
-        }
+    // CREATE NEW resetFlow that triggers the Ad
+    const resetFlow = () => {
+        performReset();
+    };
 
-        // 2. Save
-        await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), {
-            userId: user.uid,
-            productName: productName.trim(),
-            productImage: productImageUrl,
-            marketingClaims: selectedClaims, 
-            productType: productType, 
-            analysisData: finalAnalysis, 
-            createdAt: Timestamp.now()
+    const openSaveModal = () => {
+        setProductName('');
+        setFrontImageUri(null); // Force user to take a new pic of the front
+        setSaveModalVisible(true);
+    };
+
+    // 3. Pick Front Image (For Shelf)
+    const pickFrontImage = () => {
+        AlertService.show({
+            title: "صورة المنتج",
+            message: "كيف تريد التقاط صورة المنتج؟",
+            type: 'info', // Uses the blue/neutral theme
+            buttons: [
+                {
+                    text: 'المعرض',
+                    style: 'secondary',
+                    onPress: async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            allowsEditing: false,
+                            aspect: [4, 3],
+                            quality: 1,
+                        });
+                        if (!result.canceled) {
+                            const compressed = await compressImage(result.assets[0].uri);
+                            setFrontImageUri(compressed);
+                        }
+                    }
+                },
+                {
+                    text: 'الكاميرا',
+                    style: 'primary',
+                    onPress: async () => {
+                        // Request permission implicitly handled by Expo, but good to check
+                        const result = await ImagePicker.launchCameraAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            allowsEditing: true,
+                            aspect: [4, 3],
+                            quality: 1,
+                        });
+                        if (!result.canceled) {
+                            const compressed = await compressImage(result.assets[0].uri);
+                            setFrontImageUri(compressed);
+                        }
+                    }
+                },
+                {
+                    text: 'إلغاء',
+                    style: 'destructive',
+                    onPress: () => { } // Close modal
+                }
+            ]
         });
+    };
 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setIsSaving(false);
-        setSaveModalVisible(false);
-        
-        AlertService.success(
-            "تم الحفظ", 
-            "تمت إضافة المنتج إلى رفّك.", 
-            () => router.replace('/profile')
+    const renderGeminiLoading = () => {
+        const textOpacity = loadingTextOpacityAnim;
+
+        return (
+            <View style={styles.contentContainer}>
+                <StaggeredItem index={0}>
+                    <View style={styles.flaskAnimationContainer}>
+                        <Svg width={180} height={180} viewBox="0 0 100 100">
+                            {loadingBubbles.map(bubble => <Bubble key={bubble.id} {...bubble} />)}
+
+                            <Path
+                                d="M 50 95 L 40 95 A 10 10 0 0 1 30 85 L 30 60 A 20 20 0 0 1 50 40 A 20 20 0 0 1 70 60 L 70 85 A 10 10 0 0 1 60 95 L 50 95 M 50 40 L 50 5"
+                                stroke={COLORS.primary}
+                                strokeWidth="3"
+                                fill="rgba(178, 216, 180, 0.05)"
+                                strokeLinecap="round"
+                            />
+                        </Svg>
+                    </View>
+                    <Animated.Text style={[styles.loadingText, { opacity: textOpacity, marginTop: 20 }]}>
+                        جاري تحليل الصورة بالذكاء الاصطناعي...
+                    </Animated.Text>
+                    <Text style={[styles.heroSub, { marginTop: 8 }]}>
+                        قد تستغرق هذه العملية بضع لحظات
+                    </Text>
+                </StaggeredItem>
+            </View>
         );
+    };
 
-    } catch (error) {
-        console.error(error);
-        AlertService.error("خطأ", "تعذر حفظ المنتج.");
-        setIsSaving(false);
-    }
-  };
+    const handleClaimToggle = useCallback((item) => {
+        setSelectedClaims(prev => {
+            const isSelected = prev.includes(item);
+            if (isSelected) {
+                return prev.filter(c => c !== item);
+            } else {
+                return [...prev, item];
+            }
+        });
+    }, []);
 
-  const performReset = () => {
-    setIsGeminiLoading(false);
-    setStep(0); 
-    setFinalAnalysis(null); 
-    setOcrText(''); 
-    setPreProcessedIngredients([]); 
-    setSelectedClaims([]);
-    setShowSwipeHint(true);
-    setSearchQuery('');
-    setProductName(''); 
-    setShowManualTypeGrid(false); 
-    setManualIngredients('');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setFrontImageUri(null);
-  };
+    const renderClaimItem = useCallback(({ item }) => {
+        return (
+            <MemoizedClaimItem
+                item={item}
+                isSelected={selectedClaims.includes(item)}
+                onToggle={handleClaimToggle}
+            />
+        );
+    }, [selectedClaims, handleClaimToggle]);
 
-  // CREATE NEW resetFlow that triggers the Ad
-  const resetFlow = () => {
-    performReset();
-  };
+    const getItemLayout = useCallback((data, index) => (
+        { length: 60, offset: 60 * index, index }
+    ), []);
 
-  const openSaveModal = () => {
-    setProductName('');
-    setFrontImageUri(null); // Force user to take a new pic of the front
-    setSaveModalVisible(true);
-};
+    const renderClaimsStep = () => {
+        const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
 
-// 3. Pick Front Image (For Shelf)
-const pickFrontImage = () => {
-  AlertService.show({
-      title: "صورة المنتج",
-      message: "كيف تريد التقاط صورة المنتج؟",
-      type: 'info', // Uses the blue/neutral theme
-      buttons: [
-          {
-              text: 'المعرض',
-              style: 'secondary',
-              onPress: async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      allowsEditing: false,
-                      aspect: [4, 3],
-                      quality: 1,
-                  });
-                  if (!result.canceled) {
-                      const compressed = await compressImage(result.assets[0].uri);
-                      setFrontImageUri(compressed);
-                  }
-              }
-          },
-          {
-              text: 'الكاميرا',
-              style: 'primary',
-              onPress: async () => {
-                  // Request permission implicitly handled by Expo, but good to check
-                  const result = await ImagePicker.launchCameraAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      allowsEditing: true,
-                      aspect: [4, 3],
-                      quality: 1,
-                  });
-                  if (!result.canceled) {
-                      const compressed = await compressImage(result.assets[0].uri);
-                      setFrontImageUri(compressed);
-                  }
-              }
-          },
-          {
-              text: 'إلغاء',
-              style: 'destructive',
-              onPress: () => {} // Close modal
-          }
-      ]
-  });
-};
+        const EXPANDED_HEADER_HEIGHT = 160;
+        const COLLAPSED_HEADER_HEIGHT = Platform.OS === 'android' ? 60 : 90;
+        const SEARCH_BAR_HEIGHT = 70;
+        const HEADER_ANIMATION_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
-  const renderGeminiLoading = () => {
-    const textOpacity = loadingTextOpacityAnim;
+        const headerTranslateY = scrollY.interpolate({
+            inputRange: [0, HEADER_ANIMATION_DISTANCE],
+            outputRange: [0, -HEADER_ANIMATION_DISTANCE],
+            extrapolate: 'clamp',
+        });
 
-    return (
-        <View style={styles.contentContainer}>
-            <StaggeredItem index={0}>
-                <View style={styles.flaskAnimationContainer}>
-                    <Svg width={180} height={180} viewBox="0 0 100 100">
-                        {loadingBubbles.map(bubble => <Bubble key={bubble.id} {...bubble} />)}
-                        
-                        <Path
-                            d="M 50 95 L 40 95 A 10 10 0 0 1 30 85 L 30 60 A 20 20 0 0 1 50 40 A 20 20 0 0 1 70 60 L 70 85 A 10 10 0 0 1 60 95 L 50 95 M 50 40 L 50 5"
-                            stroke={COLORS.primary}
-                            strokeWidth="3"
-                            fill="rgba(178, 216, 180, 0.05)" 
-                            strokeLinecap="round"
-                        />
-                    </Svg>
-                </View>
-                <Animated.Text style={[styles.loadingText, { opacity: textOpacity, marginTop: 20 }]}>
-                    جاري تحليل الصورة بالذكاء الاصطناعي...
-                </Animated.Text>
-                <Text style={[styles.heroSub, { marginTop: 8 }]}>
-                    قد تستغرق هذه العملية بضع لحظات
-                </Text>
-            </StaggeredItem>
-        </View>
-    );
-  };
+        const expandedHeaderOpacity = scrollY.interpolate({
+            inputRange: [0, HEADER_ANIMATION_DISTANCE / 2],
+            outputRange: [1, 0],
+            extrapolate: 'clamp',
+        });
 
-  const handleClaimToggle = useCallback((item) => {
-    setSelectedClaims(prev => {
-        const isSelected = prev.includes(item);
-        if (isSelected) {
-            return prev.filter(c => c !== item);
-        } else {
-            return [...prev, item];
-        }
-    });
-  }, []);
+        const collapsedHeaderOpacity = scrollY.interpolate({
+            inputRange: [HEADER_ANIMATION_DISTANCE / 2, HEADER_ANIMATION_DISTANCE],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+        });
 
-  const renderClaimItem = useCallback(({ item }) => {
-    return (
-      <MemoizedClaimItem 
-        item={item}
-        isSelected={selectedClaims.includes(item)}
-        onToggle={handleClaimToggle}
-      />
-    );
-  }, [selectedClaims, handleClaimToggle]);
+        const fabTranslateY = fabAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [150, 0],
+        });
+        const fabScale = fabPulseAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.1]
+        });
 
-  const getItemLayout = useCallback((data, index) => (
-    { length: 60, offset: 60 * index, index }
-  ), []);
-  
-const renderClaimsStep = () => {
-    const displayedClaims = searchQuery ? fuse.search(searchQuery).map(result => result.item) : claimsForType;
-    
-    const EXPANDED_HEADER_HEIGHT = 160;
-    const COLLAPSED_HEADER_HEIGHT = Platform.OS === 'android' ? 60 : 90;
-    const SEARCH_BAR_HEIGHT = 70;
-    const HEADER_ANIMATION_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
+        return (
+            <View style={{ flex: 1, width: '100%' }}>
+                <Animated.FlatList
+                    data={displayedClaims}
+                    renderItem={renderClaimItem}
+                    keyExtractor={(item) => item}
+                    extraData={selectedClaims} // <--- CRITICAL: Tells list to update when selection changes
 
-    const headerTranslateY = scrollY.interpolate({
-      inputRange: [0, HEADER_ANIMATION_DISTANCE],
-      outputRange: [0, -HEADER_ANIMATION_DISTANCE],
-      extrapolate: 'clamp',
-    });
+                    // --- PERFORMANCE PROPS ---
+                    initialNumToRender={12}     // How many items to show immediately
+                    maxToRenderPerBatch={10}    // How many to render per scroll batch
+                    windowSize={5}              // Reduced from default (21) to save memory
+                    removeClippedSubviews={true} // Unmounts off-screen items (Huge speedup)
+                    getItemLayout={getItemLayout} // Skips measurement calculations
+                    updateCellsBatchingPeriod={50} // Delays updates slightly to batch them
 
-    const expandedHeaderOpacity = scrollY.interpolate({
-      inputRange: [0, HEADER_ANIMATION_DISTANCE / 2],
-      outputRange: [1, 0],
-      extrapolate: 'clamp',
-    });
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{
+                        paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+                        paddingBottom: 120,
+                        paddingHorizontal: 10,
+                        gap: 12 // Matches the gap in getItemLayout
+                    }}
+                    onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                        { useNativeDriver: true }
+                    )}
+                    scrollEventThrottle={16}
+                />
 
-    const collapsedHeaderOpacity = scrollY.interpolate({
-      inputRange: [HEADER_ANIMATION_DISTANCE / 2, HEADER_ANIMATION_DISTANCE],
-      outputRange: [0, 1],
-      extrapolate: 'clamp',
-    });
+                <Animated.View style={[styles.fixedHeaderBlock, {
+                    height: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
+                    transform: [{ translateY: headerTranslateY }],
+                }]}>
+                    <View style={styles.headerBackdrop} />
 
-    const fabTranslateY = fabAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [150, 0],
-    });
-    const fabScale = fabPulseAnim.interpolate({
-      inputRange: [0,1],
-      outputRange: [1, 1.1]
-    });
+                    <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
+                        <Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text>
+                        <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
+                    </Animated.View>
 
-    return (
-      <View style={{ flex: 1, width: '100%' }}>
-        <Animated.FlatList
-          data={displayedClaims}
-          renderItem={renderClaimItem}
-          keyExtractor={(item) => item}
-          extraData={selectedClaims} // <--- CRITICAL: Tells list to update when selection changes
-          
-          // --- PERFORMANCE PROPS ---
-          initialNumToRender={12}     // How many items to show immediately
-          maxToRenderPerBatch={10}    // How many to render per scroll batch
-          windowSize={5}              // Reduced from default (21) to save memory
-          removeClippedSubviews={true} // Unmounts off-screen items (Huge speedup)
-          getItemLayout={getItemLayout} // Skips measurement calculations
-          updateCellsBatchingPeriod={50} // Delays updates slightly to batch them
-          
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingTop: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
-            paddingBottom: 120, 
-            paddingHorizontal: 10, 
-            gap: 12 // Matches the gap in getItemLayout
-          }}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
-        />
-        
-        <Animated.View style={[styles.fixedHeaderBlock, { 
-            height: EXPANDED_HEADER_HEIGHT + SEARCH_BAR_HEIGHT,
-            transform: [{ translateY: headerTranslateY }],
-        }]}>
-            <View style={styles.headerBackdrop} />
+                    <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
+                        <SafeAreaView>
+                            <View style={styles.headerContent}>
+                                <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                                    <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+                                </TouchableOpacity>
+                                <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
+                                <View style={{ width: 40 }} />
+                            </View>
+                        </SafeAreaView>
+                    </Animated.View>
 
-            <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
-                <Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text>
-                <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
-            </Animated.View>
+                    <View style={styles.claimsSearchContainer}>
+                        <View style={styles.searchInputWrapper}>
+                            <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
+                            <TextInput
+                                style={styles.claimsSearchInput}
+                                placeholder="ابحث عن إدعاء..."
+                                placeholderTextColor={COLORS.textDim}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                        </View>
+                    </View>
+                </Animated.View>
 
-            <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
-                <SafeAreaView>
-                  <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
-                    <View style={{width: 40}} />
-                  </View>
-                </SafeAreaView>
-            </Animated.View>
-
-            <View style={styles.claimsSearchContainer}>
-                <View style={styles.searchInputWrapper}>
-                    <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.claimsSearchInput}
-                        placeholder="ابحث عن إدعاء..."
-                        placeholderTextColor={COLORS.textDim}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
+                <View style={styles.fabContainer}>
+                    <Animated.View
+                        style={{
+                            transform: [{ translateY: fabTranslateY }],
+                        }}
+                    >
+                        <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+                            <TouchableOpacity
+                                onPress={executeAnalysis}
+                                style={styles.fab}
+                            >
+                                <FontAwesome5 name="flask" color={COLORS.darkGreen} size={28} />
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </Animated.View>
                 </View>
             </View>
-        </Animated.View>
+        );
+    };
 
-        <View style={styles.fabContainer}>
-            <Animated.View
-                style={{
-                    transform: [{ translateY: fabTranslateY }],
-                }}
-            >
-                <Animated.View style={{ transform: [{ scale: fabScale }] }}>
-                    <TouchableOpacity
-                        onPress={executeAnalysis} 
-                        style={styles.fab}
-                    >
-                        <FontAwesome5 name="flask" color={COLORS.darkGreen} size={28} />
-                    </TouchableOpacity>
-                </Animated.View>
+    const renderLoading = () => {
+        return (
+            <View style={styles.loadingContainer}>
+                <Animated.Text style={[styles.loadingText, {
+                    opacity: heroTransitionAnim.interpolate({
+                        inputRange: [0.5, 1],
+                        outputRange: [0, 1],
+                        extrapolate: 'clamp',
+                    })
+                }]}>
+                    جاري تحليل التركيبة...
+                </Animated.Text>
+            </View>
+        );
+    };
+
+    const BreathingGlow = ({ children, color = COLORS.accentGreen, delay = 0 }) => {
+        const glowAnim = useRef(new Animated.Value(0)).current;
+
+        useEffect(() => {
+            const animation = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(glowAnim, {
+                        toValue: 1,
+                        duration: 2000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                        delay: delay
+                    }),
+                    Animated.timing(glowAnim, {
+                        toValue: 0,
+                        duration: 2000,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ])
+            );
+            animation.start();
+            return () => animation.stop();
+        }, []);
+
+        const scale = glowAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.02], // Subtle size increase
+        });
+
+        const shadowOpacity = glowAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.2, 0.6], // Glowing shadow
+        });
+
+        return (
+            <Animated.View style={{
+                transform: [{ scale }],
+                shadowColor: color,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity,
+                shadowRadius: 10,
+                elevation: 5, // Android glow
+                flex: 1,
+            }}>
+                {children}
             </Animated.View>
-        </View>
-      </View>
-    );
-  };
-  
-  const renderLoading = () => {
-    return ( 
-      <View style={styles.loadingContainer}>
-          <Animated.Text style={[styles.loadingText, { 
-              opacity: heroTransitionAnim.interpolate({
-                inputRange: [0.5, 1], 
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-              })
-          }]}>
-              جاري تحليل التركيبة...
-          </Animated.Text>
-      </View>
-    );
-  };
+        );
+    };
 
-  const BreathingGlow = ({ children, color = COLORS.accentGreen, delay = 0 }) => {
-    const glowAnim = useRef(new Animated.Value(0)).current;
-  
-    useEffect(() => {
-      const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 1,
-            duration: 2000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-            delay: delay
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0,
-            duration: 2000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      animation.start();
-      return () => animation.stop();
-    }, []);
-  
-    const scale = glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1, 1.02], // Subtle size increase
-    });
-  
-    const shadowOpacity = glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.2, 0.6], // Glowing shadow
-    });
-  
-    return (
-      <Animated.View style={{ 
-        transform: [{ scale }],
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity,
-        shadowRadius: 10,
-        elevation: 5, // Android glow
-        flex: 1, 
-      }}>
-        {children}
-      </Animated.View>
-    );
-  };
-
-  const handleSuggestAnother = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Re-run the recommendation fetch
-    fetchVerifiedRecommendation(finalAnalysis); 
-};
+    const handleSuggestAnother = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Re-run the recommendation fetch
+        fetchVerifiedRecommendation(finalAnalysis);
+    };
 
 
-  // ... inside oilguard.js
+    // ... inside oilguard.js
 
-  const renderResultStep = () => {
-    // 1. Basic check
-    if (!finalAnalysis) return null;
+    const renderResultStep = () => {
+        // 1. Basic check
+        if (!finalAnalysis) return null;
 
-    // 2. Safe Data Extraction (Defensive Programming)
-    // We default to empty objects/arrays to prevent "undefined" errors
-    const personalMatch = finalAnalysis.personalMatch || { status: 'unknown', reasons: [] };
-    const safety = finalAnalysis.safety || { score: 0 };
-    const efficacy = finalAnalysis.efficacy || { score: 0 };
-    const marketingResults = finalAnalysis.marketing_results || [];
-    const detectedIngredients = finalAnalysis.detected_ingredients || [];
+        // 2. Safe Data Extraction (Defensive Programming)
+        // We default to empty objects/arrays to prevent "undefined" errors
+        const personalMatch = finalAnalysis.personalMatch || { status: 'unknown', reasons: [] };
+        const safety = finalAnalysis.safety || { score: 0 };
+        const efficacy = finalAnalysis.efficacy || { score: 0 };
+        const marketingResults = finalAnalysis.marketing_results || [];
+        const detectedIngredients = finalAnalysis.detected_ingredients || [];
 
-    // 3. Match Status Logic with Fallback
-    const matchConfig = {
-        good: { color: COLORS.success, icon: 'check-double', text: 'مناسب لك', glow: 'rgba(34, 197, 94, 0.2)' },
-        warning: { color: COLORS.warning, icon: 'exclamation', text: 'انتبه', glow: 'rgba(245, 158, 11, 0.2)' },
-        danger: { color: COLORS.danger, icon: 'times', text: 'غير مناسب', glow: 'rgba(239, 68, 68, 0.2)' },
-        // Fallback for 'unknown' or missing status
-        unknown: { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow }
-    }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow };
+        // 3. Match Status Logic with Fallback
+        const matchConfig = {
+            good: { color: COLORS.success, icon: 'check-double', text: 'مناسب لك', glow: 'rgba(34, 197, 94, 0.2)' },
+            warning: { color: COLORS.warning, icon: 'exclamation', text: 'انتبه', glow: 'rgba(245, 158, 11, 0.2)' },
+            danger: { color: COLORS.danger, icon: 'times', text: 'غير مناسب', glow: 'rgba(239, 68, 68, 0.2)' },
+            // Fallback for 'unknown' or missing status
+            unknown: { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow }
+        }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow };
 
-    return (
-        <View style={{width: '100%', gap: 0}}>
-            
-            {/* --- 1. THE HERO DASHBOARD + ACTIONS FOOTER --- */}
-            <StaggeredItem index={0}>
-                <View style={[styles.dashboardContainer, { borderColor: matchConfig.color }]}>
-                    
-                    {/* Background */}
-                    <LinearGradient
-                        colors={['rgba(255,255,255,0.05)', 'transparent']}
-                        style={StyleSheet.absoluteFill}
-                    />
-                    
-                    {/* Corners */}
-                    <View style={[styles.corner, styles.cornerTL]} />
-                    <View style={[styles.corner, styles.cornerTR]} />
-                    <View style={[styles.corner, styles.cornerBL]} />
-                    <View style={[styles.corner, styles.cornerBR]} />
+        return (
+            <View style={{ width: '100%', gap: 0 }}>
 
-                    {/* A. CONTENT SECTION */}
-                    <View style={styles.dashboardGlass}>
-                        
-                        {/* Header */}
-                        <View style={styles.dashHeader}>
-                            
-                        </View>
+                {/* --- 1. THE HERO DASHBOARD + ACTIONS FOOTER --- */}
+                <StaggeredItem index={0}>
+                    <View style={[styles.dashboardContainer, { borderColor: matchConfig.color }]}>
 
-                        {/* Gauge */}
-                        <View style={styles.gaugeSection}>
-                            <ComplexDashboardGauge score={finalAnalysis.oilGuardScore || 0} />
-                            <View style={{ marginTop: -15, alignItems: 'center' }}>
-                                <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || "تم التحليل"}</Text>
-                                <Text style={styles.verdictLabel}>هذه النتيجة حسب بروفايلك، قد تتغير عند شخص آخر.</Text>
+                        {/* Background */}
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.05)', 'transparent']}
+                            style={StyleSheet.absoluteFill}
+                        />
+
+                        {/* Corners */}
+                        <View style={[styles.corner, styles.cornerTL]} />
+                        <View style={[styles.corner, styles.cornerTR]} />
+                        <View style={[styles.corner, styles.cornerBL]} />
+                        <View style={[styles.corner, styles.cornerBR]} />
+
+                        {/* A. CONTENT SECTION */}
+                        <View style={styles.dashboardGlass}>
+
+                            {/* Header */}
+                            <View style={styles.dashHeader}>
+
                             </View>
-                        </View>
 
-                        {/* Stats (Safe Access) */}
-                        <View style={styles.statsGrid}>
-                            <GlassPillar 
-                                label="الأمان" 
-                                score={safety.score} 
-                                color={safety.score >= 70 ? COLORS.success : (safety.score >= 40 ? COLORS.warning : COLORS.danger)} 
-                                icon="shield-alt"
-                            />
-                            <GlassPillar 
-                                label="الفعالية" 
-                                score={efficacy.score} 
-                                color={COLORS.info} 
-                                icon="flask"
-                            />
-                        </View>
-
-                        {/* --- ENHANCED BREAKDOWN TRIGGER (Pop & Clean) --- */}
-                        <TouchableOpacity 
-                            onPress={() => setBreakdownModalVisible(true)}
-                            activeOpacity={0.7}
-                            style={{
-                                flexDirection: 'row-reverse', // RTL
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                marginTop: 12,                        
-                                paddingVertical: 12,
-                                paddingHorizontal: 16,
-                                backgroundColor: 'rgba(255, 255, 255, 0.03)', // Subtle glass fill
-                                borderRadius: 16,
-                            }}
-                        >
-                            <View style={{flexDirection: 'row-reverse', alignItems: 'center', gap: 10}}>
-                                {/* Mini Icon Badge */}
-                                <View style={{
-                                    width: 24, height: 24, borderRadius: 12,
-                                    backgroundColor: 'rgba(90, 156, 132, 0.1)',
-                                    alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    <FontAwesome5 name="microscope" size={11} color={COLORS.accentGreen} />
+                            {/* Gauge */}
+                            <View style={styles.gaugeSection}>
+                                <ComplexDashboardGauge score={finalAnalysis.oilGuardScore || 0} />
+                                <View style={{ marginTop: -15, alignItems: 'center' }}>
+                                    <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || "تم التحليل"}</Text>
+                                    <Text style={styles.verdictLabel}>هذه النتيجة حسب بروفايلك، قد تتغير عند شخص آخر.</Text>
                                 </View>
-                                
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold', // Thicker font
-                                    fontSize: 15,
-                                    color: COLORS.textPrimary,  // Brighter text
-                                    letterSpacing: 0.3
-                                }}>
-                                    تحليل تفصيلي للدرجة
-                                </Text>
                             </View>
 
-                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.textDim} />
-                        </TouchableOpacity>
+                            {/* Stats (Safe Access) */}
+                            <View style={styles.statsGrid}>
+                                <GlassPillar
+                                    label="الأمان"
+                                    score={safety.score}
+                                    color={safety.score >= 70 ? COLORS.success : (safety.score >= 40 ? COLORS.warning : COLORS.danger)}
+                                    icon="shield-alt"
+                                />
+                                <GlassPillar
+                                    label="الفعالية"
+                                    score={efficacy.score}
+                                    color={COLORS.info}
+                                    icon="flask"
+                                />
+                            </View>
 
-                        {/* Match Reasons (Safe Access) */}
-                        <MatchBreakdown 
-                            reasons={personalMatch.reasons} 
-                            overallStatus={personalMatch.status} 
+                            {/* --- ENHANCED BREAKDOWN TRIGGER (Pop & Clean) --- */}
+                            <TouchableOpacity
+                                onPress={() => setBreakdownModalVisible(true)}
+                                activeOpacity={0.7}
+                                style={{
+                                    flexDirection: 'row-reverse', // RTL
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginTop: 12,
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 16,
+                                    backgroundColor: COLORS.textPrimary + '08', // Subtle glass fill
+                                    borderRadius: 16,
+                                }}
+                            >
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+                                    {/* Mini Icon Badge */}
+                                    <View style={{
+                                        width: 24, height: 24, borderRadius: 12,
+                                        backgroundColor: COLORS.accentGreen + '1A',
+                                        alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <FontAwesome5 name="microscope" size={11} color={COLORS.accentGreen} />
+                                    </View>
+
+                                    <Text style={{
+                                        fontFamily: 'Tajawal-Bold', // Thicker font
+                                        fontSize: 15,
+                                        color: COLORS.textPrimary,  // Brighter text
+                                        letterSpacing: 0.3
+                                    }}>
+                                        تحليل تفصيلي للدرجة
+                                    </Text>
+                                </View>
+
+                                <FontAwesome5 name="chevron-left" size={10} color={COLORS.textDim} />
+                            </TouchableOpacity>
+
+                            {/* Match Reasons (Safe Access) */}
+                            <MatchBreakdown
+                                reasons={personalMatch.reasons}
+                                overallStatus={personalMatch.status}
+                            />
+                        </View>
+
+                        {/* B. ACTION ROW */}
+                        <ActionRow
+                            onSave={() => setSaveModalVisible(true)}
+                            onReset={resetFlow}
+                            analysis={finalAnalysis}
+                            productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج'}
                         />
+
                     </View>
+                </StaggeredItem>
 
-                    {/* B. ACTION ROW */}
-                    <ActionRow 
-                        onSave={() => setSaveModalVisible(true)}
-                        onReset={resetFlow}
-                        analysis={finalAnalysis}
-                        productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج'}
-                    />
+                {/* --- THE VERIFIED RECOMMENDATION SECTION --- */}
 
-                </View>
-            </StaggeredItem>
+                {/* 1. LOADING STATE */}
+                {isVerifiedLoading && (
+                    <View style={{ padding: 30, alignItems: 'center' }}>
+                        <ActivityIndicator color={COLORS.accentGreen} size="small" />
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12, marginTop: 10 }}>
+                            جاري البحث عن بديل في قاعدة البيانات...
+                        </Text>
+                    </View>
+                )}
 
-           {/* --- THE VERIFIED RECOMMENDATION SECTION --- */}
+                {/* 2. SUCCESS STATE (Single Card) */}
+                {/* FIX: Removed .length check. Just check if 'verifiedRec' exists */}
+                {!isVerifiedLoading && verifiedRec && (
+                    <StaggeredItem index={1}>
+                        <VerifiedChoiceCard
+                            item={verifiedRec}
+                            currentScore={finalAnalysis.oilGuardScore}
+                            onPress={(item) => {
+                                setSelectedRec(item);
+                                setDetailVisible(true);
+                            }}
+                            onSuggestAnother={handleSuggestAnother} // <--- Pass the new handler
+                            loading={isVerifiedLoading}
+                        />
+                    </StaggeredItem>
+                )}
 
-{/* 1. LOADING STATE */}
-{isVerifiedLoading && (
-    <View style={{ padding: 30, alignItems: 'center' }}>
-        <ActivityIndicator color={COLORS.accentGreen} size="small" />
-        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12, marginTop: 10 }}>
-            جاري البحث عن بديل في قاعدة البيانات...
-        </Text>
-    </View>
-)}
+                {/* 3. NO RESULTS STATE (Optional) */}
+                {/* FIX: Check explicitly if loading finished and verifiedRec is still null */}
+                {!isVerifiedLoading && !verifiedRec && step === 4 && (
+                    <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
+                            لم نجد بديلاً أفضل في قاعدة البيانات حالياً.
+                        </Text>
+                    </View>
+                )}
+                {/* --- 2. MARKETING CLAIMS --- */}
+                {marketingResults.length > 0 && (
+                    <StaggeredItem index={1}>
+                        <MarketingClaimsSection results={marketingResults} />
+                    </StaggeredItem>
+                )}
 
-{/* 2. SUCCESS STATE (Single Card) */}
-{/* FIX: Removed .length check. Just check if 'verifiedRec' exists */}
-{!isVerifiedLoading && verifiedRec && (
-    <StaggeredItem index={1}>
-        <VerifiedChoiceCard 
-            item={verifiedRec} 
-            currentScore={finalAnalysis.oilGuardScore} 
-            onPress={(item) => {
-                setSelectedRec(item);
-                setDetailVisible(true);
+                {/* --- 3. INGREDIENTS CAROUSEL --- */}
+                {detectedIngredients.length > 0 && (
+                    <StaggeredItem index={2}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 15, paddingHorizontal: 5 }}>
+                            <Text style={styles.resultsSectionTitle}>{`المكونات (${detectedIngredients.length})`}</Text>
+                            <View style={{ backgroundColor: COLORS.textPrimary + '1A', height: 1, flex: 1, marginRight: 15 }} />
+                        </View>
+
+                        <Pagination data={detectedIngredients} scrollX={scrollX} />
+
+                        <View style={{ marginHorizontal: -20 }}>
+                            <Animated.FlatList
+                                data={detectedIngredients}
+                                renderItem={({ item, index }) => (
+                                    <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
+                                )}
+                                keyExtractor={item => item.id || `ing-${index}`} // Safe Key
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                snapToInterval={ITEM_WIDTH}
+                                decelerationRate="fast"
+                                contentContainerStyle={{ paddingHorizontal: (width - CARD_WIDTH) / 2 }}
+                                ItemSeparatorComponent={() => <View style={{ width: SEPARATOR_WIDTH }} />}
+                                onScrollBeginDrag={() => setShowSwipeHint(false)}
+                                onScroll={Animated.event(
+                                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                                    { useNativeDriver: true }
+                                )}
+                                scrollEventThrottle={16}
+                            />
+                            {showSwipeHint && detectedIngredients.length > 1 && <SwipeHint />}
+                        </View>
+                    </StaggeredItem>
+                )}
+
+                <View style={{ height: 40 }} />
+            </View>
+        );
+    };
+
+    return (
+        <View
+            style={[styles.container, { backgroundColor: COLORS.background }]}
+            // ROOT FIX: We measure the actual available space from the OS
+            onLayout={(e) => {
+                const { height } = e.nativeEvent.layout;
+                // Only accept measurements that look like a full screen
+                if (height > SCREEN_HEIGHT * 0.7) {
+                    setContainerHeight(height);
+                }
             }}
-            onSuggestAnother={handleSuggestAnother} // <--- Pass the new handler
-            loading={isVerifiedLoading}
-        />
-    </StaggeredItem>
-)}
+        >
+            {/* 1. Permanent System Overlays */}
+            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+            <View style={styles.darkOverlay} />
+            {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-{/* 3. NO RESULTS STATE (Optional) */}
-{/* FIX: Check explicitly if loading finished and verifiedRec is still null */}
-{!isVerifiedLoading && !verifiedRec && step === 4 && (
-    <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
-        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
-            لم نجد بديلاً أفضل في قاعدة البيانات حالياً.
-        </Text>
-    </View>
-)}
-            {/* --- 2. MARKETING CLAIMS --- */}
-            {marketingResults.length > 0 && (
-                <StaggeredItem index={1}>
-                   <MarketingClaimsSection results={marketingResults} />
-                </StaggeredItem>
-            )}
-
-            {/* --- 3. INGREDIENTS CAROUSEL --- */}
-            {detectedIngredients.length > 0 && (
-                <StaggeredItem index={2}>
-                     <View style={{flexDirection:'row-reverse', alignItems:'center', marginTop: 20, marginBottom: 15, paddingHorizontal: 5}}>
-                         <Text style={styles.resultsSectionTitle}>{`المكونات (${detectedIngredients.length})`}</Text>
-                         <View style={{backgroundColor: 'rgba(255,255,255,0.1)', height:1, flex:1, marginRight: 15}} />
-                    </View>
-                    
-                    <Pagination data={detectedIngredients} scrollX={scrollX} />
-
-                    <View style={{ marginHorizontal: -20 }}>
-                        <Animated.FlatList
-                            data={detectedIngredients}
-                            renderItem={({ item, index }) => (
-                                <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
-                            )}
-                            keyExtractor={item => item.id || `ing-${index}`} // Safe Key
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            snapToInterval={ITEM_WIDTH}
-                            decelerationRate="fast"
-                            contentContainerStyle={{ paddingHorizontal: (width - CARD_WIDTH) / 2 }}
-                            ItemSeparatorComponent={() => <View style={{ width: SEPARATOR_WIDTH }} />}
-                            onScrollBeginDrag={() => setShowSwipeHint(false)}
-                            onScroll={Animated.event(
-                                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                                { useNativeDriver: true }
-                            )}
-                            scrollEventThrottle={16}
-                        />
-                        {showSwipeHint && detectedIngredients.length > 1 && <SwipeHint />}
-                    </View>
-                </StaggeredItem>
-            )}
-            
-            <View style={{height: 40}} />
-        </View>
-    );
-};
-  
-return (
-    <View 
-        style={[styles.container, { backgroundColor: '#1A2D27' }]}
-        // ROOT FIX: We measure the actual available space from the OS
-        onLayout={(e) => {
-            const { height } = e.nativeEvent.layout;
-            // Only accept measurements that look like a full screen
-            if (height > SCREEN_HEIGHT * 0.7) {
-                setContainerHeight(height);
-            }
-        }}
-    >
-        {/* 1. Permanent System Overlays */}
-        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-        <View style={styles.darkOverlay} />
-        {particles.map((p) => <Spore key={p.id} {...p} />)}
-
-        {/* 
+            {/* 
             2. THE ROOT GATEKEEPER 
             If containerHeight is 0, it means the OS hasn't finished 
             calculating the layout. We show NOTHING (just background).
         */}
-        {containerHeight === 0 ? (
-            <View style={{ flex: 1, backgroundColor: '#1A2D27' }} />
-        ) : (
-            <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
-                
-                {/* Header (Hidden on Step 2) */}
-                {step !== 2 && !isAnimatingTransition && (
-                    <View style={[styles.header, { marginTop: insets.top }]}>
-                        {step === 0 && <View style={styles.headerBlur} />}
-                        
-                        {step > 0 && (
-                            <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
-                                <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                            </TouchableOpacity>
-                        )}
-                        
-                        {step > 0 && <View style={{ width: 40 }} />}
-                    </View>
-                )}
+            {containerHeight === 0 ? (
+                <View style={{ flex: 1, backgroundColor: COLORS.background }} />
+            ) : (
+                <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
 
-                {/* 
+                    {/* Header (Hidden on Step 2) */}
+                    {step !== 2 && !isAnimatingTransition && (
+                        <View style={[styles.header, { marginTop: insets.top }]}>
+                            {step === 0 && <View style={styles.headerBlur} />}
+
+                            {step > 0 && (
+                                <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                                    <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+                                </TouchableOpacity>
+                            )}
+
+                            {step > 0 && <View style={{ width: 40 }} />}
+                        </View>
+                    )}
+
+                    {/* 
                    CONTENT STACK 
                    We use the EXACT measured height from the OS 
                 */}
-                <View style={{ flex: 1 }}>
-                    {step === 2 ? (
-                        <Animated.View style={{ 
-                            flex: 1, 
-                            opacity: contentOpacity,
-                            transform: [{ translateX: contentTranslateX }],
-                            width: '100%' 
-                        }}>
-                            {renderClaimsStep()}
-                        </Animated.View>
-                    ) : step === 0 ? (
-                        <Animated.View style={{ 
-                            flex: 1,
-                            width: '100%', 
-                            opacity: contentOpacity,
-                            transform: [{ translateX: contentTranslateX }]
-                        }}>
-                            <InputStepView 
-                                onImageSelect={handleImageSelection} 
-                                onManualSelect={() => setManualModalVisible(true)} 
-                                scanMode={scanMode}
-                                setScanMode={setScanMode}
-                            />
-                        </Animated.View>
-                    ) : step === 1 ? (
-                        <Animated.View style={{ 
-                            flex: 1, 
-                            width: '100%',
-                            opacity: contentOpacity,
-                            transform: [{ translateX: contentTranslateX }],
-                            paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
-                            paddingHorizontal: 20
-                        }}>
-                            <ReviewStep 
-                                productType={productType} 
-                                setProductType={setProductType} 
-                                onConfirm={() => changeStep(2)} 
-                            />
-                        </Animated.View>
-                    ) : (
-                        <ScrollView 
-                            ref={scrollRef} 
-                            contentContainerStyle={[
-                                styles.scrollContent, 
-                                { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
-                            ]} 
-                            keyboardShouldPersistTaps="handled"
-                            showsVerticalScrollIndicator={false}
-                        >
-                            <Animated.View style={{ 
-                                opacity: contentOpacity, 
+                    <View style={{ flex: 1 }}>
+                        {step === 2 ? (
+                            <Animated.View style={{
+                                flex: 1,
+                                opacity: contentOpacity,
+                                transform: [{ translateX: contentTranslateX }],
+                                width: '100%'
+                            }}>
+                                {renderClaimsStep()}
+                            </Animated.View>
+                        ) : step === 0 ? (
+                            <Animated.View style={{
+                                flex: 1,
                                 width: '100%',
+                                opacity: contentOpacity,
                                 transform: [{ translateX: contentTranslateX }]
                             }}>
-                                {step === 3 && (
-                                    <View style={{ height: height * 0.6, justifyContent: 'center' }}>
-                                        <LoadingScreen />
-                                    </View>
-                                )}
-
-                                {step === 4 && renderResultStep()}
+                                <InputStepView
+                                    onImageSelect={handleImageSelection}
+                                    onManualSelect={() => setManualModalVisible(true)}
+                                    scanMode={scanMode}
+                                    setScanMode={setScanMode}
+                                />
                             </Animated.View>
-                        </ScrollView>
-                    )}
+                        ) : step === 1 ? (
+                            <Animated.View style={{
+                                flex: 1,
+                                width: '100%',
+                                opacity: contentOpacity,
+                                transform: [{ translateX: contentTranslateX }],
+                                paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+                                paddingHorizontal: 20
+                            }}>
+                                <ReviewStep
+                                    productType={productType}
+                                    setProductType={setProductType}
+                                    onConfirm={() => changeStep(2)}
+                                />
+                            </Animated.View>
+                        ) : (
+                            <ScrollView
+                                ref={scrollRef}
+                                contentContainerStyle={[
+                                    styles.scrollContent,
+                                    { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
+                                ]}
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator={false}
+                            >
+                                <Animated.View style={{
+                                    opacity: contentOpacity,
+                                    width: '100%',
+                                    transform: [{ translateX: contentTranslateX }]
+                                }}>
+                                    {step === 3 && (
+                                        <View style={{ height: height * 0.6, justifyContent: 'center' }}>
+                                            <LoadingScreen />
+                                        </View>
+                                    )}
+
+                                    {step === 4 && renderResultStep()}
+                                </Animated.View>
+                            </ScrollView>
+                        )}
+                    </View>
                 </View>
-            </View>
-        )}
+            )}
 
-        {/* 3. MODALS (Floating outside the layout calculation) */}
-        
-        <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-            <View style={styles.modalOverlay}>
-                <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
-                <Animated.View style={styles.modalContent}>
-                    <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                        <Text style={styles.modalTitle}>حفظ النتيجة</Text>
-                        <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
-                    </View>
-                    
-                    <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
-                        {frontImageUri ? (
-                            <>
-                                <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
-                                <View style={styles.editBadge}>
-                                    <Feather name="edit-2" size={12} color="#FFF" />
+            {/* 3. MODALS (Floating outside the layout calculation) */}
+
+            <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
+                    <Animated.View style={styles.modalContent}>
+                        <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                            <Text style={styles.modalTitle}>حفظ النتيجة</Text>
+                            <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
+                        </View>
+
+                        <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
+                            {frontImageUri ? (
+                                <>
+                                    <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
+                                    <View style={styles.editBadge}>
+                                        <Feather name="edit-2" size={12} color="#FFF" />
+                                    </View>
+                                </>
+                            ) : (
+                                <View style={{ alignItems: 'center', gap: 8 }}>
+                                    <View style={styles.cameraIconCircle}>
+                                        <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                    </View>
+                                    <Text style={styles.pickerText}>صورة المنتج</Text>
                                 </View>
-                            </>
-                        ) : (
-                            <View style={{ alignItems: 'center', gap: 8 }}>
-                                <View style={styles.cameraIconCircle}>
-                                    <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                            )}
+                        </TouchableOpacity>
+
+                        <View style={styles.inputWrapper}>
+                            <Text style={styles.inputLabel}>اسم المنتج</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="مثال: غسول CeraVe الرغوي"
+                                placeholderTextColor={COLORS.textSecondary}
+                                value={productName}
+                                onChangeText={setProductName}
+                                textAlign="right"
+                            />
+                        </View>
+
+                        <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
+                            {isSaving ? (
+                                <ActivityIndicator color={COLORS.textOnAccent} />
+                            ) : (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
+                                    <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
                                 </View>
-                                <Text style={styles.pickerText}>صورة المنتج</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                            )}
+                        </Pressable>
+                    </Animated.View>
+                </View>
+            </Modal>
 
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.inputLabel}>اسم المنتج</Text>
-                        <TextInput 
-                            style={styles.modalInput} 
-                            placeholder="مثال: غسول CeraVe الرغوي" 
-                            placeholderTextColor={COLORS.textSecondary} 
-                            value={productName} 
-                            onChangeText={setProductName} 
-                            textAlign="right"
-                        />
-                    </View>
-                    
-                    <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
-                        {isSaving ? (
-                            <ActivityIndicator color={COLORS.textOnAccent} />
-                        ) : (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
-                                <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
-                            </View>
-                        )}
-                    </Pressable>
-                </Animated.View>
-            </View>
-        </Modal>
-        
-        <ManualInputSheet
-            visible={isManualModalVisible}
-            onClose={() => setManualModalVisible(false)}
-            onSubmit={(text) => {
-                setManualInputText(text);
-                processManualText(text);
-            }}
-        />
-    
-        <CustomCameraModal
-            isVisible={isCameraViewVisible}
-            onClose={() => setCameraViewVisible(false)}
-            onPictureTaken={handlePictureTaken}
-        />
+            <ManualInputSheet
+                visible={isManualModalVisible}
+                onClose={() => setManualModalVisible(false)}
+                onSubmit={(text) => {
+                    setManualInputText(text);
+                    processManualText(text);
+                }}
+            />
 
-        <ImageCropperModal
-            isVisible={cropperVisible}
-            imageUri={tempImageUri}
-            onClose={() => setCropperVisible(false)}
-            onCropComplete={(cropped) => {
-                setCropperVisible(false);
-                processImageWithGemini(cropped.uri);
-            }}
-        />
+            <CustomCameraModal
+                isVisible={isCameraViewVisible}
+                onClose={() => setCameraViewVisible(false)}
+                onPictureTaken={handlePictureTaken}
+            />
 
-        <ScoreBreakdownModal 
-            visible={isBreakdownModalVisible}
-            onClose={() => setBreakdownModalVisible(false)}
-            data={finalAnalysis?.scoreBreakdown}
-        />
+            <ImageCropperModal
+                isVisible={cropperVisible}
+                imageUri={tempImageUri}
+                onClose={() => setCropperVisible(false)}
+                onCropComplete={(cropped) => {
+                    setCropperVisible(false);
+                    processImageWithGemini(cropped.uri);
+                }}
+            />
 
-<VerifiedDetailModal 
-    visible={isDetailVisible} 
-    onClose={() => setDetailVisible(false)} 
-    item={selectedRec} 
-/>
-    </View>
-);
+            <ScoreBreakdownModal
+                visible={isBreakdownModalVisible}
+                onClose={() => setBreakdownModalVisible(false)}
+                data={finalAnalysis?.scoreBreakdown}
+            />
+
+            <VerifiedDetailModal
+                visible={isDetailVisible}
+                onClose={() => setDetailVisible(false)}
+                item={selectedRec}
+            />
+        </View>
+    );
 }

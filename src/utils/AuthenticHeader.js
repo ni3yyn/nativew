@@ -2,18 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-
-// --- THEME COLORS (Matches your Profile.js) ---
-const COLORS = {
-  accentGreen: '#5A9C84', 
-  textSecondary: '#A3B1AC',
-  textDim: '#6B7C76',
-  gold: '#fbbf24',
-  blue: '#60a5fa'
-};
+import { useTheme } from '../context/ThemeContext';
 
 // --- LOGIC: CONTEXT AWARE MESSAGES & ICONS ---
-const getAuthenticContent = (productCount, name) => {
+const getAuthenticContent = (productCount, name, COLORS) => {
   const hour = new Date().getHours();
   const firstName = name?.split(' ')[0] || 'جميلتي';
 
@@ -25,7 +17,7 @@ const getAuthenticContent = (productCount, name) => {
       { text: "متحيريش، افحصي أول منتج ونحن معك", icon: "hand-holding-heart", iconColor: COLORS.gold }
     ];
   }
-  
+
   // 2. Context: Crowded Shelf (The "Baraka but Logic" Phase)
   if (productCount > 10) {
     return [
@@ -36,16 +28,16 @@ const getAuthenticContent = (productCount, name) => {
   }
 
   // 3. Context: Morning (The "Chatara" & Sun Anxiety)
-  if (hour >= 5 && hour < 12) { 
+  if (hour >= 5 && hour < 12) {
     return [
       { text: `صباح النشاط يا ${firstName}`, icon: "sun", iconColor: COLORS.gold },
       { text: "نوضي وتوكلي على ربي.", icon: "search", iconColor: COLORS.textDim },
       { text: "وجهك يستحق أن يشرق قبل الشمس", icon: "smile-beam", iconColor: COLORS.blue }
     ];
   }
-  
+
   // 4. Context: Evening (The "Nqa" & Rest)
-  if (hour >= 18 || hour < 5) { 
+  if (hour >= 18 || hour < 5) {
     return [
       { text: "بالاكي يغلبك النعاس قبل الغسول!", icon: "exclamation-triangle", iconColor: COLORS.danger }, // The "motherly warning" tone
       { text: "نامي بقلب ووجه صافيين", icon: "sparkles", iconColor: COLORS.blue },
@@ -63,27 +55,30 @@ const getAuthenticContent = (productCount, name) => {
 
 
 const AuthenticHeader = ({ productCount, userName }) => {
+  const { colors: COLORS } = useTheme();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const [displayData, setDisplayData] = useState({ text: "", icon: "circle", color: COLORS.textDim });
   const [typedText, setTypedText] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
-  
+
   // Animation Refs
   const typingTimeout = useRef(null);
   const cursorInterval = useRef(null);
   const iconOpacity = useRef(new Animated.Value(1)).current;
 
   // Get data based on props
-  const messages = useMemo(() => 
-    getAuthenticContent(productCount, userName), 
-  [productCount, userName]);
+  const messages = useMemo(() =>
+    getAuthenticContent(productCount, userName, COLORS),
+    [productCount, userName, COLORS]);
 
   // Typing Effect
   const startTyping = (messageData) => {
     let i = 0;
-    setTypedText(""); 
+    setTypedText("");
     setDisplayData(messageData); // Set Icon immediately
-    
+
     // Fade Icon In
     iconOpacity.setValue(0);
     Animated.timing(iconOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
@@ -100,7 +95,7 @@ const AuthenticHeader = ({ productCount, userName }) => {
   // Initial Load
   useEffect(() => {
     startTyping(messages[0]);
-    
+
     cursorInterval.current = setInterval(() => {
       setCursorVisible(v => !v);
     }, 500);
@@ -114,18 +109,18 @@ const AuthenticHeader = ({ productCount, userName }) => {
   // Handle User Tap
   const handleNextMessage = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // Fade Out Icon briefly
     Animated.timing(iconOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
-        const nextIndex = (messageIndex + 1) % messages.length;
-        setMessageIndex(nextIndex);
-        startTyping(messages[nextIndex]);
+      const nextIndex = (messageIndex + 1) % messages.length;
+      setMessageIndex(nextIndex);
+      startTyping(messages[nextIndex]);
     });
   };
 
   return (
     <Pressable onPress={handleNextMessage} style={styles.container}>
-      
+
       <View style={styles.textContainer}>
         <Text style={styles.authenticText} numberOfLines={2}>
           {typedText}
@@ -134,18 +129,18 @@ const AuthenticHeader = ({ productCount, userName }) => {
       </View>
 
       <Animated.View style={[styles.iconContainer, { opacity: iconOpacity }]}>
-         <FontAwesome5 
-            name={displayData.icon} 
-            size={14} 
-            color={displayData.iconColor} 
-         />
+        <FontAwesome5
+          name={displayData.icon}
+          size={14}
+          color={displayData.iconColor}
+        />
       </Animated.View>
 
     </Pressable>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
   container: {
     flexDirection: 'row', // RTL
     alignItems: 'center',
@@ -158,9 +153,9 @@ const styles = StyleSheet.create({
     flexShrink: 1, // Ensures text wraps if too long
   },
   authenticText: {
-    fontFamily: 'Tajawal-Regular', 
+    fontFamily: 'Tajawal-Regular',
     fontSize: 13,
-    color: COLORS.textSecondary, 
+    color: COLORS.textSecondary,
     textAlign: 'right',
     lineHeight: 20,
     letterSpacing: 0.2
@@ -183,3 +178,4 @@ const styles = StyleSheet.create({
 });
 
 export default AuthenticHeader;
+

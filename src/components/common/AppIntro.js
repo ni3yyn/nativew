@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Modal, View, Text, StyleSheet, TouchableOpacity, Dimensions, 
-    Animated, Easing, StatusBar, Platform 
+import {
+    Modal, View, Text, StyleSheet, TouchableOpacity, Dimensions,
+    Animated, Easing, StatusBar, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,25 +12,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width, height } = Dimensions.get('window');
 
 // 🔴 DEBUG FLAG: Set to 'false' for production
-const ALWAYS_SHOW_INTRO_DEBUG = false; 
+const ALWAYS_SHOW_INTRO_DEBUG = false;
 
 // --- THEME ---
 const COLORS = {
-  background: '#1A2D27', 
-  card: '#253D34',      
-  border: 'rgba(90, 156, 132, 0.25)', 
-  textDim: '#6B7C76',   
-  accentGreen: '#5A9C84', 
-  accentGlow: 'rgba(90, 156, 132, 0.4)', 
-  primary: '#A3E4D7',    
-  textPrimary: '#F1F3F2',   
-  textSecondary: '#A3B1AC', 
-  textOnAccent: '#1A2D27',  
-  danger: '#ef4444', 
-  warning: '#f59e0b', 
-  info: '#3b82f6', 
-  success: '#22c55e',
-  gold: '#fbbf24'
+    background: '#1A2D27',
+    card: '#253D34',
+    border: 'rgba(90, 156, 132, 0.25)',
+    textDim: '#6B7C76',
+    accentGreen: '#5A9C84',
+    accentGlow: 'rgba(90, 156, 132, 0.4)',
+    primary: '#A3E4D7',
+    textPrimary: '#F1F3F2',
+    textSecondary: '#A3B1AC',
+    textOnAccent: '#1A2D27',
+    danger: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6',
+    success: '#22c55e',
+    gold: '#fbbf24'
 };
 
 // --- 1. DATA ---
@@ -41,7 +41,7 @@ const SLIDES = [
         subtitle: "الجمال يبدأ بالحقيقة",
         desc: "تجاوزي وعود الإعلانات واكتشفي الحقيقة العلمية لكل منتج. نحن هنا لتمكينك بالمعرفة وليس لبيع الأوهام.",
         icon: "shield-alt",
-        color: COLORS.accentGreen, 
+        color: COLORS.accentGreen,
         bgGradient: [COLORS.background, '#064E3B']
     },
     {
@@ -50,7 +50,7 @@ const SLIDES = [
         subtitle: "عين الخبير في جيبك",
         desc: "صوري المكونات واحصلي فورا على تحليل كيميائي دقيق. نكشف لكِ السموم الخفية، المواد الحافظة، والفعالية الحقيقية.",
         icon: "search-plus",
-        color: COLORS.gold, 
+        color: COLORS.gold,
         bgGradient: [COLORS.background, '#14532D']
     },
     {
@@ -59,7 +59,7 @@ const SLIDES = [
         subtitle: "تنظيم وتحليل",
         desc: "رتبي منتجاتك رقميا، وسنقوم بتحليل التناغم بينها. هل تتعارض مكونات روتينك؟ وثيق سيخبرك قبل أن تضعيها على بشرتك.",
         icon: "flask",
-        color: COLORS.primary, 
+        color: COLORS.primary,
         bgGradient: [COLORS.background, '#065F46']
     },
     {
@@ -68,7 +68,7 @@ const SLIDES = [
         subtitle: "تجارب تشبهكِ",
         desc: "انضمي لمجتمع يعتمد على 'التطابق الحيوي'. شاركي تجاربك واقرئي تقييمات أشخاص يملكون نفس نوع بشرتك تماما.",
         icon: "users",
-        color: '#6EE7B7', 
+        color: '#6EE7B7',
         bgGradient: [COLORS.background, '#047857']
     },
     {
@@ -95,10 +95,10 @@ const AnimatedBackground = ({ scrollX }) => (
             });
             return (
                 <Animated.View key={slide.id} style={[StyleSheet.absoluteFill, { opacity }]}>
-                    <LinearGradient 
-                        colors={slide.bgGradient} 
-                        style={StyleSheet.absoluteFill} 
-                        start={{x: 0.5, y: 0}} end={{x: 0.5, y: 1}}
+                    <LinearGradient
+                        colors={slide.bgGradient}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
                     />
                     <View style={styles.noiseOverlay} />
                 </Animated.View>
@@ -131,7 +131,7 @@ const Particle = ({ delay, duration, startX, size, color }) => {
     }, []);
 
     return (
-        <Animated.View 
+        <Animated.View
             style={{
                 position: 'absolute', bottom: -50, left: startX, width: size, height: size,
                 borderRadius: size / 2, backgroundColor: color, opacity,
@@ -216,7 +216,7 @@ const AppIntro = ({ visible, onClose }) => {
     const handleFinish = async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (dontShowAgain) {
-            try { await AsyncStorage.setItem('has_seen_app_intro', 'true'); } catch (e) {}
+            try { await AsyncStorage.setItem('has_seen_app_intro', 'true'); } catch (e) { }
         }
         setShouldRender(false);
         if (onClose) onClose();
@@ -224,13 +224,13 @@ const AppIntro = ({ visible, onClose }) => {
 
     const renderItem = ({ item, index }) => {
         const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-        
+
         const scale = scrollX.interpolate({
             inputRange,
             outputRange: [0.8, 1, 0.8],
             extrapolate: 'clamp'
         });
-        
+
         const translateX = scrollX.interpolate({
             inputRange,
             outputRange: [-width * 0.3, 0, width * 0.3],
@@ -253,12 +253,12 @@ const AppIntro = ({ visible, onClose }) => {
                     </Animated.View>
 
                     <Animated.View style={[styles.orbitRing, { width: 220, height: 220, borderRadius: 110, borderColor: 'rgba(255,255,255,0.15)', transform: [{ rotate: reverseSpin }, { scale }] }]}>
-                         <View style={[styles.orbitDot, { left: -4, backgroundColor: item.color }]} />
+                        <View style={[styles.orbitDot, { left: -4, backgroundColor: item.color }]} />
                     </Animated.View>
 
                     <Animated.View style={[
-                        styles.iconCore, 
-                        { 
+                        styles.iconCore,
+                        {
                             backgroundColor: item.color + '15',
                             borderColor: item.color,
                             transform: [{ scale }]
@@ -306,13 +306,13 @@ const AppIntro = ({ visible, onClose }) => {
         <Modal visible={true} transparent animationType="fade" statusBarTranslucent>
             <View style={styles.container}>
                 <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-                
+
                 {/* Backgrounds */}
                 <AnimatedBackground scrollX={scrollX} />
                 {particles.map(p => <Particle key={p.id} {...p} />)}
 
                 <SafeAreaView style={{ flex: 1 }}>
-                    
+
                     {/* Header: Skip Button */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={handleFinish} style={styles.skipBtn}>
@@ -344,7 +344,7 @@ const AppIntro = ({ visible, onClose }) => {
 
                     {/* Footer */}
                     <View style={styles.footer}>
-                        
+
                         {/* Pagination */}
                         <View style={styles.pagination}>
                             {SLIDES.map((_, index) => {
@@ -367,13 +367,13 @@ const AppIntro = ({ visible, onClose }) => {
 
                         {/* Controls */}
                         <View style={styles.controlsContainer}>
-                            
+
                             {/* Switch */}
                             <View style={styles.switchWrapper}>
-                                <CustomSwitch 
-                                    value={dontShowAgain} 
-                                    onToggle={() => setDontShowAgain(!dontShowAgain)} 
-                                    activeColor={currentSlide.color} 
+                                <CustomSwitch
+                                    value={dontShowAgain}
+                                    onToggle={() => setDontShowAgain(!dontShowAgain)}
+                                    activeColor={currentSlide.color}
                                 />
                             </View>
 
@@ -384,7 +384,7 @@ const AppIntro = ({ visible, onClose }) => {
                                 </Animated.View>
 
                                 <Animated.View style={[
-                                    styles.absoluteCenter, 
+                                    styles.absoluteCenter,
                                     { opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }
                                 ]} pointerEvents={currentIndex === lastIndex ? 'auto' : 'none'}>
                                     <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.9}>
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     },
     noiseOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.05)', 
+        backgroundColor: 'rgba(0,0,0,0.05)',
     },
     header: {
         flexDirection: 'row',
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     },
     dot: {
         height: 6,
-        width: 6, 
+        width: 6,
         borderRadius: 3,
         backgroundColor: '#FFF',
     },

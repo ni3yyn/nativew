@@ -1,22 +1,23 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../context/ThemeContext';
 
-// --- THEME MATCHING PROFILE.JS ---
-const COLORS = {
-  background: '#1A2D27', 
-  card: '#253D34',      
-  border: 'rgba(90, 156, 132, 0.25)', 
-  textDim: '#6B7C76',   
-  accentGreen: '#5A9C84', 
-  textPrimary: '#F1F3F2',   
-  textSecondary: '#A3B1AC', 
-  textOnAccent: '#1A2D27',  
-  gold: '#fbbf24',
-  success: '#22c55e',
-  danger: '#ef4444'
+
+const FALLBACK_COLORS = {
+    background: '#1A2D27',
+    card: '#253D34',
+    border: 'rgba(90, 156, 132, 0.25)',
+    textDim: '#6B7C76',
+    accentGreen: '#5A9C84',
+    textPrimary: '#F1F3F2',
+    textSecondary: '#A3B1AC',
+    textOnAccent: '#1A2D27',
+    gold: '#fbbf24',
+    success: '#22c55e',
+    danger: '#ef4444'
 };
 
 // --- ANIMATED WRAPPER ---
@@ -80,8 +81,12 @@ const FastShimmerButton = ({ children }) => {
 
 // --- SHARED BUTTON ---
 const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, variant = 'primary' }) => {
-    const IconComponent = iconFamily === "MaterialCommunityIcons" ? MaterialCommunityIcons : 
-                          iconFamily === "FontAwesome5" ? FontAwesome5 : MaterialIcons;
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+    const IconComponent = iconFamily === "MaterialCommunityIcons" ? MaterialCommunityIcons :
+        iconFamily === "FontAwesome5" ? FontAwesome5 : MaterialIcons;
 
     const isPrimary = variant === 'primary';
 
@@ -99,7 +104,7 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, vari
         >
             {isPrimary ? (
                 <LinearGradient
-                    colors={[COLORS.accentGreen, '#4a8a73']}
+                    colors={[COLORS.accentGreen, COLORS.accentGreen + 'CC']}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                     style={styles.actionButtonGradient}
                 >
@@ -117,180 +122,210 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, vari
 };
 
 // --- 1. SHELF EMPTY STATE (Updated with instruction step) ---
-export const ShelfEmptyState = ({ onPress }) => (
-    <FadeInView>
-        <View style={styles.container}>
-            <View style={styles.iconCircle}>
-                <Image 
-                    source={require('../../../assets/icon.png')} 
-                    style={{ width: 80, height: 80, resizeMode: 'contain', opacity: 0.9 }} 
-                />
-            </View>
-            
-            <Text style={styles.title}>أهلا بك في وثيق</Text>
-            <Text style={styles.description}>
-                للبدء في تحليل بشرتك وبناء روتينك، نحتاج أولا لمعرفة المنتجات التي تملكينها.
-            </Text>
+export const ShelfEmptyState = ({ onPress }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-            <View style={styles.featuresList}>
-                <FeatureItem icon="touch-app" text="اضغطي على زر 'إضافة منتج' في الأسفل" />
-                <FeatureItem icon="qr-code-scanner" text="صوري قائمة مكونات المنتج" />
-                <FeatureItem icon="insights" text="احصلي على تحليل مفصل للمنتج ومكوناته" />
-                <FeatureItem icon="save" text="اضغطي على 'إضافة للرف'" />
-            </View>
+    return (
+        <FadeInView>
+            <View style={styles.container}>
+                <View style={styles.iconCircle}>
+                    <Image
+                        source={require('../../../assets/icon.png')}
+                        style={{ width: 80, height: 80, resizeMode: 'contain', opacity: 0.9 }}
+                    />
+                </View>
 
-            <View style={{ width: '100%' }}>
-                <WathiqButton label="إضافة منتج الآن" icon="add-a-photo" onPress={onPress} />
+                <Text style={styles.title}>أهلا بك في وثيق</Text>
+                <Text style={styles.description}>
+                    للبدء في تحليل بشرتك وبناء روتينك، نحتاج أولا لمعرفة المنتجات التي تملكينها.
+                </Text>
+
+                <View style={styles.featuresList}>
+                    <FeatureItem icon="touch-app" text="اضغطي على زر 'إضافة منتج' في الأسفل" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="qr-code-scanner" text="صوري قائمة مكونات المنتج" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="insights" text="احصلي على تحليل مفصل للمنتج ومكوناته" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="save" text="اضغطي على 'إضافة للرف'" styles={styles} COLORS={COLORS} />
+                </View>
+
+                <View style={{ width: '100%' }}>
+                    <WathiqButton label="إضافة منتج الآن" icon="add-a-photo" onPress={onPress} />
+                </View>
             </View>
-        </View>
-    </FadeInView>
-);
+        </FadeInView>
+    );
+};
 
 // --- 2. ANALYSIS EMPTY STATE (Updated Layout + Shimmer) ---
-export const AnalysisEmptyState = ({ onPress }) => (
-    <FadeInView>
-        <View style={styles.container}>
-            
-            {/* 1. The Insistence Header */}
-            <View style={styles.lockedHeader}>
-                <View style={[styles.iconCircle, { width: 50, height: 50, borderColor: COLORS.gold, backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
-                    <FontAwesome5 name="lock" size={20} color={COLORS.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.titleAlignRight}>التحليل بانتظار البيانات</Text>
-                    <Text style={styles.descAlignRight}>يجب إضافة منتجات للرف لفتح التحليل.</Text>
-                </View>
-            </View>
+export const AnalysisEmptyState = ({ onPress }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-            {/* 2. The Steps Visual (Insistence) */}
-            <View style={styles.stepsContainer}>
-                {/* Step 1: Active */}
-                <View style={styles.stepRow}>
-                    <View style={styles.stepIndicatorContainer}>
-                        <View style={[styles.stepDot, { borderColor: COLORS.danger, backgroundColor: COLORS.danger + '20' }]}>
-                            <MaterialIcons name="priority-high" size={12} color={COLORS.danger} />
+    return (
+        <FadeInView>
+            <View style={styles.container}>
+
+                {/* 1. The Insistence Header */}
+                <View style={styles.lockedHeader}>
+                    <View style={[styles.iconCircle, { width: 50, height: 50, borderColor: COLORS.gold, backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
+                        <FontAwesome5 name="lock" size={20} color={COLORS.gold} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.titleAlignRight}>التحليل بانتظار البيانات</Text>
+                        <Text style={styles.descAlignRight}>يجب إضافة منتجات للرف لفتح التحليل.</Text>
+                    </View>
+                </View>
+
+                {/* 2. The Steps Visual (Insistence) */}
+                <View style={styles.stepsContainer}>
+                    {/* Step 1: Active */}
+                    <View style={styles.stepRow}>
+                        <View style={styles.stepIndicatorContainer}>
+                            <View style={[styles.stepDot, { borderColor: COLORS.danger, backgroundColor: COLORS.danger + '20' }]}>
+                                <MaterialIcons name="priority-high" size={12} color={COLORS.danger} />
+                            </View>
+                            <View style={styles.stepLine} />
                         </View>
-                        <View style={styles.stepLine} />
+                        <View style={styles.stepContent}>
+                            <Text style={[styles.stepTitle, { color: COLORS.danger }]}>إضافة منتجات للرف</Text>
+                            <Text style={styles.stepDesc}>الخطوة الأولى</Text>
+                        </View>
                     </View>
-                    <View style={styles.stepContent}>
-                        <Text style={[styles.stepTitle, { color: COLORS.danger }]}>إضافة منتجات للرف</Text>
-                        <Text style={styles.stepDesc}>الخطوة الأولى</Text>
+
+                    {/* Step 2: Locked */}
+                    <View style={styles.stepRow}>
+                        <View style={styles.stepIndicatorContainer}>
+                            <View style={styles.stepDotLocked} />
+                        </View>
+                        <View style={styles.stepContent}>
+                            <Text style={styles.stepTitleLocked}>فتح لوحة التحليل الشاملة</Text>
+                            <Text style={styles.stepDesc}>مغلق حالياً</Text>
+                        </View>
                     </View>
                 </View>
 
-                {/* Step 2: Locked */}
-                <View style={styles.stepRow}>
-                    <View style={styles.stepIndicatorContainer}>
-                        <View style={styles.stepDotLocked} />
-                    </View>
-                    <View style={styles.stepContent}>
-                        <Text style={styles.stepTitleLocked}>فتح لوحة التحليل الشاملة</Text>
-                        <Text style={styles.stepDesc}>مغلق حالياً</Text>
-                    </View>
+                {/* SHIMMER BUTTON: Under the Steps */}
+                <View style={{ width: '100%', marginBottom: 15 }}>
+                    <FastShimmerButton>
+                        <WathiqButton label="إضافة منتجات للرف" icon="add" onPress={onPress} />
+                    </FastShimmerButton>
                 </View>
+
+                <View style={styles.divider} />
+
+                {/* 3. The Features (Motivation) */}
+                <Text style={styles.sectionHeader}>مالذي ستحصلين عليه؟</Text>
+                <View style={styles.featuresGrid}>
+                    <FeatureCard icon="shield" title="صحة الحاجز" desc="قياس الإجهاد الكيميائي" color={COLORS.success} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="wb-sunny" title="المناخ والبشرة" desc="تحليل تأثير الطقس" color={COLORS.accentGreen} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="verified" title="أهداف البشرة" desc="مدى توافق المنتجات" color={COLORS.gold} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="warning" title="التعارضات" desc="تنبيهات الخلط الخاطئ" color={COLORS.danger} styles={styles} COLORS={COLORS} />
+                </View>
+
             </View>
-
-            {/* SHIMMER BUTTON: Under the Steps */}
-            <View style={{ width: '100%', marginBottom: 15 }}>
-                <FastShimmerButton>
-                    <WathiqButton label="إضافة منتجات للرف" icon="add" onPress={onPress} />
-                </FastShimmerButton>
-            </View>
-
-            <View style={styles.divider} />
-
-            {/* 3. The Features (Motivation) */}
-            <Text style={styles.sectionHeader}>مالذي ستحصلين عليه؟</Text>
-            <View style={styles.featuresGrid}>
-                <FeatureCard icon="shield" title="صحة الحاجز" desc="قياس الإجهاد الكيميائي" color={COLORS.success} />
-                <FeatureCard icon="wb-sunny" title="المناخ والبشرة" desc="تحليل تأثير الطقس" color={COLORS.accentGreen} />
-                <FeatureCard icon="verified" title="أهداف البشرة" desc="مدى توافق المنتجات" color={COLORS.gold} />
-                <FeatureCard icon="warning" title="التعارضات" desc="تنبيهات الخلط الخاطئ" color={COLORS.danger} />
-            </View>
-
-        </View>
-    </FadeInView>
-);
+        </FadeInView>
+    );
+};
 
 // --- 3. ROUTINE EMPTY STATE ---
-export const RoutineEmptyState = ({ onPress }) => (
-    <FadeInView>
-        <View style={[styles.container, { borderStyle: 'dashed' }]}>
-            <View style={styles.iconCircle}>
-                <MaterialCommunityIcons name="timeline-clock-outline" size={40} color={COLORS.textSecondary} />
+export const RoutineEmptyState = ({ onPress }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+    return (
+        <FadeInView>
+            <View style={[styles.container, { borderStyle: 'dashed' }]}>
+                <View style={styles.iconCircle}>
+                    <MaterialCommunityIcons name="timeline-clock-outline" size={40} color={COLORS.textSecondary} />
+                </View>
+
+                <Text style={styles.title}>بناء الروتين الذكي</Text>
+                <Text style={styles.description}>
+                    اتركي خوارزمية وثيق ترتب منتجاتك تلقائيا للحصول على أقصى فعالية.
+                </Text>
+
+                <View style={styles.featuresList}>
+                    <FeatureItem icon="layers" text="الترتيب حسب اللزوجة (من الأخف للأثقل)" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="wb-twilight" text="فصل المكونات النشطة (صباحا ومساء)" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="shield" text="ضمان وجود طبقة الحماية والمرطب" styles={styles} COLORS={COLORS} />
+                </View>
+
+                <WathiqButton label="إنشاء روتين تلقائي" icon="auto-fix-high" onPress={onPress} />
             </View>
-
-            <Text style={styles.title}>بناء الروتين الذكي</Text>
-            <Text style={styles.description}>
-                اتركي خوارزمية وثيق ترتب منتجاتك تلقائيا للحصول على أقصى فعالية.
-            </Text>
-
-            <View style={styles.featuresList}>
-                <FeatureItem icon="layers" text="الترتيب حسب اللزوجة (من الأخف للأثقل)" />
-                <FeatureItem icon="wb-twilight" text="فصل المكونات النشطة (صباحا ومساء)" />
-                <FeatureItem icon="shield" text="ضمان وجود طبقة الحماية والمرطب" />
-            </View>
-
-            <WathiqButton label="إنشاء روتين تلقائي" icon="auto-fix-high" onPress={onPress} />
-        </View>
-    </FadeInView>
-);
+        </FadeInView>
+    );
+};
 
 // --- 4. INGREDIENTS EMPTY STATE ---
-export const IngredientsEmptyState = () => (
-    <FadeInView>
-        <View style={[styles.container, { paddingVertical: 40 }]}>
-            <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
-                <MaterialCommunityIcons name="flask-outline" size={36} color={COLORS.textDim} />
+export const IngredientsEmptyState = () => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+    return (
+        <FadeInView>
+            <View style={[styles.container, { paddingVertical: 40 }]}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
+                    <MaterialCommunityIcons name="flask-outline" size={36} color={COLORS.textDim} />
+                </View>
+                <Text style={[styles.title, { color: COLORS.textSecondary }]}>موسوعة المكونات</Text>
+                <Text style={styles.description}>بعد إضافة منتج للرف، ستظهر هنا بطاقات تعريفية ذكية لكل مكون.</Text>
+
+                <View style={{ flexDirection: 'row-reverse', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Badge text="الإسم العلمي" icon="science" styles={styles} COLORS={COLORS} />
+                    <Badge text="الوظيفة" icon="work-outline" styles={styles} COLORS={COLORS} />
+                    <Badge text="الفوائد" icon="favorite-border" styles={styles} COLORS={COLORS} />
+                    <Badge text="تنبيهات السلامة" icon="warning-amber" styles={styles} COLORS={COLORS} />
+                </View>
             </View>
-            <Text style={[styles.title, { color: COLORS.textSecondary }]}>موسوعة المكونات</Text>
-            <Text style={styles.description}>بعد إضافة منتج للرف، ستظهر هنا بطاقات تعريفية ذكية لكل مكون.</Text>
-            
-            <View style={{ flexDirection: 'row-reverse', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Badge text="الإسم العلمي" icon="science" />
-                <Badge text="الوظيفة" icon="work-outline" />
-                <Badge text="الفوائد" icon="favorite-border" />
-                <Badge text="تنبيهات السلامة" icon="warning-amber" />
-            </View>
-        </View>
-    </FadeInView>
-);
+        </FadeInView>
+    );
+};
 
 // --- 5. MIGRATION (GOOD) EMPTY STATE ---
-export const MigrationSuccessState = () => (
-    <FadeInView>
-        <LinearGradient
-            colors={['rgba(34, 197, 94, 0.1)', 'rgba(34, 197, 94, 0.01)']}
-            style={[styles.container, { borderColor: 'rgba(34, 197, 94, 0.2)' }]}
-        >
-            <View style={[styles.iconCircle, { borderColor: COLORS.success, backgroundColor: 'rgba(34, 197, 94, 0.05)' }]}>
-                <MaterialIcons name="verified-user" size={36} color={COLORS.success} />
-            </View>
-            <Text style={[styles.title, { color: COLORS.success }]}>منتجاتك نظيفة</Text>
-            <Text style={styles.description}>
-                رائع! لم يتم العثور على مكونات "شديدة الخطورة" أو مواد صناعية قاسية في رفّك الحالي.
-            </Text>
-            <View style={{ marginTop: 10, paddingHorizontal: 15, paddingVertical: 8, backgroundColor: COLORS.background, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border }}>
-                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 12, textAlign: 'center' }}>
-                    🌱 استمري في اختيار البدائل الصحية
+export const MigrationSuccessState = () => {
+    const { colors } = useTheme();
+    const COLORS = colors || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+    return (
+        <FadeInView>
+            <LinearGradient
+                colors={['rgba(34, 197, 94, 0.1)', 'rgba(34, 197, 94, 0.01)']}
+                style={[styles.container, { borderColor: 'rgba(34, 197, 94, 0.2)' }]}
+            >
+                <View style={[styles.iconCircle, { borderColor: COLORS.success, backgroundColor: 'rgba(34, 197, 94, 0.05)' }]}>
+                    <MaterialIcons name="verified-user" size={36} color={COLORS.success} />
+                </View>
+                <Text style={[styles.title, { color: COLORS.success }]}>منتجاتك نظيفة</Text>
+                <Text style={styles.description}>
+                    رائع! لم يتم العثور على مكونات "شديدة الخطورة" أو مواد صناعية قاسية في رفّك الحالي.
                 </Text>
-            </View>
-        </LinearGradient>
-    </FadeInView>
-);
+                <View style={{ marginTop: 10, paddingHorizontal: 15, paddingVertical: 8, backgroundColor: COLORS.background, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border }}>
+                    <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 12, textAlign: 'center' }}>
+                        🌱 استمري في اختيار البدائل الصحية
+                    </Text>
+                </View>
+            </LinearGradient>
+        </FadeInView>
+    );
+};
 
 // --- SUB-COMPONENTS ---
 
-const FeatureItem = ({ icon, text }) => (
+const FeatureItem = ({ icon, text, styles, COLORS }) => (
     <View style={styles.featureRow}>
-        <View style={{width: 28, alignItems: 'center'}}>
-             <MaterialIcons name={icon} size={18} color={COLORS.accentGreen} />
+        <View style={{ width: 28, alignItems: 'center' }}>
+            <MaterialIcons name={icon} size={18} color={COLORS.accentGreen} />
         </View>
         <Text style={styles.featureText}>{text}</Text>
     </View>
 );
 
-const FeatureCard = ({ icon, title, desc, color }) => (
+const FeatureCard = ({ icon, title, desc, color, styles, COLORS }) => (
     <View style={[styles.featureCard, { borderColor: color + '40' }]}>
         <MaterialIcons name={icon} size={20} color={color} style={{ marginBottom: 8 }} />
         <Text style={styles.featureCardTitle}>{title}</Text>
@@ -298,19 +333,19 @@ const FeatureCard = ({ icon, title, desc, color }) => (
     </View>
 );
 
-const Badge = ({ text, icon }) => (
+const Badge = ({ text, icon, styles, COLORS }) => (
     <View style={styles.badge}>
-        {icon && <MaterialIcons name={icon} size={10} color={COLORS.textDim} style={{marginLeft: 4}} />}
+        {icon && <MaterialIcons name={icon} size={10} color={COLORS.textDim} style={{ marginLeft: 4 }} />}
         <Text style={styles.badgeText}>{text}</Text>
     </View>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     container: {
         alignItems: 'center',
         padding: 25,
         backgroundColor: COLORS.card,
-        borderRadius: 28, 
+        borderRadius: 28,
         borderWidth: 1,
         borderColor: COLORS.border,
         marginVertical: 10,
@@ -320,13 +355,13 @@ const styles = StyleSheet.create({
     iconCircle: {
         width: 72,
         height: 72,
-        borderRadius: 24, 
-        backgroundColor: 'rgba(90, 156, 132, 0.08)',
+        borderRadius: 24,
+        backgroundColor: COLORS.accentGreen + '14',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(90, 156, 132, 0.2)',
+        borderColor: COLORS.accentGreen + '33',
     },
     title: {
         fontFamily: 'Tajawal-ExtraBold',
@@ -344,7 +379,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         maxWidth: '95%',
     },
-    
+
     // --- Specific Styles for Locked Analysis ---
     lockedHeader: {
         flexDirection: 'row-reverse',
@@ -460,7 +495,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     featureText: {
-        fontFamily: 'Tajawal-Bold', 
+        fontFamily: 'Tajawal-Bold',
         fontSize: 13,
         color: COLORS.textPrimary,
         textAlign: 'right',
@@ -476,7 +511,7 @@ const styles = StyleSheet.create({
     },
     featureCard: {
         width: '45%',
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: COLORS.card,
         padding: 14,
         borderRadius: 18,
         alignItems: 'center',
@@ -496,7 +531,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 14,
     },
-    
+
     // --- Buttons ---
     actionButton: {
         borderRadius: 16,
@@ -534,12 +569,12 @@ const styles = StyleSheet.create({
     badge: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: COLORS.textPrimary + '08',
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: COLORS.border,
     },
     badgeText: {
         fontFamily: 'Tajawal-Regular',

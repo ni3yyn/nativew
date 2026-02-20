@@ -1,33 +1,29 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { 
-  View, Text, StyleSheet, Modal, TextInput, Pressable, Animated, 
-  Dimensions, Easing, PanResponder, TouchableOpacity, KeyboardAvoidingView, 
-  Platform, Keyboard 
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import {
+    View, Text, StyleSheet, Modal, TextInput, Pressable, Animated,
+    Dimensions, Easing, PanResponder, TouchableOpacity, KeyboardAvoidingView,
+    Platform, Keyboard
 } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
+import { useTheme } from '../../context/ThemeContext';
 
 // --- THEME CONFIG ---
 const { height } = Dimensions.get('window');
-const COLORS = {
-  background: '#1A2D27',
-  card: '#253D34',
-  border: 'rgba(90, 156, 132, 0.25)',
-  accentGreen: '#5A9C84',
-  textPrimary: '#F1F3F2',
-  textSecondary: '#A3B1AC',
-  textDim: '#666666',
-  accentGlow: 'rgba(90, 156, 132, 0.4)',
-};
 
 const getTextDirection = (text) => {
-    if (!text) return 'right'; 
+    if (!text) return 'right';
     const isArabic = /[\u0600-\u06FF]/.test(text);
     return isArabic ? 'right' : 'left';
 };
 
 export default function ManualInputSheet({ visible, onClose, onSubmit }) {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
     const [text, setText] = useState('');
     const [inputDirection, setInputDirection] = useState('right');
     const animController = useRef(new Animated.Value(0)).current;
@@ -69,25 +65,25 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
     const closeSheet = () => {
         Keyboard.dismiss();
-        Animated.timing(animController, { 
-            toValue: 0, 
-            duration: 250, 
-            easing: Easing.out(Easing.cubic), 
-            useNativeDriver: true 
-        }).start(({ finished }) => { 
-            if (finished) onClose(); 
+        Animated.timing(animController, {
+            toValue: 0,
+            duration: 250,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true
+        }).start(({ finished }) => {
+            if (finished) onClose();
         });
     };
 
     const handleSubmit = () => {
         if (!text.trim()) return;
-        
+
         // --- LOGGING ADDED HERE ---
         console.log("====================================");
         console.log("📝 [ManualInput] Sending Text:");
         console.log(text);
         console.log("====================================");
-        
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         closeSheet();
         setTimeout(() => onSubmit(text), 300);
@@ -97,32 +93,32 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
 
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] });
-    
+
     return (
-        <Modal 
-            transparent 
-            visible={true} 
-            onRequestClose={closeSheet} 
+        <Modal
+            transparent
+            visible={true}
+            onRequestClose={closeSheet}
             animationType="fade"
             statusBarTranslucent
         >
             <View style={styles.modalContainer}>
-                
+
                 {/* Dark Backdrop */}
                 <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
                 </Animated.View>
 
                 {/* Keyboard Handler */}
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "padding"} 
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "padding"}
                     style={styles.keyboardContainer}
                 >
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
-                        
+
                         {/* Content Body */}
                         <View style={styles.sheetContent}>
-                            
+
                             <View style={styles.sheetHandleBar} {...panResponder.panHandlers}>
                                 <View style={styles.sheetHandle} />
                             </View>
@@ -161,8 +157,8 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                 <TextInput
                                     ref={inputRef}
                                     style={[
-                                        styles.textInput, 
-                                        { textAlign: inputDirection } 
+                                        styles.textInput,
+                                        { textAlign: inputDirection }
                                     ]}
                                     multiline
                                     placeholder="مثال: Water, Glycerin, Niacinamide..."
@@ -172,18 +168,18 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                 />
                             </View>
 
-                            <TouchableOpacity 
-                                onPress={handleSubmit} 
+                            <TouchableOpacity
+                                onPress={handleSubmit}
                                 style={[styles.submitBtn, { opacity: text.trim().length > 2 ? 1 : 0.6 }]}
                                 disabled={text.trim().length <= 2}
                             >
                                 <LinearGradient
-                                    colors={[COLORS.accentGreen, '#4a8570']}
+                                    colors={[COLORS.accentGreen, COLORS.accentGreen + 'BF']}
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                     style={styles.gradientBtn}
                                 >
                                     <Text style={styles.submitBtnText}>تحليل المكونات</Text>
-                                    <FontAwesome5 name="flask" size={16} color="#1A2D27" />
+                                    <FontAwesome5 name="flask" size={16} color={COLORS.textOnAccent} />
                                 </LinearGradient>
                             </TouchableOpacity>
 
@@ -195,56 +191,56 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     modalContainer: {
         flex: 1,
     },
-    backdrop: { 
-        ...StyleSheet.absoluteFillObject, 
-        backgroundColor: '#000', 
-        zIndex: 1 
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000',
+        zIndex: 1
     },
-    keyboardContainer: { 
+    keyboardContainer: {
         width: '100%',
         zIndex: 2,
         justifyContent: 'flex-end',
         flex: 1
     },
-    sheetContainer: { 
+    sheetContainer: {
         width: '100%',
-        backgroundColor: COLORS.card,
-        borderTopLeftRadius: 30, 
+        backgroundColor: COLORS.card || COLORS.background,
+        borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
     },
-    sheetContent: { 
+    sheetContent: {
         width: '100%',
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20, 
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
         paddingHorizontal: 24,
     },
-    sheetHandleBar: { 
-        alignItems: 'center', 
-        paddingVertical: 15, 
-        width: '100%' 
+    sheetHandleBar: {
+        alignItems: 'center',
+        paddingVertical: 15,
+        width: '100%'
     },
-    sheetHandle: { 
-        width: 40, 
-        height: 4, 
-        backgroundColor: COLORS.border, 
-        borderRadius: 10 
+    sheetHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: COLORS.border,
+        borderRadius: 10
     },
-    header: { 
-        flexDirection: 'row-reverse', 
-        alignItems: 'center', 
-        marginBottom: 20, 
-        justifyContent: 'space-between' 
+    header: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        marginBottom: 20,
+        justifyContent: 'space-between'
     },
-    headerIconCircle: { 
-        width: 40, 
-        height: 40, 
-        borderRadius: 12, 
-        backgroundColor: 'rgba(90, 156, 132, 0.1)', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
+    headerIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: COLORS.accentGreen + '1A',
+        alignItems: 'center',
+        justifyContent: 'center',
         marginLeft: 12,
         borderWidth: 1,
         borderColor: COLORS.border
@@ -253,71 +249,71 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'flex-end'
     },
-    headerTitle: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 18, 
-        color: COLORS.textPrimary, 
-        textAlign: 'right' 
+    headerTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 18,
+        color: COLORS.textPrimary,
+        textAlign: 'right'
     },
-    headerSub: { 
-        fontFamily: 'Tajawal-Regular', 
-        fontSize: 13, 
-        color: COLORS.textSecondary, 
-        textAlign: 'right' 
+    headerSub: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'right'
     },
-    closeBtn: { 
+    closeBtn: {
         padding: 5,
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 20
     },
-    instructionsContainer: { 
-        flexDirection: 'row-reverse', 
-        justifyContent: 'space-between', 
-        backgroundColor: 'rgba(26, 45, 39, 0.5)', 
-        borderRadius: 12, 
+    instructionsContainer: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        backgroundColor: COLORS.background + '80',
+        borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 15,
         marginBottom: 20,
         borderWidth: 1,
         borderColor: COLORS.border
     },
-    instructionItem: { 
-        flexDirection: 'row-reverse', 
-        alignItems: 'center', 
-        gap: 6 
+    instructionItem: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6
     },
-    instructionText: { 
-        fontFamily: 'Tajawal-Regular', 
-        fontSize: 11, 
-        color: COLORS.textSecondary 
+    instructionText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 11,
+        color: COLORS.textSecondary
     },
-    verticalLine: { 
-        width: 1, 
-        height: '70%', 
-        backgroundColor: COLORS.border 
+    verticalLine: {
+        width: 1,
+        height: '70%',
+        backgroundColor: COLORS.border
     },
-    inputWrapper: { 
-        backgroundColor: COLORS.background, 
-        borderRadius: 16, 
-        borderWidth: 1, 
-        borderColor: COLORS.border, 
+    inputWrapper: {
+        backgroundColor: COLORS.background,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
         marginBottom: 20,
         overflow: 'hidden'
     },
-    textInput: { 
-        color: COLORS.textPrimary, 
-        fontFamily: 'Tajawal-Regular', 
-        fontSize: 15, 
-        paddingHorizontal: 15, 
-        paddingTop: 15, 
+    textInput: {
+        color: COLORS.textPrimary,
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 15,
+        paddingHorizontal: 15,
+        paddingTop: 15,
         paddingBottom: 15,
-        height: 150, 
-        textAlignVertical: 'top', 
+        height: 150,
+        textAlignVertical: 'top',
         lineHeight: 24,
     },
-    submitBtn: { 
-        borderRadius: 16, 
-        overflow: 'hidden', 
+    submitBtn: {
+        borderRadius: 16,
+        overflow: 'hidden',
         height: 56,
         shadowColor: COLORS.accentGreen,
         shadowOffset: { width: 0, height: 4 },
@@ -325,16 +321,16 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 4
     },
-    gradientBtn: { 
-        flex: 1, 
-        flexDirection: 'row-reverse', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        gap: 10 
+    gradientBtn: {
+        flex: 1,
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10
     },
-    submitBtnText: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 16, 
-        color: '#1A2D27' 
+    submitBtnText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 16,
+        color: COLORS.textOnAccent
     },
 });

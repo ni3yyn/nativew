@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react'; // Added useMemo
 import { View, Text, StyleSheet, ActivityIndicator, Animated, TouchableOpacity, ScrollView, Modal, Pressable, Dimensions, Platform, Alert, Easing, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,23 +11,10 @@ import * as Notifications from 'expo-notifications'; // Ensure you have installe
 import * as Location from 'expo-location'; // <--- ADD THIS
 import { useTimerStore } from './timerStore'; // Adjust the path as needed
 import { AlertService } from '../../services/alertService'; // <--- IMPORT THIS
+import { useTheme } from '../../context/ThemeContext';
 
 // --- THEME CONSTANTS ---
-const COLORS = {
-    card: '#253D34',
-    cardSurface: '#2F4840',
-    border: 'rgba(90, 156, 132, 0.3)',
-    textPrimary: '#F1F3F2',
-    textSecondary: '#B0C4DE',
-    textDim: '#6B7C76',
-    accentGreen: '#5A9C84',
-    textOnAccent: '#1A2D27',
-    danger: '#ef4444',
-    warning: '#f59e0b',
-    success: '#10b981',
-    gold: '#fbbf24',
-    blue: '#3b82f6'
-};
+// --- THEME CONSTANTS REMOVED (Using ThemeContext) ---
 
 const THEME_VARIANTS = {
     pollution: { colors: ['#4c1d95', '#6d28d9'], icon: 'smog', label: 'خطر تلوث', shadow: '#6d28d9' },
@@ -63,6 +50,8 @@ Notifications.setNotificationHandler({
 //                       1. SKELETON LOADER
 // ============================================================================
 export const WeatherLoadingCard = () => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const opacity = useRef(new Animated.Value(0.3)).current;
 
     useEffect(() => {
@@ -93,6 +82,8 @@ export const WeatherLoadingCard = () => {
 //                       2. COMPACT WIDGET (Hero)
 // ============================================================================
 export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const isPermissionError = insight.customData?.isPermissionError;
     const isServiceError = insight.customData?.isServiceError;
     const themeKey = insight.customData?.theme || 'unknown';
@@ -134,6 +125,8 @@ export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBl
 };
 
 export const WeatherMiniCard = ({ insight, onPress }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const meta = insight.customData?.meta || {};
     const { temp, uvIndex } = meta;
 
@@ -159,7 +152,7 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
                         <View style={styles.liveDot} />
                     </View>
                     <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 8 }}>
-                         <Text style={styles.miniCardTitle} numberOfLines={2}>{insight.title}</Text>
+                        <Text style={styles.miniCardTitle} numberOfLines={2}>{insight.title}</Text>
                     </View>
                     <View style={styles.miniCardFooter}>
                         {temp !== undefined ? (
@@ -168,7 +161,7 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
                                 {uvIndex !== undefined && <><View style={styles.glassSeparator} /><Text style={styles.glassPillText}>UV {Math.round(uvIndex)}</Text></>}
                             </View>
                         ) : (
-                             <View style={styles.glassPill}><Text style={styles.glassPillText}>{theme.label}</Text></View>
+                            <View style={styles.glassPill}><Text style={styles.glassPillText}>{theme.label}</Text></View>
                         )}
                     </View>
                 </View>
@@ -181,14 +174,16 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
 //               3. SMART SPF TIMER (LOGIC FIXED)
 // ============================================================================
 const SpfTimerWidget = ({ uvIndex = 0 }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     // 2. Store Hooks
-    const { 
-        isActive, 
-        endTime, 
-        duration: storeDuration, 
-        startTimer, 
-        stopTimer, 
-        notificationId 
+    const {
+        isActive,
+        endTime,
+        duration: storeDuration,
+        startTimer,
+        stopTimer,
+        notificationId
     } = useTimerStore();
 
     // 3. Local State for Tick
@@ -196,7 +191,7 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
     // 4. SVG Config
-    const size = 80; 
+    const size = 80;
     const strokeWidth = 6;
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
@@ -237,9 +232,9 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                 // Ensure we don't get negative numbers
                 const diff = Math.max(0, Math.ceil((endTime - now) / 1000));
                 setRemainingSeconds(diff);
-                
+
                 if (diff <= 0) {
-                    stopTimer(); 
+                    stopTimer();
                 }
             };
 
@@ -263,10 +258,10 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
         }
 
         // 1. Calculate Duration (Default to 60s if 0 for testing)
-        const durationToSet = recommendedDuration > 0 ? recommendedDuration : 60; 
+        const durationToSet = recommendedDuration > 0 ? recommendedDuration : 60;
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
+
         // 2. Cancel any stale notification
         if (notificationId) {
             await Notifications.cancelScheduledNotificationAsync(notificationId);
@@ -278,17 +273,17 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
 
         // 4. Schedule with DATE trigger (Matches notificationHelper.js)
         const id = await Notifications.scheduleNotificationAsync({
-            content: { 
-                title: "☀️ وقت التجديد", 
-                body: "انتهت فترة فعالية واقي الشمس. يرجى إعادة وضعه الآن.", 
-                sound: 'default' 
+            content: {
+                title: "☀️ وقت التجديد",
+                body: "انتهت فترة فعالية واقي الشمس. يرجى إعادة وضعه الآن.",
+                sound: 'default'
             },
-            trigger: { 
+            trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
-                date: triggerDate 
+                date: triggerDate
             },
         });
-        
+
         // 5. Start State
         startTimer(durationToSet, id);
     };
@@ -307,8 +302,8 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
-        const mm = m.toString().padStart(2,'0');
-        const ss = s.toString().padStart(2,'0');
+        const mm = m.toString().padStart(2, '0');
+        const ss = s.toString().padStart(2, '0');
         return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
     };
 
@@ -316,12 +311,12 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
     if (isSafe && !isActive) {
         return (
             <View style={[styles.spfContainer, styles.spfSafeBg]}>
-                <View style={[styles.spfIconCircle, {backgroundColor: 'rgba(16, 185, 129, 0.2)'}]}>
+                <View style={[styles.spfIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
                     <FontAwesome5 name="check" size={14} color="#10b981" />
                 </View>
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={[styles.spfTitle, {color: '#d1fae5'}]}>الأجواء آمنة</Text>
-                    <Text style={[styles.spfDesc, {color: '#6ee7b7'}]}>مؤشر UV منخفض، لا حاجة للمؤقت.</Text>
+                    <Text style={[styles.spfTitle, { color: '#d1fae5' }]}>الأجواء آمنة</Text>
+                    <Text style={[styles.spfDesc, { color: '#6ee7b7' }]}>مؤشر UV منخفض، لا حاجة للمؤقت.</Text>
                 </View>
             </View>
         );
@@ -356,26 +351,26 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                         </SvgGradient>
                     </Defs>
                     {/* Track */}
-                    <Circle stroke="rgba(255,255,255,0.03)" fill="none" cx={size/2} cy={size/2} r={radius} strokeWidth={strokeWidth} />
+                    <Circle stroke={COLORS.textPrimary + '08'} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
                     {/* Progress */}
                     <AnimatedCircle
                         stroke="url(#grad)"
                         fill="none"
-                        cx={size/2} cy={size/2}
+                        cx={size / 2} cy={size / 2}
                         r={radius}
                         strokeWidth={strokeWidth}
                         strokeDasharray={circumference}
                         strokeDashoffset={strokeDashoffset}
                         strokeLinecap="round"
-                        transform={`rotate(-90 ${size/2} ${size/2})`}
+                        transform={`rotate(-90 ${size / 2} ${size / 2})`}
                     />
                 </Svg>
-                
+
                 <View style={styles.ringCenter}>
                     {isActive ? (
                         <FontAwesome5 name="clock" size={18} color={COLORS.accentGreen} />
                     ) : (
-                        <View style={{alignItems:'center'}}>
+                        <View style={{ alignItems: 'center' }}>
                             <Text style={styles.ringVal}>{Math.round(recommendedDuration / 60)}</Text>
                             <Text style={styles.ringUnit}>دقيقة</Text>
                         </View>
@@ -386,7 +381,7 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
             {/* 2. Controls (Right) */}
             <View style={styles.spfContent}>
                 {isActive ? (
-                    <View style={{alignItems: 'flex-end', gap: 2}}>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
                         <Text style={styles.statusLabel}>المؤقت يعمل</Text>
                         <Text style={styles.timerBigDisplay}>{formatTime(remainingSeconds)}</Text>
                         <PressableScale onPress={handleStop} style={styles.linkButton}>
@@ -394,18 +389,18 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                         </PressableScale>
                     </View>
                 ) : (
-                    <View style={{alignItems: 'flex-end', gap: 6}}>
+                    <View style={{ alignItems: 'flex-end', gap: 6 }}>
                         <View>
                             <Text style={styles.spfTitle}>تجديد واقي الشمس</Text>
                             <Text style={styles.spfDesc}>
-                                مؤشر UV الحالي <Text style={{color: COLORS.warning, fontFamily:'Tajawal-Bold'}}>{uvIndex}</Text>
+                                مؤشر UV الحالي <Text style={{ color: COLORS.warning, fontFamily: 'Tajawal-Bold' }}>{uvIndex}</Text>
                             </Text>
                         </View>
-                        
+
                         <PressableScale onPress={handleStart} style={styles.startPill}>
                             <LinearGradient
                                 colors={[COLORS.accentGreen, '#047857']}
-                                start={{x:0, y:0}} end={{x:1, y:0}}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                 style={styles.startPillGradient}
                             >
                                 <Text style={styles.startPillText}>تشغيل</Text>
@@ -426,6 +421,8 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
 
 // --- 4.1 SUN CYCLE (UV DRIVEN) ---
 const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
 
     // 1. Status Logic
@@ -436,7 +433,7 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
     if (!isDay) {
         label = "هدوء";
         color = "#94a3b8"; // Moon/Slate color
-        percentage = 0; 
+        percentage = 0;
     } else {
         const safeUV = Math.min(uvIndex, 11);
         percentage = safeUV / 11;
@@ -468,32 +465,32 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
                     </Defs>
 
                     {/* 1. Background Track (Always visible, clean line) */}
-                    <Path 
-                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} 
-                        stroke="rgba(255,255,255,0.05)" 
-                        strokeWidth={strokeWidth} 
-                        strokeLinecap="round" 
-                        fill="none" 
+                    <Path
+                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+                        stroke="rgba(255,255,255,0.05)"
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        fill="none"
                     />
 
                     {/* 2. Day Mode Only: Colored Arc + Sun Dot */}
                     {isDay && (
                         <>
-                            <Path 
-                                d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${sunX} ${sunY}`} 
-                                stroke="url(#sunGrad)" 
-                                strokeWidth={strokeWidth} 
-                                strokeLinecap="round" 
-                                fill="none" 
+                            <Path
+                                d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${sunX} ${sunY}`}
+                                stroke="url(#sunGrad)"
+                                strokeWidth={strokeWidth}
+                                strokeLinecap="round"
+                                fill="none"
                             />
                             {/* The Sun Indicator Dot */}
-                            <Circle 
-                                cx={sunX} 
-                                cy={sunY} 
-                                r="5" 
-                                fill="#fff" 
-                                stroke={color} 
-                                strokeWidth="2" 
+                            <Circle
+                                cx={sunX}
+                                cy={sunY}
+                                r="5"
+                                fill="#fff"
+                                stroke={color}
+                                strokeWidth="2"
                             />
                         </>
                     )}
@@ -512,17 +509,19 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
 
 // --- 4.2 HYDRO-GAUGE (Skin Hydration) ---
 const HydroGauge = ({ humidity, dewPoint }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
-    
+
     const safeHum = humidity !== undefined ? humidity : 50;
     const safeDP = dewPoint !== undefined ? dewPoint : (safeHum > 50 ? 18 : 5);
 
     // Status Colors
     let color = COLORS.success;
     let label = 'مريح';
-    if (safeDP < 10) { color = '#60a5fa'; label = 'جاف'; } 
-    else if (safeDP <= 16) { color = COLORS.success; label = 'مثالي'; } 
-    else if (safeDP <= 20) { color = COLORS.warning; label = 'رطب'; } 
+    if (safeDP < 10) { color = '#60a5fa'; label = 'جاف'; }
+    else if (safeDP <= 16) { color = COLORS.success; label = 'مثالي'; }
+    else if (safeDP <= 20) { color = COLORS.warning; label = 'رطب'; }
     else { color = COLORS.danger; label = 'خانق'; }
 
     // Math for Fill Arc
@@ -544,19 +543,19 @@ const HydroGauge = ({ humidity, dewPoint }) => {
             <View style={{ alignItems: 'center', marginTop: 4 }}>
                 <Svg width={width} height={height}>
                     {/* Background Track */}
-                    <Path 
-                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} 
-                        stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} strokeLinecap="round" fill="none" 
+                    <Path
+                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+                        stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} strokeLinecap="round" fill="none"
                     />
                     {/* Active Fill */}
-                    <Path 
-                        d={fillPath} 
-                        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" fill="none" 
+                    <Path
+                        d={fillPath}
+                        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" fill="none"
                     />
                 </Svg>
 
                 <View style={styles.arcCenterText}>
-                    <Text style={styles.arcBigValue}>{safeHum}<Text style={{fontSize:12}}>%</Text></Text>
+                    <Text style={styles.arcBigValue}>{safeHum}<Text style={{ fontSize: 12 }}>%</Text></Text>
                     <Text style={[styles.arcLabel, { color: color }]}>{label}</Text>
                 </View>
             </View>
@@ -567,15 +566,17 @@ const HydroGauge = ({ humidity, dewPoint }) => {
 
 // --- 4.3 PORE CLARITY ---
 const PoreClarityWidget = ({ aqi }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
     const safeAqi = aqi !== undefined ? aqi : 50;
 
     let color = COLORS.success;
     let label = 'نقي';
-    
+
     // Scale AQI (0-300 usually, but we cap at 150 for the meter visual)
     const percentage = Math.min(safeAqi / 150, 1);
-    
+
     if (safeAqi > 100) { color = COLORS.danger; label = 'ملوث'; }
     else if (safeAqi > 50) { color = COLORS.warning; label = 'متوسط'; }
 
@@ -593,13 +594,13 @@ const PoreClarityWidget = ({ aqi }) => {
 
             <View style={{ alignItems: 'center', marginTop: 4 }}>
                 <Svg width={width} height={height}>
-                    <Path 
-                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} 
-                        stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} strokeLinecap="round" fill="none" 
+                    <Path
+                        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+                        stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} strokeLinecap="round" fill="none"
                     />
-                    <Path 
-                        d={fillPath} 
-                        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" fill="none" 
+                    <Path
+                        d={fillPath}
+                        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" fill="none"
                     />
                 </Svg>
 
@@ -616,6 +617,8 @@ const PoreClarityWidget = ({ aqi }) => {
 //                       5. HOURLY TIMELINE
 // ============================================================================
 const HourlySkinRisk = ({ forecast }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     if (!forecast || forecast.length === 0) return null;
 
     const currentHourIndex = new Date().getHours();
@@ -625,55 +628,55 @@ const HourlySkinRisk = ({ forecast }) => {
         let hours = date.getHours();
         const isCurrent = hours === currentHourIndex;
         const ampm = hours >= 12 ? 'م' : 'ص';
-        
+
         // Visual hour formatting
         const displayHour = hours % 12 || 12;
-        
-        return { 
-            h: displayHour, 
-            m: ampm, 
+
+        return {
+            h: displayHour,
+            m: ampm,
             isNight: hours >= 18 || hours < 6,
             isCurrent,
-            rawHour: hours 
+            rawHour: hours
         };
     };
 
     return (
         <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeaderRow}>
-            <FontAwesome5 name="clock" size={14} color={COLORS.accentGreen} />
+                <FontAwesome5 name="clock" size={14} color={COLORS.accentGreen} />
                 <Text style={styles.sectionTitle}>مؤشر البشرة (12 ساعة)</Text>
             </View>
 
             <View style={styles.timelineContainer}>
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.timelineScrollContent}
                     // Optional: Try to center content if few items, otherwise start
-                    contentOffset={{ x: 0, y: 0 }} 
+                    contentOffset={{ x: 0, y: 0 }}
                 >
                     {forecast.map((hour, index) => {
                         const { h, m, isNight, isCurrent } = formatTime(hour.time);
-                        
+
                         // Enhanced Color Logic
                         const color = hour.color || COLORS.success;
                         const icon = hour.icon || (isNight ? 'moon' : 'sun');
                         // Shorten label for cleaner UI if needed
                         const label = hour.label || 'آمن';
-                        
+
                         // Dynamic Height Calculation
                         const barHeight = Math.min(Math.max((hour.uv * 6) + 20, 20), 65);
-                        
+
                         // Is this a risky hour? (e.g. UV > 5)
                         const isRisky = hour.uv >= 5;
 
                         return (
                             <View key={index} style={[styles.timeSlot, isCurrent && styles.timeSlotActive]}>
-                                
+
                                 {/* Top Condition Pill */}
                                 <View style={[
-                                    styles.timelinePill, 
+                                    styles.timelinePill,
                                     { backgroundColor: isCurrent ? color : color + '10', borderColor: color + '30' }
                                 ]}>
                                     <FontAwesome5 name={icon} size={isCurrent ? 10 : 9} color={isCurrent ? '#fff' : color} />
@@ -688,9 +691,9 @@ const HourlySkinRisk = ({ forecast }) => {
                                     {/* The Risk Bar */}
                                     <LinearGradient
                                         colors={[color, color + '80']} // Gradient fade
-                                        style={[styles.barFill, { height: barHeight }]} 
+                                        style={[styles.barFill, { height: barHeight }]}
                                     />
-                                    
+
                                     {/* Issue Indicator INSIDE the bar */}
                                     {isRisky && (
                                         <View style={[styles.barWarningIcon, { bottom: barHeight + 2 }]}>
@@ -725,12 +728,14 @@ const HourlySkinRisk = ({ forecast }) => {
 //                       6. ACCESSORIES GRID
 // ============================================================================
 const AccessoriesSection = ({ accessories }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     if (!accessories || accessories.length === 0) return null;
 
     return (
         <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeaderRow}>
-            <FontAwesome5 name="tshirt" size={14} color={COLORS.accentGreen} />
+                <FontAwesome5 name="tshirt" size={14} color={COLORS.accentGreen} />
                 <Text style={styles.sectionTitle}>تجهيزات الخروج</Text>
             </View>
             <View style={styles.accessoriesGrid}>
@@ -740,7 +745,7 @@ const AccessoriesSection = ({ accessories }) => {
                             <View style={[styles.accessoryIconBox, { backgroundColor: item.color + '15' }]}>
                                 <FontAwesome5 name={item.icon} size={18} color={item.color} />
                             </View>
-                            <View style={{flex: 1}}>
+                            <View style={{ flex: 1 }}>
                                 <Text style={styles.accessoryText}>{item.label}</Text>
                                 {/* Added a subtle sub-label for context if available, or just visual balance */}
                                 <Text style={styles.accessorySubText}>موصى به</Text>
@@ -761,6 +766,8 @@ const AccessoriesSection = ({ accessories }) => {
 //                       7. MAIN SHEET (Detailed View)
 // ============================================================================
 export const WeatherDetailedSheet = ({ insight }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const data = insight.customData;
 
     if (!data) return null;
@@ -770,7 +777,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
     // *** FIX: READ RAW DATA FOR INDICATORS ***
     const raw = data.rawWeather || {};
-    
+
     // Read numeric values from raw data (calculated in logic layer)
     const humidity = raw.humidity !== undefined ? raw.humidity : parseFloat(data.metrics?.humidity || 50);
     const dewPoint = raw.dewPoint; // Pass this specifically
@@ -783,7 +790,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
             {/* 1. HEADER */}
             <View style={[styles.headerContainer, { shadowColor: theme.shadow }]}>
-                <LinearGradient colors={theme.colors} style={styles.headerGradient} start={{x:0, y:0}} end={{x:1, y:1}}>
+                <LinearGradient colors={theme.colors} style={styles.headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     {data.location && (
                         <View style={styles.locationTag}>
                             <FontAwesome5 name="map-marker-alt" size={10} color="#fff" />
@@ -814,14 +821,14 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
             {/* 3. METRICS SCROLL (Indicators) */}
             <View style={{ marginTop: 20 }}>
-                <Text style={[styles.sectionTitle, {marginRight: 8, marginBottom: 10}]}>مؤشرات الجو</Text>
+                <Text style={[styles.sectionTitle, { marginRight: 8, marginBottom: 10 }]}>مؤشرات الجو</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, flexDirection: 'row-reverse', gap: 10 }}>
                     {/* Pass isDay to SunCycle */}
                     <SunCycleWidget uvIndex={uvIndex} isDay={isDay} />
-                    
+
                     {/* Pass dewPoint to HydroGauge for medical accuracy */}
                     <HydroGauge humidity={humidity} dewPoint={dewPoint} />
-                    
+
                     <PoreClarityWidget aqi={aqi} />
                 </ScrollView>
             </View>
@@ -831,12 +838,12 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
             {/* 5. ACCESSORIES */}
             <AccessoriesSection accessories={data.accessories} />
-            
+
             {/* 6. IMPACT ANALYSIS */}
             {data.impact && (
                 <View style={styles.sectionWrapper}>
                     <View style={styles.sectionHeaderRow}>
-                    <FontAwesome5 name="chart-pie" size={14} color={COLORS.accentGreen} />
+                        <FontAwesome5 name="chart-pie" size={14} color={COLORS.accentGreen} />
                         <Text style={styles.sectionTitle}>تحليل الأثر</Text>
                     </View>
                     <View style={styles.impactCard}>
@@ -867,10 +874,10 @@ export const WeatherDetailedSheet = ({ insight }) => {
             {data.routine_adjustments && data.routine_adjustments.length > 0 ? (
                 <View style={styles.sectionWrapper}>
                     <View style={styles.sectionHeaderRow}>
-                    <FontAwesome5 name="magic" size={14} color={COLORS.accentGreen} />
+                        <FontAwesome5 name="magic" size={14} color={COLORS.accentGreen} />
                         <Text style={styles.sectionTitle}>توصيات الروتين</Text>
                     </View>
-                    
+
                     {/* Container with visual separation but no heavy boxing */}
                     <View style={styles.cleanListContainer}>
                         {data.routine_adjustments.map((item, index) => (
@@ -884,7 +891,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                         ))}
                     </View>
                 </View>
-            ) : null} 
+            ) : null}
             {/* The : null ensures nothing renders if array is empty */}
 
             <View style={{ height: 40 }} />
@@ -893,6 +900,8 @@ export const WeatherDetailedSheet = ({ insight }) => {
 };
 
 const CleanRoutineItem = ({ item }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const isOwned = !!item.product;
     const isAdviceOnly = !item.product && !item.missing_suggestion; // e.g., "Skip Moisturizer"
 
@@ -928,11 +937,11 @@ const CleanRoutineItem = ({ item }) => {
                     <Text style={styles.cleanAction}>{item.action}</Text>
                     <Text style={styles.cleanStepTag}>{item.step}</Text>
                 </View>
-                
+
                 {/* Only render subtext if it exists */}
                 {subText ? (
                     <Text style={[
-                        styles.cleanProductText, 
+                        styles.cleanProductText,
                         { color: isOwned ? COLORS.textPrimary : COLORS.textSecondary }
                     ]}>
                         {subText}
@@ -950,9 +959,11 @@ const CleanRoutineItem = ({ item }) => {
 // ============================================================================
 
 export const LocationPermissionModal = ({ visible, onClose }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [showModal, setShowModal] = useState(visible);
-    
-    const slideAnim = useRef(new Animated.Value(100)).current; 
+
+    const slideAnim = useRef(new Animated.Value(100)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -961,32 +972,32 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
             // FIX: Use timing + Easing.out(Easing.cubic) instead of spring.
             // This looks smooth but finishes deterministically, allowing clicks immediately.
             Animated.parallel([
-                Animated.timing(opacityAnim, { 
-                    toValue: 1, 
-                    duration: 300, 
-                    useNativeDriver: true 
+                Animated.timing(opacityAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true
                 }),
-                Animated.timing(slideAnim, { 
-                    toValue: 0, 
-                    duration: 300, 
-                    easing: Easing.out(Easing.cubic), 
-                    useNativeDriver: true 
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true
                 })
             ]).start();
         } else {
             Animated.parallel([
-                Animated.timing(opacityAnim, { 
-                    toValue: 0, 
-                    duration: 200, 
-                    useNativeDriver: true 
+                Animated.timing(opacityAnim, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true
                 }),
-                Animated.timing(slideAnim, { 
-                    toValue: 150, 
-                    duration: 200, 
-                    useNativeDriver: true 
+                Animated.timing(slideAnim, {
+                    toValue: 150,
+                    duration: 200,
+                    useNativeDriver: true
                 })
-            ]).start(({ finished }) => { 
-                if (finished) setShowModal(false); 
+            ]).start(({ finished }) => {
+                if (finished) setShowModal(false);
             });
         }
     }, [visible]);
@@ -1004,13 +1015,13 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                     type: 'warning',
                     buttons: [
                         { text: "إلغاء", style: "secondary" },
-                        { 
-                            text: "الإعدادات", 
-                            style: "primary", 
+                        {
+                            text: "الإعدادات",
+                            style: "primary",
                             onPress: () => {
                                 Linking.openSettings();
-                                onClose(); 
-                            } 
+                                onClose();
+                            }
                         }
                     ]
                 });
@@ -1032,15 +1043,15 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
 
                 {/* Content */}
                 <Animated.View style={[
-                    styles.modalContent, 
-                    { 
-                        opacity: opacityAnim, 
-                        transform: [{ translateY: slideAnim }] 
+                    styles.modalContent,
+                    {
+                        opacity: opacityAnim,
+                        transform: [{ translateY: slideAnim }]
                     }
                 ]}>
-                    
+
                     <View style={styles.modalIconFloat}>
-                        <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.modalIconGradient}>
+                        <LinearGradient colors={[COLORS.accentGreen, COLORS.accentGreen + 'CC']} style={styles.modalIconGradient}>
                             <FontAwesome5 name="cloud-sun" size={32} color="#fff" />
                         </LinearGradient>
                     </View>
@@ -1052,19 +1063,19 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
 
                     <View style={styles.featureListContainer}>
                         <View style={styles.featureRow}>
-                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
+                            <View style={[styles.featureIconBox, { backgroundColor: COLORS.gold + '26' }]}>
                                 <FontAwesome5 name="clock" size={14} color={COLORS.gold} />
                             </View>
                             <Text style={styles.featureText}>مؤقت ذكي لتجديد واقي الشمس</Text>
                         </View>
                         <View style={styles.featureRow}>
-                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                            <View style={[styles.featureIconBox, { backgroundColor: COLORS.danger + '26' }]}>
                                 <FontAwesome5 name="sun" size={14} color={COLORS.danger} />
                             </View>
                             <Text style={styles.featureText}>تحذيرات فورية من الأشعة UV</Text>
                         </View>
                         <View style={styles.featureRow}>
-                            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                            <View style={[styles.featureIconBox, { backgroundColor: (COLORS.info || COLORS.accentGreen) + '26' }]}>
                                 <FontAwesome5 name="wind" size={14} color={COLORS.blue} />
                             </View>
                             <Text style={styles.featureText}>تحليل التلوث وجودة الهواء</Text>
@@ -1072,17 +1083,17 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                     </View>
 
                     <View style={styles.modalActions}>
-                        <TouchableOpacity 
-                            onPress={onClose} 
-                            style={styles.btnSecondary} 
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={styles.btnSecondary}
                             activeOpacity={0.7}
                             delayPressIn={0} // <--- FIX: Removes tap delay
                         >
                             <Text style={styles.btnSecondaryText}>لاحقا</Text>
                         </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                            onPress={handleGrantPermission} 
+
+                        <TouchableOpacity
+                            onPress={handleGrantPermission}
                             style={styles.btnPrimary}
                             activeOpacity={0.8}
                             delayPressIn={0} // <--- FIX: Removes tap delay
@@ -1098,40 +1109,42 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
 
 
 export const NightPrepCard = ({ data, onPress }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     if (!data) return null;
 
     return (
         <StaggeredItem index={1} animated={true}>
             <PressableScale onPress={onPress}>
                 <View style={styles.nightPrepContainer}>
-                    <LinearGradient 
-                        colors={['#1e1b4b', '#312e81']} 
-                        start={{x:0, y:0}} end={{x:1, y:1}} 
-                        style={StyleSheet.absoluteFill} 
+                    <LinearGradient
+                        colors={['#1e1b4b', '#312e81']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
                     />
-                    
+
                     {/* Moon Glow Effect */}
                     <View style={styles.moonGlow} />
-                    
+
                     <View style={styles.nightPrepContent}>
                         <View style={styles.nightHeader}>
-                            <View style={[styles.iconBox, {backgroundColor: data.color + '30'}]}>
+                            <View style={[styles.iconBox, { backgroundColor: data.color + '30' }]}>
                                 <FontAwesome5 name={data.icon} size={16} color={data.color} />
                             </View>
                             <Text style={styles.nightTag}>خطة الليلة لطقس الغد</Text>
                         </View>
-                        
+
                         <Text style={styles.nightTitle}>{data.title}</Text>
                         <Text style={styles.nightBody}>
-                            {data.reason} <Text style={{fontFamily: 'Tajawal-Bold', color: '#fff'}}>{data.action}</Text>
+                            {data.reason} <Text style={{ fontFamily: 'Tajawal-Bold', color: '#fff' }}>{data.action}</Text>
                         </Text>
-                        
+
                         <View style={styles.nightActionRow}>
                             <Text style={styles.nightBtnText}>إضافة للروتين المسائي</Text>
                             <Feather name="plus-circle" size={16} color="#c7d2fe" />
                         </View>
                     </View>
-                    
+
                     <FontAwesome5 name="moon" size={80} color="#ffffff10" style={styles.bgMoon} />
                 </View>
             </PressableScale>
@@ -1141,8 +1154,10 @@ export const NightPrepCard = ({ data, onPress }) => {
 
 // 2. INTERACTIVE EXPOSURE SLIDER (The Context Switcher)
 export const ExposureSlider = ({ value, onChange }) => {
+    const { colors: COLORS } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     // Value: 0 (Indoors), 1 (Commute), 2 (Outdoors)
-    
+
     // We use the prop 'value' to drive the animation, not internal state
     const widthAnim = useRef(new Animated.Value(value)).current;
 
@@ -1168,15 +1183,15 @@ export const ExposureSlider = ({ value, onChange }) => {
 
     return (
         <View style={styles.sliderContainer}>
-            <View style={{flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 5}}>
+            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 5 }}>
                 <Text style={styles.sliderTitle}>طبيعة يومك:</Text>
-                <View style={{backgroundColor: 'rgba(90, 156, 132, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6}}>
-                    <Text style={{color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Regular'}}>
+                <View style={{ backgroundColor: COLORS.accentGreen + '1A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Regular' }}>
                         {value === 0 ? 'تنبيهات منخفضة' : value === 2 ? 'تنبيهات قصوى' : 'تنبيهات قياسية'}
                     </Text>
                 </View>
             </View>
-            
+
             <View style={styles.sliderTrack}>
                 {/* 
                    ANIMATED PILL: 
@@ -1190,20 +1205,20 @@ export const ExposureSlider = ({ value, onChange }) => {
                         outputRange: ['1%', '34%', '67%'] // Moves from Right to Left
                     })
                 }]} />
-                
+
                 {options.map((opt, i) => {
                     const isActive = value === i;
                     return (
                         <Pressable key={i} onPress={() => handlePress(i)} style={styles.sliderOption}>
-                            <FontAwesome5 
-                                name={opt.icon} 
-                                size={14} 
-                                color={isActive ? '#1A2D27' : '#B0C4DE'} 
+                            <FontAwesome5
+                                name={opt.icon}
+                                size={14}
+                                color={isActive ? COLORS.textOnAccent : COLORS.textDim}
                             />
                             <Text style={[
-                                styles.sliderText, 
-                                { 
-                                    color: isActive ? '#1A2D27' : '#B0C4DE', 
+                                styles.sliderText,
+                                {
+                                    color: isActive ? COLORS.textOnAccent : COLORS.textDim,
                                     fontFamily: isActive ? 'Tajawal-Bold' : 'Tajawal-Regular'
                                 }
                             ]}>
@@ -1221,16 +1236,16 @@ export const ExposureSlider = ({ value, onChange }) => {
 // ============================================================================
 //                       STYLES (COMPLETE & FIXED)
 // ============================================================================
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     // --- Skeleton ---
     loadingCard: {
         flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 24, padding: 16, marginBottom: 20,
         borderWidth: 1, borderColor: COLORS.border,
     },
     loadingIcon: {
-        width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(90, 156, 132, 0.1)', alignItems: 'center', justifyContent: 'center', marginLeft: 16,
+        width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.accentGreen + '1A', alignItems: 'center', justifyContent: 'center', marginLeft: 16,
     },
-    skeletonLine: { backgroundColor: 'rgba(90, 156, 132, 0.2)', borderRadius: 4 },
+    skeletonLine: { backgroundColor: COLORS.accentGreen + '33', borderRadius: 4 },
 
     // --- Compact Widget (Hero) ---
     widgetContainer: {
@@ -1275,22 +1290,22 @@ const styles = StyleSheet.create({
 
     // --- SPF Timer ---
     spfContainer: {
-        backgroundColor: COLORS.cardSurface,
+        backgroundColor: COLORS.card,
         borderRadius: 26,
         padding: 18,
         flexDirection: 'row-reverse',
         alignItems: 'center',
         marginBottom: 20,
         // No border, just subtle depth
-        
+
     },
-    
+
     // Safe State
     spfSafeBg: {
         backgroundColor: '#064e3b', // Deep green bg
     },
     spfIconCircle: {
-        width: 36, height: 36, borderRadius: 18, 
+        width: 36, height: 36, borderRadius: 18,
         alignItems: 'center', justifyContent: 'center', marginLeft: 12
     },
 
@@ -1300,20 +1315,20 @@ const styles = StyleSheet.create({
         paddingRight: 16, // Space between text and ring
         justifyContent: 'center',
     },
-    
+
     // Typography
-    spfTitle: { 
-        fontFamily: 'Tajawal-ExtraBold', 
-        fontSize: 16, 
-        color: COLORS.textPrimary, 
+    spfTitle: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 16,
+        color: COLORS.textPrimary,
         textAlign: 'right',
         marginBottom: 2
     },
-    spfDesc: { 
-        fontFamily: 'Tajawal-Regular', 
-        fontSize: 13, 
-        color: COLORS.textSecondary, 
-        textAlign: 'right' 
+    spfDesc: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        textAlign: 'right'
     },
     statusLabel: {
         fontFamily: 'Tajawal-Bold',
@@ -1332,7 +1347,7 @@ const styles = StyleSheet.create({
 
     // Ring
     ringWrapper: {
-        width: 80, height: 80, 
+        width: 80, height: 80,
         alignItems: 'center', justifyContent: 'center'
     },
     ringCenter: {
@@ -1371,7 +1386,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#fff'
     },
-    
+
     // Minimal Link Button (Stop)
     linkButton: {
         paddingVertical: 4,
@@ -1388,30 +1403,30 @@ const styles = StyleSheet.create({
     featureCard: {
         width: 120, // Width to fit the 110px Arc comfortably
         height: 125, // Height to fit Header + Arc + Text
-        backgroundColor: COLORS.cardSurface, 
-        borderRadius: 24, 
+        backgroundColor: COLORS.card,
+        borderRadius: 24,
         padding: 10,
-        borderWidth: 1, 
-        borderColor: COLORS.border, 
+        borderWidth: 1,
+        borderColor: COLORS.border,
         justifyContent: 'flex-start',
-        
+
     },
-    featureHeader: { 
+    featureHeader: {
         flexDirection: 'row', // Icon First (Left), Title Last (Right) - due to RTL/row-reverse not being applied here? 
         // NOTE: If your app is RTL forced, use 'row-reverse' or arrange items accordingly.
         // My code snippets above assumed Icon First in code = Visual Left in LTR or Visual Right in RTL depending on container.
         // Let's force alignment:
-        justifyContent: 'space-between', 
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 5,
         paddingHorizontal: 4
     },
-    featureTitle: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 11, 
-        color: COLORS.textSecondary 
+    featureTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+        color: COLORS.textSecondary
     },
-    
+
     // Centered Text inside the Arc
     arcCenterText: {
         position: 'absolute',
@@ -1441,11 +1456,11 @@ const styles = StyleSheet.create({
 
     // --- Timeline ---
     timelineContainer: {
-        backgroundColor: COLORS.cardSurface, 
-        borderRadius: 24, 
+        backgroundColor: COLORS.card,
+        borderRadius: 24,
         paddingVertical: 20,
-        borderWidth: 1, 
-        borderColor: COLORS.border, 
+        borderWidth: 1,
+        borderColor: COLORS.border,
         marginTop: 10,
         // Make it look slightly deeper
         shadowColor: "#000",
@@ -1454,14 +1469,14 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2
     },
-    timelineScrollContent: { 
-        paddingHorizontal: 20, 
+    timelineScrollContent: {
+        paddingHorizontal: 20,
         flexDirection: 'row-reverse',
         paddingBottom: 5 // Extra padding for shadows
     },
-    timeSlot: { 
-        alignItems: 'center', 
-        width: 60, 
+    timeSlot: {
+        alignItems: 'center',
+        width: 60,
         marginLeft: 8,
         justifyContent: 'flex-end',
         borderRadius: 12,
@@ -1469,40 +1484,40 @@ const styles = StyleSheet.create({
     },
     // Highlighting the current hour
     timeSlotActive: {
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: COLORS.textPrimary + '08',
         borderWidth: 1,
-        borderColor: 'rgba(90, 156, 132, 0.2)',
+        borderColor: COLORS.accentGreen + '33',
     },
     timelinePill: {
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        paddingHorizontal: 6, 
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
         paddingVertical: 3,
-        borderRadius: 8, 
-        borderWidth: 1, 
-        marginBottom: 8, 
-        gap: 4, 
-        minWidth: 45, 
+        borderRadius: 8,
+        borderWidth: 1,
+        marginBottom: 8,
+        gap: 4,
+        minWidth: 45,
         justifyContent: 'center',
     },
-    timelinePillText: { 
-        fontSize: 9, 
-        fontFamily: 'Tajawal-Bold' 
+    timelinePillText: {
+        fontSize: 9,
+        fontFamily: 'Tajawal-Bold'
     },
     barTrack: {
         height: 70, // Increased height for better visualization
-        width: 6, 
+        width: 6,
         backgroundColor: 'rgba(255,255,255,0.03)',
-        borderRadius: 3, 
-        justifyContent: 'flex-end', 
+        borderRadius: 3,
+        justifyContent: 'flex-end',
         overflow: 'visible', // Changed to visible so icons can float if needed, though we put inside
         alignItems: 'center',
         marginBottom: 8
     },
-    barFill: { 
-        width: '100%', 
+    barFill: {
+        width: '100%',
         borderRadius: 3,
-        minHeight: 4 
+        minHeight: 4
     },
     barWarningIcon: {
         position: 'absolute',
@@ -1516,21 +1531,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.danger
     },
-    timeLabelContainer: { 
-        alignItems: 'center', 
+    timeLabelContainer: {
+        alignItems: 'center',
         height: 32, // Fixed height to align everything
         justifyContent: 'flex-start'
     },
-    timeText: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 13, 
-        color: COLORS.textSecondary 
+    timeText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textSecondary
     },
-    ampmText: { 
-        fontSize: 9, 
-        color: COLORS.textDim, 
-        fontFamily: 'Tajawal-Regular', 
-        marginTop: -2 
+    ampmText: {
+        fontSize: 9,
+        color: COLORS.textDim,
+        fontFamily: 'Tajawal-Regular',
+        marginTop: -2
     },
     nowBadge: {
         backgroundColor: COLORS.accentGreen,
@@ -1546,32 +1561,32 @@ const styles = StyleSheet.create({
     },
     // --- Accessories ---
     accessoryCardWrapper: {
-        flexGrow: 1, 
-        maxWidth: '48%', 
+        flexGrow: 1,
+        maxWidth: '48%',
     },
     accessoryCard: {
-        flexDirection: 'row-reverse', 
-        alignItems: 'center', 
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
         backgroundColor: COLORS.cardSurface,
-        borderRadius: 18, 
-        padding: 12, 
-        borderWidth: 1, 
+        borderRadius: 18,
+        padding: 12,
+        borderWidth: 1,
         borderColor: COLORS.border,
         gap: 10,
         height: 64
     },
-    accessoryIconBox: { 
-        width: 40, 
-        height: 40, 
-        borderRadius: 14, 
-        alignItems: 'center', 
-        justifyContent: 'center' 
+    accessoryIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
-    accessoryText: { 
-        fontFamily: 'Tajawal-Bold', 
-        fontSize: 13, 
-        color: COLORS.textPrimary, 
-        textAlign: 'right' 
+    accessoryText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: COLORS.textPrimary,
+        textAlign: 'right'
     },
     accessorySubText: {
         fontFamily: 'Tajawal-Regular',
@@ -1600,7 +1615,7 @@ const styles = StyleSheet.create({
     },
     headerGradient: { padding: 25, borderRadius: 32, alignItems: 'center' },
     locationTag: {
-        position: 'absolute', top:22, flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
+        position: 'absolute', top: 22, flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
         backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
     },
     locationText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
@@ -1624,13 +1639,13 @@ const styles = StyleSheet.create({
 
     // --- Impact ---
     impactCard: {
-        flexDirection: 'row-reverse', backgroundColor: COLORS.cardSurface, borderRadius: 24,
+        flexDirection: 'row-reverse', backgroundColor: COLORS.card, borderRadius: 24,
         padding: 24, borderWidth: 1, borderColor: COLORS.border,
     },
     impactSide: { flex: 1, gap: 12 },
     impactHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
     impactIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    impactTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary,},
+    impactTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary, },
     impactBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 22, alignSelf: 'center' },
     impactDividerVertical: { width: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20 },
 
@@ -1640,7 +1655,7 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderRightWidth: 4,
     },
     routineHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 14, gap: 12 },
-    stepTag: { backgroundColor: 'rgba(90, 156, 132, 0.1)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+    stepTag: { backgroundColor: COLORS.accentGreen + '1A', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
     stepTagText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.accentGreen },
     routineActionText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
     matchBox: { flexDirection: 'row-reverse', alignItems: 'center', padding: 14, borderRadius: 16 },
@@ -1655,7 +1670,7 @@ const styles = StyleSheet.create({
     },
     moonGlow: {
         position: 'absolute', top: -50, right: -50, width: 150, height: 150,
-        borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)' 
+        borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)'
     },
     nightPrepContent: { flex: 1, justifyContent: 'space-between' },
     nightHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
@@ -1671,16 +1686,16 @@ const styles = StyleSheet.create({
     sliderContainer: { marginBottom: 20, paddingHorizontal: 4 },
     sliderTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
     sliderTrack: {
-        flexDirection: 'row-reverse', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 16, height: 48,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', position: 'relative', justifyContent: 'space-between',
+        flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 16, height: 48,
+        borderWidth: 1, borderColor: COLORS.border, position: 'relative', justifyContent: 'space-between',
     },
     sliderPill: {
-        position: 'absolute', top: 4, bottom: 4, width: '32%', backgroundColor: '#A3E4D7', borderRadius: 12,
+        position: 'absolute', top: 4, bottom: 4, width: '32%', backgroundColor: COLORS.accentGreen, borderRadius: 12,
         shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4, zIndex: 1,
     },
     sliderOption: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 10, height: '100%' },
     sliderText: { fontSize: 11, paddingBottom: 2 },
-    
+
     // --- Modal ---
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.8)' },
@@ -1693,24 +1708,24 @@ const styles = StyleSheet.create({
     modalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, marginBottom: 8, textAlign: 'center' },
     modalBody: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
     featureListContainer: { width: '100%', marginBottom: 25, gap: 12 },
-    featureRow: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 12, gap: 12 },
+    featureRow: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.background, padding: 10, borderRadius: 12, gap: 12 },
     featureIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     featureText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
     modalActions: { flexDirection: 'row-reverse', width: '100%', gap: 12 },
-    btnPrimary: { flex: 1, backgroundColor: COLORS.accentGreen, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowOffset: {width: 0, height: 4}, elevation: 4 },
+    btnPrimary: { flex: 1, backgroundColor: COLORS.accentGreen, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
     btnPrimaryText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#ffffff', marginBottom: 2 },
     btnSecondary: { flex: 0.4, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
     btnSecondaryText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textDim, marginBottom: 2 },
 
     // --- Clean Routine Styles (New) ---
     cleanListContainer: {
-        backgroundColor: COLORS.cardSurface,
+        backgroundColor: COLORS.card,
         borderRadius: 20,
         paddingVertical: 8,
         paddingHorizontal: 16,
         // No heavy border, just subtle containment
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: COLORS.border,
     },
     cleanRowContainer: {
         flexDirection: 'row-reverse',

@@ -1,11 +1,12 @@
 // src/components/oilguard/VerifiedDetailModal.js
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-    View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet, 
-    Dimensions, Linking, Animated, Easing, Pressable, Image 
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+    View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet,
+    Dimensions, Linking, Animated, Easing, Pressable, Image
 } from 'react-native';
-import { FontAwesome5, MaterialIcons, Ionicons, CommunityIcons } from '@expo/vector-icons';
-import { COLORS } from './oilguard.styles';
+import { FontAwesome5, MaterialIcons, Ionicons, MaterialCommunityIcons as CommunityIcons } from '@expo/vector-icons';
+import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
+import { useTheme } from '../../context/ThemeContext';
 import FullImageViewer from '../common/FullImageViewer';
 
 const { height, width } = Dimensions.get('window');
@@ -14,6 +15,10 @@ const { height, width } = Dimensions.get('window');
 // SUB-COMPONENT: Marketing Claim Row (Accordion)
 // ==========================================
 const ClaimRow = ({ result, index, isLast }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const s = useMemo(() => createStyles(COLORS), [COLORS]);
+
     const [expanded, setExpanded] = useState(false);
     const animController = useRef(new Animated.Value(0)).current;
     const [contentHeight, setContentHeight] = useState(0);
@@ -24,22 +29,22 @@ const ClaimRow = ({ result, index, isLast }) => {
     };
 
     const getStatusConfig = (statusRaw) => {
-        const s = statusRaw ? statusRaw.toString() : '';
-        
+        const str = statusRaw ? statusRaw.toString() : '';
+
         // BLUE: Significant (بنسبة معتبرة)
-        if (s.includes('معتبرة')) {
+        if (str.includes('معتبرة')) {
             return { color: '#4D96FF', icon: 'check-double', bg: 'rgba(77, 150, 255, 0.1)', label: 'قوي وفعال', bars: 3 };
         }
         // GREEN: Moderate (بنسبة متوسطة)
-        if (s.includes('متوسطة') || s.includes('✅') || s.includes('🌿')) {
-            return { color: COLORS.accentGreen, icon: 'check', bg: 'rgba(90, 156, 132, 0.1)', label: 'فعالية جيدة', bars: 2 };
+        if (str.includes('متوسطة') || str.includes('✅') || str.includes('🌿')) {
+            return { color: COLORS.accentGreen, icon: 'check', bg: COLORS.accentGreen + '1A', label: 'فعالية جيدة', bars: 2 };
         }
         // YELLOW: Low (منخفض)
-        if (s.includes('منخفض') || s.includes('⚠️')) {
+        if (str.includes('منخفض') || str.includes('⚠️')) {
             return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)', label: 'تأثير هامشي', bars: 1 };
         }
         // RED: Deception
-        if (s.includes('❌') || s.includes('كذب') || s.includes('🚫')) {
+        if (str.includes('❌') || str.includes('كذب') || str.includes('🚫')) {
             return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)', label: 'غير موجود', bars: 0 };
         }
         return { color: COLORS.textDim, icon: 'info-circle', bg: 'rgba(255, 255, 255, 0.05)', label: 'تحليل جاري', bars: 0 };
@@ -53,16 +58,16 @@ const ClaimRow = ({ result, index, isLast }) => {
     const toggle = () => {
         const targetValue = expanded ? 0 : 1;
         setExpanded(!expanded);
-        Animated.timing(animController, { 
-            toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false 
+        Animated.timing(animController, {
+            toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false
         }).start();
     };
 
     const rotateArrow = animController.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
-    const heightInterpolate = animController.interpolate({ 
-        inputRange: [0, 1], 
-        outputRange: [0, contentHeight || 180], 
-        extrapolate: 'clamp' 
+    const heightInterpolate = animController.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, contentHeight || 180],
+        extrapolate: 'clamp'
     });
 
     return (
@@ -120,8 +125,12 @@ const ClaimRow = ({ result, index, isLast }) => {
 // MAIN COMPONENT
 // ==========================================
 export const VerifiedDetailModal = ({ visible, onClose, item }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const s = useMemo(() => createStyles(COLORS), [COLORS]);
+
     const [isViewerVisible, setIsViewerVisible] = useState(false);
-    
+
     // Ingredients Collapse Logic
     const [ingExpanded, setIngExpanded] = useState(false);
     const ingAnim = useRef(new Animated.Value(0)).current;
@@ -166,12 +175,12 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                     <View style={s.dragHandle} />
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
-                        
+
                         {/* 1. HERO HEADER */}
                         <View style={s.heroCard}>
                             <TouchableOpacity style={s.imageBox} onPress={() => item.image && setIsViewerVisible(true)} activeOpacity={0.9}>
-                                {item.image ? <Image source={{ uri: item.image }} style={s.productImg} resizeMode="contain" /> 
-                                : <View style={s.placeholderImg}><FontAwesome5 name="box" size={30} color={COLORS.textDim} /></View>}
+                                {item.image ? <Image source={{ uri: item.image }} style={s.productImg} resizeMode="contain" />
+                                    : <View style={s.placeholderImg}><FontAwesome5 name="box" size={30} color={COLORS.textDim} /></View>}
                                 <View style={s.zoomIcon}><Ionicons name="expand" size={14} color="#000" /></View>
                             </TouchableOpacity>
                             <View style={s.heroTextContainer}>
@@ -179,11 +188,11 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                 <Text style={s.productNameLarge}>{item.name}</Text>
                                 <View style={s.mainBadgeRow}>
                                     <View style={[s.premiumScoreBadge, { backgroundColor: getScoreColor(item.real_score) }]}>
-                                        <Text style={s.premiumScoreText}>{item.real_score}% موثوق</Text>
+                                        <Text style={s.premiumScoreText}>{item.real_score}%</Text>
                                     </View>
                                     <View style={s.verifiedIndicator}>
                                         <MaterialIcons name="verified-user" size={14} color={COLORS.success} />
-                                        <Text style={s.verifiedIndicatorText}>تحليل مخبري</Text>
+                                        <Text style={s.verifiedIndicatorText}>درجة وثيق</Text>
                                     </View>
                                 </View>
                             </View>
@@ -259,7 +268,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                     <Text style={s.sectionTitle}>قائمة المكونات</Text>
                                     <Text style={s.ingCountLabel}>{item.ingredients?.length || 0} مكون تم تحليله</Text>
                                 </View>
-                                <View style={[s.statIconCircle, { marginBottom: 0, backgroundColor: 'rgba(90, 156, 132, 0.1)' }]}>
+                                <View style={[s.statIconCircle, { marginBottom: 0, backgroundColor: COLORS.accentGreen + '1A' }]}>
                                     <FontAwesome5 name="dna" size={14} color={COLORS.accentGreen} />
                                 </View>
                             </TouchableOpacity>
@@ -307,7 +316,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
     );
 };
 
-const s = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
     sheet: { backgroundColor: COLORS.background, height: height * 0.9, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderWidth: 1, borderColor: COLORS.border },
     dragHandle: { width: 45, height: 5, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', borderRadius: 10, marginVertical: 18 },
@@ -325,7 +334,7 @@ const s = StyleSheet.create({
     premiumScoreBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
     premiumScoreText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#fff' },
     verifiedIndicator: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    verifiedIndicatorText: { fontFamily: 'Tajawal-Medium', fontSize: 11, color: COLORS.textDim },
+    verifiedIndicatorText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textDim },
 
     // Stats Grid
     statsGrid: { flexDirection: 'row-reverse', gap: 15, marginBottom: 25 },
@@ -338,9 +347,9 @@ const s = StyleSheet.create({
 
     // Compatibility (Restored Style)
     compatibilityList: { gap: 10, marginTop: 10 },
-    reasonRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: 'rgba(90, 156, 132, 0.05)', padding: 14, borderRadius: 16 },
-    reasonIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(90, 156, 132, 0.1)', justifyContent: 'center', alignItems: 'center' },
-    reasonText: { fontFamily: 'Tajawal-Medium', color: COLORS.textSecondary, fontSize: 14, textAlign: 'right', flex: 1, lineHeight: 20 },
+    reasonRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: COLORS.accentGreen + '0D', padding: 14, borderRadius: 16 },
+    reasonIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.accentGreen + '1A', justifyContent: 'center', alignItems: 'center' },
+    reasonText: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, textAlign: 'right', flex: 1, lineHeight: 20 },
 
     // Sections General
     sectionCard: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 28, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: COLORS.border },
@@ -388,10 +397,10 @@ const s = StyleSheet.create({
     // Ingredients Grid
     ingGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 10 },
     ingTag: { backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 14 },
-    ingTagText: { fontFamily: 'Tajawal-Medium', color: COLORS.textSecondary, fontSize: 12 },
+    ingTagText: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 12 },
 
     // Footer
     stickyFooter: { position: 'absolute', bottom: 0, width: '100%', padding: 25, backgroundColor: COLORS.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
     primaryBtn: { backgroundColor: COLORS.accentGreen, height: 60, borderRadius: 20, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 15, elevation: 5 },
-    primaryBtnText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.background, fontSize: 16 }
+    primaryBtnText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.textOnAccent, fontSize: 16 }
 });

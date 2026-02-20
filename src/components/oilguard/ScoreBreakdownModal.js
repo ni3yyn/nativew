@@ -1,50 +1,35 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, Pressable, Animated, Dimensions, Easing, PanResponder, TouchableOpacity } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../context/ThemeContext';
+import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 
 const { height } = Dimensions.get('window');
 
-// --- SHARED COLORS (Matching InsightDetailsModal) ---
-const COLORS = {
-    background: '#1A2D27',
-  card: '#253D34',
-  border: 'rgba(90, 156, 132, 0.25)',
-  textDim: '#6B7C76',
-  accentGreen: '#5A9C84',
-  accentGlow: 'rgba(90, 156, 132, 0.4)',
-  primary: '#A3E4D7',
-  textPrimary: '#F1F3F2',
-  textSecondary: '#A3B1AC',
-  textOnAccent: '#1A2D27',
-
-    success: '#2ea043',
-    danger: '#da3633',
-    warning: '#d29922',
-    info: '#58a6ff',
-    blue: '#3b82f6'
-};
-
 // --- HELPER: ITEM STYLING ---
-const getItemStyle = (type) => {
+const getItemStyle = (type, COLORS) => {
     switch (type) {
         case 'deduction':
-            return { color: COLORS.danger, bg: 'rgba(218, 54, 51, 0.1)', icon: 'minus-circle-outline' };
+            return { color: COLORS.danger, bg: COLORS.danger + '1A', icon: 'minus-circle-outline' };
         case 'warning':
-            return { color: COLORS.warning, bg: 'rgba(210, 153, 34, 0.1)', icon: 'alert-outline' };
+            return { color: COLORS.warning, bg: COLORS.warning + '1A', icon: 'alert-outline' };
         case 'info':
         case 'bonus':
-            return { color: COLORS.success, bg: 'rgba(46, 160, 67, 0.1)', icon: 'plus-circle-outline' };
+            return { color: COLORS.success, bg: COLORS.success + '1A', icon: 'plus-circle-outline' };
         case 'override':
-            return { color: COLORS.danger, bg: 'rgba(218, 54, 51, 0.15)', icon: 'shield-alert-outline', border: true };
+            return { color: COLORS.danger, bg: COLORS.danger + '26', icon: 'shield-alert-outline', border: true };
         case 'calculation':
-            return { color: COLORS.textSecondary, bg: 'rgba(139, 148, 158, 0.1)', icon: 'calculator' };
+            return { color: COLORS.textSecondary, bg: COLORS.textSecondary + '1A', icon: 'calculator' };
         default:
-            return { color: COLORS.info, bg: 'rgba(88, 166, 255, 0.1)', icon: 'information-outline' };
+            return { color: COLORS.info, bg: COLORS.info + '1A', icon: 'information-outline' };
     }
 };
 
 const ScoreBreakdownModal = ({ visible, onClose, data }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const animController = useRef(new Animated.Value(0)).current;
 
     // --- Gesture Handler (Same Physics as InsightDetails) ---
@@ -84,8 +69,8 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
 
     return (
         <Modal transparent visible={visible} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-        <View style={{ flex: 1 }} pointerEvents="box-none">
-                
+            <View style={{ flex: 1 }} pointerEvents="box-none">
+
                 {/* Backdrop */}
                 <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
@@ -94,14 +79,14 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                 {/* Bottom Sheet */}
                 <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                     <View style={styles.sheetContent}>
-                        
+
                         {/* Drag Handle */}
                         <View style={styles.sheetHandleBar} {...panResponder.panHandlers}>
                             <View style={styles.sheetHandle} />
                         </View>
 
                         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                            
+
                             {/* Header */}
                             <View style={styles.headerRow}>
                                 <View style={{ flex: 1 }}>
@@ -120,14 +105,14 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                                 // Filter out calculation steps if needed, or keep for transparency
                                 if (item.type === 'calculation' && !item.text.includes('النهائي')) return null;
 
-                                const style = getItemStyle(item.type);
-                                
+                                const style = getItemStyle(item.type, COLORS);
+
                                 return (
                                     <View key={index} style={[
-                                        styles.itemRow, 
+                                        styles.itemRow,
                                         style.border && { borderColor: style.color, borderWidth: 1, backgroundColor: 'transparent' }
                                     ]}>
-                                        
+
                                         {/* Value (Left) */}
                                         <View style={styles.valueCol}>
                                             <Text style={[styles.itemValue, { color: style.color }]}>{item.value}</Text>
@@ -158,8 +143,8 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                             </View>
 
                             {/* Close Button */}
-                            <TouchableOpacity 
-                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleClose(); }} 
+                            <TouchableOpacity
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleClose(); }}
                                 style={styles.closeButton}
                                 activeOpacity={0.9}
                             >
@@ -174,7 +159,7 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
     // --- Layout ---
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1 },
     sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%', zIndex: 2 },
@@ -186,20 +171,20 @@ const styles = StyleSheet.create({
 
     // --- Header ---
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.cardSurface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
     title: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 4 },
     subtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'right' },
 
     // --- Rows ---
-    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardSurface, padding: 12, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },
-    
+    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 12, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },
+
     // Icon (Right side in RTL)
     iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 12 },
-    
+
     // Text (Middle)
     textCol: { flex: 1 },
     itemText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, textAlign: 'right', lineHeight: 20 },
-    
+
     // Value (Left side in RTL)
     valueCol: { minWidth: 50, alignItems: 'flex-start', paddingRight: 8, borderRightWidth: 1, borderRightColor: COLORS.border + '40' },
     itemValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 14 },
