@@ -1067,7 +1067,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 50,
+        zIndex: 51,
         justifyContent: 'flex-end',
         paddingBottom: 15,
     },
