@@ -28,60 +28,53 @@ export const THEMES = {
       }
     }
   },
-  babyPink: {
-    id: 'babyPink',
-    name: 'Baby Pink',
+  baby_pink: {
+    id: 'baby_pink',
+    label: 'وردي لطيف (Kawaii)',
     colors: {
-      background: '#FFF0F5', // Lavender Blush
-      card: '#FFE4E1',      // Misty Rose
-      border: 'rgba(255, 182, 193, 0.5)',
-      accentGreen: '#FF69B4', // Hot Pink equivalent of accent
-      accentGlow: 'rgba(255, 105, 180, 0.4)',
-      primary: '#FFB6C1',     // Light Pink
-      textPrimary: '#4A2C36', // Dark Brownish/Red for contrast
-      textSecondary: '#8B5A65',
-      textOnAccent: '#FFFFFF',
-      success: '#4ADE80',
-      danger: '#EF4444', 
-      warning: '#F59E0B',
-      info: '#3B82F6',
-      gold: '#F59E0B',
-      blue: '#3B82F6',
-      purple: '#8B5CF6',
-      textDim: '#9CA3AF',
-      inputBg: 'rgba(255,255,255,0.5)',
-      statusBar: 'dark',
-      gradients: {
-          primary: ['#FFF0F5', '#FFE4E1']
-      }
+        background: '#FFF5F8', // Very soft, clean strawberry milk background
+        card: '#FFFFFF', // Pure white cards for modern crispness
+        border: '#FDE2E8', // Soft pastel pink border
+        textDim: '#CDBECA', // Muted mauve for subtle elements
+        accentGreen: '#FF7DA5', // Vibrant, cute pastel pink (Main Accent)
+        accentGlow: 'rgba(255, 125, 165, 0.3)',
+        primary: '#FFD6E0', // Lighter complementary pink for highlights
+        textPrimary: '#4A353B', // Deep cocoa brown (softer & cuter than black)
+        textSecondary: '#9A7D84', // Dusty rose-brown for secondary text
+        textOnAccent: '#FFFFFF',
+        danger: '#FF4B4B', // Bright, punchy red
+        warning: '#FFB042', // Cute sunny orange
+        info: '#5AC8FA', // Soft sky blue
+        success: '#34C759', // Clean apple green
+        gold: '#FFD60A', // Vibrant gold
+        blue: '#5AC8FA',
+        purple: '#C084FC', // Pastel purple
+        inputBg: 'rgba(255, 125, 165, 0.06)' // Very subtle pink tint for inputs
     }
-  },
-  clinical: {
-    id: 'clinical',
-    name: 'Clinical White/Blue',
+},
+clinical_blue: {
+    id: 'clinical_blue',
+    label: 'طبي حديث (أزرق)',
     colors: {
-      background: '#FFFFFF',
-      card: '#F0F9FF',      // Alice Blue
-      border: 'rgba(59, 130, 246, 0.2)',
-      accentGreen: '#3B82F6', // Blue
-      accentGlow: 'rgba(59, 130, 246, 0.3)',
-      primary: '#60A5FA',
-      textPrimary: '#1E293B', // Slate 800
-      textSecondary: '#64748B', // Slate 500
-      textOnAccent: '#FFFFFF',
-      success: '#10B981',
-      danger: '#EF4444',
-      warning: '#F59E0B',
-      info: '#3B82F6',
-      gold: '#F59E0B',
-      blue: '#2563EB',
-      purple: '#7C3AED',
-      textDim: '#94A3B8',
-      inputBg: '#F1F5F9',
-      statusBar: 'dark',
-      gradients: {
-          primary: ['#FFFFFF', '#F0F9FF']
-      }
+        background: '#F4F7FB', // Sleek, modern tech-slate background
+        card: '#FFFFFF', // Pure white cards for a clinical, clean look
+        border: 'rgba(59, 130, 246, 0.15)', // Glassy, subtle blue border
+        textDim: '#94A3B8', // Tailwind Slate-400
+        accentGreen: '#2563EB', // Trustworthy, sharp medical blue (Main Accent)
+        accentGlow: 'rgba(37, 99, 235, 0.25)',
+        primary: '#DBEAFE', // Very light ice-blue for highlights
+        textPrimary: '#0F172A', // Dark sleek slate for high contrast reading
+        textSecondary: '#475569', // Medium slate
+        textOnAccent: '#FFFFFF',
+        danger: '#EF4444', 
+        warning: '#F59E0B',
+        info: '#06B6D4', // Medical cyan
+        success: '#10B981', // Clinical mint/emerald green
+        gold: '#F59E0B',
+        blue: '#2563EB',
+        purple: '#8B5CF6',
+        inputBg: 'rgba(37, 99, 235, 0.04)' // Nearly invisible icy input background
     }
+
   }
 };

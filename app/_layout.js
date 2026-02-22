@@ -7,7 +7,6 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
@@ -332,12 +331,15 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 // 8. INNER LOGIC COMPONENT (The Brain)
 // ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
-  // 1. ADD 'loading' to the destructuring here:
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts, loading } = useAppContext();
 
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showAppIntro, setShowAppIntro] = useState(false);
+  
+  // ➤ THE LOCK: Prevents infinite scheduling loops
+  const notificationScheduleLock = useRef(false);
+
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
@@ -423,16 +425,13 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   };
 
   // =========================================================
-  // ➤ NEW: THE WATCHER (Redirects Instantly on Repair)
+  // ➤ THE WATCHER (Redirects Instantly on Repair)
   // =========================================================
   useEffect(() => {
-    // 1. If we are still loading, do nothing
     if (loading) return;
 
     if (user && userProfile) {
-      // 2. If the user exists but onboarding is FALSE (because we just repaired it)
       if (userProfile.onboardingComplete === false) {
-        // 3. Force them to the Welcome screen immediately
         router.replace({
           pathname: '/(onboarding)/welcome',
           params: { reason: 'repair' }
@@ -442,73 +441,18 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   }, [user, userProfile, loading]);
 
   // =========================================================
-  // ➤ UPDATED: NOTIFICATION LOGIC (With Channel Restoration)
+  // ➤ UPDATED: NOTIFICATION DEBOUNCE & LOCK LOGIC
   // =========================================================
   useEffect(() => {
     if (!fontsLoaded) return;
 
-    const checkPermissionAndSchedule = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-
-      if (status !== 'granted') {
-        const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
-        if (hasSkipped !== 'true') {
-          setShowNotificationModal(true);
-        }
-      } else {
-        if (user && userProfile) {
-          // ➤ SAFETY CHECK: Only proceed if onboarding is done
-          if (!userProfile.onboardingComplete) return;
-
-          try {
-            // =========================================================================
-            // ➤ 1. EXPLICITLY CREATE THE CHANNEL (The Fix for Disappearing Category)
-            // =========================================================================
-            if (Platform.OS === 'android') {
-              await Notifications.setNotificationChannelAsync('oilguard-smart', {
-                name: 'Smart Skincare Reminders',
-                importance: Notifications.AndroidImportance.MAX,
-                vibrationPattern: [0, 250, 250, 250],
-                lightColor: '#5A9C84',
-              });
-              console.log("🔔 [Layout] 'oilguard-smart' channel created/verified.");
-            }
-
-            // =========================================================================
-            // ➤ 2. SCHEDULE THE AUTHENTIC MESSAGES
-            // =========================================================================
-            const name = userProfile.settings?.name || 'غالية';
-            const settings = userProfile.settings || {};
-            const products = savedProducts || [];
-
-            if (scheduleAuthenticNotifications) {
-              await scheduleAuthenticNotifications(name, products, settings);
-              console.log("📅 [Layout] Smart notifications scheduled.");
-            }
-          } catch (e) {
-            console.log("Error scheduling local notifications:", e);
-          }
-        }
-      }
-    };
-
+    // 1. Navigation setup for incoming notifications
     const handleNotificationNavigation = (response) => {
       const data = response.notification.request.content.data;
-      console.log("🔔 Notification Data Received:", data);
-
       setTimeout(() => {
-        if (data?.screen === 'oilguard') {
-          router.push('/oilguard');
-        }
-        else if (data?.screen === 'routine') {
-          router.push('/profile');
-        }
-        else if (data?.postId || (data?.screen === 'PostDetails' && data?.postId)) {
-          router.push({
-            pathname: "/community",
-            params: { openPostId: data.postId }
-          });
-        }
+        if (data?.screen === 'oilguard') router.push('/oilguard');
+        else if (data?.screen === 'routine') router.push('/profile');
+        else if (data?.postId) router.push({ pathname: "/community", params: { openPostId: data.postId } });
       }, 800);
     };
 
@@ -520,13 +464,66 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       }
     };
 
-    checkPermissionAndSchedule();
     checkInitialNotification();
-
     const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationNavigation);
 
-    return () => subscription.remove();
-  }, [user, userProfile, savedProducts, fontsLoaded]);
+    // 2. STOP if data isn't fully ready yet, or if already locked
+    if (loading || !user || !userProfile || !userProfile.onboardingComplete) {
+      return () => subscription.remove();
+    }
+    
+    if (notificationScheduleLock.current) {
+      return () => subscription.remove();
+    }
+
+    // 3. THE DEBOUNCE TIMER (Wait 2.5 seconds for Firebase to settle)
+    const timer = setTimeout(async () => {
+      // Check lock one more time just in case of race condition
+      if (notificationScheduleLock.current) return;
+      
+      // 🔒 LOCK IMMEDIATELY: Prevents any re-renders from triggering this again
+      notificationScheduleLock.current = true;
+
+      const { status } = await Notifications.getPermissionsAsync();
+
+      if (status !== 'granted') {
+        const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
+        if (hasSkipped !== 'true') {
+          setShowNotificationModal(true);
+        }
+      } else {
+        try {
+          if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('oilguard-smart', {
+              name: 'Smart Skincare Reminders',
+              importance: Notifications.AndroidImportance.MAX,
+              vibrationPattern: [0, 250, 250, 250],
+              lightColor: '#5A9C84',
+            });
+          }
+
+          const name = userProfile.settings?.name || 'غالية';
+          const settings = userProfile.settings || {};
+          const products = savedProducts || [];
+
+          if (scheduleAuthenticNotifications) {
+            await scheduleAuthenticNotifications(name, products, settings);
+            // This log will now only appear EXACTLY ONCE per app launch!
+            console.log(`📅 [Layout] Notifications Locked & Scheduled! Products: ${products.length}`);
+          }
+        } catch (e) {
+          console.log("Error scheduling local notifications:", e);
+        }
+      }
+    }, 2500); // 2.5 seconds delay
+
+    // Cleanup: If data changes within 2.5s, it clears the old timer and starts a new one
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+
+  }, [user, userProfile, savedProducts, fontsLoaded, loading]);
 
   const handleEnableNotifications = async () => {
     setShowNotificationModal(false);
@@ -554,7 +551,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   }
 
   return (
-    // ADD THIS WRAPPER: It provides a stable, colored "floor" for all screens
     <View style={{ flex: 1, backgroundColor: '#1A2D27' }}>
       <StatusBar style="light" translucent={true} />
 
@@ -575,7 +571,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
       <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} />
 
-      {/* The Stack now lives inside a flex:1 container */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
       </Stack>

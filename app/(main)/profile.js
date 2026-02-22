@@ -47,7 +47,7 @@ import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
 import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared';
 import { RoutineLogViewer } from '../../src/components/profile/routine/RoutineLogViewer';
 import { NatureDock } from '../../src/components/profile/NatureDock';
-import RealGlass from '../../src/components/common/RealGlass';
+
 
 
 // --- 1. SYSTEM CONFIG ---
@@ -860,7 +860,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
 
     return (
         <View style={{ flex: 1 }}>
-<RealGlass style={{ padding: 15, marginBottom: 20 }} intensity={25}>
+            <ContentCard delay={100} style={{ padding: 15, marginBottom: 20 }}>
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
                         <Text style={styles.statLabel}>إجمالي المنتجات</Text>
@@ -877,7 +877,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
                         <AnimatedCount value={products.filter(p => p.analysisData?.efficacy?.score > 60).length} style={styles.statValue} />
                     </View>
                 </View>
-            </RealGlass>
+            </ContentCard>
 
             {empty ? (
                 <ShelfEmptyState onPress={() => router.push('/oilguard')} />
@@ -3039,48 +3039,6 @@ export default function ProfileScreen() {
     // ========================================================================
     return (
         <View style={styles.container}>
-
-             {/* --- NEW: AURORA BACKGROUND LAYER (The Blobs) ---    */}
-            {/* =================================================== */}
-            <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                {/* Blob 1: Top Left (Deep Base) */}
-                <View style={{
-                    position: 'absolute',
-                    top: -width * 0.2,
-                    left: -width * 0.2,
-                    width: width * 0.9,
-                    height: width * 0.9,
-                    borderRadius: width * 0.45,
-                    backgroundColor: C.blob1 || '#1F4D3E', // Fallback color just in case
-                    opacity: 0.5,
-                    transform: [{ scale: 1.2 }]
-                }} />
-
-                {/* Blob 2: Middle Right (Highlight) */}
-                <View style={{
-                    position: 'absolute',
-                    top: height * 0.25,
-                    right: -width * 0.3,
-                    width: width * 0.7,
-                    height: width * 0.7,
-                    borderRadius: width * 0.35,
-                    backgroundColor: C.blob2 || '#2D5B50',
-                    opacity: 0.4,
-                }} />
-
-                {/* Blob 3: Bottom Left (Depth) */}
-                <View style={{
-                    position: 'absolute',
-                    bottom: -width * 0.2,
-                    left: -width * 0.2,
-                    width: width * 0.8,
-                    height: width * 0.8,
-                    borderRadius: width * 0.4,
-                    backgroundColor: C.blob3 || '#0F221D',
-                    opacity: 0.5,
-                    transform: [{ scaleX: 1.4 }]
-                }} />
-            </View>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             {/* Background Particles */}

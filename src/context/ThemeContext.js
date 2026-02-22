@@ -8,108 +8,72 @@ export const THEMES = {
         id: 'original',
         label: 'أصلي (غابة)',
         colors: {
-            // Background: Deep Jungle Gradient Base
-            background: '#132A24', 
-            
-            // Aurora Blobs (Use these for your background absolute views)
-            blob1: '#1F4D3E', // Deep Emerald
-            blob2: '#2D5B50', // Soft Jungle
-            blob3: '#0F221D', // Darker Depth
-            
-            // Glassmorphism UI (Transparent Dark Glass)
-            card: 'rgba(37, 61, 52, 0.7)', 
-            border: 'rgba(163, 228, 215, 0.1)', // Subtle Mint Rim
-            inputBg: 'rgba(0, 0, 0, 0.3)',
-            
-            // Text & Accents
-            textDim: '#8CA39C',
+            background: '#1A2D27',
+            card: '#253D34',
+            border: 'rgba(90, 156, 132, 0.25)',
+            textDim: '#6B7C76',
             accentGreen: '#5A9C84',
-            accentGlow: 'rgba(90, 156, 132, 0.5)',
+            accentGlow: 'rgba(90, 156, 132, 0.4)',
             primary: '#A3E4D7',
             textPrimary: '#F1F3F2',
-            textSecondary: '#B4C5C0',
+            textSecondary: '#A3B1AC',
             textOnAccent: '#1A2D27',
-            
-            // Status Colors
             danger: '#ef4444',
             warning: '#f59e0b',
             info: '#3b82f6',
             success: '#22c55e',
             gold: '#fbbf24',
             blue: '#3B82F6',
-            purple: '#8B5CF6'
+            purple: '#8B5CF6',
+            inputBg: 'rgba(0,0,0,0.2)'
         }
     },
     baby_pink: {
         id: 'baby_pink',
-        label: 'وردي لطيف (Kawaii)',
+        label: 'وردي بناتي (Macaron Pink)',
         colors: {
-            // Background: Soft Strawberry Milk
-            background: '#FFF0F5', 
-
-            // Aurora Blobs
-            blob1: '#FFDEE9', // Cotton Candy
-            blob2: '#B5FFFC', // Subtle Blue hint (Holo effect)
-            blob3: '#FFC3A0', // Peach
-
-            // Glassmorphism UI (Frosted White Glass)
-            card: 'rgba(255, 255, 255, 0.65)', 
-            border: 'rgba(255, 255, 255, 0.9)', // Strong White Rim
-            inputBg: 'rgba(255, 255, 255, 0.5)',
-
-            // Text & Accents
-            textDim: '#CDBECA',
-            accentGreen: '#FF9EB5', // Soft Pink
-            accentGlow: 'rgba(255, 158, 181, 0.4)',
-            primary: '#FFB7C5',
-            textPrimary: '#5D4037', // Warm Cocoa
-            textSecondary: '#9A7D84',
-            textOnAccent: '#FFFFFF',
-
-            // Status Colors
-            danger: '#FF6B6B',
-            warning: '#FFCC00',
-            info: '#5AC8FA',
-            success: '#69F0AE',
-            gold: '#FFD700',
-            blue: '#5AC8FA',
-            purple: '#E0BBE4'
+            background: '#FFEBF0',       // Soft pastel pink background (NOT white)
+            card: '#FFD9E4',             // Distinct macaron pink for cards and elements
+            border: '#FFB3C6',           // Slightly deeper pink for borders and dividers
+            textDim: '#B38A9A',          // Muted plum for inactive text
+            accentGreen: '#FF6B9E',      // Vibrant but soft rose pink for buttons/icons
+            accentGlow: 'rgba(255, 107, 158, 0.35)', // Gorgeous pink glow
+            primary: '#FFA6C9',          // Medium soft pink
+            textPrimary: '#592B3C',      // Deep rich plum/burgundy (Very readable, very soft)
+            textSecondary: '#8C5C6F',    // Dusty plum for secondary text
+            textOnAccent: '#FFFFFF',     // Crisp white text on the accent buttons
+            danger: '#F47174',
+            warning: '#FDBA74',
+            info: '#7DD3FC',
+            success: '#6EE7B7',
+            gold: '#FBBF24',
+            blue: '#7DD3FC',
+            purple: '#C084FC',
+            inputBg: 'rgba(255, 107, 158, 0.12)' // Pink-tinted text inputs
         }
     },
     clinical_blue: {
         id: 'clinical_blue',
-        label: 'طبي حديث (أزرق)',
+        label: 'أزرق ليلي (Midnight Ocean)',
         colors: {
-            // Background: Sterile Ice
-            background: '#F0F9FF', 
-
-            // Aurora Blobs
-            blob1: '#BAE6FD', // Sky Blue
-            blob2: '#E0F2FE', // Ice White
-            blob3: '#A5F3FC', // Cyan Glow
-
-            // Glassmorphism UI (Clear Ice Glass)
-            card: 'rgba(255, 255, 255, 0.70)', 
-            border: 'rgba(255, 255, 255, 0.8)', // Icy Rim
-            inputBg: 'rgba(224, 242, 254, 0.3)',
-
-            // Text & Accents
-            textDim: '#94A3B8',
-            accentGreen: '#0EA5E9', // Clinical Blue
-            accentGlow: 'rgba(14, 165, 233, 0.3)',
-            primary: '#38BDF8',
-            textPrimary: '#0F172A', // Dark Slate
-            textSecondary: '#475569',
-            textOnAccent: '#FFFFFF',
-
-            // Status Colors
-            danger: '#F43F5E',
-            warning: '#F59E0B',
-            info: '#06B6D4',
-            success: '#10B981',
-            gold: '#F59E0B',
-            blue: '#3B82F6',
-            purple: '#8B5CF6'
+            background: '#0B111A',       // Very deep, dark night-sky blue
+            card: '#151F2E',             // Dark navy slate for cards
+            border: 'rgba(108, 180, 238, 0.15)', // Subtle blue border
+            textDim: '#64748B',          // Dimmed slate
+            accentGreen: '#6CB4EE',      // Soft, relaxing azure/cyan 
+            accentGlow: 'rgba(108, 180, 238, 0.25)',
+            primary: '#BBDDFB',          // Soft pastel blue
+            textPrimary: '#E2E8F0',      // Soft off-white with a cool blue tint
+            textSecondary: '#94A3B8',    // Medium slate grey
+            textOnAccent: '#0B111A',     // Dark text on the blue buttons
+            danger: '#F87171',
+            warning: '#FBBF24',
+            info: '#38BDF8',
+            success: '#34D399',
+            gold: '#FBBF24',
+            blue: '#60A5FA',
+            purple: '#A78BFA',
+            inputBg: 'rgba(0,0,0,0.3)'   // Dark inset for text inputs
         }
     }
 };
