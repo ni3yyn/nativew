@@ -28,5 +28,12 @@ export const CATEGORIES = [
         icon: 'clipboard-list',
         colorKey: 'purple',
         desc: 'اعرضي روتينكِ واحصلي على نصائح.'
+    },
+    {
+        id: 'tips',
+        label: 'نصائح ومعلومات',
+        icon: 'lightbulb',
+        colorKey: 'info',
+        desc: 'معلومات ومنشورات موثوقة من الإدارة.'
     }
 ];

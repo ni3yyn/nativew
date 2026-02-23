@@ -113,7 +113,7 @@ const DurationInput = ({ value, onChangeText, unit, onSelectUnit, COLORS, styles
 
 // --- MAIN COMPONENT ---
 
-const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutines, defaultType }) => {
+const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutines, defaultType, isAdmin }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -279,7 +279,11 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
     // --- SUBMIT LOGIC ---
     const handleSubmit = async () => {
-        if (!content.trim()) { AlertService.error("حقل فارغ", "يرجى كتابة المحتوى."); return; }
+        // Validation: Content is required for ALL types (QA, Tips, Review, etc use it)
+        if (!content.trim()) { 
+            AlertService.error("حقل فارغ", "يرجى كتابة المحتوى."); 
+            return; 
+        }
 
         if (type === 'review') {
             if (!selectedProduct) { AlertService.error("ناقص", "يرجى اختيار المنتج."); return; }
@@ -346,8 +350,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
         const payload = {
             type, content,
-            title: (type === 'qa' && title) ? title : null,
-            rating: type === 'review' ? rating : null,
+            title: (type === 'qa' || type === 'tips') && title ? title.trim() : null,            rating: type === 'review' ? rating : null,
             taggedProduct: selectedProduct ? {
                 id: selectedProduct.id,
                 name: selectedProduct.productName,
@@ -391,7 +394,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 {/* Category Tabs */}
                 <View style={{ height: 50, marginBottom: 15 }}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
-                        {CATEGORIES.map(cat => {
+                        {CATEGORIES.filter(cat => cat.id !== 'tips' || isAdmin).map(cat => {
                             const catColor = COLORS[cat.colorKey] || COLORS.accentGreen;
                             return (
                                 <TouchableOpacity
@@ -410,6 +413,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}>
 
+                        {/* --- QA (Title Input) --- */}
                         {type === 'qa' && (
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>عنوان السؤال</Text>
@@ -443,20 +447,68 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                             </View>
                         )}
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>
-                                {type === 'qa' ? 'تفاصيل السؤال' : type === 'routine_rate' ? 'رأيك / استفسارك عن الروتين' : 'التفاصيل'}
-                            </Text>
-                            <TextInput
-                                style={styles.inputContent}
-                                placeholder={type === 'journey' ? "صف رحلتك والنتائج..." : type === 'routine_rate' ? "مثال: هل ترتيب المنتجات صحيح؟ هل أحتاج سيروم فيتامين سي؟" : "التفاصيل..."}
-                                placeholderTextColor={COLORS.textDim}
-                                multiline
-                                value={content}
-                                onChangeText={setContent}
-                                textAlign="right"
-                            />
-                        </View>
+                        {/* --- SHARED CONTENT INPUT (Hidden for Tips) --- */}
+                        {type !== 'tips' && (
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>
+                                    {type === 'qa' ? 'تفاصيل السؤال' : type === 'routine_rate' ? 'رأيك / استفسارك عن الروتين' : 'التفاصيل'}
+                                </Text>
+                                <TextInput
+                                    style={styles.inputContent}
+                                    placeholder={type === 'journey' ? "صف رحلتك والنتائج..." : type === 'routine_rate' ? "مثال: هل ترتيب المنتجات صحيح؟ هل أحتاج سيروم فيتامين سي؟" : "التفاصيل..."}
+                                    placeholderTextColor={COLORS.textDim}
+                                    multiline
+                                    value={content}
+                                    onChangeText={setContent}
+                                    textAlign="right"
+                                />
+                            </View>
+                        )}
+
+                        {/* --- TIPS DEDICATED BLOCK (Admin Only) --- */}
+                        {type === 'tips' && (
+    <View>
+        {/* Title Input */}
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>عنوان النصيحة</Text>
+            <TextInput
+                style={styles.inputTitle}
+                placeholder="مثال: خرافات التسويق عن الكولاجين..."
+                placeholderTextColor={COLORS.textDim}
+                value={title}
+                onChangeText={setTitle}
+                textAlign="right"
+            />
+        </View>
+
+        {/* Content Input */}
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>المعلومة / النصيحة</Text>
+            <TextInput
+                style={styles.inputContent}
+                placeholder="اكتب النصيحة العلمية أو المعلومة هنا بالتفصيل..."
+                placeholderTextColor={COLORS.textDim}
+                multiline
+                value={content}
+                onChangeText={setContent}
+                textAlign="right"
+            />
+        </View>
+
+        {/* Image Input */}
+        <View>
+            <Text style={styles.label}>صورة توضيحية (اختياري)</Text>
+            <ImageBox
+                imageUri={images.main}
+                onPress={() => pickImage('main')}
+                onDelete={() => removeImage('main')}
+                label="إرفاق صورة للنصيحة"
+                COLORS={COLORS}
+                styles={styles}
+            />
+        </View>
+    </View>
+)}
 
                         {/* --- JOURNEY --- */}
                         {type === 'journey' && (
@@ -565,7 +617,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                             </View>
                         )}
 
-                        {/* --- QA --- */}
+                        {/* --- QA (Image Input) --- */}
                         {type === 'qa' && (
                             <View>
                                 <Text style={styles.label}>صورة توضيحية (اختياري)</Text>

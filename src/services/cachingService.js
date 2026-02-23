@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+
 
 const POSTS_CACHE_KEY = 'community_posts_cache_v1';
 const PROFILES_CACHE_KEY = 'user_profiles_cache_v1';
@@ -6,6 +8,8 @@ const SAVED_PRODUCTS_CACHE_KEY = 'saved_products_cache_v1';
 const SELF_PROFILE_CACHE_KEY = 'self_profile_cache_v1';
 
 const PROFILE_TTL = 24 * 60 * 60 * 1000; // 24 Hours
+const AUDIO_CACHE_DIR = `${FileSystem.documentDirectory}tips_audio/`;
+
 
 /**
  * Saves posts and timestamp to local storage.
@@ -143,6 +147,59 @@ export const getSelfProfileCache = async () => {
         return JSON.parse(itemString);
     } catch (error) {
         console.error("Error getting self profile cache:", error);
+        return null;
+    }
+};
+
+async function ensureAudioDir() {
+    try {
+        const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
+        if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true });
+        }
+    } catch (error) {
+        console.error("Error creating audio directory:", error);
+    }
+}
+
+// ==========================================
+// AUDIO CACHING LOGIC
+// ==========================================
+
+/**
+ * Checks if a specific post's audio is already downloaded.
+ */
+export const getCachedAudioUri = async (postId) => {
+    try {
+        const fileUri = `${AUDIO_CACHE_DIR}${postId}.mp3`;
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        return fileInfo.exists ? fileUri : null;
+    } catch (e) {
+        return null;
+    }
+};
+
+/**
+ * Saves base64 audio data to a local file.
+ */
+export const saveAudioCache = async (postId, base64Data) => {
+    try {
+        await ensureAudioDir();
+        const fileUri = `${AUDIO_CACHE_DIR}${postId}.mp3`;
+        
+        // Remove data URI prefix if present
+        const base64Content = base64Data.includes('base64,') 
+            ? base64Data.split('base64,')[1] 
+            : base64Data;
+            
+        // ✅ Fix: Use the string 'base64' directly to avoid EncodingType undefined issues
+        await FileSystem.writeAsStringAsync(fileUri, base64Content, {
+            encoding: 'base64', 
+        });
+        
+        return fileUri;
+    } catch (error) {
+        console.error("Error saving audio cache:", error);
         return null;
     }
 };

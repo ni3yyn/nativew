@@ -64,6 +64,8 @@ export default function CommunityScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [sortBy, setSortBy] = useState('recent');
+    const ADMIN_UID = "Nlek1lx0lqUKD5zgWqUdcqacleX2";
+    const isAdmin = user?.uid === ADMIN_UID;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -243,6 +245,8 @@ export default function CommunityScreen() {
                     imageUrl: post.image_url || null,
                     createdAt: post.created_at,
                     duration: post.duration || null,
+                    audio_url: post.audio_url || null, 
+
 
                     taggedProduct: !Array.isArray(safeProduct) ? safeProduct : null,
                     journeyProducts: Array.isArray(safeProduct) ? safeProduct : [],
@@ -439,6 +443,8 @@ export default function CommunityScreen() {
         );
     }
 
+    const canCreatePost = selectedCategory?.id !== 'tips' || isAdmin;
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -499,9 +505,9 @@ export default function CommunityScreen() {
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
                             <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? 'لا توجد نتائج تطابق بحثك.' : 'القسم فارغ حاليا.'}</Text>
-                            {(!searchQuery && !isBioFilterActive) && (
+                            {(!searchQuery && !isBioFilterActive && canCreatePost) && (
                                 <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
-                                    <Text style={styles.emptyActionText}>أضف أول مشاركة</Text>
+                                    <Text style={styles.emptyActionText}>كوني أنتِ الأولى</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -521,8 +527,31 @@ export default function CommunityScreen() {
                 </LinearGradient>
             </TouchableOpacity>
 
-            <CreatePostModal visible={isCreateModalVisible} onClose={() => setCreateModalVisible(false)} onSubmit={handleCreateWrapper} savedProducts={savedProducts} userRoutines={userProfile?.routines} defaultType={selectedCategory.id} />
-            <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
+
+            {canCreatePost && (
+        <TouchableOpacity style={styles.fab} onPress={() => setCreateModalVisible(true)} activeOpacity={0.8}>
+            <LinearGradient
+                colors={[COLORS[selectedCategory?.colorKey] || COLORS.accentGreen, COLORS.card]}
+                style={styles.fabGradient}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+                <Feather name="plus" size={24} color={COLORS.textOnAccent} />
+            </LinearGradient>
+        </TouchableOpacity>
+    )}
+
+    {/* Pass isAdmin as a prop to your modal */}
+    <CreatePostModal 
+        visible={isCreateModalVisible} 
+        onClose={() => setCreateModalVisible(false)} 
+        onSubmit={handleCreateWrapper} 
+        savedProducts={savedProducts} 
+        userRoutines={userProfile?.routines} 
+        defaultType={selectedCategory?.id}
+        isAdmin={isAdmin} // ✅ ADDED THIS
+    />
+   
+    <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
             <CommentModal
                 visible={!!commentingPost}
                 onClose={() => {
