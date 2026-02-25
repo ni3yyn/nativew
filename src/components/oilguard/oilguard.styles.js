@@ -1072,6 +1072,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderColor: COLORS.textPrimary + '26',
     marginBottom: 20,
     position: 'relative',
+    backgroundColor: 'transparent'
   },
   dashboardGlass: {
     padding: 20,

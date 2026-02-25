@@ -47,8 +47,7 @@ import { AnalysisSection } from '../../src/components/profile/AnalysisSection';
 import { PressableScale, ContentCard, StaggeredItem } from '../../src/components/profile/analysis/AnalysisShared';
 import { RoutineLogViewer } from '../../src/components/profile/routine/RoutineLogViewer';
 import { NatureDock } from '../../src/components/profile/NatureDock';
-
-
+import PremiumShareButton from '../../src/components/oilguard/ShareComponent';
 
 // --- 1. SYSTEM CONFIG ---
 
@@ -526,20 +525,19 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
 
 
 // 3. The new sophisticated Bottom Sheet for product details
-const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
+const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const { user, savedProducts, setSavedProducts } = useAppContext(); // Get context to update list
     const animController = useRef(new Animated.Value(0)).current;
 
     // -- Editing State --
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const { user, savedProducts, setSavedProducts } = useAppContext();
 
     useEffect(() => {
         if (isVisible) {
-            // Reset edit state when opening a product
             if (product) setEditedName(product.productName);
             setIsEditing(false);
 
@@ -564,44 +562,53 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
         });
     };
 
-    // -- Renaming Logic --
+    // -- Renaming Logic (Existing) --
     const handleSaveName = async () => {
-        if (!editedName.trim()) {
-            AlertService.show({ title: 'تنبيه', message: 'لا يمكن ترك الاسم فارغاً', type: 'warning' });
-            return;
-        }
-
-        if (editedName.trim() === product.productName) {
-            setIsEditing(false);
-            return;
-        }
+        if (!editedName.trim()) return;
+        if (editedName.trim() === product.productName) { setIsEditing(false); return; }
 
         setIsSaving(true);
         try {
-            // 1. Update Firebase
             const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
             await updateDoc(productRef, { productName: editedName.trim() });
-
-            // 2. Update Local State (Global Context)
-            const updatedList = savedProducts.map(p =>
+            
+            // Update Context locally to avoid refresh
+            const updatedList = savedProducts.map(p => 
                 p.id === product.id ? { ...p, productName: editedName.trim() } : p
             );
             setSavedProducts(updatedList);
-
-            // 3. UI Feedback
+            
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setIsEditing(false);
         } catch (error) {
-            console.error("Renaming Error:", error);
-            AlertService.error("خطأ", "تعذر تحديث الاسم، يرجى المحاولة لاحقاً");
+            AlertService.error("خطأ", "تعذر تحديث الاسم");
         } finally {
             setIsSaving(false);
         }
     };
 
+    // -- Delete Logic (New) --
+    const handleDeletePress = () => {
+        AlertService.confirm(
+            "حذف المنتج",
+            "هل أنت متأكد من حذف هذا المنتج من الرف؟",
+            async () => {
+                // Animate closing first
+                Animated.timing(animController, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true,
+                }).start(() => {
+                    onClose(); // Close modal
+                    setTimeout(() => onDelete(product.id), 300); // Trigger delete in parent
+                });
+            }
+        );
+    };
+
     if (!product) return null;
 
-    // --- HELPER: Dynamic Alert Styling ---
+    // ... Helper functions (getAlertStyle) ...
     const getAlertStyle = (type) => {
         const safeType = type ? type.toLowerCase() : 'info';
         switch (safeType) {
@@ -619,8 +626,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
-    // --- DATA EXTRACTION ---
-    // Note: We use 'product.productName' for initial render, but 'editedName' for the input
     const { productImage } = product;
     const {
         oilGuardScore = 0,
@@ -633,6 +638,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
     } = product.analysisData || {};
 
     const scoreColor = oilGuardScore >= 80 ? C.success : oilGuardScore >= 65 ? C.warning : C.danger;
+    const typeLabel = PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج';
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -647,14 +653,11 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
                         {/* 1. Header (Image + Editable Title) */}
-                        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                            {/* ... Image Logic (Same as before) ... */}
                             {productImage ? (
                                 <View style={styles.productImageContainer}>
-                                    <Image
-                                        source={{ uri: productImage }}
-                                        style={styles.productRealImage}
-                                        resizeMode="cover"
-                                    />
+                                    <Image source={{ uri: productImage }} style={styles.productRealImage} resizeMode="cover" />
                                     <View style={[styles.scoreBadgeFloat, { backgroundColor: scoreColor }]}>
                                         <Text style={styles.scoreBadgeText}>{oilGuardScore}</Text>
                                     </View>
@@ -666,67 +669,62 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                     justifyContent: 'center', alignItems: 'center',
                                     marginBottom: 15, borderWidth: 2, borderColor: scoreColor
                                 }}>
-                                    <FontAwesome5
-                                        name={PRODUCT_TYPES.find(t => t.id === product_type)?.icon || 'tint'}
-                                        size={32}
-                                        color={scoreColor}
-                                    />
+                                    <FontAwesome5 name={PRODUCT_TYPES.find(t => t.id === product_type)?.icon || 'tint'} size={32} color={scoreColor} />
                                 </View>
                             )}
 
-                            {/* --- EDITABLE TITLE AREA --- */}
+                            {/* Editable Title */}
                             {isEditing ? (
                                 <View style={styles.editTitleContainer}>
                                     <TextInput
                                         value={editedName}
                                         onChangeText={setEditedName}
                                         style={styles.editTitleInput}
-                                        placeholder="اسم المنتج"
-                                        placeholderTextColor={C.textDim}
                                         autoFocus
                                         textAlign="right"
                                     />
                                     <View style={styles.editActionsRow}>
-                                        <TouchableOpacity
-                                            onPress={() => setIsEditing(false)}
-                                            style={[styles.editActionBtn, { backgroundColor: C.background, borderColor: C.border }]}
-                                        >
+                                        <TouchableOpacity onPress={() => setIsEditing(false)} style={[styles.editActionBtn, { backgroundColor: C.background, borderColor: C.border }]}>
                                             <FontAwesome5 name="times" size={14} color={C.textSecondary} />
                                         </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            onPress={handleSaveName}
-                                            disabled={isSaving}
-                                            style={[styles.editActionBtn, { backgroundColor: C.accentGreen }]}
-                                        >
-                                            {isSaving ? (
-                                                <ActivityIndicator size="small" color={C.textOnAccent} />
-                                            ) : (
-                                                <FontAwesome5 name="check" size={14} color={C.textOnAccent} />
-                                            )}
+                                        <TouchableOpacity onPress={handleSaveName} disabled={isSaving} style={[styles.editActionBtn, { backgroundColor: C.accentGreen }]}>
+                                            {isSaving ? <ActivityIndicator size="small" color={C.textOnAccent} /> : <FontAwesome5 name="check" size={14} color={C.textOnAccent} />}
                                         </TouchableOpacity>
                                     </View>
                                 </View>
                             ) : (
                                 <View style={styles.titleDisplayRow}>
                                     <Text style={styles.sheetProductTitle}>{product.productName}</Text>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            Haptics.selectionAsync();
-                                            setIsEditing(true);
-                                        }}
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        style={styles.editIconBtn}
-                                    >
+                                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editIconBtn}>
                                         <Feather name="edit-2" size={16} color={C.accentGreen} />
                                     </TouchableOpacity>
                                 </View>
                             )}
-                            {/* --------------------------- */}
+                            <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, marginTop: 5 }}>{typeLabel}</Text>
+                        </View>
 
-                            <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, marginTop: 5 }}>
-                                {PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج غير محدد'}
-                            </Text>
+                        {/* --- NEW: ACTION ROW (Share & Delete) --- */}
+                        <View style={styles.sheetActionsRow}>
+                            {/* Share Button (Takes remaining space) */}
+                            <View style={{ flex: 1 }}>
+                                <PremiumShareButton
+                                    analysis={product.analysisData}
+                                    product={product} // Pass the entire Firebase document object
+                                    typeLabel={typeLabel}
+                                    customStyle={[styles.sheetShareBtn, { backgroundColor: C.accentGreen + '15', borderColor: C.accentGreen + '40' }]} // Custom styling
+                                    iconSize={16}
+                                    textColor={C.accentGreen}
+                                />
+                            </View>
+
+                            {/* Delete Button */}
+                            <TouchableOpacity 
+                                onPress={handleDeletePress} 
+                                style={[styles.sheetDeleteBtn, { backgroundColor: C.danger + '15', borderColor: C.danger + '40' }]}
+                            >
+                                <FontAwesome5 name="trash-alt" size={16} color={C.danger} />
+                                <Text style={[styles.sheetBtnText, { color: C.danger }]}>حذف</Text>
+                            </TouchableOpacity>
                         </View>
 
                         {/* 2. Main Score Card */}
@@ -738,7 +736,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                     </View>
                                 )}
                                 {!productImage && <View style={{ width: 1, height: '80%', backgroundColor: scoreColor, opacity: 0.3, marginHorizontal: 10 }} />}
-
                                 <View style={{ flex: 1 }}>
                                     <Text style={{ color: scoreColor, fontFamily: 'Tajawal-Bold', fontSize: 16, textAlign: 'center' }}>
                                         {finalVerdict}
@@ -747,22 +744,18 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                             </View>
                         </View>
 
-                        {/* 3. Safety & Efficacy Pillars */}
+                        {/* 3. Safety & Efficacy */}
                         <View style={styles.sheetPillarsContainer}>
                             <View style={styles.sheetPillar}>
                                 <FontAwesome5 name="magic" size={18} color={C.accentGreen} />
                                 <Text style={styles.sheetPillarLabel}>الفعالية</Text>
-                                <Text style={styles.sheetPillarValue}>
-                                    {typeof efficacy === 'object' ? efficacy.score : efficacy}%
-                                </Text>
+                                <Text style={styles.sheetPillarValue}>{typeof efficacy === 'object' ? efficacy.score : efficacy}%</Text>
                             </View>
                             <View style={styles.sheetDividerVertical} />
                             <View style={styles.sheetPillar}>
                                 <FontAwesome5 name="shield-alt" size={18} color={C.gold} />
                                 <Text style={styles.sheetPillarLabel}>الأمان</Text>
-                                <Text style={styles.sheetPillarValue}>
-                                    {typeof safety === 'object' ? safety.score : safety}%
-                                </Text>
+                                <Text style={styles.sheetPillarValue}>{typeof safety === 'object' ? safety.score : safety}%</Text>
                             </View>
                         </View>
 
@@ -775,7 +768,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                                     const alertText = isObj ? alert.text : alert;
                                     const alertType = isObj ? alert.type : 'info';
                                     const style = getAlertStyle(alertType);
-
                                     return (
                                         <View key={i} style={[styles.alertBox, { backgroundColor: style.bg, borderColor: style.border, marginBottom: 8 }]}>
                                             <FontAwesome5 name={style.icon} size={16} color={style.text} />
@@ -786,7 +778,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose }) => {
                             </View>
                         )}
 
-                        {/* 5. Ingredients List */}
+                        {/* 5. Ingredients */}
                         <View style={styles.sheetSection}>
                             <Text style={styles.sheetSectionTitle}>المكونات المكتشفة ({detected_ingredients.length})</Text>
                             <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
@@ -846,6 +838,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     const handleProductDelete = (productId) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         onDelete(productId);
+        setSelectedProduct(null); // Ensure modal closes
     };
 
     if (loading) {
@@ -906,6 +899,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
                 product={selectedProduct}
                 isVisible={!!selectedProduct}
                 onClose={() => setSelectedProduct(null)}
+                onDelete={handleProductDelete} // <--- Pass the delete handler here
             />
         </View>
     );
@@ -2392,9 +2386,9 @@ const SettingsSection = ({ profile, onLogout }) => {
                     <SingleSelectGroup
                         title="اختر مظهر التطبيق"
                         options={[
-                            { id: 'original', label: 'أصلي (غابة)', icon: 'tree' },
-                            { id: 'baby_pink', label: 'وردي ناعم', icon: 'heart' },
-                            { id: 'clinical_blue', label: 'طبي (أزرق)', icon: 'medkit' }
+                            { id: 'original', label: 'أصلي', icon: 'tree' },
+                            { id: 'baby_pink', label: 'وردي', icon: 'heart' },
+                            { id: 'clinical_blue', label: 'ليلي', icon: 'moon' }
                         ]}
                         selectedValue={activeThemeId}
                         onSelect={changeTheme}
@@ -5537,6 +5531,37 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Bold',
         fontSize: 12,
         color: C.gold,
+    },
+    // --- New Action Buttons inside Sheet ---
+    sheetActionsRow: {
+        flexDirection: 'row-reverse',
+        gap: 10,
+        marginBottom: 20,
+        width: '100%',
+    },
+    sheetShareBtn: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        width: '100%', // Take full width of flex container
+    },
+    sheetDeleteBtn: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 14,
+        borderWidth: 1,
+    },
+    sheetBtnText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
     },
 });
 const styles = StyleSheet.create(getStylesContent(THEMES.original.colors));

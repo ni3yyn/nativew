@@ -6,7 +6,7 @@ import {
     RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -63,27 +63,51 @@ const normalizeForMatching = (name) => {
         .replace(/\s+/g, ' ')
         .trim();
 };
-let useInterstitialAd;
-let TestIds = { INTERSTITIAL: 'ca-app-pub-7808816060487731/8992297454' }; // Default dummy ID
 
-// 2. Check environment
+
+// 🔥 YOUR REAL INTERSTITIAL ID
+const INTERSTITIAL_ID = 'ca-app-pub-6010052879824695/5539413194';
+
+let useInterstitialAd;
 const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
 
 if (isAdMobLinked) {
-    // REAL: If native code exists, import the real library
+    // ✅ REAL ADMOB (For APK)
     const adMob = require('react-native-google-mobile-ads');
     useInterstitialAd = adMob.useInterstitialAd;
-    TestIds = adMob.TestIds;
+    
+    // Initialize the SDK immediately (Prevents "Not Initialized" errors)
+    adMob.default().initialize(); 
 } else {
-    // FAKE: If in Expo Go, use this dummy hook that does nothing
-    console.log("Running in Expo Go: Ads are mocked.");
-    useInterstitialAd = () => ({
-        isLoaded: false,
-        isClosed: false,
-        load: () => console.log("Mock Ad Loaded"),
-        show: () => console.log("Mock Ad Shown (No real ad)"),
-        error: null
-    });
+    // 🛠 SMART MOCK (For Expo Go)
+    // This pretends to load an ad so you can test the UI flow
+    console.log("⚠️ Expo Go detected. Using Smart Mock for Ads.");
+    
+    // We create a fake hook that uses React State to simulate loading
+    useInterstitialAd = () => {
+        const [isLoaded, setIsLoaded] = useState(false);
+        const [isClosed, setIsClosed] = useState(false);
+
+        const load = useCallback(() => {
+            console.log("Mock Ad: Loading...");
+            setTimeout(() => {
+                setIsLoaded(true);
+                setIsClosed(false);
+                console.log("Mock Ad: Loaded!");
+            }, 1000); // Fakes a 1-second load time
+        }, []);
+
+        const show = useCallback(() => {
+            console.log("Mock Ad: Showing...");
+            setIsLoaded(false);
+            setTimeout(() => {
+                setIsClosed(true);
+                console.log("Mock Ad: Closed");
+            }, 500);
+        }, []);
+
+        return { isLoaded, isClosed, load, show, error: null };
+    };
 }
 
 // --- LOGIC MOVED TO SERVER: These functions were removed to protect IP ---
@@ -1479,7 +1503,6 @@ export default function OilGuardEngine() {
     const router = useRouter();
     const { user, userProfile } = useAppContext();
     const insets = useSafeAreaInsets();
-    const interstitialId = TestIds.INTERSTITIAL;
 
 
     const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
@@ -1650,40 +1673,38 @@ export default function OilGuardEngine() {
     }, [isAnimatingTransition]);
 
     // ---------------------------------------------------------
-    // --- ADS DISABLED START ----------------------------------
+    // --- ADS ENABLED: INTERSTITIAL LOGIC ---------------------
     // ---------------------------------------------------------
 
-    /* 
-    // ORIGINAL CODE COMMENTED OUT:
-    const { isLoaded, isClosed, load, show } = useInterstitialAd(interstitialId, {
-      requestNonPersonalizedAdsOnly: true,
+    const { isLoaded, isClosed, load, show, error } = useInterstitialAd(INTERSTITIAL_ID, {
+        requestNonPersonalizedAdsOnly: true,
     });
-  
-    // 2. LOAD AD WHEN COMPONENT MOUNTS
-    useEffect(() => {
-      load();
-    }, [load]);
-  
-    // 3. RELOAD AD AFTER IT IS CLOSED
-    useEffect(() => {
-      if (isClosed) {
-        load();
-        // Actually reset the app flow after ad closes
-        performReset(); 
-      }
-    }, [isClosed, load]);
-    */
 
-    // DUMMY OBJECT (Prevents crashes if variables are referenced elsewhere)
-    const { isLoaded, isClosed, load, show } = {
-        isLoaded: false,
-        isClosed: false,
-        load: () => console.log("Ad loading disabled"),
-        show: () => console.log("Ad showing disabled")
-    };
+    // 🔥 NEW: Create a Ref to track ad status instantly
+    const isAdReadyRef = useRef(false);
+
+    // 1. Sync the Ref with the State whenever it changes
+    useEffect(() => {
+        isAdReadyRef.current = isLoaded; // Update the Ref
+        if (isLoaded) console.log("✅ Ad is Ready (Ref Updated)!");
+    }, [isLoaded]);
+
+    // 2. Load Ad on Mount
+    useEffect(() => {
+        console.log("🔄 Initial Ad Request...");
+        load();
+    }, []);
+
+    // 3. Reload Ad after it closes
+    useEffect(() => {
+        if (isClosed) {
+            console.log("🔄 Ad closed. Loading next one...");
+            load();
+        }
+    }, [isClosed]);
 
     // ---------------------------------------------------------
-    // --- ADS DISABLED END ------------------------------------
+    // --- ADS END ------------------------------------
     // ---------------------------------------------------------
 
     const changeStep = useCallback((next) => {
@@ -1804,19 +1825,33 @@ export default function OilGuardEngine() {
     }, []);
 
     const processImageWithGemini = async (uri) => {
+        // 1. UI: Immediate Feedback
         setLoading(true);
         setIsGeminiLoading(true);
-        changeStep(3);
+        changeStep(3); 
+
+        // 2. AD STRATEGY: Check the REF, not the state
+        // This fixes the "Not ready yet" bug
+        if (isAdReadyRef.current) {
+            try {
+                console.log("🎬 Showing Ad Now...");
+                show();
+            } catch (adError) {
+                console.log("Ad failed to show, continuing flow...", adError);
+            }
+        } else {
+            console.log("⚠️ Ad was truly not ready yet (Ref is false).");
+        }
 
         try {
-            // 1. Process image for upload
+            // 3. LOGIC: Process image (Runs in background behind the ad)
             const manipResult = await ImageManipulator.manipulateAsync(
                 uri,
                 [{ resize: { width: 1500 } }],
                 { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
             );
 
-            // 2. Convert to base64
+            // 4. Convert to base64
             const base64Data = await uriToBase64(manipResult.uri);
 
             console.log("📤 Sending image to backend...");
@@ -1832,7 +1867,7 @@ export default function OilGuardEngine() {
             });
 
             const responseData = await response.json();
-            console.log("🧠 Backend response:", JSON.stringify(responseData, null, 2));
+            console.log("🧠 Backend response received");
 
             if (!response.ok) {
                 throw new Error(responseData.error || "Backend processing failed");
@@ -1919,7 +1954,11 @@ export default function OilGuardEngine() {
 
             setIsGeminiLoading(false);
             setLoading(false);
-            changeStep(1);
+            
+            // Move to next step (Review Ingredients)
+            // If the ad is still open, this happens in the background. 
+            // When the user closes the ad, they will land directly on Step 1.
+            changeStep(1); 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
@@ -2628,11 +2667,14 @@ export default function OilGuardEngine() {
 
                         {/* B. ACTION ROW */}
                         <ActionRow
-                            onSave={() => setSaveModalVisible(true)}
-                            onReset={resetFlow}
-                            analysis={finalAnalysis}
-                            productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label || 'منتج'}
-                        />
+    onSave={openSaveModal}
+    onReset={resetFlow}
+    analysis={finalAnalysis}
+    productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label}
+    // Pass these new props so the Share Button knows what to show
+    productName={productName} 
+    frontImageUri={frontImageUri} 
+/>
 
                     </View>
                 </StaggeredItem>

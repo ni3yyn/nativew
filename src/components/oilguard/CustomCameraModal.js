@@ -10,14 +10,12 @@ import {
   StatusBar,
   Easing,
   PanResponder,
-  SafeAreaView
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; // ✅ Import it here
 const COLORS = {
   background: '#000000',
   accent: '#5A9C84',

@@ -6,7 +6,7 @@ const ThemeContext = createContext();
 export const THEMES = {
     original: {
         id: 'original',
-        label: 'أصلي (غابة)',
+        label: 'أصلي',
         colors: {
             background: '#1A2D27',
             card: '#253D34',
@@ -30,7 +30,7 @@ export const THEMES = {
     },
     baby_pink: {
         id: 'baby_pink',
-        label: 'وردي بناتي (Macaron Pink)',
+        label: 'وردي',
         colors: {
             background: '#FFEBF0',       
             card: '#FFD9E4',             
@@ -43,11 +43,11 @@ export const THEMES = {
             textSecondary: '#8C5C6F',    
             textOnAccent: '#FFFFFF',     
             // --- UPDATED COLORS BELOW ---
-            danger: '#E11D48',    // Stronger Red
-            warning: '#D97706',   // Deep Amber (visible on light pink)
-            info: '#0284C7',      // Deep Sky Blue (WAS #7DD3FC)
+            danger: '#ed0538',    // Stronger Red
+            warning: '#e8ad09',   // Deep Amber (visible on light pink)
+            info: '#108dcc',      // Deep Sky Blue (WAS #7DD3FC)
             success: '#059669',   // Deep Emerald Green (WAS #6EE7B7)
-            gold: '#B45309',      // Deep Gold
+            gold: '#e6863e',      // Deep Gold
             blue: '#0284C7',      // Deep Blue
             purple: '#7E22CE',    // Deep Purple
             inputBg: 'rgba(255, 107, 158, 0.12)' 
@@ -55,7 +55,7 @@ export const THEMES = {
     },
     clinical_blue: {
         id: 'clinical_blue',
-        label: 'أزرق ليلي (Midnight Ocean)',
+        label: 'ليلي',
         colors: {
             background: '#0B111A',       // Very deep, dark night-sky blue
             card: '#151F2E',             // Dark navy slate for cards
@@ -67,7 +67,7 @@ export const THEMES = {
             textPrimary: '#E2E8F0',      // Soft off-white with a cool blue tint
             textSecondary: '#94A3B8',    // Medium slate grey
             textOnAccent: '#0B111A',     // Dark text on the blue buttons
-            danger: '#F87171',
+            danger: '#f53333',
             warning: '#FBBF24',
             info: '#38BDF8',
             success: '#34D399',

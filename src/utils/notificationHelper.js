@@ -240,23 +240,17 @@ export async function registerForPushNotificationsAsync() {
 // ==============================================================================
 
 export async function scheduleAuthenticNotifications(userName, savedProducts, settings) {
-  // 1. Wipe clean to avoid duplicates/stale messages
+  // 1. Wipe clean to avoid duplicates
   await Notifications.cancelAllScheduledNotificationsAsync();
 
-  // 2. Prepare Data
   const firstName = userName?.split(' ')[0] || 'غالية';
   const today = new Date();
-  const isEmptyShelf = !savedProducts || savedProducts.length === 0;
 
-  // 3. Loop: Schedule next 7 days individually
   for (let i = 0; i < 7; i++) {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + i);
-    const dayOfWeek = targetDate.getDay(); // 0-6
+    const dayOfWeek = targetDate.getDay();
 
-    // --- ALGERIAN WEEKEND LOGIC (Fri/Sat) ---
-    // On weekends, people sleep late. Schedule morning alert for 10:30 AM
-    // On weekdays, schedule for 9:00 AM
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
     const morningHour = isWeekend ? 10 : 9;
     const morningMinute = isWeekend ? 30 : 0;
@@ -265,19 +259,21 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     const morningTrigger = new Date(targetDate);
     morningTrigger.setHours(morningHour, morningMinute, 0, 0);
 
-    // Only schedule if time is in the future
     if (morningTrigger > new Date()) {
         const msg = generateSmartMessage('morning', targetDate, firstName, savedProducts, settings);
         
         await Notifications.scheduleNotificationAsync({
           content: {
-            // Vary the title on weekends too
             title: isWeekend ? "صباح العطلة والدلع ☕" : "صباح السرور ☀️",
             body: msg,
-            data: { screen: 'routine', period: 'am' }, // Deep Link Data
+            data: { screen: 'routine', period: 'am' },
             sound: true,
+            // 👇 ADD THIS SECTION:
+            android: {
+              channelId: 'oilguard-smart',
+              priority: Notifications.AndroidNotificationPriority.MAX,
+            },
           },
-          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: morningTrigger.getTime()
@@ -285,7 +281,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
         });
     }
 
-    // --- B. EVENING TRIGGER (Always 9:30 PM) ---
+    // --- B. EVENING TRIGGER ---
     const eveningTrigger = new Date(targetDate);
     eveningTrigger.setHours(21, 30, 0, 0);
 
@@ -296,10 +292,14 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
           content: {
             title: "الوقت 🌙",
             body: msg,
-            data: { screen: 'routine', period: 'pm' }, // Deep Link Data
+            data: { screen: 'routine', period: 'pm' },
             sound: true,
+            // 👇 ADD THIS SECTION:
+            android: {
+              channelId: 'oilguard-smart',
+              priority: Notifications.AndroidNotificationPriority.MAX,
+            },
           },
-          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: eveningTrigger.getTime()
@@ -308,5 +308,5 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     }
   }
 
-  console.log(`📅 Smart Schedule Updated: ${firstName}, ${getSeason(today)}, ${savedProducts?.length} Products`);
+  console.log(`📅 Smart Schedule Updated: ${firstName}`);
 }

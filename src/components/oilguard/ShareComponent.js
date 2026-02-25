@@ -25,36 +25,12 @@ const SCALE_FACTOR = PREVIEW_WIDTH / TEMPLATE_WIDTH;
 
 // --- 🎯 REGISTRY ---
 const EXTENDED_REGISTRY = [
-    { 
-        ...ORIGINAL_REGISTRY[0], 
-        id: '01', 
-        layout: { maskW: 230, maskH: 330, imgSize: 600, radius: 115, border: 1.5, type: 'solid' } 
-    },
-    { 
-        ...ORIGINAL_REGISTRY[1], 
-        id: '02',
-        layout: { maskW: 500, maskH: 500, imgSize: 600, radius: 40, border: 1, type: 'solid' } 
-    },
-    { 
-        ...ORIGINAL_REGISTRY[2], 
-        id: '03',
-        layout: { maskW: 420, maskH: 420, imgSize: 600, radius: 210, border: 3, type: 'dashed' } 
-    },
-    { 
-        ...ORIGINAL_REGISTRY[3], 
-        id: '04',
-        layout: { maskW: 300, maskH: 280, imgSize: 600, radius: 35, border: 1, type: 'solid' } 
-    },
-    { 
-        ...ORIGINAL_REGISTRY[4], 
-        id: '05',
-        layout: { maskW: 300, maskH: 320, imgSize: 600, radius: 45, border: 2, type: 'solid' } 
-    },
-    { 
-        ...ORIGINAL_REGISTRY[5], 
-        id: '06',
-        layout: { maskW: 510, maskH: 380, imgSize: 600, radius: 50, border: 1, type: 'solid' } 
-    },
+    { ...ORIGINAL_REGISTRY[0], id: '01', layout: { maskW: 230, maskH: 330, imgSize: 600, radius: 115, border: 1.5, type: 'solid' } },
+    { ...ORIGINAL_REGISTRY[1], id: '02', layout: { maskW: 500, maskH: 500, imgSize: 600, radius: 40, border: 1, type: 'solid' } },
+    { ...ORIGINAL_REGISTRY[2], id: '03', layout: { maskW: 420, maskH: 420, imgSize: 600, radius: 210, border: 3, type: 'dashed' } },
+    { ...ORIGINAL_REGISTRY[3], id: '04', layout: { maskW: 300, maskH: 280, imgSize: 600, radius: 35, border: 1, type: 'solid' } },
+    { ...ORIGINAL_REGISTRY[4], id: '05', layout: { maskW: 300, maskH: 320, imgSize: 600, radius: 45, border: 2, type: 'solid' } },
+    { ...ORIGINAL_REGISTRY[5], id: '06', layout: { maskW: 510, maskH: 380, imgSize: 600, radius: 50, border: 1, type: 'solid' } },
 ];
 
 const THEMES = {
@@ -65,14 +41,29 @@ const THEMES = {
     white: { id: 'white', primary: '#FFFFFF', accent: '#1A2D27', text: '#1A2D27', gradient: ['#FFFFFF', '#F5F5F5', '#E0E0E0'], glass: 'rgba(255, 255, 255, 0.8)', border: 'rgba(26, 45, 39, 0.1)', btn: ['#1A2D27', '#2F4F4F'], isDark: false }
 };
 
-const PremiumShareButton = ({ analysis, typeLabel, customStyle, iconSize = 18, textColor = '#E8F5E9' }) => {
+const PremiumShareButton = ({ 
+    product,        // FOR PROFILE (Shelf Object)
+    analysis,       // FOR OILGUARD FALLBACK
+    productName: manualName, 
+    imageUri: manualImage, 
+    typeLabel, 
+    customStyle, 
+    iconSize = 18, 
+    textColor = '#E8F5E9' 
+}) => {
     const viewShotRef = useRef();
+
+    // --- SMART DATA EXTRACTION ---
+    const finalAnalysis = product?.analysisData || analysis;
+    const initialName = product?.productName || manualName || '';
+    const initialImage = product?.productImage || manualImage || null;
+
     const [modalVisible, setModalVisible] = useState(false);
     const [editorVisible, setEditorVisible] = useState(false);
     const [selectedTemplateId, setSelectedTemplateId] = useState('01');
-    const [productName, setProductName] = useState('');
+    const [productName, setProductName] = useState(initialName);
     const [activeTheme, setActiveTheme] = useState('green');
-    const [userImage, setUserImage] = useState(null);
+    const [userImage, setUserImage] = useState(initialImage);
     const [isGenerating, setIsGenerating] = useState(false);
     const [hasAttemptedShare, setHasAttemptedShare] = useState(false);
     const [imgPos, setImgPos] = useState({ x: 0, y: 0, scale: 1 });
@@ -80,57 +71,46 @@ const PremiumShareButton = ({ analysis, typeLabel, customStyle, iconSize = 18, t
     const pan = useRef(new Animated.ValueXY({x: 0, y: 0})).current;
     const scale = useRef(new Animated.Value(1)).current;
     const internalState = useRef({ x: 0, y: 0, scale: 1, lastDist: null });
-
     const pulseAnim = useRef(new Animated.Value(0)).current;
 
-useEffect(() => {
-    let animation;
+    // Validation
+    const isNameValid = productName.trim().length > 0;
+    const isImageValid = userImage !== null;
+    const canShare = isNameValid && isImageValid;
 
-    if (modalVisible) {
-        // Reset the value to 0 before starting
-        pulseAnim.setValue(0);
+    // Sync state for OilGuard typing flow
+    useEffect(() => {
+        if (!product) {
+            setProductName(manualName || '');
+            setUserImage(manualImage || null);
+        }
+    }, [manualName, manualImage]);
 
-        animation = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 0,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ])
-        );
-        animation.start();
-    }
-
-    // Cleanup function: Stops the animation when modal is closed 
-    // or component is destroyed to prevent memory leaks.
-    return () => {
-        if (animation) animation.stop();
-    };
-}, [modalVisible]);
+    useEffect(() => {
+        let animation;
+        if (modalVisible) {
+            pulseAnim.setValue(0);
+            animation = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+                ])
+            );
+            animation.start();
+        }
+        return () => animation?.stop();
+    }, [modalVisible]);
 
     const activeTemplateConfig = EXTENDED_REGISTRY.find(t => t.id === selectedTemplateId) || EXTENDED_REGISTRY[0];
     const CurrentTemplate = activeTemplateConfig.component;
     const currentThemeData = THEMES[activeTheme];
     const layout = activeTemplateConfig.layout;
 
-    const isNameValid = productName.trim().length > 0;
-    const isImageValid = userImage !== null;
-    const canShare = isNameValid && isImageValid;
-
-    // --- 📐 EDITOR MATH 📐 ---
-    const EDITOR_PADDING = 40;
-    const AVAILABLE_WIDTH = SCREEN_WIDTH - EDITOR_PADDING * 2;
     const k = useMemo(() => {
-        const widthRatio = AVAILABLE_WIDTH / layout.maskW;
+        const widthRatio = (SCREEN_WIDTH - 80) / layout.maskW;
         const heightRatio = (SCREEN_HEIGHT * 0.55) / layout.maskH; 
         return Math.min(widthRatio, heightRatio, 1.2); 
-    }, [layout, AVAILABLE_WIDTH]);
+    }, [layout]);
 
     useEffect(() => {
         const backAction = () => {
@@ -232,7 +212,7 @@ useEffect(() => {
                             
                             <View style={[styles.prevFrame, { borderColor: currentThemeData.accent }]}>
                                 <View style={styles.scaler}>
-                                    <CurrentTemplate analysis={analysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
+                                    <CurrentTemplate analysis={finalAnalysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
                                 </View>
                             </View>
 
@@ -269,48 +249,46 @@ useEffect(() => {
                                 )}
                             </View>
 
-                            {/* --- TEMPLATES SECTION --- */}
-<View style={styles.templatesWrapper}>
-    {/* Pulsating Arrow Hint (Absolute Positioned on the Left) */}
-    <Animated.View 
-        style={[
-            styles.scrollArrow, 
-            { 
-                opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-                transform: [{ translateX: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }]
-            }
-        ]}
-        pointerEvents="none"
-    >
-        <Ionicons name="chevron-forward-circle" size={24} color={currentThemeData.accent} />
-    </Animated.View>
+                            <View style={styles.templatesWrapper}>
+                                <Animated.View 
+                                    style={[
+                                        styles.scrollArrow, 
+                                        { 
+                                            opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+                                            transform: [{ translateX: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }]
+                                        }
+                                    ]}
+                                    pointerEvents="none"
+                                >
+                                    <Ionicons name="chevron-forward-circle" size={24} color={currentThemeData.accent} />
+                                </Animated.View>
 
-    <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.list}
-        contentContainerStyle={{ paddingLeft: 40 }} // Space so icons don't go under the arrow
-    >
-        {EXTENDED_REGISTRY.map(t => (
-            <Pressable 
-                key={t.id} 
-                onPress={() => { setSelectedTemplateId(t.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
-                style={[styles.tempItem, selectedTemplateId === t.id && styles.tempActive]}
-            >
-                <View style={[styles.tempIcon, selectedTemplateId === t.id && { backgroundColor: currentThemeData.accent }]}>
-                    <MaterialCommunityIcons 
-                        name={t.icon} 
-                        size={24} 
-                        color={selectedTemplateId === t.id ? currentThemeData.primary : '#666'} 
-                    />
-                </View>
-                <Text style={[styles.tempText, { color: selectedTemplateId === t.id ? currentThemeData.accent : '#666' }]}>
-                    {t.name}
-                </Text>
-            </Pressable>
-        ))}
-    </ScrollView>
-</View>
+                                <ScrollView 
+                                    horizontal 
+                                    showsHorizontalScrollIndicator={false} 
+                                    style={styles.list}
+                                    contentContainerStyle={{ paddingLeft: 40 }}
+                                >
+                                    {EXTENDED_REGISTRY.map(t => (
+                                        <Pressable 
+                                            key={t.id} 
+                                            onPress={() => { setSelectedTemplateId(t.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
+                                            style={[styles.tempItem, selectedTemplateId === t.id && styles.tempActive]}
+                                        >
+                                            <View style={[styles.tempIcon, selectedTemplateId === t.id && { backgroundColor: currentThemeData.accent }]}>
+                                                <MaterialCommunityIcons 
+                                                    name={t.icon} 
+                                                    size={24} 
+                                                    color={selectedTemplateId === t.id ? currentThemeData.primary : '#666'} 
+                                                />
+                                            </View>
+                                            <Text style={[styles.tempText, { color: selectedTemplateId === t.id ? currentThemeData.accent : '#666' }]}>
+                                                {t.name}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </ScrollView>
+                            </View>
 
                             <TextInput 
                                 style={[
@@ -345,7 +323,6 @@ useEffect(() => {
             <Modal visible={editorVisible} transparent animationType="fade" onRequestClose={() => setEditorVisible(false)}>
                 <View style={[styles.edContainer, { backgroundColor: currentThemeData.primary }]}>
                     <LinearGradient colors={currentThemeData.gradient} style={StyleSheet.absoluteFill} />
-
                     <View style={styles.edHeader}>
                         <Text style={[styles.edTitle, { color: currentThemeData.text }]}>ضبط الصورة</Text>
                     </View>
@@ -363,32 +340,13 @@ useEffect(() => {
                                  backgroundColor: currentThemeData.glass,
                              }
                          ]} {...panResponder.panHandlers}>
-                            
-                            {/* --- 1. BACKGROUND FILL (BLURRED) --- */}
-                            {/* This fills the empty spaces if the user zooms out */}
-                            <Image 
-                                source={{ uri: userImage }} 
-                                style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', opacity: 0.5 }]} 
-                                resizeMode="cover" 
-                                blurRadius={50} // Heavy blur effect
-                            />
-                            {/* Dimming overlay to make foreground pop */}
+                            <Image source={{ uri: userImage }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', opacity: 0.5 }]} resizeMode="cover" blurRadius={50} />
                             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
-
-                            {/* --- 2. FOREGROUND (INTERACTIVE) --- */}
-                            <Animated.View style={{ 
-                                transform: [{translateX: pan.x}, {translateY: pan.y}, {scale: scale}], 
-                                width: layout.imgSize * k, 
-                                height: layout.imgSize * k 
-                            }}>
-                                {/* Changed to CONTAIN so the user can fit the whole image if they want. 
-                                    The background fill above handles the empty space. */}
+                            <Animated.View style={{ transform: [{translateX: pan.x}, {translateY: pan.y}, {scale: scale}], width: layout.imgSize * k, height: layout.imgSize * k }}>
                                 <Image source={{ uri: userImage }} style={{width: '100%', height: '100%'}} resizeMode="contain" />
                             </Animated.View>
-
                          </View>
                          <Text style={[styles.edHint, { color: currentThemeData.text, opacity: 0.6 }]}>اسحبي للتحريك • استخدمي إصبعين للتكبير</Text>
-                        
                         <View style={styles.edSliderContainer}>
                              <Slider 
                                 style={{flex: 1, height: 40}} 
@@ -398,7 +356,6 @@ useEffect(() => {
                                 onValueChange={(v) => { scale.setValue(v); internalState.current.scale = v; }} 
                                 minimumTrackTintColor={currentThemeData.accent} 
                                 thumbTintColor={currentThemeData.accent} 
-                                maximumTrackTintColor={currentThemeData.glass}
                             />
                         </View>
                     </View>
@@ -407,22 +364,13 @@ useEffect(() => {
                         <Pressable onPress={() => setEditorVisible(false)} style={[styles.edFooterBtn, { borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1 }]}>
                             <Text style={[styles.edBtnText, { color: currentThemeData.text }]}>إلغاء</Text>
                         </Pressable>
-
-                        <Pressable 
-                            onPress={() => { 
-                                setImgPos({x: internalState.current.x, y: internalState.current.y, scale: internalState.current.scale}); 
-                                setEditorVisible(false); 
-                            }}
-                            style={[styles.edFooterBtn, { backgroundColor: currentThemeData.accent }]}
-                        >
-                            <Text style={[styles.edBtnText, { color: currentThemeData.primary }]}>حفظ التعديل</Text>
-                        </Pressable>
+                        <Pressable onPress={() => { setImgPos({x: internalState.current.x, y: internalState.current.y, scale: internalState.current.scale}); setEditorVisible(false); }} style={[styles.edFooterBtn, { backgroundColor: currentThemeData.accent }]}><Text style={[styles.edBtnText, { color: currentThemeData.primary }]}>حفظ التعديل</Text></Pressable>
                     </View>
                 </View>
             </Modal>
 
             <ViewShot ref={viewShotRef} options={{ format: "jpg", quality: 1.0 }} style={{ position: 'absolute', left: -5000 }}>
-                <CurrentTemplate analysis={analysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
+                <CurrentTemplate analysis={finalAnalysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
             </ViewShot>
         </>
     );
@@ -460,21 +408,8 @@ const styles = StyleSheet.create({
     edFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 30, paddingBottom: 50, gap: 15 },
     edFooterBtn: { flex: 1, padding: 18, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
     edBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16 },
-    templatesWrapper: {
-        width: '100%',
-        position: 'relative', // Necessary for absolute positioning of arrow
-        marginVertical: 10,
-    },
-    scrollArrow: {
-        position: 'absolute',
-        right: 0,           // Position on the left for RTL scrolling
-        top: '25%',        // Align with the icons
-        zIndex: 10,
-        backgroundColor: 'rgba(10,10,10,0.8)', // Dark background to pop
-        borderRadius: 20,
-        padding: 2,
-    },
-    
+    templatesWrapper: { width: '100%', position: 'relative', marginVertical: 10 },
+    scrollArrow: { position: 'absolute', right: 0, top: '25%', zIndex: 10, backgroundColor: 'rgba(10,10,10,0.8)', borderRadius: 20, padding: 2 },
 });
 
 export default PremiumShareButton;

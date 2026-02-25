@@ -12,8 +12,8 @@ import {
   Platform,
   StatusBar,
   Image as RNImage,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; // ✅ Import it here
 import Slider from '@react-native-community/slider';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';

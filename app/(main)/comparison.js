@@ -3,14 +3,14 @@ import {
     StyleSheet, View, Text,
     ScrollView, Animated, Platform, Alert,
     UIManager, Image, StatusBar,
-    Easing, TouchableOpacity, Dimensions, TextInput, SafeAreaView
+    Easing, TouchableOpacity, Dimensions, TextInput
 } from 'react-native';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; // ✅ Import it here
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Fuse from 'fuse.js'; // Ensure this is installed: npm install fuse.js
 
 import { useAppContext } from '../../src/context/AppContext';

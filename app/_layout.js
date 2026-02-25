@@ -21,6 +21,15 @@ import { db } from '../src/config/firebase';
 // Import Notification Helper
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 SplashScreen.preventAutoHideAsync();
 
 
@@ -75,82 +84,83 @@ const useDailyPresence = (user) => {
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
 const useSilentUpdates = () => {
-  useEffect(() => {
-    if (__DEV__) return;
 
-    let isUpdatePending = false;
+  useEffect(() => {
 
     const checkAndDownload = async () => {
       try {
+
+        // IMPORTANT: In Expo Go / Local Development, this often returns false
+        // because you are already on a 'development' version.
         const update = await Updates.checkForUpdateAsync();
+        
         if (update.isAvailable) {
           await Updates.fetchUpdateAsync();
-          isUpdatePending = true;
-          console.log("Silent OTA Update downloaded.");
+          await Updates.reloadAsync();
+        } else {
         }
       } catch (e) {
-        // Ignore errors silently (network issues, etc.)
       }
     };
 
     checkAndDownload();
-
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'background' && isUpdatePending) {
-        Updates.reloadAsync();
-      }
-    });
-
-    return () => subscription.remove();
-  }, []);
+  }, []); 
 };
 
 // ============================================================================
 // 2. HELPER: APP OPEN AD HOOK
 // ============================================================================
+
 const useAppOpenAd = () => {
   useEffect(() => {
-    // 1. Safety Check: Ensure AdMob module is linked
     const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
     if (!isAdMobLinked) return;
 
     try {
-      const { AppOpenAd, AdEventType, TestIds } = require('react-native-google-mobile-ads');
-
-      // 2. Config: Use Test ID in Dev, Real ID in Prod
-      // REPLACE 'ca-app-pub-...' with your actual AD UNIT ID for App Open
-      const adUnitId = __DEV__
-        ? TestIds.APP_OPEN
-        : 'ca-app-pub-6010052879824695/7889332295';
-
+      const { AppOpenAd, AdEventType } = require('react-native-google-mobile-ads');
+      const adUnitId = 'ca-app-pub-6010052879824695/8213348420';
+      
       const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: true,
       });
 
-      // 3. Listener: When Loaded, Show it!
+      let isFirstLaunch = true; // Track if it's the first time opening the app
+
+      // 1. When loaded, ONLY show if it's the very first app launch
       const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-        // console.log('App Open Ad Loaded - Showing now');
-        appOpenAd.show();
+        console.log('App Open Ad Loaded');
+        if (isFirstLaunch) {
+          appOpenAd.show();
+          isFirstLaunch = false;
+        }
       });
 
-      // 4. Listener: When Closed, Load the Next one
+      // 2. When closed, SILENTLY load the next ad so it's ready for later
       const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-        // console.log('App Open Ad Closed - Loading next');
-        appOpenAd.load();
+        console.log('App Open Ad Closed - Preloading next');
+        appOpenAd.load(); 
+        // Notice we do NOT show it here.
       });
 
-      // 5. Listener: Handle Errors
       const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
         console.log('App Open Ad Error:', error);
       });
 
-      // 6. Initial Load
+      // 3. Initial Load
       appOpenAd.load();
 
-      // 7. Handle App Resume (Background -> Active)
+      // 4. Show the preloaded ad ONLY when the app comes back from the background
       const appStateSub = AppState.addEventListener('change', (nextAppState) => {
         if (nextAppState === 'active') {
-          appOpenAd.load();
+          try {
+            if (appOpenAd.loaded) {
+              appOpenAd.show();
+            } else {
+              appOpenAd.load();
+            }
+          } catch (error) {
+            console.log("Error showing App Open Ad on resume", error);
+          }
         }
       });
 
@@ -477,6 +487,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     }
 
     // 3. THE DEBOUNCE TIMER (Wait 2.5 seconds for Firebase to settle)
+    // 3. THE DEBOUNCE TIMER (Wait 2.5 seconds for Firebase to settle)
     const timer = setTimeout(async () => {
       // Check lock one more time just in case of race condition
       if (notificationScheduleLock.current) return;
@@ -484,36 +495,51 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       // 🔒 LOCK IMMEDIATELY: Prevents any re-renders from triggering this again
       notificationScheduleLock.current = true;
 
-      const { status } = await Notifications.getPermissionsAsync();
+      try {
+        // A. REGISTER CHANNEL & REQUEST NATIVE PERMISSION
+        // This ensures the 'oilguard-smart' channel exists on the system
+        // and triggers the native "Allow Notifications" popup.
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
 
-      if (status !== 'granted') {
-        const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
-        if (hasSkipped !== 'true') {
-          setShowNotificationModal(true);
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
         }
-      } else {
-        try {
+
+        // B. CHECK STATUS
+        if (finalStatus !== 'granted') {
+          // If the user still hasn't granted permission, check if we should show the custom modal
+          const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
+          if (hasSkipped !== 'true') {
+            setShowNotificationModal(true);
+          }
+        } else {
+          // C. PREPARE CHANNEL (Redundant but safe for APK)
           if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('oilguard-smart', {
               name: 'Smart Skincare Reminders',
               importance: Notifications.AndroidImportance.MAX,
               vibrationPattern: [0, 250, 250, 250],
               lightColor: '#5A9C84',
+              sound: 'default',
             });
           }
 
+          // D. SCHEDULE NOTIFICATIONS
           const name = userProfile.settings?.name || 'غالية';
           const settings = userProfile.settings || {};
           const products = savedProducts || [];
 
           if (scheduleAuthenticNotifications) {
             await scheduleAuthenticNotifications(name, products, settings);
-            // This log will now only appear EXACTLY ONCE per app launch!
             console.log(`📅 [Layout] Notifications Locked & Scheduled! Products: ${products.length}`);
           }
-        } catch (e) {
-          console.log("Error scheduling local notifications:", e);
         }
+      } catch (e) {
+        console.log("Error during notification initialization:", e);
+        // Unlock if there was a major failure so it can try again next time
+        notificationScheduleLock.current = false;
       }
     }, 2500); // 2.5 seconds delay
 
