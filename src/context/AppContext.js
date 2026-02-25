@@ -57,8 +57,8 @@ export const AppProvider = ({ children }) => {
   // --- System State ---
   const [appConfig, setAppConfig] = useState({
     maintenanceMode: false,
-    minSupportedVersion: '1.1.0', 
-    latestVersion: '1.1.0',       
+    minSupportedVersion: '1.2.0', 
+    latestVersion: '1.2.0',       
     latestVersionUrl: '',
     maintenanceMessage: '',
     changelog: [],                
@@ -183,8 +183,8 @@ export const AppProvider = ({ children }) => {
         const data = docSnap.data();
         setAppConfig({
           maintenanceMode: data.maintenance_mode || false,
-          minSupportedVersion: data.android?.min_supported_version || '1.1.0',
-          latestVersion: data.android?.latest_version || '1.1.0',
+          minSupportedVersion: data.android?.min_supported_version || '1.2.0',
+          latestVersion: data.android?.latest_version || '1.2.0',
           latestVersionUrl: data.android?.store_url || '',
           maintenanceMessage: data.maintenance_message || 'الصيانة جارية',
           changelog: data.android?.changelog || [],

@@ -94,8 +94,8 @@ android {
         targetSdkVersion 35
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 5
-        versionName "1.1.0"
+        versionCode 6
+        versionName "1.2.0"
         resConfigs "en", "ar" 
         
         missingDimensionStrategy 'react-native-camera', 'general'
