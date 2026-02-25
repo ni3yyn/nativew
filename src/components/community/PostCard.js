@@ -322,7 +322,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         // ✅ Local state to track audio URL (starts with prop, updates if we upload a new one)
         const [cloudAudioUrl, setCloudAudioUrl] = useState(p.audio_url || null);
 
-        const ELEVENLABS_API_KEY = "sk_43ddc83a04e0096320c7b410ea97a4aa29c4fd419b8ba7aa"; 
+        const ELEVENLABS_API_KEY = "sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589"; 
         const VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; 
         const validTitle = p.title && p.title !== 'null' && p.title.trim() !== '' ? p.title : null;
 

@@ -443,8 +443,6 @@ export default function CommunityScreen() {
         );
     }
 
-    const canCreatePost = selectedCategory?.id !== 'tips' || isAdmin;
-
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -505,7 +503,7 @@ export default function CommunityScreen() {
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
                             <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? 'لا توجد نتائج تطابق بحثك.' : 'القسم فارغ حاليا.'}</Text>
-                            {(!searchQuery && !isBioFilterActive && canCreatePost) && (
+                            {(!searchQuery && !isBioFilterActive && (selectedCategory.id !== 'tips' || isAdmin)) && (
                                 <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
                                     <Text style={styles.emptyActionText}>كوني أنتِ الأولى</Text>
                                 </TouchableOpacity>
@@ -517,41 +515,34 @@ export default function CommunityScreen() {
 
             <NewPostsToast visible={newPostsCount > 0} onPress={() => loadNewPosts(false)} COLORS={COLORS} styles={styles} />
 
-            <TouchableOpacity style={styles.fab} onPress={() => setCreateModalVisible(true)} activeOpacity={0.8}>
-                <LinearGradient
-                    colors={[COLORS[selectedCategory?.colorKey] || COLORS.accentGreen, COLORS.card]}
-                    style={styles.fabGradient}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                >
-                    <Feather name="plus" size={24} color={COLORS.textOnAccent} />
-                </LinearGradient>
-            </TouchableOpacity>
+            {/* FAB - Only show for non-tips categories OR if user is admin in tips category */}
+            {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                <TouchableOpacity style={styles.fab} onPress={() => setCreateModalVisible(true)} activeOpacity={0.8}>
+                    <LinearGradient
+                        colors={[COLORS[selectedCategory?.colorKey] || COLORS.accentGreen, COLORS.card]}
+                        style={styles.fabGradient}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    >
+                        <Feather name="plus" size={24} color={COLORS.textOnAccent} />
+                    </LinearGradient>
+                </TouchableOpacity>
+            )}
 
-
-            {canCreatePost && (
-        <TouchableOpacity style={styles.fab} onPress={() => setCreateModalVisible(true)} activeOpacity={0.8}>
-            <LinearGradient
-                colors={[COLORS[selectedCategory?.colorKey] || COLORS.accentGreen, COLORS.card]}
-                style={styles.fabGradient}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            >
-                <Feather name="plus" size={24} color={COLORS.textOnAccent} />
-            </LinearGradient>
-        </TouchableOpacity>
-    )}
-
-    {/* Pass isAdmin as a prop to your modal */}
-    <CreatePostModal 
-        visible={isCreateModalVisible} 
-        onClose={() => setCreateModalVisible(false)} 
-        onSubmit={handleCreateWrapper} 
-        savedProducts={savedProducts} 
-        userRoutines={userProfile?.routines} 
-        defaultType={selectedCategory?.id}
-        isAdmin={isAdmin} // ✅ ADDED THIS
-    />
+            {/* Create Post Modal - Only render for non-tips categories OR if user is admin in tips category */}
+            {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                <CreatePostModal 
+                    visible={isCreateModalVisible} 
+                    onClose={() => setCreateModalVisible(false)} 
+                    onSubmit={handleCreateWrapper} 
+                    savedProducts={savedProducts} 
+                    userRoutines={userProfile?.routines} 
+                    defaultType={selectedCategory?.id}
+                    isAdmin={isAdmin}
+                />
+            )}
    
-    <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
+            <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
+            
             <CommentModal
                 visible={!!commentingPost}
                 onClose={() => {
@@ -563,6 +554,7 @@ export default function CommunityScreen() {
                 currentUser={userProfile ? { ...userProfile, uid: user.uid } : { uid: user.uid }}
                 onProfilePress={(userId) => setViewingUserProfile({ id: userId })}
             />
+            
             <FullImageViewer visible={!!viewingImage} imageUrl={viewingImage} onClose={() => setViewingImage(null)} />
 
             <UserProfileModal

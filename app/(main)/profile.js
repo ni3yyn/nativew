@@ -2384,7 +2384,7 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Traits */}
             <StaggeredItem index={0}>
                 <Accordion
-                    title="المظهر والنماذج"
+                    title="ألوان التطبيق"
                     icon="palette"
                     isOpen={openAccordion === 'theme'}
                     onPress={() => handleToggleAccordion('theme')}
