@@ -180,7 +180,7 @@ const useAppOpenAd = () => {
 // ============================================================================
 // 3. UI HELPER: FORCE UPDATE SCREEN (BLOCKING)
 // ============================================================================
-const ForceUpdateScreen = ({ url }) => (
+const ForceUpdateScreen = ({ url, message }) => (
   <View style={styles.systemScreen}>
     <StatusBar style="light" />
     <LinearGradient colors={['#1A2D27', '#0F1C18']} style={StyleSheet.absoluteFill} />
@@ -188,7 +188,8 @@ const ForceUpdateScreen = ({ url }) => (
       <MaterialIcons name="system-update" size={70} color="#fbbf24" style={{ marginBottom: 20 }} />
       <Text style={styles.systemTitle}>تحديث إجباري مطلوب</Text>
       <Text style={styles.systemMessage}>
-       هذه النسخة تحتوي على مشاكل تم حلها في الإصدار الجديد مع ميزات جديدة.
+        {/* نستخدم الرسالة القادمة من الفايربيس (android.critical_message) */}
+        {message || "هذه النسخة تحتوي على مشاكل تم حلها في الإصدار الجديد مع ميزات جديدة."}
       </Text>
       {url ? (
         <Pressable style={styles.updateButton} onPress={() => Linking.openURL(url)}>
@@ -573,7 +574,13 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
-    return <ForceUpdateScreen url={appConfig.latestVersionUrl} />;
+    return (
+      <ForceUpdateScreen 
+        url={appConfig.latestVersionUrl} 
+        // تمرير الرسالة من Firebase
+        message={appConfig.android?.critical_message} 
+      />
+    );
   }
 
   return (

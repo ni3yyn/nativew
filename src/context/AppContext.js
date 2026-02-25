@@ -188,6 +188,8 @@ export const AppProvider = ({ children }) => {
           latestVersionUrl: data.android?.store_url || '',
           maintenanceMessage: data.maintenance_message || 'الصيانة جارية',
           changelog: data.android?.changelog || [],
+          criticalMessage: data.android?.critical_message || 'تحديث ضروري لاستمرار عمل التطبيق',
+
         });
       }
     });
