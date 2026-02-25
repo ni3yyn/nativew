@@ -22,18 +22,12 @@ export const CATEGORIES = [
         colorKey: 'blue',
         desc: 'اطلبي المساعدة من المجتمع والخبراء.'
     },
-    {
-        id: 'routine_rate',
-        label: 'تقييم روتيني',
-        icon: 'clipboard-list',
-        colorKey: 'purple',
-        desc: 'اعرضي روتينكِ واحصلي على نصائح.'
-    },
+    
     {
         id: 'tips',
-        label: 'نصائح ومعلومات',
-        icon: 'lightbulb',
-        colorKey: 'info',
-        desc: 'معلومات ومنشورات موثوقة من الإدارة.'
+        label: 'ميني-بودكاست',
+        icon: 'headphones',
+        colorKey: 'success',
+        desc: 'صوتيات قصيرة عن المنتجات والعناية'
     }
 ];

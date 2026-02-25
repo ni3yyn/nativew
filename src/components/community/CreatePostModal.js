@@ -249,32 +249,51 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
     const resolveRoutineData = (routinePeriod) => {
         if (!routinePeriod || !Array.isArray(routinePeriod)) return [];
 
-        return routinePeriod.map(step => {
-            // Map IDs to actual Product Objects from savedProducts
-            const resolvedProducts = step.productIds.map(id => {
-                const product = savedProducts.find(p => p.id === id);
-                if (!product) return null;
+        const resolvedSteps = routinePeriod.map((step) => {
+            const ids = step.productIds || [];
+            if (ids.length === 0) return null;
+            
+            // Resolve IDs to Full Products
+            const richProducts = ids.map(id => {
+                const shelfItem = savedProducts.find(p => p.id === id);
 
-                return {
-                    id: product.id,
-                    name: product.productName,
-                    image: product.productImage,
-                    score: product.analysisData?.oilGuardScore || 0,
-                    type: product.analysisData?.product_type || 'other',
+                if (shelfItem) {
+                    console.log(`[Resolve] Found: ${shelfItem.productName}`);
+                    return {
+                        id: shelfItem.id,
+                        // ✅ Use standard keys that match your Shelf schema
+                        productName: shelfItem.productName || shelfItem.name || 'منتج',
+                        productImage: shelfItem.productImage || shelfItem.imageUrl || shelfItem.image || null,
+                        oilGuardScore: Number(shelfItem.analysisData?.oilGuardScore || shelfItem.score || 0),
+                        productType: shelfItem.analysisData?.product_type || shelfItem.type || 'other',
+                        
+                        // Full Analysis Data (Saved directly to Post in Supabase)
+                        detected_ingredients: shelfItem.analysisData?.detected_ingredients || shelfItem.ingredients || [],
+                        marketingClaims: shelfItem.marketingClaims || shelfItem.claims || []
+                    };
+                } else {
+                    console.log(`[Resolve] Not Found in Shelf: ${id}`);
+                    // Fallback using Routine Nickname
+                    return {
+                        id: id,
+                        productName: step.details || 'منتج غير متوفر',
+                        productImage: null,
+                        oilGuardScore: 0,
+                        productType: 'other',
+                        detected_ingredients: [],
+                        marketingClaims: []
+                    };
+                }
+            });
 
-                    // 🟢 ADD THESE TWO LINES (IMPORTANT FOR RE-EVALUATION):
-                    ingredients: product.analysisData?.detected_ingredients || [],
-                    marketingClaims: product.marketingClaims || []
-                };
-            }).filter(Boolean);
-
-            if (resolvedProducts.length === 0) return null;
-
+            // Return Wrapper
             return {
-                stepName: step.name,
-                products: resolvedProducts
+                stepName: step.name || "خطوة", 
+                products: richProducts
             };
-        }).filter(Boolean);
+        });
+
+        return resolvedSteps.filter(Boolean);
     };
 
     // --- SUBMIT LOGIC ---

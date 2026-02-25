@@ -105,7 +105,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.textPrimary + '1A',
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -242,7 +242,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: COLORS.textPrimary + '33',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -255,7 +255,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   primaryActionSub: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
-    color: 'rgba(21, 37, 32, 0.8)',
+    color: COLORS.background + 'CC',
     textAlign: 'right',
   },
 
@@ -273,10 +273,10 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: COLORS.textPrimary + '1A',
   },
   secondaryBtnText: {
     fontFamily: 'Tajawal-Bold',
@@ -345,7 +345,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
     borderWidth: 1,
     borderColor: COLORS.accentGreen + '4D',
     alignItems: 'center',
@@ -380,11 +380,11 @@ export const createStyles = (COLORS) => StyleSheet.create({
     color: COLORS.accentGreen,
   },
   rs_GridWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     borderRadius: 20,
     padding: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     marginTop: 10,
     // Remove fixed height, will be animated
   },
@@ -400,9 +400,9 @@ export const createStyles = (COLORS) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     gap: 8,
   },
   rs_TypeChipActive: {
@@ -458,11 +458,11 @@ export const createStyles = (COLORS) => StyleSheet.create({
     color: COLORS.background,
   },
   rs_GridWrapperAnimated: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     borderRadius: 20,
     padding: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     marginTop: 10,
   },
 
@@ -523,7 +523,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   },
   claimItemActive: {
     borderColor: COLORS.accentGreen,
-    backgroundColor: 'rgba(96, 165, 140, 0.1)',
+    backgroundColor: COLORS.accentGreen + '1A',
   },
   claimItemText: {
     fontFamily: 'Tajawal-Bold',
@@ -540,7 +540,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderColor: COLORS.accentGreen,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(13, 27, 30, 0.5)',
+    backgroundColor: COLORS.background + '80',
   },
   checkboxFill: {
     ...StyleSheet.absoluteFillObject,
@@ -771,20 +771,20 @@ export const createStyles = (COLORS) => StyleSheet.create({
   ingCardBase: {
     width: width * 0.85,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     padding: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: COLORS.textPrimary + '1F',
   },
   ingHeader: { alignItems: 'flex-end' },
   ingName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, textAlign: 'right' },
   ingTagsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   ingTag: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  ingFuncTag: { backgroundColor: 'rgba(96, 165, 140, 0.2)' },
-  ingChemTag: { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+  ingFuncTag: { backgroundColor: COLORS.accentGreen + '33' },
+  ingChemTag: { backgroundColor: COLORS.info + '33' },
   ingTagText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary },
   ingBenefitsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginTop: 15 },
-  ingBenefitChip: { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  ingBenefitChip: { backgroundColor: COLORS.textPrimary + '14', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   ingBenefitText: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary },
   ingDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
   ingWarningBox: { borderRadius: 12, padding: 12, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 },
@@ -822,11 +822,11 @@ export const createStyles = (COLORS) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLORS.textPrimary + '14',
     height: 50,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     gap: 8,
   },
   secondaryActionText: {
@@ -839,10 +839,10 @@ export const createStyles = (COLORS) => StyleSheet.create({
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: COLORS.textPrimary + '0D',
   },
 
   // --------------------------------------------------------------------------
@@ -861,7 +861,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 24,
     padding: 25,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
@@ -944,7 +944,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     fontFamily: 'Tajawal-Bold',
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: COLORS.textPrimary + '1A',
   },
   modalSaveButton: {
     backgroundColor: COLORS.accentGreen,
@@ -994,7 +994,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: COLORS.textPrimary + '40',
     marginRight: DOT_SPACING
   },
   paginationIndicator: {
@@ -1011,7 +1011,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // --------------------------------------------------------------------------
   breakdownContainer: {
     width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: COLORS.textPrimary + '1A',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1037,10 +1037,10 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: COLORS.textPrimary + '0D',
   },
   breakdownRowCalc: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     marginTop: 5,
     borderRadius: 6,
     paddingHorizontal: 6,
@@ -1069,14 +1069,14 @@ export const createStyles = (COLORS) => StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: COLORS.textPrimary + '26',
     marginBottom: 20,
     position: 'relative',
   },
   dashboardGlass: {
     padding: 20,
     paddingHorizontal: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'transparent',
   },
 
   // Dashboard Header (Personal Match)
@@ -1094,9 +1094,9 @@ export const createStyles = (COLORS) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: COLORS.textPrimary + '1A',
     maxWidth: 100, // Prevents it from taking more than half the header
     alignSelf: 'center',
   },
@@ -1155,7 +1155,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // The Glass Capsule
   pillarContainer: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)', // Ultra-subtle fill
+    backgroundColor: COLORS.textPrimary + '11', // Ultra-subtle fill
     borderRadius: 16,
     padding: 12,
 
@@ -1180,7 +1180,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
   },
   pillarLabel: {
     fontFamily: 'Tajawal-Bold',
@@ -1197,7 +1197,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   pillarTrack: {
     height: 6,
     width: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Darker track for depth
+    backgroundColor: COLORS.textPrimary + '26', // Darker track for depth
     borderRadius: 10,
     overflow: 'hidden',
   },
@@ -1214,7 +1214,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // Personal Match Reason Box (Sub-dashboard)
   matchContainer: {
     marginTop: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)', // Very subtle glass background
+    backgroundColor: COLORS.textPrimary + '11', // Very subtle glass background
     borderRadius: 16,
     paddingVertical: 5,
     marginHorizontal: 5,
@@ -1237,7 +1237,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.textPrimary + '1A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1303,7 +1303,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // Divider between Good and Bad sections
   matchSeparator: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.textPrimary + '1A',
     marginHorizontal: 15,
   },
 
@@ -1313,13 +1313,13 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // --------------------------------------------------------------------------
 
   claimsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     marginTop: 0,
     marginBottom: 20,
     borderRadius: 20,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: COLORS.textPrimary + '1F',
   },
 
   claimsHeader: {
@@ -1332,7 +1332,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     paddingBottom: 10, // Reduced padding to tighten gap
     marginBottom: 0,   // Removed margin to fix the "massive gap"
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: COLORS.textPrimary + '1A',
   },
   claimsTitle: {
     fontFamily: 'Tajawal-Bold',
@@ -1349,12 +1349,12 @@ export const createStyles = (COLORS) => StyleSheet.create({
   honestyBadge: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: COLORS.textPrimary + '0D',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: COLORS.textPrimary + '0D',
   },
   honestyScore: {
     fontFamily: 'Tajawal-ExtraBold',
@@ -1379,7 +1379,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   },
   claimRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: COLORS.textPrimary + '0D',
   },
 
   // Clickable Row Area
@@ -1461,18 +1461,18 @@ export const createStyles = (COLORS) => StyleSheet.create({
   miniEvidenceChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(77, 150, 255, 0.1)', // Default blue tint
+    backgroundColor: COLORS.info + '1A', // Default blue tint
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(77, 150, 255, 0.2)',
+    borderColor: COLORS.info + '33',
     marginBottom: 4,
   },
   miniEvidenceText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
-    color: '#4D96FF', // Default blue text
+    color: COLORS.info, // Default blue text
     textAlign: 'left',
   },
   guideSection: {
@@ -1488,7 +1488,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // --- THE GLASS CARD (Base) ---
   opticalCard: {
     flex: 1, // Split width 50/50
-    backgroundColor: '#0f1513', // Deep matte black
+    backgroundColor: COLORS.card, // Deep matte black
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -1504,7 +1504,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
 
   // --- SPECIFIC STATES ---
   cardError: {
-    borderColor: 'rgba(239, 68, 68, 0.4)', // Dim Red
+    borderColor: COLORS.danger + '66', // Dim Red
   },
   cardSuccess: {
     borderColor: COLORS.accentGreen + '99',
@@ -1527,7 +1527,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // Left Side: "Signal Lost" Effect
   noiseOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20, 10, 10, 0.7)', // Heavy dark tint
+    backgroundColor: COLORS.background + 'B3', // Heavy dark tint
     zIndex: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1538,7 +1538,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderColor: COLORS.danger,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: COLORS.danger + '1A',
     marginTop: 10,
   },
   errorTextMono: {
@@ -1562,9 +1562,9 @@ export const createStyles = (COLORS) => StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#00ffaa', // Neon Green
+    backgroundColor: COLORS.accentGreen, // Neon Green
     zIndex: 10,
-    shadowColor: '#00ffaa',
+    shadowColor: COLORS.accentGreen,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10, // Glowing effect
@@ -1596,9 +1596,9 @@ export const createStyles = (COLORS) => StyleSheet.create({
   cardFooter: {
     paddingVertical: 12,
     paddingHorizontal: 5,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.textPrimary + '08',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: COLORS.textPrimary + '0D',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1642,8 +1642,8 @@ export const createStyles = (COLORS) => StyleSheet.create({
 
   // Primary (Strong) Chips
   chipPrimary: {
-    backgroundColor: 'rgba(77, 150, 255, 0.15)', // Blue tint
-    borderColor: 'rgba(77, 150, 255, 0.3)',
+    backgroundColor: COLORS.info + '26', // Blue tint
+    borderColor: COLORS.info + '4D',
     borderWidth: 1,
     borderRadius: 6,
     paddingVertical: 4,
@@ -1652,7 +1652,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   chipTextPrimary: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 12,
-    color: '#4D96FF',
+    color: COLORS.info,
     textAlign: 'right', // <--- FIX: Changed from 'center' to 'right'
   },
   chipBenefit: {
@@ -1663,8 +1663,8 @@ export const createStyles = (COLORS) => StyleSheet.create({
 
   // Trace (Weak) Chips
   chipTrace: {
-    backgroundColor: 'rgba(255, 184, 76, 0.1)',
-    borderColor: 'rgba(255, 184, 76, 0.3)',
+    backgroundColor: COLORS.warning + '1A',
+    borderColor: COLORS.warning + '4D',
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 5,
@@ -1711,7 +1711,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   personalNoteText: {
     fontFamily: 'Tajawal-Regular',
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: COLORS.textPrimary + '99',
     textAlign: 'center',
     flexShrink: 1,
     lineHeight: 16

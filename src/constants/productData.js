@@ -10,10 +10,12 @@ export const PRODUCT_TYPES = [
     
     // Hair Categories
     { id: 'shampoo', label: 'شامبو', icon: 'spa' },
-    { id: 'conditioner', label: 'بلسم', icon: 'pump-soap' }, // New
+    { id: 'conditioner', label: 'بلسم/مرطب شعر', icon: 'pump-soap' }, // New
     { id: 'hair_mask', label: 'قناع شعر', icon: 'hand-sparkles' },
     { id: 'hair_serum', label: 'سيروم للشعر', icon: 'spray-can' }, // New (Split)
     { id: 'oil_blend', label: 'زيت (شعر/بشرة)', icon: 'leaf' },
+    { id: 'oil_replacement', label: 'بديل الزيت', icon: 'water' },
+
     
     // Body Categories
     { id: 'body_wash', label: 'غسول للجسم', icon: 'bath' }, // New
@@ -28,6 +30,8 @@ export const getClaimsByProductType = (productType) => {
         conditioner: [ "تنعيم الشعر", "فك التشابك", "ترطيب مكثف", "إصلاح الشعر المتضرر", "حماية اللون", "تلميع ولمعان", "مكافحة التجعد", "تغذية الشعر", "مرطب للشعر" ], // New
         
         hair_mask: [ "ترطيب مكثف", "تغذية الشعر", "إصلاح الشعر المتضرر", "تقوية الشعر", "تنعيم الشعر", "مكافحة التجعد", "حماية اللون", "تلميع ولمعان", "مرطب للشعر" ],
+
+        oil_replacement: [ "ترطيب مكثف", "تغذية الشعر", "إصلاح الشعر المتضرر", "تقوية الشعر", "تنعيم الشعر", "مكافحة التجعد", "حماية اللون", "تلميع ولمعان", "مرطب للشعر" ],
         
         hair_serum: [ "تلميع ولمعان", "مكافحة التجعد", "حماية من الحرارة", "إصلاح الشعر المتضرر", "تنعيم الشعر", "ترطيب للشعر", "تغذية الشعر", "حماية اللون", "تعزيز النمو", "مضاد لتساقط الشعر" ], // New (Split from generic serum)
         

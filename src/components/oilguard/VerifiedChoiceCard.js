@@ -101,11 +101,10 @@ const createStyles = (COLORS) => StyleSheet.create({
     container: {
         width: '100%',
         marginVertical: 10,
-        // No horizontal padding here so it stretches to match Dashboard/Claims
     },
     cardFrame: {
-        backgroundColor: 'rgba(255, 255, 255, 0.02)',
-        borderRadius: 28, // Matches sectionCard in modal
+        backgroundColor: COLORS.textPrimary + '05', // WAS 'rgba(255, 255, 255, 0.02)'
+        borderRadius: 28, 
         borderWidth: 1,
         borderColor: COLORS.border,
         padding: 16,
@@ -136,7 +135,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     matchBadgeText: {
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 10,
-        color: COLORS.background,
+        color: COLORS.background, 
     },
     mainContent: {
         flexDirection: 'row-reverse',
@@ -146,7 +145,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     imageContainer: {
         width: 70,
         height: 70,
-        backgroundColor: '#FFF',
+        backgroundColor: '#FFF', // Keep this white for product image backgrounds
         borderRadius: 18,
         padding: 8,
         justifyContent: 'center',
@@ -181,7 +180,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     scoreText: {
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 20,
-        color: '#FFF',
+        color: COLORS.textPrimary, // <---- FIX: WAS '#FFF'
         lineHeight: 22,
     },
     scoreLabel: {
@@ -192,7 +191,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     divider: {
         width: 1,
         height: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: COLORS.textPrimary + '1A', // WAS 'rgba(255,255,255,0.1)'
     },
     improvementBadge: {
         flexDirection: 'row-reverse',
@@ -213,7 +212,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         justifyContent: 'center',
         paddingLeft: 5,
         borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255,255,255,0.05)',
+        borderLeftColor: COLORS.textPrimary + '0D', // WAS 'rgba(255,255,255,0.05)'
         paddingLeft: 12,
     },
     shuffleCircle: {
@@ -235,7 +234,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     microProgressContainer: {
         height: 3,
         width: '100%',
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: COLORS.textPrimary + '08', // WAS 'rgba(255,255,255,0.03)'
         marginTop: 20,
         borderRadius: 2,
         position: 'relative',
@@ -255,7 +254,6 @@ const createStyles = (COLORS) => StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 5,
     },
-    // Technical Accents
     hudCorner: {
         position: 'absolute',
         width: 12,

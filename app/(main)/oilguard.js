@@ -111,8 +111,7 @@ const Spore = ({ size, startX, duration, delay }) => {
     const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 100, -100] });
     const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
 
-    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);
-};
+    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.accentGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);};
 
 const ContentCard = ({ children, style, delay = 0 }) => {
     const { colors } = useTheme();
@@ -154,7 +153,7 @@ const ScoreRing = ({ score = 0, size = 160 }) => {
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-                <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth="14" fill="none" />
+                <Circle cx={size / 2} cy={size / 2} r={r} stroke={COLORS.textPrimary + '14'} strokeWidth="14" fill="none" />
                 <Circle cx={size / 2} cy={size / 2} r={r} stroke={ringColor} strokeWidth="14" fill="none" strokeDasharray={circ} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
             </Svg>
             <View style={{ position: 'absolute', alignItems: 'center' }}>
@@ -201,8 +200,7 @@ const ConfidenceRing = ({ confidence }) => {
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-                <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} fill="none" />
-                <Animated.View style={StyleSheet.absoluteFill}>
+            <Circle cx={size / 2} cy={size / 2} r={r} stroke={COLORS.textPrimary + '1A'} strokeWidth={strokeWidth} fill="none" />                <Animated.View style={StyleSheet.absoluteFill}>
                     <Svg width={size} height={size}>
                         <AnimatedCircle
                             cx={size / 2}
@@ -622,7 +620,7 @@ const AnimatedCheckbox = ({ isSelected }) => {
         <View style={styles.checkboxBase}>
             <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
             <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-                <FontAwesome5 name="check" size={14} color={COLORS.darkGreen} />
+            <FontAwesome5 name="check" size={14} color={COLORS.textOnAccent} />
             </Animated.View>
         </View>
     );
@@ -656,7 +654,7 @@ const Wave = ({ isFilling }) => {
     return (
         <Animated.View style={{ width: '200%', height: 40, transform: [{ translateX }] }}>
             <Svg height="40" width={width * 1.6} style={{ width: '100%' }}>
-                <Circle cx="50%" cy="50%" r="50%" fill={COLORS.primaryGlow} />
+               <Circle cx="50%" cy="50%" r="50%" fill={COLORS.accentGlow} />
             </Svg>
         </Animated.View>
     );
@@ -693,7 +691,7 @@ const Bubble = ({ size, x, duration, delay }) => {
         cx={x}
         cy={animatedCy}
         r={size}
-        fill={COLORS.primaryGlow}
+        fill={COLORS.accentGlow}
         opacity={0.7}
     />;
 };
@@ -904,7 +902,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
                         <View style={styles.cardFooter}>
                             <View style={[styles.indicatorDot, { backgroundColor: COLORS.danger }]} />
-                            <Text style={[styles.footerLabel, { color: COLORS.textDim }]}>
+                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
                                 المنتج كامل (خطأ)
                             </Text>
                         </View>
@@ -933,13 +931,12 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                             <View style={styles.gridOverlay}>
                                 <Svg height="100%" width="100%">
                                     <Defs>
-                                        {/* FIX: Used SvgLinearGradient to avoid conflict with Expo LinearGradient */}
-                                        <SvgLinearGradient id="gridGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <SvgLinearGradient id={`gridGrad-${COLORS.accentGreen.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
                                             <Stop offset="0" stopColor={COLORS.accentGreen} stopOpacity="0.05" />
                                             <Stop offset="1" stopColor={COLORS.accentGreen} stopOpacity="0.2" />
                                         </SvgLinearGradient>
                                     </Defs>
-                                    <Rect x="0" y="0" width="100%" height="100%" fill="url(#gridGrad)" />
+                                    <Rect x="0" y="0" width="100%" height="100%" fill={`url(#gridGrad-${COLORS.accentGreen.replace('#', '')})`} />
                                     {/* Horizontal grid lines */}
                                     <Path d={`M0 ${SCAN_HEIGHT * 0.33} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
                                     <Path d={`M0 ${SCAN_HEIGHT * 0.66} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
@@ -962,7 +959,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 
                         <View style={styles.cardFooter}>
                             <View style={[styles.indicatorDot, { backgroundColor: COLORS.accentGreen }]} />
-                            <Text style={[styles.footerLabel, { color: COLORS.textDim }]}>
+                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
                                 المكونات فقط (صح)
                             </Text>
                         </View>
@@ -996,13 +993,13 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                     {/* --- NEW: SCAN MODE TOGGLE --- */}
                     <View style={{
                         flexDirection: 'row',
-                        backgroundColor: 'rgba(0,0,0,0.05)',
+                        backgroundColor: COLORS.textPrimary + '0D',
                         borderRadius: 12,
                         padding: 4,
                         marginTop: 'auto',
                         marginBottom: 5,
                         borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.1)'
+                        borderColor: COLORS.textPrimary + '1A'
                     }}>
                         {/* Fast Mode Button */}
                         <TouchableOpacity
@@ -1152,28 +1149,26 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
             {/* 1. Outer Tech Ring (Spinning Slow) */}
             <Animated.View style={{ position: 'absolute', transform: [{ rotate: spin }] }}>
                 <Svg width={size} height={size}>
-                    <Circle cx={center} cy={center} r={size * 0.48} stroke="rgba(90, 156, 132, 0.1)" strokeWidth="1" strokeDasharray="5, 10" fill="none" />
+                    <Circle cx={center} cy={center} r={size * 0.48} stroke={COLORS.accentGreen + '66'} strokeWidth="1" strokeDasharray="5, 10" fill="none" />
                 </Svg>
             </Animated.View>
-
-
 
             {/* 3. Main Gauge Track */}
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
                 <Defs>
-                    {/* FIX: Use SvgLinearGradient here instead of LinearGradient */}
-                    <SvgLinearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                    {/* FIX: Dynamic ID prevents caching across theme switches */}
+                    <SvgLinearGradient id={`grad-${score}`} x1="0" y1="0" x2="1" y2="1">
                         <Stop offset="0" stopColor={activeColor} stopOpacity="0.2" />
                         <Stop offset="1" stopColor={activeColor} stopOpacity="1" />
                     </SvgLinearGradient>
                 </Defs>
                 {/* Background Track */}
-                <Circle cx={center} cy={center} r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="18" fill="none" strokeLinecap="round" />
+                <Circle cx={center} cy={center} r={radius} stroke={COLORS.textPrimary + '0D'} strokeWidth="18" fill="none" strokeLinecap="round" />
 
                 {/* Progress Value */}
                 <AnimatedCircle
                     cx={center} cy={center} r={radius}
-                    stroke={`url(#grad)`} strokeWidth="18" fill="none"
+                    stroke={`url(#grad-${score})`} strokeWidth="18" fill="none"
                     strokeDasharray={circum} strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                 />
@@ -1189,6 +1184,7 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
                 </Text>
             </View>
         </View>
+    
     );
 };
 
@@ -1426,8 +1422,8 @@ const AgentLoadingView = () => {
         <View style={{
             marginVertical: 20, marginHorizontal: 20,
             padding: 20, borderRadius: 16,
-            backgroundColor: 'rgba(0,0,0,0.2)',
-            borderWidth: 1, borderColor: 'rgba(90, 156, 132, 0.2)',
+            backgroundColor: COLORS.textPrimary + '0D',
+            borderWidth: 1, borderColor: COLORS.accentGreen + '33',
             alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden'
         }}>
@@ -2596,7 +2592,7 @@ export default function OilGuardEngine() {
                                     marginTop: 12,
                                     paddingVertical: 12,
                                     paddingHorizontal: 16,
-                                    backgroundColor: COLORS.textPrimary + '08', // Subtle glass fill
+                                    backgroundColor: COLORS.textPrimary + '11', // Subtle glass fill
                                     borderRadius: 16,
                                 }}
                             >

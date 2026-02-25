@@ -181,48 +181,93 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         </View>
     );
 
-    const RoutineProductPill = ({ product, onPress: onPillPress }) => (
-        <TouchableOpacity style={styles.rpCard} onPress={onPillPress} activeOpacity={0.7}>
-            <View style={styles.rpImageContainer}>
-                {product.image ? (
-                    <Image source={{ uri: product.image }} style={styles.rpImage} />
-                ) : (
-                    <FontAwesome5 name={product.type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
-                )}
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.rpName} numberOfLines={1}>{product.name}</Text>
-                {product.score > 0 ? (
-                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                        <View style={[styles.rpScoreDot, { backgroundColor: product.score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
-                        <Text style={styles.rpScoreText}>{product.score}%</Text>
-                    </View>
-                ) : null}
-            </View>
-        </TouchableOpacity>
-    );
+    const RoutineProductPill = ({ product, onPress: onPillPress }) => {
+        // ✅ Robust Extraction: Checks all possible key variations
+        const imageUri = product.productImage || product.image || product.imageUrl;
+        const name = product.productName || product.name || product.details || 'منتج';
+        const score = product.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0;
+        const type = product.productType || product.type || product.analysisData?.product_type || 'other';
+
+        return (
+            <TouchableOpacity style={styles.rpCard} onPress={onPillPress} activeOpacity={0.7}>
+                <View style={styles.rpImageContainer}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.rpImage} />
+                    ) : (
+                        <FontAwesome5 name={type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
+                    )}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.rpName} numberOfLines={1}>{name}</Text>
+                    {score > 0 ? (
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                            <View style={[styles.rpScoreDot, { backgroundColor: score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                            <Text style={styles.rpScoreText}>{score}%</Text>
+                        </View>
+                    ) : null}
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
 
     const RoutineRateContent = ({ post: p }) => {
-        const rawAm = p.routineSnapshot?.am || [];
-        const rawPm = p.routineSnapshot?.pm || [];
+        // 1. Safe Parse
+        let snapshot = p.routineSnapshot;
+        if (typeof snapshot === 'string') {
+            try { snapshot = JSON.parse(snapshot); } catch (e) { snapshot = {}; }
+        }
+
+        const rawAm = snapshot?.am || [];
+        const rawPm = snapshot?.pm || [];
+        
         const handleProductPress = (prod) => {
             if (!onViewProduct) return;
+            
+            // 2. Normalize for ActionSheet (Using data embedded in the post)
             onViewProduct({
-                id: prod.id,
-                productName: prod.name,
-                productImage: prod.image,
-                imageUrl: prod.image,
+                ...prod,
+                id: prod.id || 'unknown',
+                productName: prod.productName || prod.name || 'منتج',
+                productImage: prod.productImage || prod.image || null,
                 marketingClaims: prod.marketingClaims || [],
-                analysisData: {
-                    oilGuardScore: prod.score,
-                    product_type: prod.type,
-                    detected_ingredients: prod.ingredients || [],
+                analysisData: prod.analysisData || {
+                    oilGuardScore: prod.oilGuardScore || prod.score || 0,
+                    product_type: prod.productType || prod.type || 'other',
+                    // Use the embedded ingredients list
+                    detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
                     user_specific_alerts: []
                 }
             });
         };
+        
         const renderPeriod = (title, icon, color, stepsInput) => {
             const steps = Array.isArray(stepsInput) ? stepsInput : [];
+            if (steps.length === 0) return null;
+            
+            const allProducts = [];
+            
+            steps.forEach(step => {
+                // CASE 1: Standard Wrapper (Step -> Products Array)
+                if (step.products && Array.isArray(step.products)) {
+                    allProducts.push(...step.products);
+                } 
+                // CASE 2: Flat Object (The step IS the product) - Common in older/migrated data
+                // 🛑 FIX: Preserve existing data, do NOT overwrite name with error message
+                else if (step.ingredients || step.marketingClaims || step.productName || step.name) {
+                    allProducts.push(step);
+                }
+                // CASE 3: Legacy Reference (Only IDs)
+                else if (step.productIds && step.details) {
+                    allProducts.push({
+                        id: step.productIds[0] || 'unknown',
+                        productName: step.details,
+                        productType: 'other',
+                        oilGuardScore: 0
+                    });
+                }
+            });
+
             return (
                 <View style={[styles.routinePeriodContainer, { borderColor: color + '30', backgroundColor: color + '05' }]}>
                     <View style={styles.routinePeriodHeader}>
@@ -230,12 +275,12 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                             <Feather name={icon} size={14} color={color} />
                             <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
                         </View>
-                        <Text style={styles.routineStepCount}>{steps.length} خطوات</Text>
+                        <Text style={styles.routineStepCount}>{allProducts.length} منتجات</Text>
                     </View>
-                    {steps.length > 0 ? (
+                    {allProducts.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10, gap: 8 }}>
-                            {steps.map((prod, i) => (
-                                <View key={i} style={{ alignItems: 'center', flexDirection: 'row-reverse' }}>
+                            {allProducts.map((prod, i) => (
+                                <View key={`${title}-${i}`} style={{ alignItems: 'center', flexDirection: 'row-reverse' }}>
                                     <RoutineProductPill product={prod} onPress={() => handleProductPress(prod)} />
                                 </View>
                             ))}
@@ -246,6 +291,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 </View>
             );
         };
+
         return (
             <View>
                 <Text style={styles.postContent}>{p.content}</Text>
@@ -535,7 +581,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
                         <View style={styles.pillInfo}>
                             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', paddingHorizontal: 2 }}>
-                                <Text style={styles.pillSubtitle}>استماع إلى الشرح الصوتي</Text>
+                                <Text style={styles.pillSubtitle}></Text>
                                 <Text style={styles.timerText}>{formatTime(position)} / {formatTime(duration)}</Text>
                             </View>
                             
@@ -566,9 +612,9 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                         <View style={styles.expandedContent}>
                             {p.imageUrl && <Image source={{ uri: p.imageUrl }} style={styles.pillImage} />}
                             <Text style={styles.pillDescription}>{p.content}</Text>
-                            <TouchableOpacity style={styles.pillCta} onPress={() => router.push('/(tabs)/scanner')}>
+                            <TouchableOpacity style={styles.pillCta} onPress={() => router.push('/oilguard')}>
                                 <FontAwesome5 name="search" size={14} color="#FFF" />
-                                <Text style={styles.pillCtaText}>إفحص منتجك الآن</Text>
+                                <Text style={styles.pillCtaText}>إفحصي منتجك الآن</Text>
                             </TouchableOpacity>
                         </View>
                     )}

@@ -32,24 +32,25 @@ export const THEMES = {
         id: 'baby_pink',
         label: 'وردي بناتي (Macaron Pink)',
         colors: {
-            background: '#FFEBF0',       // Soft pastel pink background (NOT white)
-            card: '#FFD9E4',             // Distinct macaron pink for cards and elements
-            border: '#FFB3C6',           // Slightly deeper pink for borders and dividers
-            textDim: '#B38A9A',          // Muted plum for inactive text
-            accentGreen: '#FF6B9E',      // Vibrant but soft rose pink for buttons/icons
-            accentGlow: 'rgba(255, 107, 158, 0.35)', // Gorgeous pink glow
-            primary: '#FFA6C9',          // Medium soft pink
-            textPrimary: '#592B3C',      // Deep rich plum/burgundy (Very readable, very soft)
-            textSecondary: '#8C5C6F',    // Dusty plum for secondary text
-            textOnAccent: '#FFFFFF',     // Crisp white text on the accent buttons
-            danger: '#F47174',
-            warning: '#FDBA74',
-            info: '#7DD3FC',
-            success: '#6EE7B7',
-            gold: '#FBBF24',
-            blue: '#7DD3FC',
-            purple: '#C084FC',
-            inputBg: 'rgba(255, 107, 158, 0.12)' // Pink-tinted text inputs
+            background: '#FFEBF0',       
+            card: '#FFD9E4',             
+            border: '#FFB3C6',           
+            textDim: '#B38A9A',          
+            accentGreen: '#FF6B9E',      
+            accentGlow: 'rgba(255, 107, 158, 0.35)', 
+            primary: '#FFA6C9',          
+            textPrimary: '#592B3C',      
+            textSecondary: '#8C5C6F',    
+            textOnAccent: '#FFFFFF',     
+            // --- UPDATED COLORS BELOW ---
+            danger: '#E11D48',    // Stronger Red
+            warning: '#D97706',   // Deep Amber (visible on light pink)
+            info: '#0284C7',      // Deep Sky Blue (WAS #7DD3FC)
+            success: '#059669',   // Deep Emerald Green (WAS #6EE7B7)
+            gold: '#B45309',      // Deep Gold
+            blue: '#0284C7',      // Deep Blue
+            purple: '#7E22CE',    // Deep Purple
+            inputBg: 'rgba(255, 107, 158, 0.12)' 
         }
     },
     clinical_blue: {

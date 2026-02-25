@@ -405,8 +405,8 @@ const createStyles = (COLORS) => StyleSheet.create({
     actionButtonSecondary: { flexDirection: 'row-reverse', alignItems: 'center', padding: 16, borderRadius: 20, backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, gap: 15, marginBottom: 10 },
     iconBoxMain: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.accentGreen + '20', alignItems: 'center', justifyContent: 'center' }, // Light accent bg
     iconBoxSec: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.textDim + '15', alignItems: 'center', justifyContent: 'center' },
-    btnTitleMain: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right' },
-    btnSubMain: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right', marginTop: 2 },
+    btnTitleMain: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.background, textAlign: 'right' },
+    btnSubMain: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.background, textAlign: 'right', marginTop: 2 },
     btnTitleSec: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right' },
     btnSubSec: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right', marginTop: 2 },
     menuGrid: { backgroundColor: COLORS.background, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
