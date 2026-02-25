@@ -188,7 +188,7 @@ const ForceUpdateScreen = ({ url }) => (
       <MaterialIcons name="system-update" size={70} color="#fbbf24" style={{ marginBottom: 20 }} />
       <Text style={styles.systemTitle}>تحديث إجباري مطلوب</Text>
       <Text style={styles.systemMessage}>
-        هذا الإصدار مليء بالمشاكل التي تم حلها في الإصدار الجديد.
+       هذه النسخة تحتوي على مشاكل تم حلها في الإصدار الجديد مع ميزات جديدة.
       </Text>
       {url ? (
         <Pressable style={styles.updateButton} onPress={() => Linking.openURL(url)}>
