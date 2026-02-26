@@ -274,10 +274,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
               priority: Notifications.AndroidNotificationPriority.MAX,
             },
           },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: morningTrigger.getTime()
-          },
+          trigger: morningTrigger,
         });
     }
 
@@ -300,10 +297,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
               priority: Notifications.AndroidNotificationPriority.MAX,
             },
           },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: eveningTrigger.getTime()
-          },
+          trigger: eveningTrigger,
         });
     }
   }
