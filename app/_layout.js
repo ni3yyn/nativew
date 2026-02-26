@@ -21,7 +21,6 @@ import { db } from '../src/config/firebase';
 // Import Notification Helper
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 
-
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -535,6 +534,8 @@ const RootLayoutNav = ({ fontsLoaded }) => {
           if (scheduleAuthenticNotifications) {
             await scheduleAuthenticNotifications(name, products, settings);
             console.log(`📅 [Layout] Notifications Locked & Scheduled! Products: ${products.length}`);
+            console.log("Current Update Channel: ", Updates.channel);
+console.log("Current Runtime Version: ", Updates.runtimeVersion);
           }
         }
       } catch (e) {

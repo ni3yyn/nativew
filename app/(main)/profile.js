@@ -2384,7 +2384,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                     onPress={() => handleToggleAccordion('theme')}
                 >
                     <SingleSelectGroup
-                        title="اختر مظهر التطبيق"
+                        title="اختر مظهر وثيق"
                         options={[
                             { id: 'original', label: 'أصلي', icon: 'tree' },
                             { id: 'baby_pink', label: 'وردي', icon: 'heart' },
