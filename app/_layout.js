@@ -83,26 +83,33 @@ const useDailyPresence = (user) => {
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
 const useSilentUpdates = () => {
-
   useEffect(() => {
+    let isUpdatePending = false; // متغير لتتبع ما إذا كان هناك تحديث جاهز
 
     const checkAndDownload = async () => {
       try {
-
-        // IMPORTANT: In Expo Go / Local Development, this often returns false
-        // because you are already on a 'development' version.
         const update = await Updates.checkForUpdateAsync();
         
         if (update.isAvailable) {
           await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
-        } else {
+          isUpdatePending = true; // التحديث نزل وصار جاهزاً
+          console.log("✅ تم تحميل التحديث الصامت بنجاح. ينتظر إعادة التشغيل.");
         }
       } catch (e) {
+        console.log("⚠️ فشل التحقق من التحديثات (قد يكون لا يوجد اتصال):", e);
       }
     };
 
     checkAndDownload();
+
+    // نراقب حالة التطبيق: إذا قام المستخدم بتصغير التطبيق (أرسله للخلفية) وهناك تحديث جاهز، نعيد التشغيل
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' && isUpdatePending) {
+        Updates.reloadAsync();
+      }
+    });
+
+    return () => subscription.remove();
   }, []); 
 };
 

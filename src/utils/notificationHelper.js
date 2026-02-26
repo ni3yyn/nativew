@@ -41,102 +41,113 @@ const MESSAGES = {
   // 🌅 MORNING BANK
   morning: {
     empty: (name) => [
-      `${name} ✨ الرف تاعك فارغ، واش رايك نعمروه بمنتجاتك اليوم؟`,
-      `بشرتك تستاهل العناية.. أضيفي أول منتج لروتينك وخلينا نبداو 🧴`,
-      `صباح الخير! خطوة صغيرة اليوم تصنع فرق كبير غدوة.. أضيفي منتجاتك الآن.`,
+      `صباح الخير يا ${name} ☀️.. لنبدأ بإضافة أول منتج؟`,
+      `يا ${name}، بشرتك تستحق العناية.. وأضيفي منتجاتك الآن.`,
+      `بداية جديدة..مرحبا بك يا ${name} 🧴`,
     ],
     // ❄️ Winter Mornings (Cold, Dry, Wind)
     winter: (name) => [
-      `البرد قاسح ❄️ ما تنسايش ترطبي وجهك مليح اليوم.`,
-      `صباح السرور! التدفئة تنشف البشرة، ديري مرطب يحمي وجهك طول النهار 💧`,
-      `السر فالشتا هو الترطيب المزدوج.. تهلاي في بشرتك اليوم ☃️`,
-      `صباح النور.. الما الفاتر أحسن من السخون باش تحافظي على زيوت وجهك الطبيعية.`,
+      `صباح الخير يا ${name} ❄️.. الجو بارد وينشف البشرة، رطبي بعمق!`,
+      `يا ${name}، برد الصباح عدو الحاجز الجلدي.. لا تخرجي بدون ترطيب وحماية.`,
+      `صباح النور.. التدفئة في الدار تنشف الوجه، عادليها بمرطب قوي.`,
+      `طبقات الترطيب هي سر النضارة الشتوية ☃️`,
+      `يا ${name}، لا تغسلي وجهك بماء ساخن.. الفاتر هو الأفضل في البرد!`,
     ],
     // ☀️ Summer Mornings (Heat, Sun, Sweat)
     summer: (name) => [
-      `صباح النور ☀️ السخانة بدات، واقي الشمس تاعك هو أهم حاجة قبل ما تخرجي!`,
-      `نهار سخون يستاهل غسول منعش وحماية قوية.. ما تنسايش تجددي الواقي 😎`,
-      `رطوبة وسخانة؟ خففي طبقات الروتين وركزي على الحماية والترطيب الخفيف 💧`,
+      `صباح النور يا ${name} ☀️!`,
+      `يا ${name}، الحرارة تفتح المسام.. غسول بارد وواقي شمس هم الحل.`,
+      `صباحو! تذكري: الواقي يوضع قبل الخروج بـ 20 دقيقة، وليس عند الباب 😉`,
+      `الجو حار والرطوبة عالية.. خففي الطبقات وركزي على الحماية 🛡️`,
+      `يا ${name}، النظارة الشمسية تحمي عينيك، والواقي يحمي شبابك.`,
     ],
     // 🎯 Goal: Acne (Hib Chabab)
     acne: (name) => [
-      `صباح الزين ✨ حبة اليوم تروح غدوة، المهم ما تمسيهاش والتزمي بروتينك.`,
-      `الاستمرارية هي سر تصفية الوجه.. غسلي وجهك مليح وابداي نهارك 💪`,
-      `صباح الخير.. تفكري بلي علاج الحبوب يحتاج صبر، ونتي راكي في الطريق الصحيح.`,
+      `صباح التحدي يا ${name} 💪.. لا تلمسي الحبوب مهما كان الإغراء!`,
+      `البكتيريا لا تحب النظافة.. روتينك الصباحي هو خط الدفاع الأول.`,
+      `يا ${name} نظفي وجهك وانطلقي ✨`,
+      `صباحو.. تذكري أن الصبر هو نصف العلاج مع حب الشباب.`,
     ],
-    // 🎯 Goal: Brightening/Pigmentation (Taftih/Les Taches)
+    // 🎯 Goal: Brightening/Pigmentation (Taftih/Tassaboghat)
     brightening: (name) => [
-      `صباح النضارة 🌟 الفيتامين C وواقي الشمس هوما السر باش تضوي اليوم.`,
-      `التصبغات يحبو الشمس.. احمي وجهك مليح باش تحافظي على نتيجة روتينك.`,
-      `تفتيح البشرة يبدا من الحماية الصباحية.. يومك مشرق ✨`,
+      `يا ${name}، التفتيح يبدأ من الحماية.. الشمس هي عدوة البقع الأولى.`,
+      `صباح الإشراق ✨.. فيتامين C اليوم هو أفضل صديق لبشرتك.`,
+      `النضارة تريد الاستمرارية.. روتينك الصباحي يصنع الفرق.`,
     ],
     // 🎯 Goal: Anti-Aging (Tajaeed)
     anti_aging: (name) => [
-      `صباح الشباب ✨ ترطيب اليوم هو استثمار في كولاجين غدوة. ما تنسايش روتينك!`,
-      `الشمس هي العدو الأول للتجاعيد.. واقي الشمس تاعك يستنى فيك 🛡️`,
-      `الترطيب الداخلي والخارجي هو السر.. شربتي كاس ما على الفراغ؟ 💧`,
+      `صباح الشباب يا ${name} ✨.. 90% من التجاعيد سببها الشمس، احمي نفسك!`,
+      `الترطيب هو سر الشباب الدائم.. شحال من كاس ما شربتي؟ 💧`,
+      `يا ${name}، لا تنسي الرقبة واليدين عند وضع واقي الشمس.`,
     ],
     // 🕌 Friday Special (Jumu'ah)
     friday: (name) => [
-      `يومك مبروك ${name} ✨`,
-      `صباح الفل.. نهار الجمعة فرصة باش تتهلاي في روحك وتريحي بشرتك.`,
-      `يومك مبروك.. دوش خفيف، روتين منعش، وبداية يوم نقية 🌿`,
+      `يا ${name} 🕌.. اجعلي نور الوجه من نور الإيمان .`,
+      `صباح الأنوار.. لا تنسي سورة الكهف.`,
+      `يومك مبروك.. اغتسلي وتطيبي، ولا تنسي ترطيب وجهك الجميل ✨`,
+      `يا ${name}، في يوم الجمعة.. الجمال جمال الروح، والعناية تزيدك تألقاً.`,
     ],
     // ☕ Weekend Vibes (Fri/Sat - Lazy Morning)
     weekend: (name) => [
-      `صباح الراحة والويكاند ☕ ادي وقتك فالرقاد.`,
-      `${name}.. واش رايك في ماسك خفيف مع قهوة الصباح؟ 💆‍♀️`,
-      `بشرتك حتى هي تفرح بالويكاند.. روتين هادي و نهارك مبروك ✨`,
+      `صباح الدلع والعطلة ☕.. خذي وقتك في الروتين، لا عجلة اليوم.`,
+      ` ${name}، صباح الراحة.. ماسك صباحي مع الفطور؟ علاش لالا! 🥒`,
+      `نوضي براحتك.. البشرة المرتاحة هي بشرة نضرة.`,
     ],
     // 🧴 Product Injection
     product: (name, pName) => [
-      `الـ ${pName} يستنى فيك باش يبدا خدمتو.. ما تنسايهش في روتين الصباح 🧴`,
-      `بشرتك محتاجة شوية حب، و ${pName} هو الحل اليوم ✨`,
-      `صباح الخير! ديري ${pName} وانطلقي لنهارك بكامل الثقة.`,
+      `يا ${name}، ${pName} يناديكِ من الرف.. لا تتجاهليه 😉`,
+      `صباحو! لا تنسي وضع ${pName}`,
+      `تذكير سريع: ${pName} جاهز لمهمة الصباح.`,
+      `بشرتك تسأل عن ${pName}.. هل وضعتيه؟`,
     ]
   },
 
   // 🌙 EVENING BANK
   evening: {
     empty: (name) => [
-      `مساء الخير 🌙 باش توجدي روتين الليل، لازمنا منتجات.. أضيفيها درك في التطبيق.`,
-      `الليل هو وقت تجديد البشرة.. خلينا نرتبو رف منتجاتك مع بعض 📸`,
+      `مساء الخير يا ${name} 🌙.. لا تتركي رفّك فارغاً، ابدئي الآن!`,
+      `قبل النوم.. ما رأيك بمسح منتجاتك لترتيب روتينك؟ 📸`,
+      `خطوة صغيرة للبدء.. اضغطي هنا لإضافة منتجاتك.`,
     ],
     // ❄️ Winter Nights
     winter: (name) => [
-      `البرد برا والتدفئة لداخل.. وجهك محتاج ترطيب عميق قبل ما ترقدي 🥶🌙`,
-      `تصبحي على خير.. ديري طبقة مليحة من المرطب باش تنوضي الصباح وجهك منور ✨`,
-      `ما تنسايش ترطبي شفايفك ويديك، الشتا تنشفهم بالخف 💧`,
+      `ليلة باردة يا ${name} 🥶.. بشرتك تحتاج طبقة ترطيب إضافية؟`,
+      `التدفئة تجفف البشرة ليلاً.. عوضي ذلك بسيروم مرطب قبل النوم.`,
+      `يا ${name}، الشفاه تجف بسرعة في الشتاء.. رطبيها الآن.`,
+      `الليل طويل والجو بارد.. فرصة مثالية لماسك مغذي 🍯`,
     ],
     // ☀️ Summer Nights
     summer: (name) => [
-      `نهار طويل وعرق وسخانة.. التنظيف المزدوج (Double Cleansing) ضروري الليلة 🌙`,
-      `بشرتك لازم تتنفس بعد نهار سخون.. غسلي وجهك مليح وتصبحي على خير 💧`,
-      `نظفي مساماتك من واقي الشمس تاع اليوم باش تتفاداي الحبوب غدوة ✨`,
+      `يوم طويل وحار.. بشرتك تحتاج تتنفس، التنظيف المزدوج ضروري 🌙`,
+      `تخلصي من طبقات الواقي والتعرق.. نامي بوجه خفيف ونظيف.`,
+      `حرارة اليوم كانت قاسية.. بردي بشرتك بغسول لطيف.`,
     ],
     // 🎯 Goal: Acne
     acne: (name) => [
-      `الليل هو أحسن وقت لعلاج الحبوب.. ديري الدواء تاعك وخليه يخدم ونتي راقدة 🌙`,
-      `ما تعصريش الحبات! 🚫 ديري العلاج الموضعي ورقدي متهنية.`,
-      `غلاف المخايد النظيف والغسول المليح = وجه صافي. تصبحي على خير ✨`,
+      `يا ${name}، غلاف الوسادة نظيف = وجه نظيف.. غيرتيه مؤخراً؟`,
+      `عالجي الحبوب الآن لتختفي غداً.. التزامك يصنع الفرق.`,
+      `لا تعبثي بالحبوب أمام المرآة! 🚫.. ضعي العلاج ونامي.`,
+      `غسولك المسائي هو أهم خطوة لقتل البكتيريا اليوم.`,
     ],
     // 🎯 Goal: Anti-Aging
     anti_aging: (name) => [
-      `وقت الريتينول وتجديد الخلايا 🌙 روتين الليل هو السلاح السري تاعك.`,
-      `تصبحي على خير ${name}.. السيروم الليلي راهو يستنى يخدم خدمتو.`,
-      `ترميم البشرة يصرا ونتي راقدة.. عاونيها بروتين خفيف ومغذي ✨`,
+      `تصبحي على خير.. الليل هو وقت الريتينول والترميم 🌙`,
+      `يا ${name}، نامي على ظهرك لتجنب خطوط النوم.. نصيحة خبيرة 😉`,
+      `السيروم الليلي يعمل وأنتِ نائمة.. لا تحرمي بشرتك منه.`,
     ],
     // 🛁 Thursday Night (Pre-Weekend/Hammam vibes)
     thursdayNight: (name) => [
-      `ليلة الخميس.. وقت التقشير والماسك والدلع 🧖‍♀️ وجدي وجهك للويكاند!`,
-      `كملي سمانتك بروتين عميق يخلي وجهك يضوي غدوة ✨`,
-      `تعب السمانة كامل يروح بروتين هادي ليلة الخميس.. تهلاي في روحك 🌙`,
+      `ليلة الجمعة.. وقت الدلع، التقشير، والماسك يا ${name} ✨`,
+      `حضري بشرتك للويكند.. روتين عميق وتصبحين على خير 🌙`,
+      `الخميس الونيس.. كمليه بروتين يخلي وجهك يضوي.`,
+      `يا ${name}، هل قمتِ بالتقشير الأسبوعي؟ الليلة وقت مناسب.`,
     ],
     // 🧴 Product Injection
     product: (name, pName) => [
-      `قبل ما ترقدي، ما تنسايش خطوة الـ ${pName}.. بشرتك رح تشكرك غدوة 🌙`,
-      `الـ ${pName} هو اللمسة الأخيرة لنهار اليوم.. تصبحي على خير ✨`,
-      `روتين الليل ما يكملش بلا ${pName}.. وقت العناية!`,
+      `قبل النوم.. ${pName} هو المكافأة التي تستحقينها ✨`,
+      `وينك يا ${name}؟ ${pName} جاهز لمهمة الليل.`,
+      `لا تنسي ${pName}.. بشرتك ستشكرك في الصباح.`,
+      `خطوة صغيرة بـ ${pName}، ونتيجة كبيرة غداً.`,
     ]
   }
 };
@@ -240,17 +251,23 @@ export async function registerForPushNotificationsAsync() {
 // ==============================================================================
 
 export async function scheduleAuthenticNotifications(userName, savedProducts, settings) {
-  // 1. Wipe clean to avoid duplicates
+  // 1. Wipe clean to avoid duplicates/stale messages
   await Notifications.cancelAllScheduledNotificationsAsync();
 
+  // 2. Prepare Data
   const firstName = userName?.split(' ')[0] || 'غالية';
   const today = new Date();
+  const isEmptyShelf = !savedProducts || savedProducts.length === 0;
 
+  // 3. Loop: Schedule next 7 days individually
   for (let i = 0; i < 7; i++) {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + i);
-    const dayOfWeek = targetDate.getDay();
+    const dayOfWeek = targetDate.getDay(); // 0-6
 
+    // --- ALGERIAN WEEKEND LOGIC (Fri/Sat) ---
+    // On weekends, people sleep late. Schedule morning alert for 10:30 AM
+    // On weekdays, schedule for 9:00 AM
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
     const morningHour = isWeekend ? 10 : 9;
     const morningMinute = isWeekend ? 30 : 0;
@@ -259,26 +276,29 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     const morningTrigger = new Date(targetDate);
     morningTrigger.setHours(morningHour, morningMinute, 0, 0);
 
+    // Only schedule if time is in the future
     if (morningTrigger > new Date()) {
         const msg = generateSmartMessage('morning', targetDate, firstName, savedProducts, settings);
         
         await Notifications.scheduleNotificationAsync({
           content: {
+            // Vary the title on weekends too
             title: isWeekend ? "صباح العطلة والدلع ☕" : "صباح السرور ☀️",
             body: msg,
-            data: { screen: 'routine', period: 'am' },
+            data: { screen: 'routine', period: 'am' }, // Deep Link Data
             sound: true,
-            // 👇 ADD THIS SECTION:
-            android: {
-              channelId: 'oilguard-smart',
-              priority: Notifications.AndroidNotificationPriority.MAX,
-            },
           },
-          trigger: morningTrigger,
+          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: morningTrigger.getTime(),
+            channelId: 'oilguard-smart',
+            strict: false, // Allow some flexibility in delivery time to prevent clustering of notifications if user opens app late or has Do Not Disturb on
+          },
         });
     }
 
-    // --- B. EVENING TRIGGER ---
+    // --- B. EVENING TRIGGER (Always 9:30 PM) ---
     const eveningTrigger = new Date(targetDate);
     eveningTrigger.setHours(21, 30, 0, 0);
 
@@ -287,20 +307,19 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: "الوقت 🌙",
+            title: "راهو الليل 🌙",
             body: msg,
-            data: { screen: 'routine', period: 'pm' },
+            data: { screen: 'routine', period: 'pm' }, // Deep Link Data
             sound: true,
-            // 👇 ADD THIS SECTION:
-            android: {
-              channelId: 'oilguard-smart',
-              priority: Notifications.AndroidNotificationPriority.MAX,
-            },
           },
-          trigger: eveningTrigger,
+          // FIX: Explicitly define the type and use timestamp to prevent object serialization errors
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: eveningTrigger.getTime()
+          },
         });
     }
   }
 
-  console.log(`📅 Smart Schedule Updated: ${firstName}`);
+  console.log(`📅 Smart Schedule Updated: ${firstName}, ${getSeason(today)}, ${savedProducts?.length} Products`);
 }
