@@ -57,8 +57,8 @@ export const AppProvider = ({ children }) => {
   // --- System State ---
   const [appConfig, setAppConfig] = useState({
     maintenanceMode: false,
-    minSupportedVersion: '1.2.0', 
-    latestVersion: '1.2.0',       
+    minSupportedVersion: '1.1.0', 
+    latestVersion: '1.3.0',       
     latestVersionUrl: '',
     maintenanceMessage: '',
     changelog: [],                
