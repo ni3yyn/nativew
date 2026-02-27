@@ -23,7 +23,7 @@ import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -460,6 +460,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // =========================================================
   // ➤ UPDATED: NOTIFICATION DEBOUNCE & LOCK LOGIC
   // =========================================================
+  // =========================================================
+  // ➤ OPTIMIZED: NOTIFICATION DEBOUNCE & DATA-HASH LOCK LOGIC
+  // =========================================================
   useEffect(() => {
     if (!fontsLoaded) return;
 
@@ -484,28 +487,15 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     checkInitialNotification();
     const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationNavigation);
 
-    // 2. STOP if data isn't fully ready yet, or if already locked
+    // 2. STOP if data isn't fully ready yet
     if (loading || !user || !userProfile || !userProfile.onboardingComplete) {
       return () => subscription.remove();
     }
-    
-    if (notificationScheduleLock.current) {
-      return () => subscription.remove();
-    }
 
-    // 3. THE DEBOUNCE TIMER (Wait 2.5 seconds for Firebase to settle)
-    // 3. THE DEBOUNCE TIMER (Wait 2.5 seconds for Firebase to settle)
-    const timer = setTimeout(async () => {
-      // Check lock one more time just in case of race condition
-      if (notificationScheduleLock.current) return;
-      
-      // 🔒 LOCK IMMEDIATELY: Prevents any re-renders from triggering this again
-      notificationScheduleLock.current = true;
-
+    // 3. THE SMART SCHEDULER (With Daily & Data-Change Locks)
+    const setupNotifications = async () => {
       try {
-        // A. REGISTER CHANNEL & REQUEST NATIVE PERMISSION
-        // This ensures the 'oilguard-smart' channel exists on the system
-        // and triggers the native "Allow Notifications" popup.
+        // A. Handle Permissions & Check Status
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
 
@@ -514,50 +504,71 @@ const RootLayoutNav = ({ fontsLoaded }) => {
           finalStatus = status;
         }
 
-        // B. CHECK STATUS
         if (finalStatus !== 'granted') {
-          // If the user still hasn't granted permission, check if we should show the custom modal
           const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
           if (hasSkipped !== 'true') {
             setShowNotificationModal(true);
           }
-        } else {
-          // C. PREPARE CHANNEL (Redundant but safe for APK)
-          if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('oilguard-smart', {
-              name: 'Smart Skincare Reminders',
-              importance: Notifications.AndroidImportance.MAX,
-              vibrationPattern: [0, 250, 250, 250],
-              lightColor: '#5A9C84',
-              sound: 'default',
-            });
-          }
+          return; // Stop here if no permission
+        }
 
-          // D. SCHEDULE NOTIFICATIONS
-          const name = userProfile.settings?.name || 'غالية';
-          const settings = userProfile.settings || {};
-          const products = savedProducts || [];
+        // B. PREPARE CHANNEL
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('oilguard-smart', {
+            name: 'Smart Skincare Reminders',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#5A9C84',
+            sound: 'default',
+          });
+        }
 
+        // C. THE SMART LOCK LOGIC (Prevents APK crash from over-scheduling)
+        const name = userProfile.settings?.name || 'غالية';
+        const settings = userProfile.settings || {};
+        const products = savedProducts || [];
+
+        // Create a "Hash" to easily check if products or goals changed
+        const currentDataHash = `${products.length}_${settings.goals?.join('') || 'none'}`;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Get what we saved last time
+        const storedHash = await AsyncStorage.getItem('last_notif_hash');
+        const storedDate = await AsyncStorage.getItem('last_notif_date');
+
+        // ✨ ONLY schedule if it's a NEW DAY OR if DATA CHANGED (e.g. added a product) ✨
+        if (todayStr !== storedDate || currentDataHash !== storedHash) {
+          
           if (scheduleAuthenticNotifications) {
             await scheduleAuthenticNotifications(name, products, settings);
-            console.log(`📅 [Layout] Notifications Locked & Scheduled! Products: ${products.length}`);
+            
+            // Lock it! It won't run again today unless the user's data (Hash) changes
+            await AsyncStorage.setItem('last_notif_date', todayStr);
+            await AsyncStorage.setItem('last_notif_hash', currentDataHash);
+            
+            console.log(`📅 Smart Notifications Scheduled! (Trigger: ${todayStr !== storedDate ? 'New Day' : 'Data Change'})`);
             console.log("Current Update Channel: ", Updates.channel);
-console.log("Current Runtime Version: ", Updates.runtimeVersion);
+            console.log("Current Runtime Version: ", Updates.runtimeVersion);
           }
+        } else {
+          console.log("⏭️ Smart Notifications Skipped (Already scheduled today & no data changes).");
         }
+
       } catch (e) {
         console.log("Error during notification initialization:", e);
-        // Unlock if there was a major failure so it can try again next time
-        notificationScheduleLock.current = false;
       }
-    }, 2500); // 2.5 seconds delay
+    };
 
-    // Cleanup: If data changes within 2.5s, it clears the old timer and starts a new one
+    // Execute the setup function
+    setupNotifications();
+
+    // Cleanup listener on unmount
     return () => {
-      clearTimeout(timer);
       subscription.remove();
     };
 
+  // MUST KEEP THESE DEPENDENCIES! The "Hash Lock" inside the function stops them from causing spam, 
+  // but they are needed so the app detects when you add a product!
   }, [user, userProfile, savedProducts, fontsLoaded, loading]);
 
   const handleEnableNotifications = async () => {

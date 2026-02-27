@@ -37,6 +37,9 @@ import ManualInputSheet from '../../src/components/oilguard/ManualInputSheet';
 import ScoreBreakdownModal from '../../src/components/oilguard/ScoreBreakdownModal'; // <--- ADD THIS
 import { VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoiceCard'; // Adjust path if needed
 import { VerifiedDetailModal } from '../../src/components/oilguard/VerifiedDetailModal';
+import { scheduleAuthenticNotifications } from '../../src/utils/notificationHelper';
+
+
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
 import { useTheme } from '../../src/context/ThemeContext';
@@ -2175,24 +2178,24 @@ export default function OilGuardEngine() {
             AlertService.error("تنبيه", "يرجى كتابة اسم المنتج.");
             return;
         }
-
+    
         // Optional: Force image
         if (!frontImageUri) {
             AlertService.error("تنبيه", "يرجى إضافة صورة لواجهة المنتج لسهولة التعرف عليه.");
             return;
         }
-
+    
         setIsSaving(true);
-
+    
         try {
             // 1. Upload Front Image
             let productImageUrl = null;
             if (frontImageUri) {
                 productImageUrl = await uploadImageToCloudinary(frontImageUri);
             }
-
-            // 2. Save
-            await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), {
+    
+            // تجهيز كائن المنتج الجديد
+            const newProduct = {
                 userId: user.uid,
                 productName: productName.trim(),
                 productImage: productImageUrl,
@@ -2200,18 +2203,37 @@ export default function OilGuardEngine() {
                 productType: productType,
                 analysisData: finalAnalysis,
                 createdAt: Timestamp.now()
-            });
-
+            };
+    
+            // 2. Save to Firebase
+            await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), newProduct);
+    
+            // ==============================================================
+            // 3. ✨ تحديث الإشعارات الذكية فوراً بعد حفظ المنتج ✨
+            // ندمج المنتجات القديمة مع المنتج الجديد لكي تحصل دالة الإشعارات على أحدث قائمة
+            // ==============================================================
+            try {
+                const updatedProductsForNotifs = [...(savedProducts || []), newProduct];
+                const userName = userProfile?.settings?.name || 'غالية';
+                const userSettings = userProfile?.settings || {};
+                
+                await scheduleAuthenticNotifications(userName, updatedProductsForNotifs, userSettings);
+                console.log("✅ تم تحديث جدول الإشعارات الذكية بالمنتج الجديد!");
+            } catch (notifError) {
+                console.log("⚠️ فشل في تحديث الإشعارات بعد الحفظ، لكن المنتج تم حفظه:", notifError);
+            }
+            // ==============================================================
+    
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setIsSaving(false);
             setSaveModalVisible(false);
-
+    
             AlertService.success(
                 "تم الحفظ",
                 "تمت إضافة المنتج إلى رفّك.",
                 () => router.replace('/profile')
             );
-
+    
         } catch (error) {
             console.error(error);
             AlertService.error("خطأ", "تعذر حفظ المنتج.");

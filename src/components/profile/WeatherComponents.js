@@ -39,8 +39,8 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowBanner: true, // Replaces shouldShowAlert
-        shouldShowList: true,   // Replaces shouldShowAlert
+        shouldShowBanner: true, // Replaces shouldShowBanner
+        shouldShowList: true,   // Replaces shouldShowBanner
         shouldPlaySound: true,
         shouldSetBadge: false,
     }),

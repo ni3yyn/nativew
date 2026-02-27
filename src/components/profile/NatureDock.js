@@ -149,6 +149,14 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
+                        <TouchableOpacity activeOpacity={0.7} onPress={() => handleAction('reminders')} style={styles.menuItem}>
+                            <View style={[styles.menuIconBox, { backgroundColor: COLORS.primary + '26' }]}>
+                                <MaterialIcons name="alarm" size={22} color={COLORS.primary} />
+                            </View>
+                            <Text style={styles.menuText}>تنبيهاتي المخصصة</Text>
+                            <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                        <View style={styles.divider} />
                         <TouchableOpacity activeOpacity={0.7} onPress={() => handleAction('settings')} style={styles.menuItem}>
                             <View style={[styles.menuIconBox, { backgroundColor: COLORS.textSecondary + '1A' }]}>
                                 <MaterialIcons name="settings" size={22} color={COLORS.textSecondary} />
@@ -295,6 +303,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
             case 'scan_product': navigation.push('/oilguard'); break;
             case 'compare_products': navigation.push('/comparison'); break;
             case 'ingredients': onTabChange('ingredients'); break;
+            case 'reminders': onTabChange('reminders'); break;
             case 'migration': onTabChange('migration'); break;
             case 'settings': onTabChange('settings'); break;
             default: break;
