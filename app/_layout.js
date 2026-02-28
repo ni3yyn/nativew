@@ -547,8 +547,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
             await AsyncStorage.setItem('last_notif_hash', currentDataHash);
             
             console.log(`📅 Smart Notifications Scheduled! (Trigger: ${todayStr !== storedDate ? 'New Day' : 'Data Change'})`);
-            console.log("Current Update Channel: ", Updates.channel);
-            console.log("Current Runtime Version: ", Updates.runtimeVersion);
+            
           }
         } else {
           console.log("⏭️ Smart Notifications Skipped (Already scheduled today & no data changes).");
