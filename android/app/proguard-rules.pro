@@ -11,4 +11,12 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Add any project specific keep options here:
+# --- Unity Ads Keep Rules ---
+-keep class com.unity3d.ads.** { *; }
+-keep class com.unity3d.services.** { *; }
+-keep class com.google.ads.mediation.unity.** { *; }
+-keep interface com.unity3d.ads.** { *; }
+-keep interface com.unity3d.services.** { *; }
+
+# Prevent R8 from stripping the adapter
+-keep class com.google.ads.mediation.** { *; }
