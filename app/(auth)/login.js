@@ -6,7 +6,7 @@ import {
     LayoutAnimation, UIManager, ActivityIndicator, Image
 } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../src/config/firebase';
@@ -140,7 +140,7 @@ const Spore = ({ size, startX, duration, delay }) => {
         return () => { clearTimeout(timeout); floatLoop.stop(); driftLoop.stop(); };
     }, []);
 
-    const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
+    const translateY = animY.interpolate({ inputRange: [0, 1], outputRange:[height + 50, -100] });
     const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-30, 30] });
 
     return (
@@ -158,9 +158,10 @@ const Spore = ({ size, startX, duration, delay }) => {
 // --- MAIN SCREEN ---
 export default function LoginScreen() {
     const [isLogin, setIsLogin] = useState(false); // Default to Signup
-    const [email, setEmail] = useState('');
+    const[email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+    const[loading, setLoading] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info' });
 
     // Animation values
@@ -180,7 +181,7 @@ export default function LoginScreen() {
             Animated.timing(containerOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
             Animated.spring(contentTranslateY, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
         ]).start();
-    }, []);
+    },[]);
 
     const switchMode = () => {
         Animated.parallel([
@@ -231,9 +232,9 @@ export default function LoginScreen() {
                         scalpType: '',
                         goals: [],
                         conditions: [],
-                        allergies: []
+                        allergies:[]
                     },
-                    routines: { am: [], pm: [] }
+                    routines: { am: [], pm:[] }
                 });
 
                 router.replace('/(onboarding)/welcome');
@@ -248,6 +249,27 @@ export default function LoginScreen() {
             showToast(title, msg, "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            showToast("تنبيه", "يرجى إدخال بريدك الإلكتروني أولاً لإرسال رابط الاستعادة.", "error");
+            return;
+        }
+
+        setResetLoading(true);
+        try {
+            await sendPasswordResetEmail(auth, email);
+            showToast("تم الإرسال", "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.", "info");
+        } catch (err) {
+            let title = "خطأ";
+            let msg = err.message;
+            if (msg.includes('auth/user-not-found')) msg = "لم يتم العثور على حساب مسجل بهذا البريد.";
+            if (msg.includes('auth/invalid-email')) msg = "صيغة البريد الإلكتروني غير صحيحة.";
+            showToast(title, msg, "error");
+        } finally {
+            setResetLoading(false);
         }
     };
 
@@ -285,7 +307,7 @@ export default function LoginScreen() {
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                                 />
 
-                                <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formSlide }], padding: 25 }}>
+                                <Animated.View style={{ opacity: formOpacity, transform:[{ translateY: formSlide }], padding: 25 }}>
 
                                     <Text style={styles.formTitle}>
                                         {isLogin ? 'مرحبا بعودتك!' : 'انضمي لعائلة وثيق'}
@@ -312,6 +334,20 @@ export default function LoginScreen() {
                                         secureTextEntry
                                         textAlign="right"
                                     />
+
+                                    {isLogin && (
+                                        <TouchableOpacity 
+                                            style={styles.forgotPasswordBtn} 
+                                            onPress={handleForgotPassword} 
+                                            disabled={resetLoading}
+                                        >
+                                            {resetLoading ? (
+                                                <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                                            ) : (
+                                                <Text style={styles.forgotPasswordText}>نسيت كلمة المرور؟</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
 
                                     {!isLogin && (
                                         <View style={styles.privacyContainer}>
@@ -428,6 +464,19 @@ const styles = StyleSheet.create({
     switchBtn: { alignItems: 'center', marginTop: 25, padding: 10 },
     switchText: { color: COLORS.textDim, fontSize: 14, fontFamily: 'Tajawal-Regular' },
     linkText: { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' },
+    
+    // Forgot Password
+    forgotPasswordBtn: {
+        alignSelf: 'flex-start',
+        marginBottom: 15,
+        marginTop: -5,
+        paddingHorizontal: 5,
+    },
+    forgotPasswordText: {
+        color: COLORS.accentGreen,
+        fontSize: 13,
+        fontFamily: 'Tajawal-Regular',
+    },
 
     copyright: { textAlign: 'center', color: COLORS.textDim, marginTop: 40, fontSize: 11, opacity: 0.6, fontFamily: 'Tajawal-Regular' },
 

@@ -112,6 +112,18 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textOnAccent} />
                         </LinearGradient>
                     </TouchableOpacity>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('search_catalog')}>
+    <View style={styles.actionButtonSecondary}>
+        <View style={styles.iconBoxSec}>
+            <MaterialIcons name="search" size={24} color={COLORS.textPrimary} />
+        </View>
+        <View style={{ flex: 1 }}>
+            <Text style={styles.btnTitleSec}>البحث في الكتالوج</Text>
+            <Text style={styles.btnSubSec}>ابحثي عن منتجات بالاسم لتحليلها</Text>
+        </View>
+        <MaterialIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
+    </View>
+</TouchableOpacity>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('compare_products')}>
                         <View style={styles.actionButtonSecondary}>
                             <View style={styles.iconBoxSec}>
@@ -302,10 +314,12 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
         switch (action) {
             case 'scan_product': navigation.push('/oilguard'); break;
             case 'compare_products': navigation.push('/comparison'); break;
+            case 'search_catalog': navigation.push('/CatalogScreen'); break;
             case 'ingredients': onTabChange('ingredients'); break;
             case 'reminders': onTabChange('reminders'); break;
             case 'migration': onTabChange('migration'); break;
             case 'settings': onTabChange('settings'); break;
+
             default: break;
         }
     };
