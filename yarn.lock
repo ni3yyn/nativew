@@ -3982,10 +3982,10 @@ expo-asset@~55.0.7:
     "@expo/image-utils" "^0.8.12"
     expo-constants "~55.0.7"
 
-expo-audio@14.0.0:
-  version "56.0.0-canary-20260305-5163746"
-  resolved "https://registry.yarnpkg.com/expo-audio/-/expo-audio-56.0.0-canary-20260305-5163746.tgz#92f9e577495aa8c0419d5de7422016eb333dd277"
-  integrity sha512-xNBSddfcjBMTcKUyMWCOURTpME9pbu/c7QsuE9g9J8sh76XokDb6lsjh7uePGculBWcoau1R1WCEm84abm8B4Q==
+expo-audio@^55.0.8:
+  version "55.0.8"
+  resolved "https://registry.yarnpkg.com/expo-audio/-/expo-audio-55.0.8.tgz#a8c487b407a1f8a457c83340977ec793a6a0d353"
+  integrity sha512-X61pQSikE2rsP2ZTMFUMThOmgGyYEHcmZpGVMrKJgcYtRCFKuctB/z69dFQPoumL+zTz8qlBoGohjkHVvA9P8A==
 
 expo-blur@14.0.3:
   version "14.0.3"
