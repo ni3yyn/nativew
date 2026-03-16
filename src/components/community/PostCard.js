@@ -2,10 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// ✅ REPLACED expo-av with expo-audio
-import { AudioPlayer, useAudioPlayer } from 'expo-audio';
+import { Audio } from 'expo-av'; 
 import Slider from '@react-native-community/slider';
-// ✅ FIXED: expo-file-system imports for Expo 55
 import * as FileSystem from 'expo-file-system';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,17 +14,18 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../config/supabase';
 
 // --- GLOBAL AUDIO TRACKING (Prevents overlapping audio in FlatList) ---
-let globalPlayer = null;
+let globalSoundRef = null;
 let globalResetState = null;
 
 const stopGlobalAudio = async () => {
-    if (globalPlayer) {
+    if (globalSoundRef) {
         try {
-            await globalPlayer.pause();
-            globalPlayer = null;
+            await globalSoundRef.stopAsync();
+            await globalSoundRef.unloadAsync();
         } catch (e) {
-            // Ignore errors
+            // Ignore unload errors
         }
+        globalSoundRef = null;
     }
     if (globalResetState) {
         globalResetState(); // Reset UI of the previously playing card
@@ -34,12 +33,10 @@ const stopGlobalAudio = async () => {
     }
 };
 
-// --- HELPER: AUDIO CACHE DIRECTORY (Fixed for Expo 55) ---
+// --- HELPER: AUDIO CACHE DIRECTORY ---
 const getAudioCacheDir = () => {
-    // ✅ FIXED: Using FileSystem.documentDirectory or cacheDirectory directly
     const cacheDir = FileSystem.cacheDirectory + 'audio_tips/';
     
-    // Create directory if it doesn't exist
     FileSystem.getInfoAsync(cacheDir).then((dirInfo) => {
         if (!dirInfo.exists) {
             FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
@@ -55,78 +52,306 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-    // ... [Keep all your sub-components here - JourneyProductsList, JourneyTimeline, ReviewContent, JourneyContent, QAContent, RoutineRateContent unchanged] ...
+    // --- SUB-COMPONENTS ---
 
-    // --- TIPS CONTENT: UPDATED WITH EXPO-AUDIO ---
+    const JourneyProductsList = ({ products }) => {
+        if (!products || products.length === 0) return null;
+        return (
+            <View style={{ marginTop: 15 }}>
+                <Text style={styles.sectionLabel}>المنتجات المستخدمة:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 5 }}>
+                    {products.map((p, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.journeyProductCard}
+                            onPress={() => onViewProduct(p)}
+                            activeOpacity={0.8}
+                        >
+                            <View style={[styles.scoreDot, { backgroundColor: (p.score || 0) >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.jpName} numberOfLines={2}>{p.name}</Text>
+                                <Text style={styles.jpPrice}>
+                                    {p.price ? `${p.price} دج` : 'السعر غير محدد'}
+                                </Text>
+                            </View>
+                            <FontAwesome5 name="plus-circle" size={16} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
+    const JourneyTimeline = ({ milestones }) => {
+        if (!milestones || milestones.length === 0) return null;
+        return (
+            <View style={styles.timelineContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timelineScroll}>
+                    {milestones.map((step, index) => (
+                        <View key={index} style={styles.timelineStep}>
+                            <View style={styles.timelineIndicator}>
+                                {index < milestones.length - 1 && <View style={styles.connectingLine} />}
+                                <View style={styles.dot} />
+                            </View>
+                            <TouchableOpacity style={styles.stepCard} onPress={() => onImagePress(step.image)}>
+                                <Image source={{ uri: step.image }} style={styles.stepImage} />
+                                <View style={styles.stepLabelBox}><Text style={styles.stepLabel} numberOfLines={1}>{step.label}</Text></View>
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
+    const ReviewContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.taggedProduct ? (
+                <TouchableOpacity
+                    onPress={() => onViewProduct({
+                        ...p.taggedProduct,
+                        imageUrl: p.taggedProduct.imageUrl || p.imageUrl
+                    })}
+                    activeOpacity={0.9}
+                    style={styles.reviewCard}
+                >
+                    <WathiqScoreBadge score={p.taggedProduct.score} />
+                    <View style={{ flex: 1, marginRight: 15, justifyContent: 'center' }}>
+                        <Text style={styles.taggedProductName}>{p.taggedProduct.name}</Text>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
+                            <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
+                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{ marginRight: 4 }} />
+                        </View>
+                    </View>
+                    <View style={styles.productIconPlaceholder}>
+                        <FontAwesome5 name="wine-bottle" size={20} color={COLORS.textSecondary} />
+                    </View>
+                </TouchableOpacity>
+            ) : null}
+            {p.imageUrl ? (
+                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)}>
+                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
+                </TouchableOpacity>
+            ) : null}
+        </View>
+    );
+
+    const JourneyContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.duration ? (
+                <View style={styles.journeyMetaRow}>
+                    <View style={styles.journeyBadge}>
+                        <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
+                        <Text style={styles.journeyBadgeText}>المدة: {p.duration}</Text>
+                    </View>
+                </View>
+            ) : null}
+            {p.milestones && p.milestones.length > 0 ? (
+                <JourneyTimeline milestones={p.milestones} />
+            ) : (
+                <View style={styles.beforeAfterContainer}>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.beforeImage && onImagePress(p.beforeImage)}>
+                        <Text style={styles.baLabel}>قبل</Text>
+                        <Image source={{ uri: p.beforeImage }} style={styles.baImage} />
+                    </TouchableOpacity>
+                    <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.afterImage && onImagePress(p.afterImage)}>
+                        <Text style={styles.baLabel}>بعد</Text>
+                        <Image source={{ uri: p.afterImage }} style={styles.baImage} />
+                    </TouchableOpacity>
+                </View>
+            )}
+            <JourneyProductsList products={p.journeyProducts || []} />
+        </View>
+    );
+
+    const QAContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.qaTitle}>{p.title}</Text>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.imageUrl ? (
+                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)} style={{ marginTop: 10 }}>
+                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
+                </TouchableOpacity>
+            ) : null}
+        </View>
+    );
+
+    const RoutineProductPill = ({ product, onPress: onPillPress }) => {
+        const imageUri = product.productImage || product.image || product.imageUrl;
+        const name = product.productName || product.name || product.details || 'منتج';
+        const score = product.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0;
+        const type = product.productType || product.type || product.analysisData?.product_type || 'other';
+
+        return (
+            <TouchableOpacity style={styles.rpCard} onPress={onPillPress} activeOpacity={0.7}>
+                <View style={styles.rpImageContainer}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.rpImage} />
+                    ) : (
+                        <FontAwesome5 name={type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
+                    )}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.rpName} numberOfLines={1}>{name}</Text>
+                    {score > 0 ? (
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                            <View style={[styles.rpScoreDot, { backgroundColor: score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                            <Text style={styles.rpScoreText}>{score}%</Text>
+                        </View>
+                    ) : null}
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const RoutineRateContent = ({ post: p }) => {
+        let snapshot = p.routineSnapshot;
+        if (typeof snapshot === 'string') {
+            try { snapshot = JSON.parse(snapshot); } catch (e) { snapshot = {}; }
+        }
+
+        const rawAm = snapshot?.am || [];
+        const rawPm = snapshot?.pm || [];
+        
+        const handleProductPress = (prod) => {
+            if (!onViewProduct) return;
+            
+            onViewProduct({
+                ...prod,
+                id: prod.id || 'unknown',
+                productName: prod.productName || prod.name || 'منتج',
+                productImage: prod.productImage || prod.image || null,
+                marketingClaims: prod.marketingClaims || [],
+                analysisData: prod.analysisData || {
+                    oilGuardScore: prod.oilGuardScore || prod.score || 0,
+                    product_type: prod.productType || prod.type || 'other',
+                    detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
+                    user_specific_alerts: []
+                }
+            });
+        };
+        
+        const renderPeriod = (title, icon, color, stepsInput) => {
+            const steps = Array.isArray(stepsInput) ? stepsInput : [];
+            if (steps.length === 0) return null;
+            
+            const allProducts = [];
+            
+            steps.forEach(step => {
+                if (step.products && Array.isArray(step.products)) {
+                    allProducts.push(...step.products);
+                } else if (step.ingredients || step.marketingClaims || step.productName || step.name) {
+                    allProducts.push(step);
+                } else if (step.productIds && step.details) {
+                    allProducts.push({
+                        id: step.productIds[0] || 'unknown',
+                        productName: step.details,
+                        productType: 'other',
+                        oilGuardScore: 0
+                    });
+                }
+            });
+
+            return (
+                <View style={[styles.routinePeriodContainer, { borderColor: color + '30', backgroundColor: color + '05' }]}>
+                    <View style={styles.routinePeriodHeader}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                            <Feather name={icon} size={14} color={color} />
+                            <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
+                        </View>
+                        <Text style={styles.routineStepCount}>{allProducts.length} منتجات</Text>
+                    </View>
+                    {allProducts.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10, gap: 8 }}>
+                            {allProducts.map((prod, i) => (
+                                <View key={`${title}-${i}`} style={{ alignItems: 'center', flexDirection: 'row-reverse' }}>
+                                    <RoutineProductPill product={prod} onPress={() => handleProductPress(prod)} />
+                                </View>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <Text style={styles.routineEmptyText}>لا توجد منتجات مسجلة</Text>
+                    )}
+                </View>
+            );
+        };
+
+        return (
+            <View>
+                <Text style={styles.postContent}>{p.content}</Text>
+                <View style={{ gap: 10, marginTop: 5 }}>
+                    {renderPeriod('الصباح', 'sun', COLORS.gold, rawAm)}
+                    {renderPeriod('المساء', 'moon', COLORS.purple, rawPm)}
+                </View>
+            </View>
+        );
+    };
+
+    // --- TIPS CONTENT WITH EXPO-AV ---
     const TipsContent = ({ post: p }) => {
         const router = useRouter();
         const [isExpanded, setIsExpanded] = useState(false);
         const [isPlaying, setIsPlaying] = useState(false);
         const [isLoading, setIsLoading] = useState(false);
-        const [player, setPlayer] = useState(null);
         
-        // Refs
+        const soundRef = useRef(null);
         const isMounted = useRef(true);
-        const playerRef = useRef(null);
 
-        // Progress State
         const [position, setPosition] = useState(0);
         const [duration, setDuration] = useState(0);
         const [isSeeking, setIsSeeking] = useState(false);
 
-        // Local state to track audio URL
         const [cloudAudioUrl, setCloudAudioUrl] = useState(p.audio_url || null);
 
         const ELEVENLABS_API_KEY = "sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589";
         const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
         const validTitle = p.title && p.title !== 'null' && p.title.trim() !== '' ? p.title : null;
 
-        // Cleanup on unmount
         useEffect(() => {
             isMounted.current = true;
             return () => {
                 isMounted.current = false;
-                if (playerRef.current) {
-                    playerRef.current.pause();
-                    playerRef.current = null;
+                if (soundRef.current) {
+                    soundRef.current.unloadAsync();
                 }
-                if (globalPlayer === playerRef.current) {
-                    globalPlayer = null;
+                if (globalSoundRef === soundRef.current) {
+                    globalSoundRef = null;
                 }
             };
         }, []);
 
-        // Setup player event listeners
-        useEffect(() => {
-            if (player) {
-                const subscription = player.addListener('statusChange', (status) => {
-                    if (!isMounted.current) return;
-                    
-                    if (status.isLoaded) {
-                        if (!isSeeking) {
-                            setPosition(status.currentTime * 1000); // Convert to milliseconds
-                        }
-                        setDuration(status.duration * 1000);
+        const onPlaybackStatusUpdate = (status) => {
+            if (!isMounted.current) return;
+            
+            if (status.isLoaded) {
+                if (!isSeeking) {
+                    setPosition(status.positionMillis);
+                }
+                setDuration(status.durationMillis);
 
-                        // Auto-stop when finished
-                        if (status.didJustFinish) {
-                            setIsPlaying(false);
-                            setPosition(0);
-                        }
+                if (status.didJustFinish) {
+                    setIsPlaying(false);
+                    setPosition(0);
+                    if (soundRef.current) {
+                        soundRef.current.stopAsync();
                     }
-                });
-
-                return () => subscription.remove();
+                }
+            } else if (status.error) {
+                console.error(`Player Error: ${status.error}`);
+                setIsPlaying(false);
             }
-        }, [player, isSeeking]);
+        };
 
         const onSlidingStart = () => setIsSeeking(true);
 
         const onSlidingComplete = async (value) => {
-            if (player) {
-                await player.seekTo(value / 1000); // Convert to seconds
+            if (soundRef.current) {
+                await soundRef.current.setPositionAsync(value);
                 if (isPlaying) {
-                    await player.play();
+                    await soundRef.current.playAsync();
                 }
             }
             if (isMounted.current) {
@@ -137,7 +362,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
         const loadAndPlay = async (uri) => {
             try {
-                // Stop any other card playing audio
                 await stopGlobalAudio();
 
                 globalResetState = () => {
@@ -147,15 +371,14 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     }
                 };
 
-                // Create new player with the audio source
-                const { player: newPlayer } = await AudioPlayer.create({ uri });
+                const { sound: newSound } = await Audio.Sound.createAsync(
+                    { uri },
+                    { shouldPlay: true, rate: 1.0, shouldCorrectPitch: true },
+                    onPlaybackStatusUpdate
+                );
                 
-                playerRef.current = newPlayer;
-                setPlayer(newPlayer);
-                globalPlayer = newPlayer;
-
-                // Start playing
-                await newPlayer.play();
+                soundRef.current = newSound;
+                globalSoundRef = newSound;
 
                 if (isMounted.current) {
                     setIsPlaying(true);
@@ -171,7 +394,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             }
         };
 
-        // --- ☁️ BACKGROUND UPLOAD FUNCTION ---
         const uploadToSupabaseAndSave = async (base64Data, postId) => {
             try {
                 console.log("⬆️ Starting background upload to Supabase...");
@@ -209,35 +431,31 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         };
 
         const handleSpeech = async () => {
-            // 1. Toggle Play/Pause if already loaded
-            if (player) {
-                if (isPlaying) {
-                    await player.pause();
-                    if (isMounted.current) setIsPlaying(false);
-                } else {
-                    // Stop others
-                    if (globalPlayer && globalPlayer !== player) {
-                        await stopGlobalAudio();
-                        globalPlayer = player;
-                        globalResetState = () => isMounted.current && setIsPlaying(false);
+            if (soundRef.current) {
+                const status = await soundRef.current.getStatusAsync();
+                if (status.isLoaded) {
+                    if (isPlaying) {
+                        await soundRef.current.pauseAsync();
+                        if (isMounted.current) setIsPlaying(false);
+                    } else {
+                        if (globalSoundRef && globalSoundRef !== soundRef.current) {
+                            await stopGlobalAudio();
+                            globalSoundRef = soundRef.current;
+                            globalResetState = () => isMounted.current && setIsPlaying(false);
+                        }
+                        if (status.positionMillis >= status.durationMillis) {
+                            await soundRef.current.setPositionAsync(0);
+                        }
+                        await soundRef.current.playAsync();
+                        if (isMounted.current) setIsPlaying(true);
                     }
-                    
-                    // Reset if at end
-                    const status = await player.getStatus();
-                    if (status.currentTime >= status.duration) {
-                        await player.seekTo(0);
-                    }
-                    
-                    await player.play();
-                    if (isMounted.current) setIsPlaying(true);
+                    return;
                 }
-                return;
             }
 
             if (isMounted.current) setIsLoading(true);
 
             try {
-                // 2. CHECK: Does Local File Exist?
                 const audioDir = getAudioCacheDir();
                 const filename = `tip_${p.id}.mp3`;
                 const fileUri = audioDir + filename;
@@ -249,12 +467,10 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     return;
                 }
 
-                // 3. CHECK: Does Cloud URL Exist?
                 if (cloudAudioUrl) {
                     console.log("☁️ Playing from Supabase URL (Zero Cost)");
                     await loadAndPlay(cloudAudioUrl);
                     
-                    // Background download to cache
                     FileSystem.downloadAsync(cloudAudioUrl, fileUri)
                         .then(() => console.log('✅ Cached audio for next time'))
                         .catch(err => console.log('❌ Failed to cache audio:', err));
@@ -262,7 +478,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     return;
                 }
 
-                // 4. GENERATE: Fetch from ElevenLabs
                 console.log("💰 Generating via ElevenLabs...");
                 const fullText = `${validTitle ? validTitle + '. ' : ''}${p.content}`;
                 const safeText = fullText.substring(0, 2500);
@@ -288,13 +503,11 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 reader.onloadend = async () => {
                     const base64data = reader.result.split(',')[1];
                     try {
-                        // A. Save Locally & Play Immediately
                         await FileSystem.writeAsStringAsync(fileUri, base64data, {
                             encoding: FileSystem.EncodingType.Base64
                         });
                         await loadAndPlay(fileUri);
 
-                        // B. Upload to Supabase in Background
                         uploadToSupabaseAndSave(base64data, p.id);
 
                     } catch (e) {
