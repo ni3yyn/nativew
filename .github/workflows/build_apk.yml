@@ -17,17 +17,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ============================================
-      # DEBUGGING STEP 1: Check system info
-      # ============================================
-      - name: Debug - System Info
-        run: |
-          echo "Node version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          echo "Yarn version: $(yarn -v)"
-          echo "Java version: $(java -version)"
-          echo "OS: $(uname -a)"
-
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
@@ -41,34 +30,24 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'yarn'
 
-      # ============================================
-      # CRITICAL FIXES: TypeScript and Environment
-      # ============================================
-      - name: Install ts-node for TypeScript support
-        run: npm install -g ts-node typescript
+      # 🔥 CRITICAL FIX: Install ts-node GLOBALLY so it's available to all node processes
+      - name: Install ts-node globally
+        run: |
+          npm install -g ts-node typescript
+          echo "ts-node version: $(ts-node -v)"
+          echo "Node version: $(node -v)"
 
-      - name: Set NODE_OPTIONS for TypeScript
+      - name: Set NODE_OPTIONS
         run: echo "NODE_OPTIONS=--loader ts-node/esm" >> $GITHUB_ENV
 
       - name: Set NODE_ENV
         run: echo "NODE_ENV=production" >> $GITHUB_ENV
-
-      # ============================================
-      # DEBUGGING STEP 2: Check environment variables
-      # ============================================
-      - name: Debug - Environment Variables
-        run: |
-          echo "NODE_ENV: $NODE_ENV"
-          echo "NODE_OPTIONS: $NODE_OPTIONS"
 
       - name: Get yarn cache directory
         id: yarn-cache-dir-path
@@ -79,59 +58,20 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      # ============================================
-      # DEBUGGING STEP 3: Check expo-modules-core build
-      # ============================================
-      - name: Debug - Check expo-modules-core build
-        run: |
-          echo "Checking expo-modules-core build directory:"
-          ls -la node_modules/expo-modules-core/build/ || echo "Build directory not found!"
-          echo "Checking for .js files:"
-          find node_modules/expo-modules-core -name "*.js" | head -20 || echo "No .js files found!"
-
-      # ============================================
-      # DEBUGGING STEP 4: List all Expo packages
-      # ============================================
-      - name: Debug - List Expo packages
-        run: |
-          yarn list --pattern "expo" --depth=0
+      # 🔥 Add ts-node to PATH for all subsequent steps
+      - name: Add ts-node to PATH
+        run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
       - name: Decode Keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-          echo "Keystore decoded successfully"
 
-      # ============================================
-      # DEBUGGING STEP 5: Check ProGuard file
-      # ============================================
-      - name: Debug - Check ProGuard file
-        run: |
-          echo "Checking proguard-rules.pro:"
-          cat android/app/proguard-rules.pro || echo "ProGuard file not found!"
-          echo "Checking build.gradle:"
-          cat android/app/build.gradle | grep -A 10 "buildTypes" || echo "buildTypes not found!"
-
-      # ============================================
-      # DEBUGGING STEP 6: Pre-build check
-      # ============================================
-      - name: Debug - Pre-build Expo config
-        run: |
-          npx expo config --json || echo "Expo config failed"
-        env:
-          NODE_OPTIONS: "--loader ts-node/esm"
-          NODE_ENV: production
-
-      # ============================================
-      # MAIN BUILD STEP with all environment variables
-      # ============================================
       - name: Build AAB
         working-directory: android
         env:
@@ -142,39 +82,10 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
           NODE_OPTIONS: "--loader ts-node/esm"
           NODE_ENV: production
-        run: |
-          echo "Starting Gradle build with debug output..."
-          ./gradlew bundleRelease --info --stacktrace
-
-      # ============================================
-      # DEBUGGING STEP 7: Check build output
-      # ============================================
-      - name: Debug - Check build output
-        if: always()  # This runs even if build fails
-        run: |
-          echo "Checking for AAB file:"
-          find android -name "*.aab" || echo "No AAB found"
-          echo "Checking for error logs:"
-          find android -name "*.log" -o -name "*.txt" | head -10
+        run: ./gradlew bundleRelease
 
       - name: Upload Artifact
-        if: success()  # Only upload if build succeeded
         uses: actions/upload-artifact@v4
         with:
           name: wathiq-release-bundle
           path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 30
-
-      # ============================================
-      # DEBUGGING STEP 8: Upload error reports
-      # ============================================
-      - name: Upload error reports
-        if: failure()  # Upload error reports if build fails
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-error-reports
-          path: |
-            android/build/reports/
-            android/app/build/reports/
-            android/app/build/outputs/mapping/
-          retention-days: 7
