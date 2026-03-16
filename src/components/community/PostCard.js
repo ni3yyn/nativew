@@ -2,9 +2,11 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av'; 
+// ✅ CORRECT: expo-av for SDK 54
+import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
-import * as FileSystem from 'expo-file-system';
+// ✅ CORRECT: expo-file-system with new API
+import { File, Directory, Paths } from 'expo-file-system';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
@@ -14,36 +16,23 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../config/supabase';
 
 // --- GLOBAL AUDIO TRACKING (Prevents overlapping audio in FlatList) ---
-let globalSoundRef = null;
+let globalSound = null;
 let globalResetState = null;
 
 const stopGlobalAudio = async () => {
-    if (globalSoundRef) {
+    if (globalSound) {
         try {
-            await globalSoundRef.stopAsync();
-            await globalSoundRef.unloadAsync();
+            await globalSound.pauseAsync();
+            await globalSound.unloadAsync();
+            globalSound = null;
         } catch (e) {
-            // Ignore unload errors
+            // Ignore errors
         }
-        globalSoundRef = null;
     }
     if (globalResetState) {
-        globalResetState(); // Reset UI of the previously playing card
+        globalResetState();
         globalResetState = null;
     }
-};
-
-// --- HELPER: AUDIO CACHE DIRECTORY ---
-const getAudioCacheDir = () => {
-    const cacheDir = FileSystem.cacheDirectory + 'audio_tips/';
-    
-    FileSystem.getInfoAsync(cacheDir).then((dirInfo) => {
-        if (!dirInfo.exists) {
-            FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
-        }
-    }).catch(err => console.log('Error creating audio cache dir:', err));
-    
-    return cacheDir;
 };
 
 // --- MAIN CARD ---
@@ -290,68 +279,100 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         );
     };
 
-    // --- TIPS CONTENT WITH EXPO-AV ---
+    // --- TIPS CONTENT: PRODUCTION READY WITH EXPO-AV ---
     const TipsContent = ({ post: p }) => {
         const router = useRouter();
         const [isExpanded, setIsExpanded] = useState(false);
         const [isPlaying, setIsPlaying] = useState(false);
         const [isLoading, setIsLoading] = useState(false);
+        const [sound, setSound] = useState(null);
         
-        const soundRef = useRef(null);
+        // Refs
         const isMounted = useRef(true);
+        const soundRef = useRef(null);
 
+        // Progress State
         const [position, setPosition] = useState(0);
         const [duration, setDuration] = useState(0);
         const [isSeeking, setIsSeeking] = useState(false);
 
+        // Local state to track audio URL
         const [cloudAudioUrl, setCloudAudioUrl] = useState(p.audio_url || null);
 
         const ELEVENLABS_API_KEY = "sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589";
         const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
         const validTitle = p.title && p.title !== 'null' && p.title.trim() !== '' ? p.title : null;
 
+        // Configure audio mode on mount
+        useEffect(() => {
+            const configureAudio = async () => {
+                try {
+                    await Audio.setAudioModeAsync({
+                        allowsRecordingIOS: false,
+                        staysActiveInBackground: false,
+                        playsInSilentModeIOS: true,
+                        shouldDuckAndroid: true,
+                        playThroughEarpieceAndroid: false,
+                        interruptionModeIOS: 1, // DuckOthers
+                        interruptionModeAndroid: 1, // DuckOthers
+                    });
+                } catch (error) {
+                    console.log('Error configuring audio:', error);
+                }
+            };
+            
+            configureAudio();
+        }, []);
+
+        // Cleanup on unmount
         useEffect(() => {
             isMounted.current = true;
             return () => {
                 isMounted.current = false;
                 if (soundRef.current) {
                     soundRef.current.unloadAsync();
+                    soundRef.current = null;
                 }
-                if (globalSoundRef === soundRef.current) {
-                    globalSoundRef = null;
+                if (globalSound === soundRef.current) {
+                    globalSound = null;
                 }
             };
         }, []);
 
-        const onPlaybackStatusUpdate = (status) => {
-            if (!isMounted.current) return;
-            
-            if (status.isLoaded) {
-                if (!isSeeking) {
-                    setPosition(status.positionMillis);
-                }
-                setDuration(status.durationMillis);
+        // Setup sound status listener
+        useEffect(() => {
+            if (sound) {
+                const subscription = sound.setOnPlaybackStatusUpdate((status) => {
+                    if (!isMounted.current) return;
+                    
+                    if (status.isLoaded) {
+                        if (!isSeeking) {
+                            setPosition(status.positionMillis);
+                        }
+                        setDuration(status.durationMillis || 0);
 
-                if (status.didJustFinish) {
-                    setIsPlaying(false);
-                    setPosition(0);
-                    if (soundRef.current) {
-                        soundRef.current.stopAsync();
+                        if (status.didJustFinish) {
+                            setIsPlaying(false);
+                            setPosition(0);
+                        }
                     }
-                }
-            } else if (status.error) {
-                console.error(`Player Error: ${status.error}`);
-                setIsPlaying(false);
+                });
+
+                return () => {
+                    if (sound) {
+                        sound.setOnPlaybackStatusUpdate(null);
+                    }
+                };
             }
-        };
+        }, [sound, isSeeking]);
 
         const onSlidingStart = () => setIsSeeking(true);
 
         const onSlidingComplete = async (value) => {
-            if (soundRef.current) {
-                await soundRef.current.setPositionAsync(value);
+            if (sound) {
+                await sound.setPositionAsync(value);
                 if (isPlaying) {
-                    await soundRef.current.playAsync();
+                    await sound.playAsync();
                 }
             }
             if (isMounted.current) {
@@ -362,6 +383,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
         const loadAndPlay = async (uri) => {
             try {
+                // Stop any other card playing audio
                 await stopGlobalAudio();
 
                 globalResetState = () => {
@@ -371,14 +393,21 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     }
                 };
 
+                // Unload previous sound if exists
+                if (soundRef.current) {
+                    await soundRef.current.unloadAsync();
+                }
+
+                // Create and load the sound
                 const { sound: newSound } = await Audio.Sound.createAsync(
                     { uri },
-                    { shouldPlay: true, rate: 1.0, shouldCorrectPitch: true },
-                    onPlaybackStatusUpdate
+                    { shouldPlay: true },
+                    null
                 );
                 
                 soundRef.current = newSound;
-                globalSoundRef = newSound;
+                setSound(newSound);
+                globalSound = newSound;
 
                 if (isMounted.current) {
                     setIsPlaying(true);
@@ -430,54 +459,70 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             }
         };
 
+        const getAudioCacheDir = async () => {
+            try {
+                const audioCacheDir = new Directory(Paths.cache, 'audio_tips/');
+                await audioCacheDir.create({ intermediates: true, idempotent: true });
+                return audioCacheDir;
+            } catch (error) {
+                console.log('Error creating cache dir:', error);
+                return Paths.cache;
+            }
+        };
+
         const handleSpeech = async () => {
-            if (soundRef.current) {
-                const status = await soundRef.current.getStatusAsync();
-                if (status.isLoaded) {
-                    if (isPlaying) {
-                        await soundRef.current.pauseAsync();
-                        if (isMounted.current) setIsPlaying(false);
-                    } else {
-                        if (globalSoundRef && globalSoundRef !== soundRef.current) {
-                            await stopGlobalAudio();
-                            globalSoundRef = soundRef.current;
-                            globalResetState = () => isMounted.current && setIsPlaying(false);
-                        }
-                        if (status.positionMillis >= status.durationMillis) {
-                            await soundRef.current.setPositionAsync(0);
-                        }
-                        await soundRef.current.playAsync();
-                        if (isMounted.current) setIsPlaying(true);
+            // Check if sound exists and handle play/pause
+            if (sound) {
+                if (isPlaying) {
+                    await sound.pauseAsync();
+                    if (isMounted.current) setIsPlaying(false);
+                } else {
+                    // Stop others if needed
+                    if (globalSound && globalSound !== sound) {
+                        await stopGlobalAudio();
+                        globalSound = sound;
+                        globalResetState = () => isMounted.current && setIsPlaying(false);
                     }
-                    return;
+                    
+                    // Get status and reset if at end
+                    const status = await sound.getStatusAsync();
+                    if (status.isLoaded && status.positionMillis >= status.durationMillis) {
+                        await sound.setPositionAsync(0);
+                    }
+                    
+                    await sound.playAsync();
+                    if (isMounted.current) setIsPlaying(true);
                 }
+                return;
             }
 
             if (isMounted.current) setIsLoading(true);
 
             try {
-                const audioDir = getAudioCacheDir();
+                const audioCacheDir = await getAudioCacheDir();
                 const filename = `tip_${p.id}.mp3`;
-                const fileUri = audioDir + filename;
+                const cachedFile = new File(audioCacheDir, filename);
 
-                const fileInfo = await FileSystem.getInfoAsync(fileUri);
-                if (fileInfo.exists) {
+                // Check if file exists locally
+                if (cachedFile.exists) {
                     console.log("📱 Playing from Local File Cache");
-                    await loadAndPlay(fileUri);
+                    await loadAndPlay(cachedFile.uri);
                     return;
                 }
 
+                // Check if cloud URL exists
                 if (cloudAudioUrl) {
-                    console.log("☁️ Playing from Supabase URL (Zero Cost)");
+                    console.log("☁️ Playing from Supabase URL");
                     await loadAndPlay(cloudAudioUrl);
                     
-                    FileSystem.downloadAsync(cloudAudioUrl, fileUri)
+                    // Background download to cache
+                    File.downloadFileAsync(cloudAudioUrl, audioCacheDir)
                         .then(() => console.log('✅ Cached audio for next time'))
                         .catch(err => console.log('❌ Failed to cache audio:', err));
-                    
                     return;
                 }
 
+                // Generate from ElevenLabs
                 console.log("💰 Generating via ElevenLabs...");
                 const fullText = `${validTitle ? validTitle + '. ' : ''}${p.content}`;
                 const safeText = fullText.substring(0, 2500);
@@ -495,28 +540,45 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     }),
                 });
 
-                if (!response.ok) throw new Error("API_ERROR");
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('ElevenLabs API error:', response.status, errorText);
+                    throw new Error(`API_ERROR: ${response.status}`);
+                }
 
                 const blob = await response.blob();
-                const reader = new FileReader();
                 
-                reader.onloadend = async () => {
-                    const base64data = reader.result.split(',')[1];
-                    try {
-                        await FileSystem.writeAsStringAsync(fileUri, base64data, {
-                            encoding: FileSystem.EncodingType.Base64
-                        });
-                        await loadAndPlay(fileUri);
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    
+                    reader.onloadend = async () => {
+                        try {
+                            const base64data = reader.result.split(',')[1];
+                            
+                            // Save locally and play
+                            const uint8Array = new Uint8Array(decode(base64data));
+                            await cachedFile.write(uint8Array);
+                            await loadAndPlay(cachedFile.uri);
 
-                        uploadToSupabaseAndSave(base64data, p.id);
-
-                    } catch (e) {
-                        console.error("Write/Play Error:", e);
+                            // Upload to Supabase in background
+                            uploadToSupabaseAndSave(base64data, p.id);
+                            
+                            resolve();
+                        } catch (e) {
+                            console.error("Write/Play Error:", e);
+                            if (isMounted.current) setIsLoading(false);
+                            reject(e);
+                        }
+                    };
+                    
+                    reader.onerror = (error) => {
+                        console.error("FileReader error:", error);
                         if (isMounted.current) setIsLoading(false);
-                    }
-                };
-                
-                reader.readAsDataURL(blob);
+                        reject(error);
+                    };
+                    
+                    reader.readAsDataURL(blob);
+                });
 
             } catch (e) {
                 console.error("🔴 Speech Handler Error:", e);
@@ -529,6 +591,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         };
 
         const formatTime = (millis) => {
+            if (!millis || millis < 0) return "0:00";
             const totalSeconds = Math.floor(millis / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
@@ -548,11 +611,21 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
                 <View style={styles.pillContainer}>
                     <View style={styles.pillMain}>
-                        <TouchableOpacity onPress={handleSpeech} disabled={isLoading} style={styles.playBtn}>
+                        <TouchableOpacity 
+                            onPress={handleSpeech} 
+                            disabled={isLoading} 
+                            style={styles.playBtn}
+                            activeOpacity={0.7}
+                        >
                             {isLoading ? (
                                 <ActivityIndicator size="small" color="#FFF" />
                             ) : (
-                                <Ionicons name={isPlaying ? "pause" : "play"} size={22} color="#FFF" style={{ marginLeft: 2 }} />
+                                <Ionicons 
+                                    name={isPlaying ? "pause" : "play"} 
+                                    size={22} 
+                                    color="#FFF" 
+                                    style={{ marginLeft: 2 }} 
+                                />
                             )}
                         </TouchableOpacity>
 
@@ -572,13 +645,15 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                                 minimumTrackTintColor={COLORS.info}
                                 maximumTrackTintColor={COLORS.border}
                                 thumbTintColor={COLORS.info}
-                                inverted={true} 
+                                inverted={true}
+                                disabled={!sound || isLoading}
                             />
                         </View>
 
                         <TouchableOpacity 
                             onPress={() => setIsExpanded(!isExpanded)}
                             style={[styles.readToggle, isExpanded && { backgroundColor: COLORS.info + '15' }]}
+                            activeOpacity={0.7}
                         >
                             <Feather name={isExpanded ? "chevron-up" : "book-open"} size={18} color={COLORS.info} />
                             <Text style={styles.readToggleText}>{isExpanded ? "إغلاق" : "قراءة"}</Text>
@@ -587,9 +662,19 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
                     {isExpanded && (
                         <View style={styles.expandedContent}>
-                            {p.imageUrl && <Image source={{ uri: p.imageUrl }} style={styles.pillImage} />}
+                            {p.imageUrl && (
+                                <Image 
+                                    source={{ uri: p.imageUrl }} 
+                                    style={styles.pillImage}
+                                    resizeMode="cover"
+                                />
+                            )}
                             <Text style={styles.pillDescription}>{p.content}</Text>
-                            <TouchableOpacity style={styles.pillCta} onPress={() => router.push('/oilguard')}>
+                            <TouchableOpacity 
+                                style={styles.pillCta} 
+                                onPress={() => router.push('/oilguard')}
+                                activeOpacity={0.8}
+                            >
                                 <FontAwesome5 name="search" size={14} color="#FFF" />
                                 <Text style={styles.pillCtaText}>إفحصي منتجك الآن</Text>
                             </TouchableOpacity>
@@ -632,11 +717,17 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     })}
                     activeOpacity={0.7}
                 >
-                    <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{post.userName?.charAt(0) || 'U'}</Text></View>
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarInitial}>{post.userName?.charAt(0) || 'U'}</Text>
+                    </View>
                     <View>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.userName}>{post.userName}</Text>
-                            {post.authorSettings?.skinType && <View style={styles.bioBadge}><Text style={styles.bioBadgeText}>{post.authorSettings.skinType}</Text></View>}
+                            {post.authorSettings?.skinType && (
+                                <View style={styles.bioBadge}>
+                                    <Text style={styles.bioBadgeText}>{post.authorSettings.skinType}</Text>
+                                </View>
+                            )}
                         </View>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                             <Text style={[styles.timestamp, { color: config.color, fontFamily: 'Tajawal-Bold' }]}>{config.label}</Text>
@@ -646,7 +737,11 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                         </View>
                     </View>
                 </TouchableOpacity>
-                {post.userId === currentUser?.uid && <TouchableOpacity onPress={() => onDelete(post.id)}><Ionicons name="trash-outline" size={18} color={COLORS.danger} /></TouchableOpacity>}
+                {post.userId === currentUser?.uid && (
+                    <TouchableOpacity onPress={() => onDelete(post.id)}>
+                        <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                    </TouchableOpacity>
+                )}
             </View>
 
             {matchData && matchData.score > 20 ? (
@@ -668,7 +763,10 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             </View>
 
             <View style={styles.cardFooter}>
-                <TouchableOpacity style={[styles.actionButton, isLiked && { backgroundColor: COLORS.accentGreen + '15', borderColor: COLORS.accentGreen + '30' }]} onPress={() => onInteract(post.id, 'like')}>
+                <TouchableOpacity 
+                    style={[styles.actionButton, isLiked && { backgroundColor: COLORS.accentGreen + '15', borderColor: COLORS.accentGreen + '30' }]} 
+                    onPress={() => onInteract(post.id, 'like')}
+                >
                     <FontAwesome5 name={isLiked ? "heart" : "heart"} solid={isLiked} size={16} color={isLiked ? COLORS.danger : COLORS.textSecondary} />
                     <Text style={[styles.statText, isLiked && { color: COLORS.danger }]}>{post.likesCount || 0}</Text>
                 </TouchableOpacity>
@@ -683,77 +781,494 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 });
 
 const createStyles = (COLORS) => StyleSheet.create({
-    cardBase: { backgroundColor: COLORS.card, marginHorizontal: 15, marginBottom: 15, borderRadius: 20, padding: 15, borderWidth: 1, borderColor: COLORS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 },
-    cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    userInfo: { flexDirection: 'row-reverse', gap: 10, alignItems: 'center' },
-    avatarPlaceholder: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-    avatarInitial: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen },
-    userName: { fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 14, textAlign: 'right' },
-    timestamp: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 11, textAlign: 'right' },
-    postContent: { fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, fontSize: 14, textAlign: 'right', lineHeight: 22, marginBottom: 10 },
-    cardFooter: { flexDirection: 'row-reverse', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 10 },
-    actionButton: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
-    actionText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textSecondary },
-    statText: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim },
-    reviewCard: { flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 10, alignItems: 'center' },
-    productIconPlaceholder: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-    taggedProductName: { fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 14, textAlign: 'right', marginBottom: 2 },
-    tapToView: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.accentGreen },
-    bioBadge: { backgroundColor: COLORS.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border },
-    bioBadgeText: { color: COLORS.textSecondary, fontSize: 10, fontFamily: 'Tajawal-Regular' },
-    matchIndicator: { flexDirection: 'row-reverse', gap: 6, backgroundColor: COLORS.accentGreen + '15', paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 0, marginTop: -5, marginBottom: 10, alignSelf: 'flex-end', borderRadius: 6, borderWidth: 1, borderColor: COLORS.accentGreen + '30' },
-    matchText: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold' },
-    qaTitle: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 6 },
-    journeyMetaRow: { flexDirection: 'row-reverse', marginBottom: 10 },
-    journeyBadge: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, backgroundColor: COLORS.gold + '1A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    journeyBadgeText: { color: COLORS.gold, fontSize: 12, fontFamily: 'Tajawal-Bold' },
-    timelineContainer: { marginTop: 10, height: 180 },
-    timelineScroll: { flexDirection: 'row-reverse', paddingHorizontal: 5, alignItems: 'center' },
-    timelineStep: { alignItems: 'center', marginHorizontal: 5, width: 110 },
-    timelineIndicator: { flexDirection: 'row-reverse', alignItems: 'center', width: '100%', height: 20, justifyContent: 'center', marginBottom: 5, position: 'relative' },
-    dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.gold, zIndex: 2 },
-    connectingLine: { position: 'absolute', right: '50%', width: 120, height: 2, backgroundColor: COLORS.gold + '4D', zIndex: 1 },
-    stepCard: { width: 110, height: 140, backgroundColor: COLORS.card, borderRadius: 16, padding: 4, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
-    stepImage: { width: '100%', height: 100, borderRadius: 12, backgroundColor: COLORS.background },
-    stepLabelBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    stepLabel: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textPrimary },
-    sectionLabel: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textSecondary, marginBottom: 8, textAlign: 'right' },
-    journeyProductCard: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.background, borderRadius: 12, padding: 10, marginRight: 10, width: 160, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
-    jpName: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textPrimary, textAlign: 'right' },
-    jpPrice: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.gold, textAlign: 'right' },
-    scoreDot: { width: 8, height: 8, borderRadius: 4 },
-    beforeAfterContainer: { flexDirection: 'row', height: 120, marginBottom: 10, borderRadius: 12, overflow: 'hidden' },
-    baImageWrapper: { flex: 1, position: 'relative', backgroundColor: COLORS.card },
-    baImage: { width: '100%', height: '100%' },
-    baPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    baLabel: { position: 'absolute', bottom: 5, right: 5, backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, padding: 4, borderRadius: 4, overflow: 'hidden', fontFamily: 'Tajawal-Bold', zIndex: 1 },
-    baDivider: { width: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card },
-    postImage: { width: '100%', height: 200, borderRadius: 12, marginTop: 10 },
-    routinePeriodContainer: { borderRadius: 12, borderWidth: 1, padding: 10, marginBottom: 4 },
-    routinePeriodHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 },
-    routinePeriodTitle: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-    routineStepCount: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim },
-    rpCard: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, padding: 6, paddingRight: 8, width: 160, borderWidth: 1, borderColor: COLORS.border, marginBottom: 0, marginLeft: 8 },
-    rpImageContainer: { width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', marginLeft: 8, overflow: 'hidden' },
-    rpImage: { width: '100%', height: '100%' },
-    rpName: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.textPrimary, textAlign: 'right' },
-    rpScoreDot: { width: 6, height: 6, borderRadius: 3 },
-    rpScoreText: { fontSize: 9, color: COLORS.textSecondary, fontFamily: 'Tajawal-Regular' },
-    routineEmptyText: { textAlign: 'center', color: COLORS.textDim, fontSize: 11, fontStyle: 'italic', padding: 10 },
-    pillContainer: { backgroundColor: COLORS.card, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', marginTop: 5 },
-    pillMain: { flexDirection: 'row-reverse', alignItems: 'center', padding: 8, height: 64 },
-    playBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.info, justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-    pillInfo: { flex: 1, justifyContent: 'center', paddingRight: 8 },
-    pillSubtitle: { fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.textSecondary, textAlign: 'right', marginBottom: -2 },
-    timerText: { fontFamily: 'Tajawal-Regular', fontSize: 9, color: COLORS.textDim },
-    readToggle: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 },
-    readToggleText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.info },
-    tipsExternalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'right', lineHeight: 26, marginBottom: 12, paddingHorizontal: 4 },
-    expandedContent: { padding: 15, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.background },
-    pillImage: { width: '100%', height: 180, borderRadius: 12, marginBottom: 12 },
-    pillDescription: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textPrimary, textAlign: 'right', lineHeight: 22, marginBottom: 15 },
-    pillCta: { backgroundColor: COLORS.info, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, gap: 8 },
-    pillCtaText: { fontFamily: 'Tajawal-Bold', color: '#FFF', fontSize: 14 },
+    cardBase: { 
+        backgroundColor: COLORS.card, 
+        marginHorizontal: 15, 
+        marginBottom: 15, 
+        borderRadius: 20, 
+        padding: 15, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        shadowColor: "#000", 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.2, 
+        shadowRadius: 8, 
+        elevation: 3 
+    },
+    cardHeader: { 
+        flexDirection: 'row-reverse', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 12 
+    },
+    userInfo: { 
+        flexDirection: 'row-reverse', 
+        gap: 10, 
+        alignItems: 'center' 
+    },
+    avatarPlaceholder: { 
+        width: 36, 
+        height: 36, 
+        borderRadius: 18, 
+        backgroundColor: COLORS.background, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        borderWidth: 1, 
+        borderColor: COLORS.border 
+    },
+    avatarInitial: { 
+        fontFamily: 'Tajawal-Bold', 
+        color: COLORS.accentGreen 
+    },
+    userName: { 
+        fontFamily: 'Tajawal-Bold', 
+        color: COLORS.textPrimary, 
+        fontSize: 14, 
+        textAlign: 'right' 
+    },
+    timestamp: { 
+        fontFamily: 'Tajawal-Regular', 
+        color: COLORS.textSecondary, 
+        fontSize: 11, 
+        textAlign: 'right' 
+    },
+    postContent: { 
+        fontFamily: 'Tajawal-Regular', 
+        color: COLORS.textPrimary, 
+        fontSize: 14, 
+        textAlign: 'right', 
+        lineHeight: 22, 
+        marginBottom: 10 
+    },
+    cardFooter: { 
+        flexDirection: 'row-reverse', 
+        borderTopWidth: 1, 
+        borderTopColor: COLORS.border, 
+        paddingTop: 10, 
+        gap: 10 
+    },
+    actionButton: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        gap: 6, 
+        paddingVertical: 6, 
+        paddingHorizontal: 12, 
+        borderRadius: 8, 
+        borderWidth: 1, 
+        borderColor: 'transparent' 
+    },
+    actionText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 12, 
+        color: COLORS.textSecondary 
+    },
+    statText: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 10, 
+        color: COLORS.textDim 
+    },
+    reviewCard: { 
+        flexDirection: 'row-reverse', 
+        backgroundColor: COLORS.background, 
+        borderRadius: 16, 
+        padding: 12, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        marginBottom: 10, 
+        alignItems: 'center' 
+    },
+    productIconPlaceholder: { 
+        width: 40, 
+        height: 40, 
+        borderRadius: 12, 
+        backgroundColor: COLORS.card, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        borderWidth: 1, 
+        borderColor: COLORS.border 
+    },
+    taggedProductName: { 
+        fontFamily: 'Tajawal-Bold', 
+        color: COLORS.textPrimary, 
+        fontSize: 14, 
+        textAlign: 'right', 
+        marginBottom: 2 
+    },
+    tapToView: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 11, 
+        color: COLORS.accentGreen 
+    },
+    bioBadge: { 
+        backgroundColor: COLORS.background, 
+        paddingHorizontal: 6, 
+        paddingVertical: 2, 
+        borderRadius: 4, 
+        borderWidth: 1, 
+        borderColor: COLORS.border 
+    },
+    bioBadgeText: { 
+        color: COLORS.textSecondary, 
+        fontSize: 10, 
+        fontFamily: 'Tajawal-Regular' 
+    },
+    matchIndicator: { 
+        flexDirection: 'row-reverse', 
+        gap: 6, 
+        backgroundColor: COLORS.accentGreen + '15', 
+        paddingHorizontal: 10, 
+        paddingVertical: 4, 
+        marginHorizontal: 0, 
+        marginTop: -5, 
+        marginBottom: 10, 
+        alignSelf: 'flex-end', 
+        borderRadius: 6, 
+        borderWidth: 1, 
+        borderColor: COLORS.accentGreen + '30' 
+    },
+    matchText: { 
+        color: COLORS.accentGreen, 
+        fontSize: 10, 
+        fontFamily: 'Tajawal-Bold' 
+    },
+    qaTitle: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 16, 
+        color: COLORS.textPrimary, 
+        textAlign: 'right', 
+        marginBottom: 6 
+    },
+    journeyMetaRow: { 
+        flexDirection: 'row-reverse', 
+        marginBottom: 10 
+    },
+    journeyBadge: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        gap: 6, 
+        backgroundColor: COLORS.gold + '1A', 
+        paddingHorizontal: 10, 
+        paddingVertical: 4, 
+        borderRadius: 8 
+    },
+    journeyBadgeText: { 
+        color: COLORS.gold, 
+        fontSize: 12, 
+        fontFamily: 'Tajawal-Bold' 
+    },
+    timelineContainer: { 
+        marginTop: 10, 
+        height: 180 
+    },
+    timelineScroll: { 
+        flexDirection: 'row-reverse', 
+        paddingHorizontal: 5, 
+        alignItems: 'center' 
+    },
+    timelineStep: { 
+        alignItems: 'center', 
+        marginHorizontal: 5, 
+        width: 110 
+    },
+    timelineIndicator: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        width: '100%', 
+        height: 20, 
+        justifyContent: 'center', 
+        marginBottom: 5, 
+        position: 'relative' 
+    },
+    dot: { 
+        width: 10, 
+        height: 10, 
+        borderRadius: 5, 
+        backgroundColor: COLORS.gold, 
+        zIndex: 2 
+    },
+    connectingLine: { 
+        position: 'absolute', 
+        right: '50%', 
+        width: 120, 
+        height: 2, 
+        backgroundColor: COLORS.gold + '4D', 
+        zIndex: 1 
+    },
+    stepCard: { 
+        width: 110, 
+        height: 140, 
+        backgroundColor: COLORS.card, 
+        borderRadius: 16, 
+        padding: 4, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        overflow: 'hidden' 
+    },
+    stepImage: { 
+        width: '100%', 
+        height: 100, 
+        borderRadius: 12, 
+        backgroundColor: COLORS.background 
+    },
+    stepLabelBox: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    stepLabel: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 11, 
+        color: COLORS.textPrimary 
+    },
+    sectionLabel: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 12, 
+        color: COLORS.textSecondary, 
+        marginBottom: 8, 
+        textAlign: 'right' 
+    },
+    journeyProductCard: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        backgroundColor: COLORS.background, 
+        borderRadius: 12, 
+        padding: 10, 
+        marginRight: 10, 
+        width: 160, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        gap: 10 
+    },
+    jpName: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 11, 
+        color: COLORS.textPrimary, 
+        textAlign: 'right' 
+    },
+    jpPrice: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 10, 
+        color: COLORS.gold, 
+        textAlign: 'right' 
+    },
+    scoreDot: { 
+        width: 8, 
+        height: 8, 
+        borderRadius: 4 
+    },
+    beforeAfterContainer: { 
+        flexDirection: 'row', 
+        height: 120, 
+        marginBottom: 10, 
+        borderRadius: 12, 
+        overflow: 'hidden' 
+    },
+    baImageWrapper: { 
+        flex: 1, 
+        position: 'relative', 
+        backgroundColor: COLORS.card 
+    },
+    baImage: { 
+        width: '100%', 
+        height: '100%' 
+    },
+    baPlaceholder: { 
+        flex: 1, 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+    },
+    baLabel: { 
+        position: 'absolute', 
+        bottom: 5, 
+        right: 5, 
+        backgroundColor: 'rgba(0,0,0,0.6)', 
+        color: '#fff', 
+        fontSize: 10, 
+        padding: 4, 
+        borderRadius: 4, 
+        overflow: 'hidden', 
+        fontFamily: 'Tajawal-Bold', 
+        zIndex: 1 
+    },
+    baDivider: { 
+        width: 20, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        backgroundColor: COLORS.card 
+    },
+    postImage: { 
+        width: '100%', 
+        height: 200, 
+        borderRadius: 12, 
+        marginTop: 10 
+    },
+    routinePeriodContainer: { 
+        borderRadius: 12, 
+        borderWidth: 1, 
+        padding: 10, 
+        marginBottom: 4 
+    },
+    routinePeriodHeader: { 
+        flexDirection: 'row-reverse', 
+        justifyContent: 'space-between', 
+        marginBottom: 8, 
+        paddingHorizontal: 4 
+    },
+    routinePeriodTitle: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 12 
+    },
+    routineStepCount: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 10, 
+        color: COLORS.textDim 
+    },
+    rpCard: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        backgroundColor: COLORS.card, 
+        borderRadius: 10, 
+        padding: 6, 
+        paddingRight: 8, 
+        width: 160, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        marginBottom: 0, 
+        marginLeft: 8 
+    },
+    rpImageContainer: { 
+        width: 32, 
+        height: 32, 
+        borderRadius: 8, 
+        backgroundColor: COLORS.background, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        marginLeft: 8, 
+        overflow: 'hidden' 
+    },
+    rpImage: { 
+        width: '100%', 
+        height: '100%' 
+    },
+    rpName: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 11, 
+        color: COLORS.textPrimary, 
+        textAlign: 'right' 
+    },
+    rpScoreDot: { 
+        width: 6, 
+        height: 6, 
+        borderRadius: 3 
+    },
+    rpScoreText: { 
+        fontSize: 9, 
+        color: COLORS.textSecondary, 
+        fontFamily: 'Tajawal-Regular' 
+    },
+    routineEmptyText: { 
+        textAlign: 'center', 
+        color: COLORS.textDim, 
+        fontSize: 11, 
+        fontStyle: 'italic', 
+        padding: 10 
+    },
+    pillContainer: { 
+        backgroundColor: COLORS.card, 
+        borderRadius: 24, 
+        borderWidth: 1, 
+        borderColor: COLORS.border, 
+        overflow: 'hidden', 
+        marginTop: 5 
+    },
+    pillMain: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        padding: 8, 
+        height: 64 
+    },
+    playBtn: { 
+        width: 46, 
+        height: 46, 
+        borderRadius: 23, 
+        backgroundColor: COLORS.info, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        marginLeft: 12 
+    },
+    pillInfo: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        paddingRight: 8 
+    },
+    pillSubtitle: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 10, 
+        color: COLORS.textSecondary, 
+        textAlign: 'right', 
+        marginBottom: -2 
+    },
+    timerText: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 9, 
+        color: COLORS.textDim 
+    },
+    readToggle: { 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        gap: 6, 
+        paddingHorizontal: 12, 
+        paddingVertical: 8, 
+        borderRadius: 16 
+    },
+    readToggleText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 12, 
+        color: COLORS.info 
+    },
+    tipsExternalTitle: { 
+        fontFamily: 'Tajawal-ExtraBold', 
+        fontSize: 18, 
+        color: COLORS.textPrimary, 
+        textAlign: 'right', 
+        lineHeight: 26, 
+        marginBottom: 12, 
+        paddingHorizontal: 4 
+    },
+    expandedContent: { 
+        padding: 15, 
+        borderTopWidth: 1, 
+        borderTopColor: COLORS.border, 
+        backgroundColor: COLORS.background 
+    },
+    pillImage: { 
+        width: '100%', 
+        height: 180, 
+        borderRadius: 12, 
+        marginBottom: 12 
+    },
+    pillDescription: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 14, 
+        color: COLORS.textPrimary, 
+        textAlign: 'right', 
+        lineHeight: 22, 
+        marginBottom: 15 
+    },
+    pillCta: { 
+        backgroundColor: COLORS.info, 
+        flexDirection: 'row-reverse', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        paddingVertical: 10, 
+        borderRadius: 12, 
+        gap: 8 
+    },
+    pillCtaText: { 
+        fontFamily: 'Tajawal-Bold', 
+        color: '#FFF', 
+        fontSize: 14 
+    },
 });
 
 export default React.memo(PostCard);
