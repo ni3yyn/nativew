@@ -36,21 +36,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 4. Setup Node (before yarn cache to enable global installs)
+      # 4. Setup Node
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
 
-      # 5. 🔧 FIX: Install ts-node globally for TypeScript support
-      - name: Install ts-node for TypeScript support
-        run: npm install -g ts-node
+      # 5. 🔧 FIX: Install ts-node and set up TypeScript support MULTIPLE WAYS
+      - name: Install ts-node and typescript
+        run: |
+          npm install -g ts-node typescript
+          echo "Node version: $(node -v)"
+          echo "ts-node version: $(ts-node -v)"
 
-      # 6. 🔧 FIX: Set NODE_OPTIONS to enable TypeScript loading
+      # 6. 🔧 FIX: Set NODE_OPTIONS in multiple ways
       - name: Set NODE_OPTIONS for TypeScript
-        run: echo "NODE_OPTIONS=--loader ts-node/esm" >> $GITHUB_ENV
+        run: |
+          echo "NODE_OPTIONS=--loader ts-node/esm" >> $GITHUB_ENV
+          echo "NODE_OPTIONS=--loader ts-node/esm" >> $GITHUB_PATH
+          echo "export NODE_OPTIONS=--loader ts-node/esm" >> ~/.bashrc
 
-      # 7. Cache Yarn
+      # 7. 🔧 FIX: Create .npmrc to ensure ts-node is used
+      - name: Configure npm for TypeScript
+        run: |
+          echo "engine-strict=true" >> .npmrc
+          echo "scripts-prepend-node-path=true" >> .npmrc
+
+      # 8. Cache Yarn
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
@@ -63,19 +75,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      # 8. Install Dependencies with Yarn
+      # 9. Install Dependencies with Yarn
       - name: Install Dependencies
         run: |
           yarn install --frozen-lockfile
 
-      # 9. Decode Keystore from GitHub Secrets
+      # 10. 🔧 FIX: Pre-build Expo config with explicit Node options
+      - name: Pre-build Expo config
+        run: |
+          export NODE_OPTIONS="--loader ts-node/esm"
+          npx expo config --platform android
+        env:
+          NODE_OPTIONS: "--loader ts-node/esm"
+
+      # 11. Decode Keystore from GitHub Secrets
       - name: Decode Keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
-      # 10. Build the Signed AAB
+      # 12. Build the Signed AAB with explicit Node options
       - name: Build AAB
         working-directory: android
         env:
@@ -84,9 +104,10 @@ jobs:
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
+          NODE_OPTIONS: "--loader ts-node/esm"
         run: ./gradlew bundleRelease
 
-      # 11. Upload AAB as Artifact
+      # 13. Upload AAB as Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
