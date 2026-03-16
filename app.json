@@ -77,7 +77,8 @@
       "expo-font",
       "@react-native-community/datetimepicker",
       "expo-build-properties",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "extra": {
       "router": {},
