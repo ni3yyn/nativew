@@ -60,6 +60,8 @@ jobs:
       - name: Install Dependencies
         run: |
           yarn install --frozen-lockfile  # ⬅️ Equivalent to npm ci
+          yarn add -D ts-node  # Add ts-node for TypeScript support
+
 
       # 7. Decode Keystore from GitHub Secrets
       - name: Decode Keystore
