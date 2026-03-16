@@ -247,3 +247,20 @@
 
 # Keep generic signatures
 -keepattributes Signature
+
+# ============================================
+# EXPO SDK 54 / COIL 3 FIXES
+# ============================================
+
+# Coil 3 (Used by Expo's new image loader)
+-dontwarn coil3.**
+-keep class coil3.** { *; }
+
+# Prevent R8 from crashing on Expo Core interfaces during instrumentation
+-dontwarn expo.modules.interfaces.**
+-dontwarn expo.modules.kotlin.**
+-dontwarn expo.modules.core.**
+
+# OkHttp/Okio (Network fetchers used by Coil/Expo)
+-dontwarn okhttp3.**
+-dontwarn okio.**
