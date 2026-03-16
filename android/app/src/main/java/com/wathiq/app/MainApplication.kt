@@ -24,21 +24,16 @@ class MainApplication : Application(), ReactApplication {
         // Packages that cannot be autolinked yet can be added manually here, for example:
         // add(MyReactNativePackage())
       }
+
     override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
+
     override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
+
     override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
   }
 
-  override val reactHost: ReactHost = object : DefaultReactHost(this) {
-    override fun getPackages(): List<ReactPackage> =
-      PackageList(this).packages.apply {
-        // Packages that cannot be autolinked yet can be added manually here, for example:
-        // add(MyReactNativePackage())
-      }
-    override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
-    override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
-    override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
-  }
+  override val reactHost: ReactHost
+    get() = DefaultReactHost.getDefaultReactHost(applicationContext, reactNativeHost)
 
   override fun onCreate() {
     super.onCreate()
