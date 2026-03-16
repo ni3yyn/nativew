@@ -36,10 +36,10 @@ const stopGlobalAudio = async () => {
 
 // --- HELPER: AUDIO CACHE DIRECTORY (Fixed for Expo 55) ---
 const getAudioCacheDir = () => {
-    // ✅ FIXED: Using FileSystem.documentDirectory or cacheDirectory directly
+    // ✅ FIXED: Using FileSystem.cacheDirectory directly
     const cacheDir = FileSystem.cacheDirectory + 'audio_tips/';
     
-    // Create directory if it doesn't exist
+    // Create directory if it doesn't exist (async but we don't need to wait)
     FileSystem.getInfoAsync(cacheDir).then((dirInfo) => {
         if (!dirInfo.exists) {
             FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
@@ -55,7 +55,252 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-    // ... [Keep all your sub-components here - JourneyProductsList, JourneyTimeline, ReviewContent, JourneyContent, QAContent, RoutineRateContent unchanged] ...
+    // --- SUB-COMPONENTS (Restored from old code) ---
+
+    const JourneyProductsList = ({ products }) => {
+        if (!products || products.length === 0) return null;
+        return (
+            <View style={{ marginTop: 15 }}>
+                <Text style={styles.sectionLabel}>المنتجات المستخدمة:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 5 }}>
+                    {products.map((p, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.journeyProductCard}
+                            onPress={() => onViewProduct(p)}
+                            activeOpacity={0.8}
+                        >
+                            <View style={[styles.scoreDot, { backgroundColor: (p.score || 0) >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.jpName} numberOfLines={2}>{p.name}</Text>
+                                <Text style={styles.jpPrice}>
+                                    {p.price ? `${p.price} دج` : 'السعر غير محدد'}
+                                </Text>
+                            </View>
+                            <FontAwesome5 name="plus-circle" size={16} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
+    const JourneyTimeline = ({ milestones }) => {
+        if (!milestones || milestones.length === 0) return null;
+        return (
+            <View style={styles.timelineContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timelineScroll}>
+                    {milestones.map((step, index) => (
+                        <View key={index} style={styles.timelineStep}>
+                            <View style={styles.timelineIndicator}>
+                                {index < milestones.length - 1 && <View style={styles.connectingLine} />}
+                                <View style={styles.dot} />
+                            </View>
+                            <TouchableOpacity style={styles.stepCard} onPress={() => onImagePress(step.image)}>
+                                <Image source={{ uri: step.image }} style={styles.stepImage} />
+                                <View style={styles.stepLabelBox}><Text style={styles.stepLabel} numberOfLines={1}>{step.label}</Text></View>
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
+    const ReviewContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.taggedProduct ? (
+                <TouchableOpacity
+                    onPress={() => onViewProduct({
+                        ...p.taggedProduct,
+                        imageUrl: p.taggedProduct.imageUrl || p.imageUrl
+                    })}
+                    activeOpacity={0.9}
+                    style={styles.reviewCard}
+                >
+                    <WathiqScoreBadge score={p.taggedProduct.score} />
+                    <View style={{ flex: 1, marginRight: 15, justifyContent: 'center' }}>
+                        <Text style={styles.taggedProductName}>{p.taggedProduct.name}</Text>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
+                            <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
+                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{ marginRight: 4 }} />
+                        </View>
+                    </View>
+                    <View style={styles.productIconPlaceholder}>
+                        <FontAwesome5 name="wine-bottle" size={20} color={COLORS.textSecondary} />
+                    </View>
+                </TouchableOpacity>
+            ) : null}
+            {p.imageUrl ? (
+                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)}>
+                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
+                </TouchableOpacity>
+            ) : null}
+        </View>
+    );
+
+    const JourneyContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.duration ? (
+                <View style={styles.journeyMetaRow}>
+                    <View style={styles.journeyBadge}>
+                        <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
+                        <Text style={styles.journeyBadgeText}>المدة: {p.duration}</Text>
+                    </View>
+                </View>
+            ) : null}
+            {p.milestones && p.milestones.length > 0 ? (
+                <JourneyTimeline milestones={p.milestones} />
+            ) : (
+                <View style={styles.beforeAfterContainer}>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.beforeImage && onImagePress(p.beforeImage)}>
+                        <Text style={styles.baLabel}>قبل</Text>
+                        <Image source={{ uri: p.beforeImage }} style={styles.baImage} />
+                    </TouchableOpacity>
+                    <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
+                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.afterImage && onImagePress(p.afterImage)}>
+                        <Text style={styles.baLabel}>بعد</Text>
+                        <Image source={{ uri: p.afterImage }} style={styles.baImage} />
+                    </TouchableOpacity>
+                </View>
+            )}
+            <JourneyProductsList products={p.journeyProducts || []} />
+        </View>
+    );
+
+    const QAContent = ({ post: p }) => (
+        <View>
+            <Text style={styles.qaTitle}>{p.title}</Text>
+            <Text style={styles.postContent}>{p.content}</Text>
+            {p.imageUrl ? (
+                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)} style={{ marginTop: 10 }}>
+                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
+                </TouchableOpacity>
+            ) : null}
+        </View>
+    );
+
+    const RoutineProductPill = ({ product, onPress: onPillPress }) => {
+        // ✅ Robust Extraction: Checks all possible key variations
+        const imageUri = product.productImage || product.image || product.imageUrl;
+        const name = product.productName || product.name || product.details || 'منتج';
+        const score = product.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0;
+        const type = product.productType || product.type || product.analysisData?.product_type || 'other';
+
+        return (
+            <TouchableOpacity style={styles.rpCard} onPress={onPillPress} activeOpacity={0.7}>
+                <View style={styles.rpImageContainer}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.rpImage} />
+                    ) : (
+                        <FontAwesome5 name={type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
+                    )}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.rpName} numberOfLines={1}>{name}</Text>
+                    {score > 0 ? (
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                            <View style={[styles.rpScoreDot, { backgroundColor: score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
+                            <Text style={styles.rpScoreText}>{score}%</Text>
+                        </View>
+                    ) : null}
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const RoutineRateContent = ({ post: p }) => {
+        // 1. Safe Parse
+        let snapshot = p.routineSnapshot;
+        if (typeof snapshot === 'string') {
+            try { snapshot = JSON.parse(snapshot); } catch (e) { snapshot = {}; }
+        }
+
+        const rawAm = snapshot?.am || [];
+        const rawPm = snapshot?.pm || [];
+        
+        const handleProductPress = (prod) => {
+            if (!onViewProduct) return;
+            
+            // 2. Normalize for ActionSheet (Using data embedded in the post)
+            onViewProduct({
+                ...prod,
+                id: prod.id || 'unknown',
+                productName: prod.productName || prod.name || 'منتج',
+                productImage: prod.productImage || prod.image || null,
+                marketingClaims: prod.marketingClaims || [],
+                analysisData: prod.analysisData || {
+                    oilGuardScore: prod.oilGuardScore || prod.score || 0,
+                    product_type: prod.productType || prod.type || 'other',
+                    // Use the embedded ingredients list
+                    detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
+                    user_specific_alerts: []
+                }
+            });
+        };
+        
+        const renderPeriod = (title, icon, color, stepsInput) => {
+            const steps = Array.isArray(stepsInput) ? stepsInput : [];
+            if (steps.length === 0) return null;
+            
+            const allProducts = [];
+            
+            steps.forEach(step => {
+                // CASE 1: Standard Wrapper (Step -> Products Array)
+                if (step.products && Array.isArray(step.products)) {
+                    allProducts.push(...step.products);
+                } 
+                // CASE 2: Flat Object (The step IS the product) - Common in older/migrated data
+                else if (step.ingredients || step.marketingClaims || step.productName || step.name) {
+                    allProducts.push(step);
+                }
+                // CASE 3: Legacy Reference (Only IDs)
+                else if (step.productIds && step.details) {
+                    allProducts.push({
+                        id: step.productIds[0] || 'unknown',
+                        productName: step.details,
+                        productType: 'other',
+                        oilGuardScore: 0
+                    });
+                }
+            });
+
+            return (
+                <View style={[styles.routinePeriodContainer, { borderColor: color + '30', backgroundColor: color + '05' }]}>
+                    <View style={styles.routinePeriodHeader}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                            <Feather name={icon} size={14} color={color} />
+                            <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
+                        </View>
+                        <Text style={styles.routineStepCount}>{allProducts.length} منتجات</Text>
+                    </View>
+                    {allProducts.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10, gap: 8 }}>
+                            {allProducts.map((prod, i) => (
+                                <View key={`${title}-${i}`} style={{ alignItems: 'center', flexDirection: 'row-reverse' }}>
+                                    <RoutineProductPill product={prod} onPress={() => handleProductPress(prod)} />
+                                </View>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <Text style={styles.routineEmptyText}>لا توجد منتجات مسجلة</Text>
+                    )}
+                </View>
+            );
+        };
+
+        return (
+            <View>
+                <Text style={styles.postContent}>{p.content}</Text>
+                <View style={{ gap: 10, marginTop: 5 }}>
+                    {renderPeriod('الصباح', 'sun', COLORS.gold, rawAm)}
+                    {renderPeriod('المساء', 'moon', COLORS.purple, rawPm)}
+                </View>
+            </View>
+        );
+    };
 
     // --- TIPS CONTENT: UPDATED WITH EXPO-AUDIO ---
     const TipsContent = ({ post: p }) => {
