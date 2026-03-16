@@ -2,10 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// ✅ CORRECT: expo-av for SDK 54
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
-// ✅ CORRECT: expo-file-system with new API
 import { File, Directory, Paths } from 'expo-file-system';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,7 +24,7 @@ const stopGlobalAudio = async () => {
             await globalSound.unloadAsync();
             globalSound = null;
         } catch (e) {
-            // Ignore errors
+            // Ignore errors on unload
         }
     }
     if (globalResetState) {
@@ -35,280 +33,13 @@ const stopGlobalAudio = async () => {
     }
 };
 
-<<<<<<< HEAD
-// --- HELPER: AUDIO CACHE DIRECTORY (Fixed for Expo 55) ---
-const getAudioCacheDir = () => {
-    // ✅ FIXED: Using FileSystem.cacheDirectory directly
-    const cacheDir = FileSystem.cacheDirectory + 'audio_tips/';
-    
-    // Create directory if it doesn't exist (async but we don't need to wait)
-    FileSystem.getInfoAsync(cacheDir).then((dirInfo) => {
-        if (!dirInfo.exists) {
-            FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
-        }
-    }).catch(err => console.log('Error creating audio cache dir:', err));
-    
-    return cacheDir;
-};
-
-=======
->>>>>>> 680a2110c426f75e955a6e3efd947a315a2ce8bb
 // --- MAIN CARD ---
 const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const styles = useMemo(() => createStyles(COLORS),[COLORS]);
 
-<<<<<<< HEAD
-    // --- SUB-COMPONENTS (Restored from old code) ---
-
-    const JourneyProductsList = ({ products }) => {
-        if (!products || products.length === 0) return null;
-        return (
-            <View style={{ marginTop: 15 }}>
-                <Text style={styles.sectionLabel}>المنتجات المستخدمة:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 5 }}>
-                    {products.map((p, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={styles.journeyProductCard}
-                            onPress={() => onViewProduct(p)}
-                            activeOpacity={0.8}
-                        >
-                            <View style={[styles.scoreDot, { backgroundColor: (p.score || 0) >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.jpName} numberOfLines={2}>{p.name}</Text>
-                                <Text style={styles.jpPrice}>
-                                    {p.price ? `${p.price} دج` : 'السعر غير محدد'}
-                                </Text>
-                            </View>
-                            <FontAwesome5 name="plus-circle" size={16} color={COLORS.textSecondary} />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-        );
-    };
-
-    const JourneyTimeline = ({ milestones }) => {
-        if (!milestones || milestones.length === 0) return null;
-        return (
-            <View style={styles.timelineContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timelineScroll}>
-                    {milestones.map((step, index) => (
-                        <View key={index} style={styles.timelineStep}>
-                            <View style={styles.timelineIndicator}>
-                                {index < milestones.length - 1 && <View style={styles.connectingLine} />}
-                                <View style={styles.dot} />
-                            </View>
-                            <TouchableOpacity style={styles.stepCard} onPress={() => onImagePress(step.image)}>
-                                <Image source={{ uri: step.image }} style={styles.stepImage} />
-                                <View style={styles.stepLabelBox}><Text style={styles.stepLabel} numberOfLines={1}>{step.label}</Text></View>
-                            </TouchableOpacity>
-                        </View>
-                    ))}
-                </ScrollView>
-            </View>
-        );
-    };
-
-    const ReviewContent = ({ post: p }) => (
-        <View>
-            <Text style={styles.postContent}>{p.content}</Text>
-            {p.taggedProduct ? (
-                <TouchableOpacity
-                    onPress={() => onViewProduct({
-                        ...p.taggedProduct,
-                        imageUrl: p.taggedProduct.imageUrl || p.imageUrl
-                    })}
-                    activeOpacity={0.9}
-                    style={styles.reviewCard}
-                >
-                    <WathiqScoreBadge score={p.taggedProduct.score} />
-                    <View style={{ flex: 1, marginRight: 15, justifyContent: 'center' }}>
-                        <Text style={styles.taggedProductName}>{p.taggedProduct.name}</Text>
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
-                            <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
-                            <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{ marginRight: 4 }} />
-                        </View>
-                    </View>
-                    <View style={styles.productIconPlaceholder}>
-                        <FontAwesome5 name="wine-bottle" size={20} color={COLORS.textSecondary} />
-                    </View>
-                </TouchableOpacity>
-            ) : null}
-            {p.imageUrl ? (
-                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)}>
-                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
-                </TouchableOpacity>
-            ) : null}
-        </View>
-    );
-
-    const JourneyContent = ({ post: p }) => (
-        <View>
-            <Text style={styles.postContent}>{p.content}</Text>
-            {p.duration ? (
-                <View style={styles.journeyMetaRow}>
-                    <View style={styles.journeyBadge}>
-                        <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
-                        <Text style={styles.journeyBadgeText}>المدة: {p.duration}</Text>
-                    </View>
-                </View>
-            ) : null}
-            {p.milestones && p.milestones.length > 0 ? (
-                <JourneyTimeline milestones={p.milestones} />
-            ) : (
-                <View style={styles.beforeAfterContainer}>
-                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.beforeImage && onImagePress(p.beforeImage)}>
-                        <Text style={styles.baLabel}>قبل</Text>
-                        <Image source={{ uri: p.beforeImage }} style={styles.baImage} />
-                    </TouchableOpacity>
-                    <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
-                    <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.afterImage && onImagePress(p.afterImage)}>
-                        <Text style={styles.baLabel}>بعد</Text>
-                        <Image source={{ uri: p.afterImage }} style={styles.baImage} />
-                    </TouchableOpacity>
-                </View>
-            )}
-            <JourneyProductsList products={p.journeyProducts || []} />
-        </View>
-    );
-
-    const QAContent = ({ post: p }) => (
-        <View>
-            <Text style={styles.qaTitle}>{p.title}</Text>
-            <Text style={styles.postContent}>{p.content}</Text>
-            {p.imageUrl ? (
-                <TouchableOpacity onPress={() => onImagePress(p.imageUrl)} style={{ marginTop: 10 }}>
-                    <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
-                </TouchableOpacity>
-            ) : null}
-        </View>
-    );
-
-    const RoutineProductPill = ({ product, onPress: onPillPress }) => {
-        // ✅ Robust Extraction: Checks all possible key variations
-        const imageUri = product.productImage || product.image || product.imageUrl;
-        const name = product.productName || product.name || product.details || 'منتج';
-        const score = product.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0;
-        const type = product.productType || product.type || product.analysisData?.product_type || 'other';
-
-        return (
-            <TouchableOpacity style={styles.rpCard} onPress={onPillPress} activeOpacity={0.7}>
-                <View style={styles.rpImageContainer}>
-                    {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.rpImage} />
-                    ) : (
-                        <FontAwesome5 name={type === 'sunscreen' ? 'sun' : 'wine-bottle'} size={16} color={COLORS.textDim} />
-                    )}
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.rpName} numberOfLines={1}>{name}</Text>
-                    {score > 0 ? (
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                            <View style={[styles.rpScoreDot, { backgroundColor: score >= 80 ? COLORS.accentGreen : COLORS.gold }]} />
-                            <Text style={styles.rpScoreText}>{score}%</Text>
-                        </View>
-                    ) : null}
-                </View>
-            </TouchableOpacity>
-        );
-    };
-
-    const RoutineRateContent = ({ post: p }) => {
-        // 1. Safe Parse
-        let snapshot = p.routineSnapshot;
-        if (typeof snapshot === 'string') {
-            try { snapshot = JSON.parse(snapshot); } catch (e) { snapshot = {}; }
-        }
-
-        const rawAm = snapshot?.am || [];
-        const rawPm = snapshot?.pm || [];
-        
-        const handleProductPress = (prod) => {
-            if (!onViewProduct) return;
-            
-            // 2. Normalize for ActionSheet (Using data embedded in the post)
-            onViewProduct({
-                ...prod,
-                id: prod.id || 'unknown',
-                productName: prod.productName || prod.name || 'منتج',
-                productImage: prod.productImage || prod.image || null,
-                marketingClaims: prod.marketingClaims || [],
-                analysisData: prod.analysisData || {
-                    oilGuardScore: prod.oilGuardScore || prod.score || 0,
-                    product_type: prod.productType || prod.type || 'other',
-                    // Use the embedded ingredients list
-                    detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
-                    user_specific_alerts: []
-                }
-            });
-        };
-        
-        const renderPeriod = (title, icon, color, stepsInput) => {
-            const steps = Array.isArray(stepsInput) ? stepsInput : [];
-            if (steps.length === 0) return null;
-            
-            const allProducts = [];
-            
-            steps.forEach(step => {
-                // CASE 1: Standard Wrapper (Step -> Products Array)
-                if (step.products && Array.isArray(step.products)) {
-                    allProducts.push(...step.products);
-                } 
-                // CASE 2: Flat Object (The step IS the product) - Common in older/migrated data
-                else if (step.ingredients || step.marketingClaims || step.productName || step.name) {
-                    allProducts.push(step);
-                }
-                // CASE 3: Legacy Reference (Only IDs)
-                else if (step.productIds && step.details) {
-                    allProducts.push({
-                        id: step.productIds[0] || 'unknown',
-                        productName: step.details,
-                        productType: 'other',
-                        oilGuardScore: 0
-                    });
-                }
-            });
-
-            return (
-                <View style={[styles.routinePeriodContainer, { borderColor: color + '30', backgroundColor: color + '05' }]}>
-                    <View style={styles.routinePeriodHeader}>
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                            <Feather name={icon} size={14} color={color} />
-                            <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
-                        </View>
-                        <Text style={styles.routineStepCount}>{allProducts.length} منتجات</Text>
-                    </View>
-                    {allProducts.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10, gap: 8 }}>
-                            {allProducts.map((prod, i) => (
-                                <View key={`${title}-${i}`} style={{ alignItems: 'center', flexDirection: 'row-reverse' }}>
-                                    <RoutineProductPill product={prod} onPress={() => handleProductPress(prod)} />
-                                </View>
-                            ))}
-                        </ScrollView>
-                    ) : (
-                        <Text style={styles.routineEmptyText}>لا توجد منتجات مسجلة</Text>
-                    )}
-                </View>
-            );
-        };
-
-        return (
-            <View>
-                <Text style={styles.postContent}>{p.content}</Text>
-                <View style={{ gap: 10, marginTop: 5 }}>
-                    {renderPeriod('الصباح', 'sun', COLORS.gold, rawAm)}
-                    {renderPeriod('المساء', 'moon', COLORS.purple, rawPm)}
-                </View>
-            </View>
-        );
-    };
-=======
     // --- SUB-COMPONENTS ---
->>>>>>> 680a2110c426f75e955a6e3efd947a315a2ce8bb
 
     const JourneyProductsList = ({ products }) => {
         if (!products || products.length === 0) return null;
@@ -419,7 +150,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     </TouchableOpacity>
                 </View>
             )}
-            <JourneyProductsList products={p.journeyProducts || []} />
+            <JourneyProductsList products={p.journeyProducts ||[]} />
         </View>
     );
 
@@ -470,31 +201,30 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         }
 
         const rawAm = snapshot?.am || [];
-        const rawPm = snapshot?.pm || [];
+        const rawPm = snapshot?.pm ||[];
         
         const handleProductPress = (prod) => {
             if (!onViewProduct) return;
-            
             onViewProduct({
                 ...prod,
                 id: prod.id || 'unknown',
                 productName: prod.productName || prod.name || 'منتج',
                 productImage: prod.productImage || prod.image || null,
-                marketingClaims: prod.marketingClaims || [],
+                marketingClaims: prod.marketingClaims ||[],
                 analysisData: prod.analysisData || {
                     oilGuardScore: prod.oilGuardScore || prod.score || 0,
                     product_type: prod.productType || prod.type || 'other',
                     detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
-                    user_specific_alerts: []
+                    user_specific_alerts:[]
                 }
             });
         };
         
         const renderPeriod = (title, icon, color, stepsInput) => {
-            const steps = Array.isArray(stepsInput) ? stepsInput : [];
+            const steps = Array.isArray(stepsInput) ? stepsInput :[];
             if (steps.length === 0) return null;
             
-            const allProducts = [];
+            const allProducts =[];
             
             steps.forEach(step => {
                 if (step.products && Array.isArray(step.products)) {
@@ -546,31 +276,26 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         );
     };
 
-    // --- TIPS CONTENT: PRODUCTION READY WITH EXPO-AV ---
+    // --- TIPS CONTENT: EXPO 54 READY (Next API & AV) ---
     const TipsContent = ({ post: p }) => {
         const router = useRouter();
-        const [isExpanded, setIsExpanded] = useState(false);
+        const[isExpanded, setIsExpanded] = useState(false);
         const [isPlaying, setIsPlaying] = useState(false);
-        const [isLoading, setIsLoading] = useState(false);
+        const[isLoading, setIsLoading] = useState(false);
         const [sound, setSound] = useState(null);
         
-        // Refs
         const isMounted = useRef(true);
         const soundRef = useRef(null);
 
-        // Progress State
         const [position, setPosition] = useState(0);
         const [duration, setDuration] = useState(0);
         const [isSeeking, setIsSeeking] = useState(false);
-
-        // Local state to track audio URL
-        const [cloudAudioUrl, setCloudAudioUrl] = useState(p.audio_url || null);
+        const[cloudAudioUrl, setCloudAudioUrl] = useState(p.audio_url || null);
 
         const ELEVENLABS_API_KEY = "sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589";
         const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
         const validTitle = p.title && p.title !== 'null' && p.title.trim() !== '' ? p.title : null;
 
-        // Configure audio mode on mount
         useEffect(() => {
             const configureAudio = async () => {
                 try {
@@ -580,18 +305,16 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                         playsInSilentModeIOS: true,
                         shouldDuckAndroid: true,
                         playThroughEarpieceAndroid: false,
-                        interruptionModeIOS: 1, // DuckOthers
-                        interruptionModeAndroid: 1, // DuckOthers
+                        interruptionModeIOS: 1, 
+                        interruptionModeAndroid: 1, 
                     });
                 } catch (error) {
                     console.log('Error configuring audio:', error);
                 }
             };
-            
             configureAudio();
-        }, []);
+        },[]);
 
-        // Cleanup on unmount
         useEffect(() => {
             isMounted.current = true;
             return () => {
@@ -604,43 +327,30 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     globalSound = null;
                 }
             };
-        }, []);
+        },[]);
 
-        // Setup sound status listener
         useEffect(() => {
             if (sound) {
                 const subscription = sound.setOnPlaybackStatusUpdate((status) => {
                     if (!isMounted.current) return;
-                    
                     if (status.isLoaded) {
-                        if (!isSeeking) {
-                            setPosition(status.positionMillis);
-                        }
+                        if (!isSeeking) setPosition(status.positionMillis);
                         setDuration(status.durationMillis || 0);
-
                         if (status.didJustFinish) {
                             setIsPlaying(false);
                             setPosition(0);
                         }
                     }
                 });
-
-                return () => {
-                    if (sound) {
-                        sound.setOnPlaybackStatusUpdate(null);
-                    }
-                };
+                return () => { if (sound) sound.setOnPlaybackStatusUpdate(null); };
             }
         }, [sound, isSeeking]);
 
         const onSlidingStart = () => setIsSeeking(true);
-
         const onSlidingComplete = async (value) => {
             if (sound) {
                 await sound.setPositionAsync(value);
-                if (isPlaying) {
-                    await sound.playAsync();
-                }
+                if (isPlaying) await sound.playAsync();
             }
             if (isMounted.current) {
                 setPosition(value);
@@ -650,7 +360,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
         const loadAndPlay = async (uri) => {
             try {
-                // Stop any other card playing audio
                 await stopGlobalAudio();
 
                 globalResetState = () => {
@@ -660,12 +369,10 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     }
                 };
 
-                // Unload previous sound if exists
                 if (soundRef.current) {
                     await soundRef.current.unloadAsync();
                 }
 
-                // Create and load the sound
                 const { sound: newSound } = await Audio.Sound.createAsync(
                     { uri },
                     { shouldPlay: true },
@@ -692,9 +399,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
         const uploadToSupabaseAndSave = async (base64Data, postId) => {
             try {
-                console.log("⬆️ Starting background upload to Supabase...");
                 const fileName = `tip_${postId}.mp3`;
-                
                 const { error: uploadError } = await supabase.storage
                     .from('audio-tips')
                     .upload(fileName, decode(base64Data), {
@@ -716,9 +421,6 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     .eq('id', postId);
 
                 if (dbError) throw dbError;
-
-                console.log("✅ Audio saved to Supabase & DB updated:", publicUrl);
-                
                 if (isMounted.current) setCloudAudioUrl(publicUrl);
 
             } catch (err) {
@@ -726,37 +428,21 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             }
         };
 
-        const getAudioCacheDir = async () => {
-            try {
-                const audioCacheDir = new Directory(Paths.cache, 'audio_tips/');
-                await audioCacheDir.create({ intermediates: true, idempotent: true });
-                return audioCacheDir;
-            } catch (error) {
-                console.log('Error creating cache dir:', error);
-                return Paths.cache;
-            }
-        };
-
         const handleSpeech = async () => {
-            // Check if sound exists and handle play/pause
             if (sound) {
                 if (isPlaying) {
                     await sound.pauseAsync();
                     if (isMounted.current) setIsPlaying(false);
                 } else {
-                    // Stop others if needed
                     if (globalSound && globalSound !== sound) {
                         await stopGlobalAudio();
                         globalSound = sound;
                         globalResetState = () => isMounted.current && setIsPlaying(false);
                     }
-                    
-                    // Get status and reset if at end
                     const status = await sound.getStatusAsync();
                     if (status.isLoaded && status.positionMillis >= status.durationMillis) {
                         await sound.setPositionAsync(0);
                     }
-                    
                     await sound.playAsync();
                     if (isMounted.current) setIsPlaying(true);
                 }
@@ -766,30 +452,30 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             if (isMounted.current) setIsLoading(true);
 
             try {
-                const audioCacheDir = await getAudioCacheDir();
+                // 1. Prepare Next API Directory & File
+                const audioDir = new Directory(Paths.cache, 'audio_tips');
+                if (!audioDir.exists) {
+                    audioDir.create();
+                }
+                
                 const filename = `tip_${p.id}.mp3`;
-                const cachedFile = new File(audioCacheDir, filename);
+                const cachedFile = new File(audioDir, filename);
 
-                // Check if file exists locally
+                // 2. Check local Next API Cache
                 if (cachedFile.exists) {
                     console.log("📱 Playing from Local File Cache");
                     await loadAndPlay(cachedFile.uri);
                     return;
                 }
 
-                // Check if cloud URL exists
+                // 3. Play from Cloud if available
                 if (cloudAudioUrl) {
                     console.log("☁️ Playing from Supabase URL");
                     await loadAndPlay(cloudAudioUrl);
-                    
-                    // Background download to cache
-                    File.downloadFileAsync(cloudAudioUrl, audioCacheDir)
-                        .then(() => console.log('✅ Cached audio for next time'))
-                        .catch(err => console.log('❌ Failed to cache audio:', err));
                     return;
                 }
 
-                // Generate from ElevenLabs
+                // 4. Fallback: Generate from ElevenLabs
                 console.log("💰 Generating via ElevenLabs...");
                 const fullText = `${validTitle ? validTitle + '. ' : ''}${p.content}`;
                 const safeText = fullText.substring(0, 2500);
@@ -807,45 +493,36 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     }),
                 });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('ElevenLabs API error:', response.status, errorText);
-                    throw new Error(`API_ERROR: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`API_ERROR: ${response.status}`);
 
                 const blob = await response.blob();
+                const reader = new FileReader();
                 
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    
-                    reader.onloadend = async () => {
-                        try {
-                            const base64data = reader.result.split(',')[1];
-                            
-                            // Save locally and play
-                            const uint8Array = new Uint8Array(decode(base64data));
-                            await cachedFile.write(uint8Array);
-                            await loadAndPlay(cachedFile.uri);
+                reader.onloadend = async () => {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        
+                        // 5. Save locally using Next API (Typed Array required)
+                        const binaryData = new Uint8Array(decode(base64data));
+                        cachedFile.write(binaryData);
+                        
+                        await loadAndPlay(cachedFile.uri);
 
-                            // Upload to Supabase in background
-                            uploadToSupabaseAndSave(base64data, p.id);
-                            
-                            resolve();
-                        } catch (e) {
-                            console.error("Write/Play Error:", e);
-                            if (isMounted.current) setIsLoading(false);
-                            reject(e);
-                        }
-                    };
-                    
-                    reader.onerror = (error) => {
-                        console.error("FileReader error:", error);
+                        // Upload to Supabase in background
+                        uploadToSupabaseAndSave(base64data, p.id);
+                        
+                    } catch (e) {
+                        console.error("Write/Play Error:", e);
                         if (isMounted.current) setIsLoading(false);
-                        reject(error);
-                    };
-                    
-                    reader.readAsDataURL(blob);
-                });
+                    }
+                };
+                
+                reader.onerror = (error) => {
+                    console.error("FileReader error:", error);
+                    if (isMounted.current) setIsLoading(false);
+                };
+                
+                reader.readAsDataURL(blob);
 
             } catch (e) {
                 console.error("🔴 Speech Handler Error:", e);
