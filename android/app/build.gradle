@@ -161,7 +161,6 @@ dependencies {
     implementation 'com.unity3d.ads:unity-ads:4.12.5'
     implementation platform('com.google.firebase:firebase-bom:34.10.0')
     implementation 'com.google.firebase:firebase-perf'
-    implementation 'expo.modules:expo-modules-core:55.0.15'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
