@@ -75,9 +75,5 @@
     "babel-plugin-transform-import-meta": "^2.3.3",
     "patch-package": "^8.0.1",
     "ts-node": "^10.9.2"
-  },
-  "resolutions": {
-    "expo-asset": "10.0.10",
-    "expo-modules-core": "3.0.29"
   }
 }
