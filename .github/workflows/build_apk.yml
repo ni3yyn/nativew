@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name:  Build Android AAB
+    name: Build Android AAB
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout Code
@@ -26,7 +26,7 @@ jobs:
           java-version: '17'
 
       # 3. Cache Gradle
-      - name:  Cache Gradle
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
@@ -36,27 +36,39 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 4. Setup Node
+      # 4. Cache Yarn
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # 5. Setup Node
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'npm'
+          cache: 'yarn'  # ⬅️ Changed to yarn
 
-      # 5. Install Dependencies
+      # 6. Install Dependencies with Yarn
       - name: Install Dependencies
         run: |
-          rm -f package-lock.json
-          npm install
+          yarn install --frozen-lockfile  # ⬅️ Equivalent to npm ci
 
-      # 6. Decode Keystore from GitHub Secrets
+      # 7. Decode Keystore from GitHub Secrets
       - name: Decode Keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
-      # 7. Build the Signed AAB
+      # 8. Build the Signed AAB
       - name: Build AAB
         working-directory: android
         env:
@@ -64,11 +76,10 @@ jobs:
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Boost memory for Gradle
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
         run: ./gradlew bundleRelease
 
-      # 8. Upload AAB as Artifact
+      # 9. Upload AAB as Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
