@@ -4702,7 +4702,7 @@ expo-modules-autolinking@55.0.9:
     chalk "^4.1.0"
     commander "^7.2.0"
 
-expo-modules-core@55.0.15:
+expo-modules-core@55.0.15, expo-modules-core@^55.0.15:
   version "55.0.15"
   resolved "https://registry.yarnpkg.com/expo-modules-core/-/expo-modules-core-55.0.15.tgz#19bf27b2a5b3ff1f1ef7905b637a5c7419bc3f80"
   integrity sha512-MAGz1SYSVgQbwVeUysWgPtLh8ozbBwORatXoA4w0NZqZBZzEyBgUQNhuwaroaIi9W8Ir3wy1McmZcDYDJNGmVw==
