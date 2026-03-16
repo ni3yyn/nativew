@@ -36,19 +36,6 @@ jobs:
         with:
           node-version: 20.x
 
-      # 🔥 CRITICAL FIX: Install ts-node GLOBALLY so it's available to all node processes
-      - name: Install ts-node globally
-        run: |
-          npm install -g ts-node typescript
-          echo "ts-node version: $(ts-node -v)"
-          echo "Node version: $(node -v)"
-
-      - name: Set NODE_OPTIONS
-        run: echo "NODE_OPTIONS=--loader ts-node/esm" >> $GITHUB_ENV
-
-      - name: Set NODE_ENV
-        run: echo "NODE_ENV=production" >> $GITHUB_ENV
-
       - name: Get yarn cache directory
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
@@ -59,12 +46,20 @@ jobs:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
+      # 🔥 STEP 1: Install dependencies including TypeScript
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          yarn install --frozen-lockfile
+          # Ensure TypeScript is installed (add to devDependencies if needed)
+          yarn add -D typescript ts-node
 
-      # 🔥 Add ts-node to PATH for all subsequent steps
-      - name: Add ts-node to PATH
-        run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+      # 🔥 STEP 2: Pre-build Expo project with TypeScript support
+      - name: Pre-build Expo project
+        run: |
+          export NODE_OPTIONS="--loader ts-node/esm"
+          npx expo export --platform android
+        env:
+          NODE_OPTIONS: "--loader ts-node/esm"
 
       - name: Decode Keystore
         env:
@@ -72,6 +67,7 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
+      # 🔥 STEP 3: Build with Node options explicitly set
       - name: Build AAB
         working-directory: android
         env:
@@ -81,7 +77,6 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
           NODE_OPTIONS: "--loader ts-node/esm"
-          NODE_ENV: production
         run: ./gradlew bundleRelease
 
       - name: Upload Artifact
