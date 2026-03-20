@@ -9,6 +9,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAppContext } from '../../context/AppContext';
 import { reevaluateProductForUser } from '../../services/communityService';
 import { getClaimsByProductType } from '../../constants/productData';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 /**
  * A self-animating scroll indicator to cue users that more content is available.
@@ -44,6 +46,7 @@ const ScrollHint = ({ visible, color, containerStyle }) => {
 };
 
 const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -130,7 +133,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
     if (!product || !visible) return null;
 
-    const displayName = product.name || product.productName || 'منتج';
+    const displayName = product.name || product.productName || t('community_product', language);
     const displayImage = product.image || product.imageUrl || product.productImage;
     const productType = product.productType || product.analysisData?.product_type || 'other';
     const possibleClaims = getClaimsByProductType(productType);
@@ -146,16 +149,16 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const score = displayData.oilGuardScore || 0;
     const matchStatus = (activeTab === 'personal' && personalScore) ? displayData.personalMatch?.status : 'neutral';
 
-    let verdictColor = COLORS.accentGreen, verdictText = "آمن ومناسب", verdictIcon = "check-circle";
-    if (matchStatus === 'danger') { verdictColor = COLORS.danger; verdictText = "غير مناسب لكِ ❌"; verdictIcon = "times-circle"; }
-    else if (matchStatus === 'warning') { verdictColor = COLORS.gold; verdictText = "استخدميه بحذر ⚠️"; verdictIcon = "exclamation-triangle"; }
-    else if (score < 50) { verdictColor = COLORS.danger; verdictText = "جودة منخفضة"; verdictIcon = "thumbs-down"; }
-    if (activeTab === 'original') { verdictText = 'التقييم العام للمنتج'; }
+    let verdictColor = COLORS.accentGreen, verdictText = t('community_sheet_safe', language), verdictIcon = "check-circle";
+    if (matchStatus === 'danger') { verdictColor = COLORS.danger; verdictText = t('community_sheet_not_suitable', language); verdictIcon = "times-circle"; }
+    else if (matchStatus === 'warning') { verdictColor = COLORS.gold; verdictText = t('community_sheet_caution', language); verdictIcon = "exclamation-triangle"; }
+    else if (score < 50) { verdictColor = COLORS.danger; verdictText = t('community_sheet_low_quality', language); verdictIcon = "thumbs-down"; }
+    if (activeTab === 'original') { verdictText = t('community_sheet_overall_rating', language); }
 
     const renderAlerts = () => {
         const rawAlerts = displayData.personalMatch?.reasons || displayData.user_specific_alerts || [];
-        if (isDataMissing) return (<View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}><FontAwesome5 name="ban" size={14} color={COLORS.textDim} style={{ marginTop: 3 }} /><Text style={[styles.alertText, { color: COLORS.textDim }]}>بيانات المكونات غير متوفرة لإجراء تحليل شخصي دقيق.</Text></View>);
-        if (rawAlerts.length === 0) return (<View style={[styles.alertBox, { borderColor: COLORS.accentGreen }]}><Text style={[styles.alertText, { color: COLORS.accentGreen }]}>✅ لا توجد تعارضات مع ملفك الشخصي.</Text></View>);
+        if (isDataMissing) return (<View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}><FontAwesome5 name="ban" size={14} color={COLORS.textDim} style={{ marginTop: 3 }} /><Text style={[styles.alertText, { color: COLORS.textDim }]}>{t('community_sheet_missing_ingredients', language)}</Text></View>);
+        if (rawAlerts.length === 0) return (<View style={[styles.alertBox, { borderColor: COLORS.accentGreen }]}><Text style={[styles.alertText, { color: COLORS.accentGreen }]}>{t('community_sheet_no_conflicts', language)}</Text></View>);
 
         return rawAlerts.map((alert, index) => {
             const text = typeof alert === 'string' ? alert : alert.text, type = typeof alert === 'object' ? alert.type : 'info';
@@ -170,7 +173,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const renderMarketingClaims = () => {
         const claimsData = displayData.marketing_results || [];
         if (claimsData.length === 0) {
-            const message = activeTab === 'personal' ? 'لم يتم تحديد إدعاءات تسويقية لهذا المنتج لتحليلها.' : 'الناشر الأصلي لم يحدد إدعاءات لهذا المنتج.';
+            const message = activeTab === 'personal' ? t('community_sheet_no_claims_personal', language) : t('community_sheet_no_claims_original', language);
             return (<View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}><Text style={[styles.alertText, { color: COLORS.textDim }]}>{message}</Text></View>);
         }
         return claimsData.map((result, index) => {
@@ -189,15 +192,15 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                 <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
                 <View style={[styles.sheetContainer, isEditingClaims && { maxHeight: '90%' }]}>
                     <View style={styles.sheetHandle} />
-                    {displayImage && !isEditingClaims && (<View style={styles.imageHeader}><Image source={{ uri: displayImage }} style={styles.sheetMainImage} resizeMode="cover" />{personalScore && activeTab === 'original' && (<View style={styles.comparisonBadge}><Text style={styles.compText}>{personalScore.oilGuardScore > (originalAnalysis.oilGuardScore || 0) ? 'نتيجة أفضل لكِ 🔼' : personalScore.oilGuardScore < (originalAnalysis.oilGuardScore || 0) ? 'انتبهي، النتيجة أقل لكِ 🔽' : 'مطابق للنتيجة الأصلية'}</Text></View>)}</View>)}
+                    {displayImage && !isEditingClaims && (<View style={styles.imageHeader}><Image source={{ uri: displayImage }} style={styles.sheetMainImage} resizeMode="cover" />{personalScore && activeTab === 'original' && (<View style={styles.comparisonBadge}><Text style={styles.compText}>{personalScore.oilGuardScore > (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_better', language) : personalScore.oilGuardScore < (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_worse', language) : t('community_sheet_comparison_same', language)}</Text></View>)}</View>)}
                     <View style={styles.content}>
                         <View style={styles.tabContainer}>
-                            <TouchableOpacity style={[styles.tab, activeTab === 'original' && styles.activeTab]} onPress={() => setActiveTab('original')}><Text style={[styles.tabText, activeTab === 'original' && { color: COLORS.textPrimary }]}>التقييم الأصلي</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.tab, activeTab === 'personal' && styles.activeTab, isDataMissing && { opacity: 0.5 }]} onPress={() => !isDataMissing && setActiveTab('personal')} disabled={isDataMissing}>{isCalculating && activeTab === 'personal' ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Text style={[styles.tabText, activeTab === 'personal' && { color: COLORS.accentGreen }]}>{isDataMissing ? "التحليل الشخصي (غير متاح)" : "تقييمي الشخصي ✨"}</Text>}</TouchableOpacity>
+                            <TouchableOpacity style={[styles.tab, activeTab === 'original' && styles.activeTab]} onPress={() => setActiveTab('original')}><Text style={[styles.tabText, activeTab === 'original' && { color: COLORS.textPrimary }]}>{t('community_sheet_original_tab', language)}</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.tab, activeTab === 'personal' && styles.activeTab, isDataMissing && { opacity: 0.5 }]} onPress={() => !isDataMissing && setActiveTab('personal')} disabled={isDataMissing}>{isCalculating && activeTab === 'personal' ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Text style={[styles.tabText, activeTab === 'personal' && { color: COLORS.accentGreen }]}>{isDataMissing ? t('community_sheet_personal_unavailable', language) : t('community_sheet_personal_tab', language)}</Text>}</TouchableOpacity>
                         </View>
-                        <TouchableOpacity style={styles.editClaimsBtn} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsEditingClaims(!isEditingClaims); }}><Text style={styles.editClaimsText}>{isEditingClaims ? "إغلاق التعديل" : "تعديل بيانات المنتج (لتحسين الدقة)"}</Text><Feather name={isEditingClaims ? "chevron-up" : "sliders"} size={14} color={COLORS.textSecondary} /></TouchableOpacity>
+                        <TouchableOpacity style={styles.editClaimsBtn} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsEditingClaims(!isEditingClaims); }}><Text style={styles.editClaimsText}>{isEditingClaims ? t('community_sheet_close_edit', language) : t('community_sheet_edit_product_data', language)}</Text><Feather name={isEditingClaims ? "chevron-up" : "sliders"} size={14} color={COLORS.textSecondary} /></TouchableOpacity>
                         {isEditingClaims ? (
-                            <View style={styles.claimsEditor}><Text style={styles.claimsHint}>حددي الخصائص المكتوبة على العبوة:</Text><ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled><View style={styles.chipsContainer}>{possibleClaims.map((claim, i) => (<TouchableOpacity key={i} style={[styles.claimChip, currentClaims.includes(claim) && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} onPress={() => toggleClaim(claim)}><Text style={[styles.claimText, currentClaims.includes(claim) && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{claim}</Text></TouchableOpacity>))}</View></ScrollView><TouchableOpacity style={[styles.applyBtn, isDataMissing && { backgroundColor: COLORS.border }]} onPress={!isDataMissing ? applyNewClaims : null} disabled={isDataMissing}><Text style={styles.applyBtnText}>{isDataMissing ? "لا توجد مكونات للتحليل" : "إعادة الحساب"}</Text></TouchableOpacity></View>
+                            <View style={styles.claimsEditor}><Text style={styles.claimsHint}>{t('community_sheet_claims_hint', language)}</Text><ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled><View style={styles.chipsContainer}>{possibleClaims.map((claim, i) => (<TouchableOpacity key={i} style={[styles.claimChip, currentClaims.includes(claim) && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} onPress={() => toggleClaim(claim)}><Text style={[styles.claimText, currentClaims.includes(claim) && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{claim}</Text></TouchableOpacity>))}</View></ScrollView><TouchableOpacity style={[styles.applyBtn, isDataMissing && { backgroundColor: COLORS.border }]} onPress={!isDataMissing ? applyNewClaims : null} disabled={isDataMissing}><Text style={styles.applyBtnText}>{isDataMissing ? t('community_sheet_no_ingredients_for_analysis', language) : t('community_sheet_recalculate', language)}</Text></TouchableOpacity></View>
                         ) : (
                             <View style={styles.scrollContainer}>
                                 <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
@@ -208,14 +211,14 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                                             {/* --- FIX: Personal analysis is now conditional --- */}
                                             {activeTab === 'personal' && (
                                                 <View style={styles.alertsContainer}>
-                                                    <Text style={styles.sectionHeader}>تفاصيل التحليل الشخصي:</Text>
+                                                    <Text style={styles.sectionHeader}>{t('community_sheet_personal_details', language)}</Text>
                                                     {renderAlerts()}
                                                 </View>
                                             )}
 
                                             {/* Marketing claims are always shown */}
                                             <View style={styles.claimsAnalysisContainer}>
-                                                <Text style={styles.sectionHeader}>مصداقية الإدعاءات التسويقية:</Text>
+                                                <Text style={styles.sectionHeader}>{t('community_sheet_claims_credibility', language)}</Text>
                                                 {renderMarketingClaims()}
                                             </View>
                                         </>
@@ -224,7 +227,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                                 <ScrollHint visible={showScrollHint && !isCalculating && !!personalScore && activeTab === 'personal'} color={COLORS.textPrimary} containerStyle={styles.scrollHintContainer} />
                             </View>
                         )}
-                        <View style={styles.sheetActions}><TouchableOpacity style={styles.sheetBtnSecondary} onPress={onClose}><Text style={styles.sheetBtnTextSec}>إغلاق</Text></TouchableOpacity><TouchableOpacity style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} onPress={() => onSave({ ...product, productName: displayName, name: displayName, analysisData: { ...displayData, detected_ingredients: product.analysisData?.detected_ingredients || product.ingredients || [] }, marketingClaims: currentClaims, productImage: displayImage, imageUrl: displayImage })} ><Text style={styles.sheetBtnTextPrim}>حفظ في رفي</Text><FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} /></TouchableOpacity></View>
+                        <View style={styles.sheetActions}><TouchableOpacity style={styles.sheetBtnSecondary} onPress={onClose}><Text style={styles.sheetBtnTextSec}>{t('community_close', language)}</Text></TouchableOpacity><TouchableOpacity style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} onPress={() => onSave({ ...product, productName: displayName, name: displayName, analysisData: { ...displayData, detected_ingredients: product.analysisData?.detected_ingredients || product.ingredients || [] }, marketingClaims: currentClaims, productImage: displayImage, imageUrl: displayImage })} ><Text style={styles.sheetBtnTextPrim}>{t('community_sheet_save_to_shelf', language)}</Text><FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} /></TouchableOpacity></View>
                     </View>
                 </View>
             </View>

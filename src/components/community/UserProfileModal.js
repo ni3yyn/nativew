@@ -12,6 +12,8 @@ import { useTheme } from '../../context/ThemeContext';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { calculateBioMatch } from '../../utils/matchCalculator';
 import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService';
+import { getLocalizedValue, normalizeLanguage, t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { getLocalizedValue, normalizeLanguage } from '../../i18n';
 
 // --- DATA IMPORTS ---
@@ -23,11 +25,11 @@ import {
 } from '../../data/allergiesandconditions';
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح و نضارة' },
-    { id: 'acne', label: 'مكافحة حب الشباب' },
-    { id: 'anti_aging', label: 'مكافحة الشيخوخة' },
-    { id: 'hydration', label: 'ترطيب عميق' },
-    { id: 'texture_pores', label: 'تحسين الملمس والمسام' },
+    { id: 'brightening', label: { ar: 'تفتيح و نضارة', en: 'Brightening & glow' } },
+    { id: 'acne', label: { ar: 'مكافحة حب الشباب', en: 'Acne control' } },
+    { id: 'anti_aging', label: { ar: 'مكافحة الشيخوخة', en: 'Anti-aging' } },
+    { id: 'hydration', label: { ar: 'ترطيب عميق', en: 'Deep hydration' } },
+    { id: 'texture_pores', label: { ar: 'تحسين الملمس والمسام', en: 'Texture & pores' } },
 ];
 
 // 🟢 CONFIG: Cache Duration (24 Hours in Milliseconds)
@@ -37,6 +39,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
     // 1. HYDRATION: Start with snapshot data if available (Instant Name)
     const [profile, setProfile] = useState(initialData ? { settings: initialData } : null);
     const [publicShelf, setPublicShelf] = useState([]);
@@ -228,7 +231,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                     <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                         <Ionicons name="close" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>ملف العضو</Text>
+                    <Text style={styles.headerTitle}>{t('community_profile_title', language)}</Text>
                     <View style={{ width: 40 }} />
                     <TouchableOpacity
                         onPress={handleManualRefresh}
@@ -277,30 +280,30 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                     )}
                                 </View>
 
-                                <Text style={styles.userName}>{profile?.settings?.name || 'مستخدم وثيق'}</Text>
+                                <Text style={styles.userName}>{profile?.settings?.name || t('community_default_user', language)}</Text>
 
                                 {/* Bio Match Indicator */}
                                 <Text style={[styles.matchLabel, { color: isMe ? COLORS.accentGreen : matchInfo.color }]}>
-                                    {isMe ? 'هذا ملفك الشخصي' : matchInfo.label || 'تحليل التوافق...'}
+                                    {isMe ? t('community_profile_me', language) : matchInfo.label || t('community_profile_match_loading', language)}
                                 </Text>
                             </LinearGradient>
 
                             {/* 2. Bio Stats (Skin & Hair) */}
                             <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>السمات الحيوية</Text>
+                                <Text style={styles.sectionTitle}>{t('community_profile_traits', language)}</Text>
                                 <View style={styles.statsGrid}>
                                     <View style={styles.statBox}>
                                         <FontAwesome5 name="user-alt" size={18} color={COLORS.gold} />
-                                        <Text style={styles.statLabel}>البشرة</Text>
+                                        <Text style={styles.statLabel}>{t('community_profile_skin', language)}</Text>
                                         <Text style={styles.statValue}>
-                                            {getLabel(profile?.settings?.skinType, basicSkinTypes) || 'غير محدد'}
+                                            {getLabel(profile?.settings?.skinType, basicSkinTypes) || t('community_unspecified', language)}
                                         </Text>
                                     </View>
                                     <View style={styles.statBox}>
                                         <FontAwesome5 name="cut" size={18} color={COLORS.blue} />
-                                        <Text style={styles.statLabel}>الشعر</Text>
+                                        <Text style={styles.statLabel}>{t('community_profile_hair', language)}</Text>
                                         <Text style={styles.statValue}>
-                                            {getLabel(profile?.settings?.scalpType, basicScalpTypes) || 'غير محدد'}
+                                            {getLabel(profile?.settings?.scalpType, basicScalpTypes) || t('community_unspecified', language)}
                                         </Text>
                                     </View>
                                 </View>
@@ -312,7 +315,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                     <View style={styles.tagGroup}>
                                         <View style={styles.tagHeaderRow}>
                                             <FontAwesome5 name="crosshairs" size={14} color={COLORS.accentGreen} />
-                                            <Text style={styles.tagGroupTitle}>الأهداف:</Text>
+                                            <Text style={styles.tagGroupTitle}>{t('community_profile_goals', language)}</Text>
                                         </View>
                                         <View style={styles.chipsRow}>
                                             {profile.settings.goals.map(g => (
@@ -328,7 +331,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                     <View style={styles.tagGroup}>
                                         <View style={styles.tagHeaderRow}>
                                             <FontAwesome5 name="notes-medical" size={14} color={COLORS.gold} />
-                                            <Text style={styles.tagGroupTitle}>الحالات:</Text>
+                                            <Text style={styles.tagGroupTitle}>{t('community_profile_conditions', language)}</Text>
                                         </View>
                                         <View style={styles.chipsRow}>
                                             {profile.settings.conditions.map(c => (
@@ -344,7 +347,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                     <View style={styles.tagGroup}>
                                         <View style={styles.tagHeaderRow}>
                                             <FontAwesome5 name="exclamation-circle" size={14} color={COLORS.danger} />
-                                            <Text style={styles.tagGroupTitle}>الحساسية:</Text>
+                                            <Text style={styles.tagGroupTitle}>{t('community_profile_allergies', language)}</Text>
                                         </View>
                                         <View style={styles.chipsRow}>
                                             {profile.settings.allergies.map(a => (
@@ -360,8 +363,8 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                             {/* 4. Interactive Public Shelf */}
                             <View style={styles.section}>
                                 <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                                    <Text style={styles.sectionTitle}>مفضلات الرف</Text>
-                                    <Text style={{ color: COLORS.textDim, fontFamily: 'Tajawal-Regular', fontSize: 12 }}>{publicShelf.length} منتجات</Text>
+                                    <Text style={styles.sectionTitle}>{t('community_profile_shelf_favorites', language)}</Text>
+                                    <Text style={{ color: COLORS.textDim, fontFamily: 'Tajawal-Regular', fontSize: 12 }}>{publicShelf.length} {t('community_products', language)}</Text>
                                 </View>
 
                                 {publicShelf.length > 0 ? (
@@ -377,7 +380,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                                 <View style={{ flex: 1, marginRight: 15 }}>
                                                     <Text style={styles.prodName} numberOfLines={1}>{item.productName}</Text>
                                                     <Text style={styles.prodVerdict}>
-                                                        {item.analysisData?.finalVerdict || 'منتج'}
+                                                        {item.analysisData?.finalVerdict || t('community_product', language)}
                                                     </Text>
                                                 </View>
                                                 <View style={styles.prodIconBox}>
@@ -389,7 +392,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                                 ) : (
                                     <View style={styles.emptyShelfBox}>
                                         <Feather name="box" size={30} color={COLORS.textDim} style={{ opacity: 0.5 }} />
-                                        <Text style={styles.emptyText}>لم يضف هذا العضو منتجات للرف العام بعد.</Text>
+                                        <Text style={styles.emptyText}>{t('community_profile_empty_shelf', language)}</Text>
                                     </View>
                                 )}
                             </View>
