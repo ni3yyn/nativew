@@ -1595,6 +1595,22 @@ const SettingsSection = ({ profile, onLogout }) => {
                     />
                 </Accordion>
                 <Accordion
+                    title="اللغة / Language"
+                    icon="language"
+                    isOpen={openAccordion === 'language'}
+                    onPress={() => handleToggleAccordion('language')}
+                >
+                    <SingleSelectGroup
+                        title="اختر لغة التطبيق"
+                        options={[
+                            { id: 'ar', label: 'العربية' },
+                            { id: 'en', label: 'English' }
+                        ]}
+                        selectedValue={form.language || 'ar'}
+                        onSelect={(value) => updateSetting('language', value)}
+                    />
+                </Accordion>
+                <Accordion
                     title="السمات الأساسية"
                     icon="id-card"
                     isOpen={openAccordion === 'traits'}
