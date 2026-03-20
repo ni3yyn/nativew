@@ -1457,6 +1457,7 @@ const SettingsSection = ({ profile, onLogout }) => {
         allergies: [],
         skinType: null,
         scalpType: null,
+        language: 'ar',
         ...profile?.settings
     }));
 
@@ -1476,6 +1477,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 allergies: profile.settings.allergies || [],
                 skinType: profile.settings.skinType || null,
                 scalpType: profile.settings.scalpType || null,
+                language: profile.settings.language || 'ar',
             }));
         }
     }, [profile]);
@@ -1515,8 +1517,8 @@ const SettingsSection = ({ profile, onLogout }) => {
             try {
                 // 5. Actual Write to Firebase (Only runs if 1 second passes with no clicks)
                 await updateDoc(doc(db, 'profiles', user.uid), {
-                    settings: newForm
-                }, { merge: true });
+                    [`settings.${key}`]: value
+                });
 
                 // Optional: Subtle success haptic when save actually commits
                 // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
@@ -1612,6 +1614,16 @@ const SettingsSection = ({ profile, onLogout }) => {
                         options={basicScalpTypes}
                         selectedValue={form.scalpType}
                         onSelect={(value) => updateSetting('scalpType', value)}
+                    />
+                    <View style={styles.divider} />
+                    <SingleSelectGroup
+                        title="لغة التطبيق"
+                        options={[
+                            { id: 'ar', label: 'العربية', icon: 'language' },
+                            { id: 'en', label: 'English', icon: 'language' }
+                        ]}
+                        selectedValue={form.language || 'ar'}
+                        onSelect={(value) => updateSetting('language', value)}
                     />
                 </Accordion>
             </StaggeredItem>
