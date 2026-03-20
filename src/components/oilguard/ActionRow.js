@@ -7,6 +7,8 @@ import * as Haptics from 'expo-haptics';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
 import PremiumShareButton from './ShareComponent';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- SHIMMER SUB-COMPONENT ---
 const ShimmerOverlay = () => {
@@ -68,6 +70,7 @@ const ActionRow = ({
   frontImageUri   
 }) => {
   const { colors } = useTheme();
+  const language = useCurrentLanguage();
   const COLORS = colors || DEFAULT_COLORS;
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -98,7 +101,7 @@ const ActionRow = ({
             <View style={styles.iconContainer}>
               <FontAwesome5 name="bookmark" size={16} color={COLORS.accentGreen} />
             </View>
-            <Text style={[styles.triggerText]}>إضافة للرف</Text>
+            <Text style={[styles.triggerText]}>{t('oilguard_add_to_shelf', language)}</Text>
           </View>
         </Pressable>
       </View>

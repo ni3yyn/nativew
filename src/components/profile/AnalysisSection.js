@@ -9,6 +9,8 @@ import { BarrierCard, BarrierDetailsModal } from './analysis/BarrierSection';
 import { OverviewDashboard } from './analysis/OverviewDashboard';
 import { InsightDetailsModal } from './analysis/InsightDetailsModal';
 import { AnalysisEmptyState } from '../../components/profile/EmptyStates';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 export const AnalysisSection = ({
     loadingProfile,
@@ -23,6 +25,7 @@ export const AnalysisSection = ({
     router
 }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
 
@@ -56,8 +59,8 @@ export const AnalysisSection = ({
         else if (weatherErrorType === 'permission') {
             weatherDashboard = {
                 id: 'weather-permission-denied',
-                title: 'الموقع غير مفعل',
-                short_summary: 'يرجى تفعيل الموقع لبيانات الطقس.',
+                title: t('profile_weather_location_disabled', language),
+                short_summary: t('profile_weather_enable_location', language),
                 severity: 'warning',
                 customData: { type: 'weather_advice', isPermissionError: true }
             };
@@ -65,8 +68,8 @@ export const AnalysisSection = ({
         else if (weatherErrorType === 'service') {
             weatherDashboard = {
                 id: 'weather-unavailable',
-                title: 'الطقس غير متاح',
-                short_summary: 'تعذر الاتصال بخدمة الطقس.',
+                title: t('profile_weather_unavailable', language),
+                short_summary: t('profile_weather_service_error', language),
                 severity: 'warning',
                 customData: { type: 'weather_advice', isServiceError: true }
             };
@@ -127,7 +130,7 @@ export const AnalysisSection = ({
             barrierData: barrier
         };
 
-    }, [analysisData, loadingWeather, weatherResults, weatherErrorType, dismissedInsightIds]);
+    }, [analysisData, loadingWeather, weatherResults, weatherErrorType, dismissedInsightIds, language]);
 
     // ========================================================================
     // --- RENDERING ---

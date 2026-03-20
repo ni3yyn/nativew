@@ -3,10 +3,13 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { ContentCard, ChartRing } from './AnalysisShared';
 import { useTheme } from '../../../context/ThemeContext';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 
 // Fixed RoutineCard with useTheme
 const RoutineCard = ({ analysisData }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     
     return (
         <ContentCard style={{flex: 1}} animated={false}>
@@ -16,12 +19,12 @@ const RoutineCard = ({ analysisData }) => {
                     <Text style={{color: colors.textSecondary}}>/</Text>
                     <Feather name="moon" size={14} color={'#a78bfa'} />
                 </View>
-                <Text style={[styles.analysisCardTitle, { color: colors.textSecondary }]}>نظرة عامة</Text>
+                <Text style={[styles.analysisCardTitle, { color: colors.textSecondary }]}>{t('overview_title', language)}</Text>
             </View>
             <View style={styles.routineOverviewGrid}>
                 <View style={styles.routineColumn}>
                     <View style={styles.colHeader}>
-                        <Text style={[styles.routineColumnTitle, { color: colors.textPrimary }]}>الصباح</Text>
+                        <Text style={[styles.routineColumnTitle, { color: colors.textPrimary }]}>{t('overview_morning', language)}</Text>
                         {(analysisData?.amRoutine?.conflicts || 0) > 0 && (
                             <View style={[styles.conflictBadge, { backgroundColor: colors.danger + '20' }]}>
                                 <Text style={[styles.conflictText, { color: colors.danger }]}>{analysisData.amRoutine.conflicts} !</Text>
@@ -36,14 +39,14 @@ const RoutineCard = ({ analysisData }) => {
                                 </Text>
                             ))
                         ) : ( 
-                            <Text style={[styles.routineEmptyText, { color: colors.textDim }]}>فارغ</Text> 
+                            <Text style={[styles.routineEmptyText, { color: colors.textDim }]}>{t('overview_empty', language)}</Text>
                         )}
                     </ScrollView>
                 </View>
                 <View style={[styles.routineDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.routineColumn}>
                     <View style={styles.colHeader}>
-                        <Text style={[styles.routineColumnTitle, { color: colors.textPrimary }]}>المساء</Text>
+                        <Text style={[styles.routineColumnTitle, { color: colors.textPrimary }]}>{t('overview_evening', language)}</Text>
                         {(analysisData?.pmRoutine?.conflicts || 0) > 0 && (
                             <View style={[styles.conflictBadge, { backgroundColor: colors.danger + '20' }]}>
                                 <Text style={[styles.conflictText, { color: colors.danger }]}>{analysisData.pmRoutine.conflicts} !</Text>
@@ -58,7 +61,7 @@ const RoutineCard = ({ analysisData }) => {
                                 </Text>
                             ))
                         ) : ( 
-                            <Text style={[styles.routineEmptyText, { color: colors.textDim }]}>فارغ</Text> 
+                            <Text style={[styles.routineEmptyText, { color: colors.textDim }]}>{t('overview_empty', language)}</Text>
                         )}
                     </ScrollView>
                 </View>
@@ -70,12 +73,13 @@ const RoutineCard = ({ analysisData }) => {
 // Fixed SunProtectionCard with useTheme
 const SunProtectionCard = ({ analysisData }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     
     return (
         <ContentCard style={{flex: 1}} animated={false}>
             <View style={styles.analysisCardHeader}>
                 <FontAwesome5 name="shield-alt" size={14} color={colors.textSecondary} />
-                <Text style={[styles.analysisCardTitle, { color: colors.textSecondary }]}>حماية من الشمس</Text>
+                <Text style={[styles.analysisCardTitle, { color: colors.textSecondary }]}>{t('overview_sun_protection', language)}</Text>
             </View>
             <View style={styles.sunProtectionContainer}>
                 <ChartRing 
@@ -90,7 +94,7 @@ const SunProtectionCard = ({ analysisData }) => {
                             <Text key={i} style={[styles.sunProtectionNote, { color: colors.textSecondary }]}>{note}</Text>
                         ))
                     ) : (
-                        <Text style={[styles.sunProtectionNote, { color: colors.textSecondary }]}>لا توجد بيانات كافية</Text>
+                        <Text style={[styles.sunProtectionNote, { color: colors.textSecondary }]}>{t('overview_not_enough_data', language)}</Text>
                     )}
                 </View>
             </View>
