@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
+import { t, normalizeLanguage } from '../src/i18n';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // ADJUST THIS PATH to match where your 'db' variable is exported in your app
 import { db } from '../src/config/firebase';
@@ -186,20 +187,19 @@ const useAppOpenAd = () => {
 // ============================================================================
 // 3. UI HELPER: FORCE UPDATE SCREEN (BLOCKING)
 // ============================================================================
-const ForceUpdateScreen = ({ url, message }) => (
+const ForceUpdateScreen = ({ url, message, language }) => (
   <View style={styles.systemScreen}>
     <StatusBar style="light" />
     <LinearGradient colors={['#1A2D27', '#0F1C18']} style={StyleSheet.absoluteFill} />
     <View style={styles.systemContent}>
       <MaterialIcons name="system-update" size={70} color="#fbbf24" style={{ marginBottom: 20 }} />
-      <Text style={styles.systemTitle}>تحديث إجباري مطلوب</Text>
+      <Text style={styles.systemTitle}>{t('force_update_title', language)}</Text>
       <Text style={styles.systemMessage}>
-        {/* نستخدم الرسالة القادمة من الفايربيس (android.critical_message) */}
-        {message || "هذه النسخة تحتوي على مشاكل تم حلها في الإصدار الجديد مع ميزات جديدة."}
+        {message || t('force_update_default_message', language)}
       </Text>
       {url ? (
         <Pressable style={styles.updateButton} onPress={() => Linking.openURL(url)}>
-          <Text style={styles.updateButtonText}>تحديث الآن</Text>
+          <Text style={styles.updateButtonText}>{t('force_update_action', language)}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -209,7 +209,7 @@ const ForceUpdateScreen = ({ url, message }) => (
 // ============================================================================
 // 4. UI HELPER: OPTIONAL UPDATE MODAL
 // ============================================================================
-const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
+const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip, language }) => {
   return (
     <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
       <View style={styles.modalOverlay}>
@@ -219,11 +219,11 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
               <Feather name="gift" size={32} color="#5A9C84" />
             </View>
           </View>
-          <Text style={styles.optionalTitle}>تحديث جديد متوفر</Text>
-          <Text style={styles.optionalSub}>إصدار جديد جاهز للتحميل. استمتعوا بأحدث الميزات!</Text>
+          <Text style={styles.optionalTitle}>{t('optional_update_title', language)}</Text>
+          <Text style={styles.optionalSub}>{t('optional_update_subtitle', language)}</Text>
 
           <View style={styles.changelogContainer}>
-            <Text style={styles.whatsNewHeader}>ما الجديد؟</Text>
+            <Text style={styles.whatsNewHeader}>{t('optional_update_whats_new', language)}</Text>
             <ScrollView style={styles.changelogList} contentContainerStyle={{ gap: 8 }}>
               {changelog && changelog.length > 0 ? (
                 changelog.map((item, index) => (
@@ -235,7 +235,7 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
               ) : (
                 <View style={styles.changelogItem}>
                   <FontAwesome5 name="check" size={12} color="#5A9C84" />
-                  <Text style={styles.changelogText}>تحسينات عامة على الأداء.</Text>
+                  <Text style={styles.changelogText}>{t('optional_update_default_item', language)}</Text>
                 </View>
               )}
             </ScrollView>
@@ -243,11 +243,11 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
 
           <View style={styles.optionalActions}>
             <Pressable style={({ pressed }) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onUpdate}>
-              <Text style={styles.updateButtonTextSmall}>تحديث من المتجر</Text>
+              <Text style={styles.updateButtonTextSmall}>{t('optional_update_action', language)}</Text>
               <Feather name="download-cloud" size={18} color="#1A2D27" />
             </Pressable>
             <Pressable style={styles.skipButton} onPress={onSkip}>
-              <Text style={styles.skipText}>ليس الآن</Text>
+              <Text style={styles.skipText}>{t('optional_update_skip', language)}</Text>
             </Pressable>
           </View>
         </View>
@@ -259,7 +259,7 @@ const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip }) => {
 // ============================================================================
 // 5. UI HELPER: NOTIFICATION PERMISSION MODAL
 // ============================================================================
-const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
+const NotificationRequestModal = ({ visible, onEnable, onDismiss, language }) => {
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -286,18 +286,15 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
               </Animated.View>
             </View>
           </View>
-          <Text style={styles.optionalTitle}>التنبيهات معطلة</Text>
-          <Text style={styles.optionalSub}>
-            بدون التنبيهات، لن يتمكن "وثيق" من تذكيرك بمواعيد الروتين أو التحسينات الجديدة.
-            و لن يتمكن من إرسال نصائح يومية لبشرتك.
-          </Text>
+          <Text style={styles.optionalTitle}>{t('notification_disabled_title', language)}</Text>
+          <Text style={styles.optionalSub}>{t('notification_disabled_message', language)}</Text>
           <View style={styles.optionalActions}>
             <Pressable style={({ pressed }) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onEnable}>
-              <Text style={styles.updateButtonTextSmall}>تفعيل من الإعدادات</Text>
+              <Text style={styles.updateButtonTextSmall}>{t('notification_enable_action', language)}</Text>
               <Feather name="settings" size={18} color="#1A2D27" />
             </Pressable>
             <Pressable style={styles.skipButton} onPress={onDismiss}>
-              <Text style={styles.skipText}>سأفعلها لاحقا</Text>
+              <Text style={styles.skipText}>{t('notification_skip_action', language)}</Text>
             </Pressable>
           </View>
         </View>
@@ -309,13 +306,13 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss }) => {
 // ============================================================================
 // 6. UI HELPER: MAINTENANCE SCREEN
 // ============================================================================
-const MaintenanceScreen = ({ message }) => (
+const MaintenanceScreen = ({ message, language }) => (
   <View style={styles.systemScreen}>
     <StatusBar style="light" />
     <LinearGradient colors={['#1A2D27', '#111']} style={StyleSheet.absoluteFill} />
     <View style={styles.systemContent}>
       <FontAwesome5 name="tools" size={60} color="#5A9C84" style={{ marginBottom: 20 }} />
-      <Text style={styles.systemTitle}>وضع الصيانة</Text>
+      <Text style={styles.systemTitle}>{t('maintenance_mode_title', language)}</Text>
       <Text style={styles.systemMessage}>{message}</Text>
     </View>
   </View>
@@ -324,7 +321,7 @@ const MaintenanceScreen = ({ message }) => (
 // ============================================================================
 // 7. UI HELPER: ANNOUNCEMENT MODAL
 // ============================================================================
-const AnnouncementModal = ({ data, onDismiss }) => {
+const AnnouncementModal = ({ data, onDismiss, language }) => {
   if (!data) return null;
   return (
     <Modal transparent visible={!!data} animationType="fade">
@@ -336,7 +333,7 @@ const AnnouncementModal = ({ data, onDismiss }) => {
           </View>
           <Text style={styles.announcementBody}>{data.body}</Text>
           <Pressable style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissText}>حسنا</Text>
+            <Text style={styles.dismissText}>{t('announcement_ok', language)}</Text>
           </Pressable>
         </View>
       </View>
@@ -349,6 +346,7 @@ const AnnouncementModal = ({ data, onDismiss }) => {
 // ============================================================================
 const RootLayoutNav = ({ fontsLoaded }) => {
   const { appConfig, activeAnnouncement, dismissAnnouncement, user, userProfile, savedProducts, loading } = useAppContext();
+  const language = normalizeLanguage(userProfile?.settings?.language);
 
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -577,7 +575,7 @@ console.log("Current Runtime Version: ", Updates.runtimeVersion);
   if (!fontsLoaded) return null;
 
   if (appConfig?.maintenanceMode) {
-    return <MaintenanceScreen message={appConfig.maintenanceMessage} />;
+    return <MaintenanceScreen message={appConfig.maintenanceMessage} language={language} />;
   }
 
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
@@ -585,8 +583,8 @@ console.log("Current Runtime Version: ", Updates.runtimeVersion);
     return (
       <ForceUpdateScreen 
         url={appConfig.latestVersionUrl} 
-        // تمرير الرسالة من Firebase
         message={appConfig.android?.critical_message} 
+        language={language}
       />
     );
   }
@@ -602,15 +600,17 @@ console.log("Current Runtime Version: ", Updates.runtimeVersion);
         changelog={appConfig.changelog}
         onUpdate={handleUpdateClick}
         onSkip={handleSkipUpdate}
+        language={language}
       />
 
       <NotificationRequestModal
         visible={showNotificationModal}
         onEnable={handleEnableNotifications}
         onDismiss={handleDismissNotifications}
+        language={language}
       />
 
-      <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} />
+      <AnnouncementModal data={activeAnnouncement} onDismiss={dismissAnnouncement} language={language} />
 
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />

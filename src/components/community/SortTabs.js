@@ -3,8 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from '
 import { Feather } from '@expo/vector-icons';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const SortTabs = ({ currentSort, onSelect }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -67,7 +70,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
                             styles.tabText,
                             currentSort === 'popular' ? styles.textActive : styles.textInactive
                         ]}>
-                            الأكثر تفاعلا
+                            {t('community_sort_popular', language)}
                         </Text>
                     </View>
                 </TouchableOpacity>
@@ -88,7 +91,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
                             styles.tabText,
                             currentSort === 'recent' ? styles.textActive : styles.textInactive
                         ]}>
-                            الأحدث
+                            {t('community_sort_recent', language)}
                         </Text>
                     </View>
                 </TouchableOpacity>

@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- SPORE PARTICLE ---
 const SporeParticle = ({ animateTrigger }) => {
@@ -42,6 +44,7 @@ const SporeParticle = ({ animateTrigger }) => {
 };
 
 const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onToggleBioFilter }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -89,7 +92,7 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
                 <Ionicons name="search" size={18} color={COLORS.textDim} style={{ marginLeft: 10 }} />
                 <TextInput
                     style={styles.input}
-                    placeholder="بحث عن تجربة، منتج، أو مشكلة..."
+                    placeholder={t('community_search_placeholder', language)}
                     placeholderTextColor={COLORS.textDim}
                     value={searchQuery}
                     onChangeText={onSearchChange}
@@ -132,7 +135,7 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
                             color={isBioFilterActive ? '#FFF' : COLORS.accentGreen}
                         />
                         {isBioFilterActive && (
-                            <Text style={styles.bioText}>مطابق لي</Text>
+                            <Text style={styles.bioText}>{t('community_bio_match_me', language)}</Text>
                         )}
 
                         {/* Notify Dot if Inactive */}

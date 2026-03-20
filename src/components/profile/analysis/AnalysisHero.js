@@ -4,12 +4,15 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { PressableScale, ContentCard, StaggeredItem } from '../../common/AnimatedComponents';
 import { WeatherLoadingCard, WeatherCompactWidget } from '../WeatherComponents';
 
 // --- Sub-Component: Focus Insight ---
 const FocusInsight = ({ insight, onSelect }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const severityStyles = {
         critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
@@ -27,7 +30,7 @@ const FocusInsight = ({ insight, onSelect }) => {
                     </View>
                     <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
                     <View style={styles.focusInsightAction}>
-                        <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
+                        <Text style={styles.focusInsightActionText}>{t('analysis_view_details', language)}</Text>
                         <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
                     </View>
                 </LinearGradient>
@@ -39,6 +42,7 @@ const FocusInsight = ({ insight, onSelect }) => {
 // --- Sub-Component: All Clear ---
 const AllClearState = () => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     return (
         <StaggeredItem index={0} animated={false}>
@@ -46,8 +50,8 @@ const AllClearState = () => {
                 <View style={styles.allClearIconWrapper}>
                     <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
                 </View>
-                <Text style={styles.allClearTitle}>روتينك يبدو رائعا!</Text>
-                <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
+                <Text style={styles.allClearTitle}>{t('analysis_all_clear_title', language)}</Text>
+                <Text style={styles.allClearSummary}>{t('analysis_all_clear_summary', language)}</Text>
             </ContentCard>
         </StaggeredItem>
     );
