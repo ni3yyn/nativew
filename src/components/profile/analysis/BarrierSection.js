@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, Modal, ScrollView, Pressable, Animated, Dimensi
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { ContentCard, PressableScale } from './AnalysisShared';
 import { useTheme } from '../../../context/ThemeContext';
+import { t, interpolate } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 
 const { height } = Dimensions.get('window');
 
@@ -43,6 +45,7 @@ const ClinicalProgressBar = ({ score, color }) => {
 // --- 2. TUG OF WAR (Builders Left, Stressors Right) ---
 const TugOfWarBar = ({ stress, repair }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const stressFlex = Math.max(stress, 0.5);
     const repairFlex = Math.max(repair, 0.5);
@@ -54,7 +57,7 @@ const TugOfWarBar = ({ stress, repair }) => {
                 {/* Left: Builders */}
                 <View style={styles.tugLabelItem}>
                     <Text style={[styles.tugValue, { color: COLORS.success }]}>{repair.toFixed(1)}</Text>
-                    <Text style={styles.tugTitle}>ترميم (بناء)</Text>
+                    <Text style={styles.tugTitle}>{t('barrier_building', language)}</Text>
                 </View>
 
                 {/* VS */}
@@ -65,7 +68,7 @@ const TugOfWarBar = ({ stress, repair }) => {
                 {/* Right: Stressors */}
                 <View style={styles.tugLabelItem}>
                     <Text style={[styles.tugValue, { color: COLORS.danger }]}>{stress.toFixed(1)}</Text>
-                    <Text style={styles.tugTitle}>إجهاد (هدم)</Text>
+                    <Text style={styles.tugTitle}>{t('barrier_stress', language)}</Text>
                 </View>
             </View>
 
@@ -93,6 +96,7 @@ const TugOfWarBar = ({ stress, repair }) => {
 // --- 3. PRODUCT ROW ---
 const ClinicalProductRow = ({ name, ingredients, type }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const isOffender = type === 'offender';
     const indicatorColor = isOffender ? COLORS.danger : COLORS.success;
@@ -103,11 +107,11 @@ const ClinicalProductRow = ({ name, ingredients, type }) => {
                 <Text style={styles.productName} numberOfLines={1}>{name}</Text>
                 {ingredients && ingredients.length > 0 ? (
                     <Text style={styles.rationaleText}>
-                        <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary }}>السبب: </Text>
+                        <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary }}>{t('barrier_reason', language)}</Text>
                         {ingredients.join(' ، ')}
                     </Text>
                 ) : (
-                    <Text style={styles.rationaleText}>تركيبة عامة</Text>
+                    <Text style={styles.rationaleText}>{t('barrier_generic_formula', language)}</Text>
                 )}
             </View>
         </View>
@@ -117,6 +121,7 @@ const ClinicalProductRow = ({ name, ingredients, type }) => {
 // --- 4. MAIN MODAL ---
 export const BarrierDetailsModal = ({ visible, onClose, data }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const slideAnim = useRef(new Animated.Value(height)).current;
 
@@ -150,7 +155,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             <View style={[styles.iconBadge, { backgroundColor: data.color + '20' }]}>
                                 <FontAwesome5 name="shield-alt" size={24} color={data.color} />
                             </View>
-                            <Text style={styles.headerTitle}>تقرير الحاجز الطبي</Text>
+                            <Text style={styles.headerTitle}>{t('barrier_medical_report', language)}</Text>
                             <Text style={[styles.headerSubtitle, { color: data.color }]}>{data.status} ({data.score}%)</Text>
                         </View>
                     </View>
@@ -161,12 +166,9 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                         <View style={styles.friendlyBox}>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                                 <FontAwesome5 name="lightbulb" size={14} color={COLORS.accentGreen} />
-                                <Text style={styles.friendlyTitle}>كيف يعمل الميزان؟</Text>
+                                <Text style={styles.friendlyTitle}>{t('barrier_how_it_works', language)}</Text>
                             </View>
-                            <Text style={styles.friendlyText}>
-                                نقوم بحساب توازن روتينك بين <Text style={{ color: COLORS.danger, fontFamily: 'Tajawal-Bold' }}>الإجهاد</Text> (المقشرات والمواد القوية) وبين <Text style={{ color: COLORS.success, fontFamily: 'Tajawal-Bold' }}>الترميم</Text> (المرطبات والزيوت).
-                                {"\n"}الهدف هو أن تتفوق كفة الترميم دائما للحفاظ على نضارة البشرة.
-                            </Text>
+                            <Text style={styles.friendlyText}>{t('barrier_how_it_works_body', language)}</Text>
                         </View>
 
                         {/* 2. Tug of War */}
@@ -179,7 +181,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             <View style={styles.alertBox}>
                                 <View style={styles.alertHeader}>
                                     <MaterialIcons name="not-interested" size={18} color={COLORS.danger} />
-                                    <Text style={styles.alertTitle}>موانع استخدام طبية</Text>
+                                    <Text style={styles.alertTitle}>{t('barrier_medical_contraindications', language)}</Text>
                                 </View>
                                 {contraindications.map((c, i) => (
                                     <Text key={i} style={styles.alertText}>• {c.name}: {c.contraindication}</Text>
@@ -192,7 +194,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             {/* Stressors */}
                             <View style={styles.column}>
                                 <View style={styles.colHeader}>
-                                    <Text style={[styles.colTitle, { color: COLORS.danger }]}>المجهدات</Text>
+                                    <Text style={[styles.colTitle, { color: COLORS.danger }]}>{t('barrier_stressors', language)}</Text>
                                     <View style={[styles.countBadge, { backgroundColor: COLORS.danger + '20' }]}><Text style={{ color: COLORS.danger, fontSize: 10, fontFamily: 'Tajawal-Bold' }}>{offenders.length}</Text></View>
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: COLORS.danger }]} />
@@ -207,7 +209,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             {/* Builders */}
                             <View style={styles.column}>
                                 <View style={styles.colHeader}>
-                                    <Text style={[styles.colTitle, { color: COLORS.success }]}>المرممات</Text>
+                                    <Text style={[styles.colTitle, { color: COLORS.success }]}>{t('barrier_builders', language)}</Text>
                                     <View style={[styles.countBadge, { backgroundColor: COLORS.success + '20' }]}><Text style={{ color: COLORS.success, fontSize: 10, fontFamily: 'Tajawal-Bold' }}>{defenders.length}</Text></View>
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: COLORS.success }]} />
@@ -219,7 +221,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                         </View>
 
                         <Pressable onPress={handleClose} style={styles.dismissBtn}>
-                            <Text style={styles.dismissText}>إغلاق التقرير</Text>
+                            <Text style={styles.dismissText}>{t('barrier_close_report', language)}</Text>
                         </Pressable>
 
                     </ScrollView>
@@ -232,6 +234,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
 // --- 5. MAIN CARD (Unchanged) ---
 export const BarrierCard = ({ barrier, onPress }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     return (
         <PressableScale onPress={onPress}>
@@ -240,10 +243,10 @@ export const BarrierCard = ({ barrier, onPress }) => {
                     <View style={styles.cardHeader}>
                         <View style={styles.titleRow}>
                             <FontAwesome5 name="shield-alt" size={16} color={barrier.color} />
-                            <Text style={[styles.cardTitle, { color: barrier.color }]}>صحة الحاجز الجلدي</Text>
+                            <Text style={[styles.cardTitle, { color: barrier.color }]}>{t('barrier_skin_health', language)}</Text>
                         </View>
                         <View style={{ backgroundColor: barrier.color + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: barrier.color }}>تحليل طبي</Text>
+                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: barrier.color }}>{t('barrier_medical_analysis', language)}</Text>
                         </View>
                     </View>
 
@@ -260,13 +263,16 @@ export const BarrierCard = ({ barrier, onPress }) => {
                     <View style={styles.footer}>
                         <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
                             {(barrier.stats?.load || 0) > 0
-                                ? `حمل كيميائي: ${(barrier.stats?.load || 0).toFixed(1)} / ترميم: ${(barrier.stats?.repair || 0).toFixed(1)}`
-                                : 'لا يوجد إجهاد كيميائي'}
+                                ? interpolate(t('barrier_chemical_load', language), {
+                                    load: (barrier.stats?.load || 0).toFixed(1),
+                                    repair: (barrier.stats?.repair || 0).toFixed(1)
+                                })
+                                : t('barrier_no_chemical_stress', language)}
                         </Text>
                         {barrier.contraindications && barrier.contraindications.length > 0 && (
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>
                                 <MaterialIcons name="error" size={14} color={COLORS.danger} />
-                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.danger }}>تنبيه هام</Text>
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.danger }}>{t('barrier_important_alert', language)}</Text>
                             </View>
                         )}
                     </View>

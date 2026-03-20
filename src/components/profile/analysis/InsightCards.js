@@ -3,12 +3,15 @@ import { View, Text, StyleSheet, ScrollView, I18nManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { PressableScale, StaggeredItem, ContentCard } from './AnalysisShared';
 import { WeatherMiniCard, WeatherCompactWidget, WeatherLoadingCard } from '../../profile/WeatherComponents';
 
 // --- Focus Insight (Hero) ---
 const FocusInsight = ({ insight, onSelect }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     const severityStyles = {
         critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
@@ -26,7 +29,7 @@ const FocusInsight = ({ insight, onSelect }) => {
                     </View>
                     <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
                     <View style={styles.focusInsightAction}>
-                        <Text style={styles.focusInsightActionText}>عرض التفاصيل والتوصية</Text>
+                        <Text style={styles.focusInsightActionText}>{t('analysis_view_details', language)}</Text>
                         <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
                     </View>
                 </LinearGradient>
@@ -38,6 +41,7 @@ const FocusInsight = ({ insight, onSelect }) => {
 // --- All Clear ---
 const AllClearState = () => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     return (
         <StaggeredItem index={0} animated={false}>
@@ -45,8 +49,8 @@ const AllClearState = () => {
                 <View style={styles.allClearIconWrapper}>
                     <FontAwesome5 name="leaf" size={28} color={COLORS.success} />
                 </View>
-                <Text style={styles.allClearTitle}>روتينك يبدو رائعا!</Text>
-                <Text style={styles.allClearSummary}>لم نعثر على أي مشاكل حرجة أو تعارضات. استمري في العناية ببشرتك.</Text>
+                <Text style={styles.allClearTitle}>{t('analysis_all_clear_title', language)}</Text>
+                <Text style={styles.allClearSummary}>{t('analysis_all_clear_summary', language)}</Text>
             </ContentCard>
         </StaggeredItem>
     );
@@ -55,6 +59,7 @@ const AllClearState = () => {
 // --- NEW: Night Prep Mini Card (Carousel Item) ---
 const NightPrepMiniCard = ({ insight, onPress, index }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     const data = insight.customData || {};
 
@@ -80,16 +85,16 @@ const NightPrepMiniCard = ({ insight, onPress, index }) => {
                     {/* Content */}
                     <View style={{ flex: 1, justifyContent: 'center', gap: 2 }}>
                         <Text style={[styles.modernCardTitle, { color: '#e0e7ff', marginTop: 4 }]} numberOfLines={1}>
-                            خطة الليلة
+                            {t('analysis_night_plan', language)}
                         </Text>
                         <Text style={styles.nightMiniText} numberOfLines={2}>
-                            {data.action || 'جهزي بشرتك للغد'}
+                            {data.action || t('analysis_night_prepare', language)}
                         </Text>
                     </View>
 
                     {/* Footer */}
                     <View style={styles.modernCardFooter}>
-                        <Text style={[styles.readMoreText, { color: '#a5b4fc' }]}>إضافة</Text>
+                        <Text style={[styles.readMoreText, { color: '#a5b4fc' }]}>{t('analysis_add', language)}</Text>
                         <Feather name="plus-circle" size={12} color="#a5b4fc" />
                     </View>
                 </View>
@@ -101,6 +106,7 @@ const NightPrepMiniCard = ({ insight, onPress, index }) => {
 // --- Standard Small Card ---
 const StandardInsightCard = ({ insight, onPress, index }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     const getTheme = () => {
         switch (insight.severity) {
@@ -126,7 +132,7 @@ const StandardInsightCard = ({ insight, onPress, index }) => {
                         <Text style={styles.modernCardTitle} numberOfLines={3}>{insight.title}</Text>
                     </View>
                     <View style={styles.modernCardFooter}>
-                        <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
+                        <Text style={[styles.readMoreText, { color: theme.border }]}>{t('analysis_more', language)}</Text>
                         <Feather name="chevron-left" size={12} color={theme.border} />
                     </View>
                 </View>
@@ -150,11 +156,12 @@ export const AnalysisHero = ({ focusInsight, onSelect, onRetryWeather, onShowPer
 
 export const AnalysisCarousel = ({ insights, onSelect }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     return (
         <View style={{ marginBottom: 25 }}>
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15 }}>
-                <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+                <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 25 }} style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }}>
                 {insights.map((insight, index) => {

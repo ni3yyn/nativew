@@ -43,6 +43,8 @@ import { scheduleAuthenticNotifications } from '../../src/utils/notificationHelp
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
 import { useTheme } from '../../src/context/ThemeContext';
+import { t } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
 // --- STYLE & CONSTANT IMPORTS ---
 import {
@@ -846,6 +848,7 @@ const extractIngredientsFromAIText = async (inputData) => {
 // --- COMPONENT: MOVED OUTSIDE & MEMOIZED ---
 const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, setScanMode }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -987,7 +990,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                         <View style={styles.cardFooter}>
                             <View style={[styles.indicatorDot, { backgroundColor: COLORS.accentGreen }]} />
                             <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
-                                المكونات فقط (صح)
+                                {t('oilguard_capture_ingredients', language)}
                             </Text>
                         </View>
                     </View>
@@ -1002,12 +1005,12 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                     style={styles.bottomDeckGradient}
                 >
                     <View style={styles.deckHeader}>
-                        <Text style={styles.deckTitle}>فحص المكونات</Text>
+                        <Text style={styles.deckTitle}>{t('oilguard_ingredients_scan', language)}</Text>
                         <Typewriter
                             texts={[
-                                "ابحث عن كلمة Ingredients...",
-                                "يستحسن تصوير المكونات بالإنجليزية لدقة أفضل",
-                                "لكن لا بأس بالعربية",
+                                t('oilguard_typewriter_1', language),
+                                t('oilguard_typewriter_2', language),
+                                t('oilguard_typewriter_3', language),
                             ]}
                             typingSpeed={60}
                             style={{
@@ -1047,7 +1050,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                 fontFamily: 'Tajawal-Bold',
                                 fontSize: 13,
                                 color: scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim
-                            }}>وضع السرعة</Text>
+                            }}>{t('oilguard_mode_fast', language)}</Text>
                         </TouchableOpacity>
 
                         {/* Accurate Mode Button */}
@@ -1069,7 +1072,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                 fontFamily: 'Tajawal-Bold',
                                 fontSize: 13,
                                 color: scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim
-                            }}>وضع الدقة</Text>
+                            }}>{t('oilguard_mode_accurate', language)}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -1082,8 +1085,8 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                         marginBottom: 10
                     }}>
                         {scanMode === 'accurate'
-                            ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية"
-                            : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
+                            ? t('oilguard_mode_accurate_note', language)
+                            : t('oilguard_mode_fast_note', language)}
                     </Text>
                     {/* --- END NEW UI --- */}
 
@@ -1099,8 +1102,8 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                                 <Ionicons name="camera" size={28} color={COLORS.textOnAccent} />
                             </View>
                             <View>
-                                <Text style={styles.primaryActionTitle}>تصوير المكونات</Text>
-                                <Text style={styles.primaryActionSub}>اضغط لفتح الكاميرا</Text>
+                                <Text style={styles.primaryActionTitle}>{t('oilguard_capture_ingredients', language)}</Text>
+                                <Text style={styles.primaryActionSub}>{t('oilguard_open_camera', language)}</Text>
                             </View>
                             <Ionicons name="chevron-back" size={24} color={COLORS.textOnAccent} style={{ opacity: 0.6, marginRight: 'auto' }} />
                         </LinearGradient>
@@ -1109,12 +1112,12 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                     <View style={styles.secondaryActionsRow}>
                         <TouchableOpacity onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
                             <Ionicons name="images" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>المعرض</Text>
+                            <Text style={styles.secondaryBtnText}>{t('oilguard_gallery', language)}</Text>
                         </TouchableOpacity>
                         <View style={styles.verticalDivider} />
                         <TouchableOpacity onPress={onManualSelect} style={styles.secondaryBtn}>
                             <Ionicons name="search" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>بحث يدوي</Text>
+                            <Text style={styles.secondaryBtnText}>{t('oilguard_manual_search', language)}</Text>
                         </TouchableOpacity>
                     </View>
                 </LinearGradient>
@@ -1500,6 +1503,7 @@ const AgentLoadingView = () => {
 // ============================================================================
 export default function OilGuardEngine() {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -1775,7 +1779,7 @@ export default function OilGuardEngine() {
             if (mode === 'camera') {
                 const { status } = await ImagePicker.requestCameraPermissionsAsync();
                 if (status !== 'granted') {
-                    Alert.alert('عذرا', 'يجب السماح بالوصول للكاميرا لالتقاط صورة.');
+                    Alert.alert(t('oilguard_alert_sorry', language), t('oilguard_camera_permission', language));
                     return;
                 }
                 setCameraViewVisible(true);
@@ -1785,7 +1789,7 @@ export default function OilGuardEngine() {
             if (mode === 'gallery') {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') {
-                    Alert.alert('عذرا', 'يجب السماح بالوصول للمعرض لاختيار صورة.');
+                    Alert.alert(t('oilguard_alert_sorry', language), t('oilguard_gallery_permission', language));
                     return;
                 }
 
@@ -1806,7 +1810,7 @@ export default function OilGuardEngine() {
             }
         } catch (error) {
             console.error("Image selection error:", error);
-            Alert.alert("خطأ", "حدث خطأ أثناء اختيار الصورة. حاول مرة أخرى.");
+            Alert.alert(t('oilguard_error_title', language), t('oilguard_error_pick_image', language));
         }
     }, []);
 
@@ -1898,42 +1902,42 @@ export default function OilGuardEngine() {
                     switch (status) {
                         case 'front_label_detected':
                             AlertService.show({
-                                title: "واجهة المنتج",
-                                message: "يبدو أنك صورتي واجهة المنتج. يرجى تصوير قائمة المكونات فقط و قصيها (غالباً خلف العبوة).",
+                                title: t('oilguard_alert_front_label_title', language),
+                                message: t('oilguard_alert_front_label_message', language),
                                 type: "warning",
-                                buttons: [{ text: "حسنا", style: "primary" }]
+                                buttons: [{ text: t('oilguard_ok', language), style: "primary" }]
                             });
                             break;
 
                         case 'instructions_only':
                             AlertService.show({
-                                title: "إرشادات فقط",
-                                message: "وجدنا نصاً، لكنه لا يحتوي على مكونات. ابحثي عن قسم يبدأ بكلمة Ingredients.",
+                                title: t('oilguard_alert_instructions_only_title', language),
+                                message: t('oilguard_alert_instructions_only_message', language),
                                 type: "warning",
-                                buttons: [{ text: "محاولة أخرى", style: "primary" }]
+                                buttons: [{ text: t('oilguard_try_again', language), style: "primary" }]
                             });
                             break;
 
                         case 'not_cosmetic':
                             AlertService.show({
-                                title: "ليس منتجاً",
-                                message: "الصورة لا تبدو لمنتج تجميلي. يرجى التأكد من تصوير عبوة المنتج.",
+                                title: t('oilguard_alert_not_cosmetic_title', language),
+                                message: t('oilguard_alert_not_cosmetic_message', language),
                                 type: "error"
                             });
                             break;
 
                         case 'unreadable':
                             AlertService.show({
-                                title: "صورة غير واضحة",
-                                message: "النص غير مقروء. يرجى تثبيت اليد وتوفير إضاءة جيدة.",
+                                title: t('oilguard_alert_unreadable_title', language),
+                                message: t('oilguard_alert_unreadable_message', language),
                                 type: "error"
                             });
                             break;
 
                         default:
                             AlertService.show({
-                                title: "تعذر التحليل",
-                                message: "لم نتمكن من استخراج المكونات. يرجى المحاولة مرة أخرى بصورة أوضح.",
+                                title: t('oilguard_alert_cannot_analyze_title', language),
+                                message: t('oilguard_alert_cannot_analyze_message', language),
                                 type: "error"
                             });
                             break;
@@ -1972,8 +1976,8 @@ export default function OilGuardEngine() {
             changeStep(0);
 
             AlertService.show({
-                title: "خطأ في الاتصال",
-                message: "حدث خطأ غير متوقع. يرجى التحقق من الانترنت والمحاولة مرة أخرى.",
+                title: t('oilguard_alert_connection_error_title', language),
+                message: t('oilguard_alert_connection_error_message', language),
                 type: "error"
             });
         }
@@ -2116,7 +2120,7 @@ export default function OilGuardEngine() {
 
             } catch (error) {
                 console.error(error);
-                Alert.alert("Analysis Error", "Could not connect to analysis server.");
+                Alert.alert(t('oilguard_analysis_error_title', language), t('oilguard_analysis_error_message', language));
                 changeStep(2); // Go back to claims
             }
         }, 100); // 100ms delay gives the animation enough time to start
@@ -2127,7 +2131,7 @@ export default function OilGuardEngine() {
         const textToProcess = directInputText || manualInputText;
 
         if (!textToProcess || !textToProcess.trim()) {
-            Alert.alert("تنبيه", "الرجاء إدخال المكونات.");
+            Alert.alert(t('oilguard_alert_enter_ingredients_title', language), t('oilguard_alert_enter_ingredients_message', language));
             return;
         }
 
@@ -2166,7 +2170,7 @@ export default function OilGuardEngine() {
 
         } catch (error) {
             console.error("Text Parse Error:", error);
-            Alert.alert("خطأ", "لم نتمكن من تحليل النص، يرجى المحاولة مرة أخرى.");
+            Alert.alert(t('oilguard_error_title', language), t('oilguard_alert_parse_error_message', language));
             setIsGeminiLoading(false);
             setLoading(false);
             changeStep(0);
@@ -2175,13 +2179,13 @@ export default function OilGuardEngine() {
 
     const handleSaveProduct = async () => {
         if (!productName.trim()) {
-            AlertService.error("تنبيه", "يرجى كتابة اسم المنتج.");
+            AlertService.error(t('oilguard_alert_enter_ingredients_title', language), t('oilguard_alert_enter_product_name', language));
             return;
         }
     
         // Optional: Force image
         if (!frontImageUri) {
-            AlertService.error("تنبيه", "يرجى إضافة صورة لواجهة المنتج لسهولة التعرف عليه.");
+            AlertService.error(t('oilguard_alert_enter_ingredients_title', language), t('oilguard_alert_add_product_image', language));
             return;
         }
     
@@ -2229,14 +2233,14 @@ export default function OilGuardEngine() {
             setSaveModalVisible(false);
     
             AlertService.success(
-                "تم الحفظ",
-                "تمت إضافة المنتج إلى رفّك.",
+                t('oilguard_saved_title', language),
+                t('oilguard_saved_message', language),
                 () => router.replace('/profile')
             );
     
         } catch (error) {
             console.error(error);
-            AlertService.error("خطأ", "تعذر حفظ المنتج.");
+            AlertService.error(t('oilguard_error_title', language), t('oilguard_save_failed', language));
             setIsSaving(false);
         }
     };
@@ -2271,12 +2275,12 @@ export default function OilGuardEngine() {
     // 3. Pick Front Image (For Shelf)
     const pickFrontImage = () => {
         AlertService.show({
-            title: "صورة المنتج",
-            message: "كيف تريد التقاط صورة المنتج؟",
+            title: t('oilguard_front_image_title', language),
+            message: t('oilguard_front_image_message', language),
             type: 'info', // Uses the blue/neutral theme
             buttons: [
                 {
-                    text: 'المعرض',
+                    text: t('oilguard_gallery', language),
                     style: 'secondary',
                     onPress: async () => {
                         const result = await ImagePicker.launchImageLibraryAsync({
@@ -2292,7 +2296,7 @@ export default function OilGuardEngine() {
                     }
                 },
                 {
-                    text: 'الكاميرا',
+                    text: t('oilguard_camera', language),
                     style: 'primary',
                     onPress: async () => {
                         // Request permission implicitly handled by Expo, but good to check
@@ -2309,7 +2313,7 @@ export default function OilGuardEngine() {
                     }
                 },
                 {
-                    text: 'إلغاء',
+                    text: t('oilguard_cancel', language),
                     style: 'destructive',
                     onPress: () => { } // Close modal
                 }
@@ -2444,7 +2448,7 @@ export default function OilGuardEngine() {
                     <View style={styles.headerBackdrop} />
 
                     <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
-                        <Text style={styles.heroTitle}>ما هي وعود المنتج؟</Text>
+                        <Text style={styles.heroTitle}>{t('oilguard_claims_header', language)}</Text>
                         <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
                     </Animated.View>
 
@@ -2454,7 +2458,7 @@ export default function OilGuardEngine() {
                                 <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
                                     <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                                 </TouchableOpacity>
-                                <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
+                                <Text style={styles.collapsedHeaderText}>{t('oilguard_claims_header', language)}</Text>
                                 <View style={{ width: 40 }} />
                             </View>
                         </SafeAreaView>
@@ -2465,7 +2469,7 @@ export default function OilGuardEngine() {
                             <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
                             <TextInput
                                 style={styles.claimsSearchInput}
-                                placeholder="ابحث عن إدعاء..."
+                                placeholder={t('oilguard_claims_search_placeholder', language)}
                                 placeholderTextColor={COLORS.textDim}
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
@@ -2583,12 +2587,12 @@ export default function OilGuardEngine() {
 
         // 3. Match Status Logic with Fallback
         const matchConfig = {
-            good: { color: COLORS.success, icon: 'check-double', text: 'مناسب لك', glow: 'rgba(34, 197, 94, 0.2)' },
-            warning: { color: COLORS.warning, icon: 'exclamation', text: 'انتبه', glow: 'rgba(245, 158, 11, 0.2)' },
-            danger: { color: COLORS.danger, icon: 'times', text: 'غير مناسب', glow: 'rgba(239, 68, 68, 0.2)' },
+            good: { color: COLORS.success, icon: 'check-double', text: t('oilguard_match_good', language), glow: 'rgba(34, 197, 94, 0.2)' },
+            warning: { color: COLORS.warning, icon: 'exclamation', text: t('oilguard_match_warning', language), glow: 'rgba(245, 158, 11, 0.2)' },
+            danger: { color: COLORS.danger, icon: 'times', text: t('oilguard_match_danger', language), glow: 'rgba(239, 68, 68, 0.2)' },
             // Fallback for 'unknown' or missing status
-            unknown: { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow }
-        }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: 'تم التحليل', glow: COLORS.primaryGlow };
+            unknown: { color: COLORS.primary, icon: 'check', text: t('oilguard_match_unknown', language), glow: COLORS.primaryGlow }
+        }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: t('oilguard_match_unknown', language), glow: COLORS.primaryGlow };
 
         return (
             <View style={{ width: '100%', gap: 0 }}>
@@ -2621,21 +2625,21 @@ export default function OilGuardEngine() {
                             <View style={styles.gaugeSection}>
                                 <ComplexDashboardGauge score={finalAnalysis.oilGuardScore || 0} />
                                 <View style={{ marginTop: -15, alignItems: 'center' }}>
-                                    <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || "تم التحليل"}</Text>
-                                    <Text style={styles.verdictLabel}>هذه النتيجة حسب بروفايلك، قد تتغير عند شخص آخر.</Text>
+                                    <Text style={styles.verdictBig}>{finalAnalysis.finalVerdict || t('oilguard_match_unknown', language)}</Text>
+                                    <Text style={styles.verdictLabel}>{t('oilguard_verdict_profile_note', language)}</Text>
                                 </View>
                             </View>
 
                             {/* Stats (Safe Access) */}
                             <View style={styles.statsGrid}>
                                 <GlassPillar
-                                    label="الأمان"
+                                    label={t('oilguard_stat_safety', language)}
                                     score={safety.score}
                                     color={safety.score >= 70 ? COLORS.success : (safety.score >= 40 ? COLORS.warning : COLORS.danger)}
                                     icon="shield-alt"
                                 />
                                 <GlassPillar
-                                    label="الفعالية"
+                                    label={t('oilguard_stat_efficacy', language)}
                                     score={efficacy.score}
                                     color={COLORS.info}
                                     icon="flask"
@@ -2708,7 +2712,7 @@ export default function OilGuardEngine() {
                     <View style={{ padding: 30, alignItems: 'center' }}>
                         <ActivityIndicator color={COLORS.accentGreen} size="small" />
                         <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12, marginTop: 10 }}>
-                            جاري البحث عن بديل في قاعدة البيانات...
+                            {t('oilguard_verified_loading', language)}
                         </Text>
                     </View>
                 )}
@@ -2735,7 +2739,7 @@ export default function OilGuardEngine() {
                 {!isVerifiedLoading && !verifiedRec && step === 4 && (
                     <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
                         <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
-                            لم نجد بديلاً أفضل في قاعدة البيانات حالياً.
+                            {t('oilguard_verified_none', language)}
                         </Text>
                     </View>
                 )}
@@ -2907,8 +2911,8 @@ export default function OilGuardEngine() {
                     <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
                     <Animated.View style={styles.modalContent}>
                         <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                            <Text style={styles.modalTitle}>حفظ النتيجة</Text>
-                            <Text style={styles.modalSub}>أضف صورة للعبوة لتجدها بسهولة في رفّك</Text>
+                            <Text style={styles.modalTitle}>{t('oilguard_save_result_title', language)}</Text>
+                            <Text style={styles.modalSub}>{t('oilguard_save_result_sub', language)}</Text>
                         </View>
 
                         <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
@@ -2924,16 +2928,16 @@ export default function OilGuardEngine() {
                                     <View style={styles.cameraIconCircle}>
                                         <Feather name="camera" size={24} color={COLORS.accentGreen} />
                                     </View>
-                                    <Text style={styles.pickerText}>صورة المنتج</Text>
+                                    <Text style={styles.pickerText}>{t('oilguard_product_image', language)}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
 
                         <View style={styles.inputWrapper}>
-                            <Text style={styles.inputLabel}>اسم المنتج</Text>
+                            <Text style={styles.inputLabel}>{t('oilguard_product_name', language)}</Text>
                             <TextInput
                                 style={styles.modalInput}
-                                placeholder="مثال: غسول CeraVe الرغوي"
+                                placeholder={t('oilguard_product_name_placeholder', language)}
                                 placeholderTextColor={COLORS.textSecondary}
                                 value={productName}
                                 onChangeText={setProductName}
@@ -2946,7 +2950,7 @@ export default function OilGuardEngine() {
                                 <ActivityIndicator color={COLORS.textOnAccent} />
                             ) : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Text style={styles.modalSaveButtonText}>حفظ في الرف</Text>
+                                    <Text style={styles.modalSaveButtonText}>{t('oilguard_save_to_shelf', language)}</Text>
                                     <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
                                 </View>
                             )}
