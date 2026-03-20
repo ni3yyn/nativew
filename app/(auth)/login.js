@@ -13,6 +13,8 @@ import { auth, db } from '../../src/config/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { t } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
 // --- THEME CONSTANTS ---
 const COLORS = {
@@ -157,6 +159,7 @@ const Spore = ({ size, startX, duration, delay }) => {
 
 // --- MAIN SCREEN ---
 export default function LoginScreen() {
+    const language = useCurrentLanguage();
     const [isLogin, setIsLogin] = useState(false); // Default to Signup
     const[email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -206,7 +209,7 @@ export default function LoginScreen() {
 
     const handleAuth = async () => {
         if (!email || !password) {
-            showToast("بيانات ناقصة", "يرجى ملء البريد وكلمة المرور.", "error");
+            showToast(t('auth_missing_fields_title', language), t('auth_missing_fields_message', language), "error");
             return;
         }
 
@@ -240,11 +243,11 @@ export default function LoginScreen() {
                 router.replace('/(onboarding)/welcome');
             }
         } catch (err) {
-            let title = "خطأ في الدخول";
+            let title = t('auth_error_signin_title', language);
             let msg = err.message;
-            if (msg.includes('auth/invalid-credential')) msg = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-            if (msg.includes('auth/email-already-in-use')) msg = "هذا البريد الإلكتروني مسجل بالفعل.";
-            if (msg.includes('password-short')) { title = "كلمة المرور ضعيفة"; msg = "يجب أن تكون كلمة المرور 6 أحرف على الأقل."; }
+            if (msg.includes('auth/invalid-credential')) msg = t('auth_invalid_credentials', language);
+            if (msg.includes('auth/email-already-in-use')) msg = t('auth_email_in_use', language);
+            if (msg.includes('password-short')) { title = t('auth_weak_password_title', language); msg = t('auth_weak_password_message', language); }
 
             showToast(title, msg, "error");
         } finally {
@@ -254,19 +257,19 @@ export default function LoginScreen() {
 
     const handleForgotPassword = async () => {
         if (!email) {
-            showToast("تنبيه", "يرجى إدخال بريدك الإلكتروني أولاً لإرسال رابط الاستعادة.", "error");
+            showToast(t('auth_notice_title', language), t('auth_enter_email_first', language), "error");
             return;
         }
 
         setResetLoading(true);
         try {
             await sendPasswordResetEmail(auth, email);
-            showToast("تم الإرسال", "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.", "info");
+            showToast(t('auth_reset_sent_title', language), t('auth_reset_sent_message', language), "info");
         } catch (err) {
-            let title = "خطأ";
+            let title = t('auth_error_title', language);
             let msg = err.message;
-            if (msg.includes('auth/user-not-found')) msg = "لم يتم العثور على حساب مسجل بهذا البريد.";
-            if (msg.includes('auth/invalid-email')) msg = "صيغة البريد الإلكتروني غير صحيحة.";
+            if (msg.includes('auth/user-not-found')) msg = t('auth_user_not_found', language);
+            if (msg.includes('auth/invalid-email')) msg = t('auth_invalid_email', language);
             showToast(title, msg, "error");
         } finally {
             setResetLoading(false);
@@ -295,7 +298,7 @@ export default function LoginScreen() {
                             <View style={styles.brandContainer}>
                                 <AppLogo />
                                 <Text style={styles.brandTitle}>وثيق</Text>
-                                <Text style={styles.brandSubtitle}>دليلكِ الذكي لجمال آمن وطبيعي</Text>
+                                <Text style={styles.brandSubtitle}>{t('auth_brand_subtitle', language)}</Text>
                             </View>
 
                             {/* Glassmorphic Login Card */}
@@ -310,15 +313,15 @@ export default function LoginScreen() {
                                 <Animated.View style={{ opacity: formOpacity, transform:[{ translateY: formSlide }], padding: 25 }}>
 
                                     <Text style={styles.formTitle}>
-                                        {isLogin ? 'مرحبا بعودتك!' : 'انضمي لعائلة وثيق'}
+                                        {isLogin ? t('auth_welcome_back', language) : t('auth_join_family', language)}
                                     </Text>
                                     <Text style={styles.formSub}>
-                                        {isLogin ? 'سجلي دخولكِ للوصول إلى رفّك وتحليلاتك.' : 'أنشئي حسابا واكتشفي حقيقة منتجاتك.'}
+                                        {isLogin ? t('auth_login_subtitle', language) : t('auth_signup_subtitle', language)}
                                     </Text>
 
                                     <BioInput
                                         icon="mail-outline"
-                                        placeholder="البريد الإلكتروني"
+                                        placeholder={t('auth_email_placeholder', language)}
                                         value={email}
                                         onChangeText={setEmail}
                                         keyboardType="email-address"
@@ -328,7 +331,7 @@ export default function LoginScreen() {
 
                                     <BioInput
                                         icon="lock-closed-outline"
-                                        placeholder="كلمة المرور"
+                                        placeholder={t('auth_password_placeholder', language)}
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry
@@ -344,7 +347,7 @@ export default function LoginScreen() {
                                             {resetLoading ? (
                                                 <ActivityIndicator size="small" color={COLORS.accentGreen} />
                                             ) : (
-                                                <Text style={styles.forgotPasswordText}>نسيت كلمة المرور؟</Text>
+                                                <Text style={styles.forgotPasswordText}>{t('auth_forgot_password', language)}</Text>
                                             )}
                                         </TouchableOpacity>
                                     )}
@@ -352,12 +355,12 @@ export default function LoginScreen() {
                                     {!isLogin && (
                                         <View style={styles.privacyContainer}>
                                             <Text style={styles.privacyText}>
-                                                بالتسجيل، أنت توافق على{' '}
+                                                {t('auth_privacy_agree_prefix', language)}
                                                 <Text
                                                     style={styles.privacyLink}
                                                     onPress={() => Linking.openURL('https://wathiq.web.app/privacy')}
                                                 >
-                                                    سياسة الخصوصية
+                                                    {t('auth_privacy_policy', language)}
                                                 </Text>
                                             </Text>
                                         </View>
@@ -377,22 +380,22 @@ export default function LoginScreen() {
                                             {loading ? (
                                                 <ActivityIndicator color={COLORS.textOnAccent} />
                                             ) : (
-                                                <Text style={styles.btnText}>{isLogin ? 'دخول' : 'تسجيل'}</Text>
+                                                <Text style={styles.btnText}>{isLogin ? t('auth_button_login', language) : t('auth_button_signup', language)}</Text>
                                             )}
                                         </LinearGradient>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity style={styles.switchBtn} onPress={switchMode} activeOpacity={0.6}>
                                         <Text style={styles.switchText}>
-                                            {isLogin ? 'ليس لديك حساب؟ ' : 'لديك حساب بالفعل؟ '}
-                                            <Text style={styles.linkText}>{isLogin ? ' أنشئي حسابا' : ' سجلّي الدخول'}</Text>
+                                            {isLogin ? t('auth_no_account_prefix', language) : t('auth_have_account_prefix', language)}
+                                            <Text style={styles.linkText}>{isLogin ? t('auth_create_account', language) : t('auth_sign_in', language)}</Text>
                                         </Text>
                                     </TouchableOpacity>
 
                                 </Animated.View>
                             </View>
 
-                            <Text style={styles.copyright}>© وثيق | تكنولوجيا الجمال الجزائرية</Text>
+                            <Text style={styles.copyright}>{t('auth_copyright', language)}</Text>
 
                         </Animated.View>
                     </ScrollView>

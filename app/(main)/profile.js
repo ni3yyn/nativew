@@ -20,6 +20,8 @@ import Svg, { Defs, Rect, Mask, Circle, LinearGradient as SvgGradient, Stop, Pat
 import * as Location from 'expo-location';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
 import AuthenticHeader from '../../src/utils/AuthenticHeader';
+import { t, getLocalizedValue } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 import {
     commonAllergies,
     commonConditions,
@@ -1402,6 +1404,7 @@ const SettingChip = ({ label, icon, isSelected, onPress }) => {
 
 const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
     const { colors: C } = useTheme();
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(C), [C]);
     return (
         <View style={styles.settingGroup}>
@@ -1410,7 +1413,7 @@ const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
                 {options.map(option => (
                     <SettingChip
                         key={option.id}
-                        label={option.label}
+                        label={getLocalizedValue(option.label, language)}
                         icon={option.icon}
                         isSelected={selectedValue === option.id}
                         onPress={() => onSelect(option.id)}
@@ -1423,6 +1426,7 @@ const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
 
 const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
     const currentSelected = Array.isArray(selectedValues) ? selectedValues : [];
+    const language = useCurrentLanguage();
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     return (
@@ -1432,7 +1436,7 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
                 {options.map(option => (
                     <SettingChip
                         key={option.id}
-                        label={option.name}
+                        label={getLocalizedValue(option.name, language)}
                         isSelected={currentSelected.includes(option.id)}
                         onPress={() => onToggle(option.id)}
                     />
@@ -1446,6 +1450,7 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
 // --- 3. SETTINGS SECTION (With Debounce to Save Reads/Writes) ---
 const SettingsSection = ({ profile, onLogout }) => {
     const { user } = useAppContext();
+    const language = useCurrentLanguage();
     const { colors: C, activeThemeId, changeTheme } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const [openAccordion, setOpenAccordion] = useState(null);
@@ -1496,7 +1501,10 @@ const SettingsSection = ({ profile, onLogout }) => {
 
     // --- THE DEBOUNCED UPDATE FUNCTION ---
     const updateSetting = (key, value) => {
-        if (!user?.uid) { Alert.alert("Error", "User not found."); return; }
+        if (!user?.uid) {
+            Alert.alert(t('settings_user_not_found_title', language), t('settings_user_not_found_message', language));
+            return;
+        }
 
         // 1. Optimistic Update (Update UI immediately so it feels fast)
         const newForm = { ...form, [key]: value };
@@ -1523,7 +1531,7 @@ const SettingsSection = ({ profile, onLogout }) => {
 
             } catch (e) {
                 console.error("Error updating settings:", e);
-                Alert.alert("Error", "Could not save setting.");
+                Alert.alert(t('settings_save_error_title', language), t('settings_save_error_message', language));
             } finally {
                 setIsSaving(false);
                 saveTimeoutRef.current = null;
@@ -1544,8 +1552,8 @@ const SettingsSection = ({ profile, onLogout }) => {
         // If AdsConsent is undefined (mocked at top of file) or missing method
         if (!AdsConsent || !AdsConsent.showPrivacyOptionsForm) {
             AlertService.show({
-                title: 'وضع التطوير',
-                message: 'خاصية الإعلانات غير مفعلة في Expo Go',
+                title: t('settings_dev_mode_title', language),
+                message: t('settings_ads_not_enabled', language),
                 type: 'info'
             });
             return;
@@ -1556,8 +1564,8 @@ const SettingsSection = ({ profile, onLogout }) => {
         } catch (error) {
             console.log("Privacy Form Error or Not Required:", error);
             AlertService.show({
-                title: 'تنبيه',
-                message: 'إعدادات الخصوصية غير مطلوبة في منطقتك الحالية أو غير مدعومة.',
+                title: t('settings_notice_title', language),
+                message: t('settings_privacy_not_required', language),
                 type: 'info'
             });
         }
@@ -1570,7 +1578,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 {isSaving && (
                     <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <ActivityIndicator size="small" color={C.accentGreen} />
-                        <Text style={{ color: C.textDim, fontSize: 10, fontFamily: 'Tajawal-Regular' }}>جاري الحفظ...</Text>
+                        <Text style={{ color: C.textDim, fontSize: 10, fontFamily: 'Tajawal-Regular' }}>{t('settings_saving', language)}</Text>
                     </Animated.View>
                 )}
             </View>
@@ -1578,17 +1586,17 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Traits */}
             <StaggeredItem index={0}>
                 <Accordion
-                    title="ألوان التطبيق"
+                    title={t('settings_theme_title', language)}
                     icon="palette"
                     isOpen={openAccordion === 'theme'}
                     onPress={() => handleToggleAccordion('theme')}
                 >
                     <SingleSelectGroup
-                        title="اختر مظهر التطبيق"
+                        title={t('settings_theme_pick', language)}
                         options={[
-                            { id: 'original', label: 'أصلي', icon: 'tree' },
-                            { id: 'baby_pink', label: 'وردي', icon: 'heart' },
-                            { id: 'clinical_blue', label: 'ليلي', icon: 'moon' }
+                            { id: 'original', label: { ar: t('settings_theme_original', 'ar'), en: t('settings_theme_original', 'en') }, icon: 'tree' },
+                            { id: 'baby_pink', label: { ar: t('settings_theme_pink', 'ar'), en: t('settings_theme_pink', 'en') }, icon: 'heart' },
+                            { id: 'clinical_blue', label: { ar: t('settings_theme_blue', 'ar'), en: t('settings_theme_blue', 'en') }, icon: 'moon' }
                         ]}
                         selectedValue={activeThemeId}
                         onSelect={changeTheme}
@@ -1612,19 +1620,20 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
                 <Accordion
                     title="السمات الأساسية"
+                    title={t('settings_traits_title', language)}
                     icon="id-card"
                     isOpen={openAccordion === 'traits'}
                     onPress={() => handleToggleAccordion('traits')}
                 >
                     <SingleSelectGroup
-                        title="نوع بشرتي"
+                        title={t('settings_skin_type', language)}
                         options={basicSkinTypes}
                         selectedValue={form.skinType}
                         onSelect={(value) => updateSetting('skinType', value)}
                     />
                     <View style={styles.divider} />
                     <SingleSelectGroup
-                        title="نوع فروة رأسي"
+                        title={t('settings_scalp_type', language)}
                         options={basicScalpTypes}
                         selectedValue={form.scalpType}
                         onSelect={(value) => updateSetting('scalpType', value)}
@@ -1635,13 +1644,13 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Goals - Added Title */}
             <StaggeredItem index={1}>
                 <Accordion
-                    title="الأهداف"
+                    title={t('settings_goals_title', language)}
                     icon="crosshairs"
                     isOpen={openAccordion === 'goals'}
                     onPress={() => handleToggleAccordion('goals')}
                 >
                     <MultiSelectGroup
-                        title="ما هي أهدافك للعناية؟"
+                        title={t('settings_goals_question', language)}
                         options={GOALS_LIST.map(g => ({ ...g, name: g.label }))}
                         selectedValues={form.goals}
                         onToggle={(id) => handleMultiSelectToggle('goals', id)}
@@ -1652,13 +1661,13 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Conditions - Added Title */}
             <StaggeredItem index={2}>
                 <Accordion
-                    title="الحالات الصحية"
+                    title={t('settings_conditions_title', language)}
                     icon="heartbeat"
                     isOpen={openAccordion === 'conditions'}
                     onPress={() => handleToggleAccordion('conditions')}
                 >
                     <MultiSelectGroup
-                        title="هل تعانين من أي مما يلي؟"
+                        title={t('settings_conditions_question', language)}
                         options={commonConditions}
                         selectedValues={form.conditions}
                         onToggle={(id) => handleMultiSelectToggle('conditions', id)}
@@ -1669,13 +1678,13 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Allergies - Added Title */}
             <StaggeredItem index={3}>
                 <Accordion
-                    title="الحساسية"
+                    title={t('settings_allergies_title', language)}
                     icon="allergies"
                     isOpen={openAccordion === 'allergies'}
                     onPress={() => handleToggleAccordion('allergies')}
                 >
                     <MultiSelectGroup
-                        title="مكونات تسبب لكِ حساسية"
+                        title={t('settings_allergies_question', language)}
                         options={commonAllergies}
                         selectedValues={form.allergies}
                         onToggle={(id) => handleMultiSelectToggle('allergies', id)}
@@ -1686,7 +1695,7 @@ const SettingsSection = ({ profile, onLogout }) => {
             {/* Account */}
             <StaggeredItem index={4}>
                 <Accordion
-                    title="إدارة الحساب"
+                    title={t('settings_account_title', language)}
                     icon="user-cog"
                     isOpen={openAccordion === 'account'}
                     onPress={() => handleToggleAccordion('account')}
@@ -1696,12 +1705,12 @@ const SettingsSection = ({ profile, onLogout }) => {
                         onPress={handlePrivacyOptions}
                         style={[styles.logoutBtn, { backgroundColor: C.background, borderColor: C.border, marginBottom: 10 }]}
                     >
-                        <Text style={[styles.logoutText, { color: C.textPrimary }]}>إعدادات الخصوصية (Ads)</Text>
+                        <Text style={[styles.logoutText, { color: C.textPrimary }]}>{t('settings_ads_privacy_button', language)}</Text>
                         <FontAwesome5 name="shield-alt" size={16} color={C.accentGreen} />
                     </PressableScale>
 
                     <PressableScale onPress={onLogout} style={styles.logoutBtn}>
-                        <Text style={styles.logoutText}>تسجيل الخروج</Text>
+                        <Text style={styles.logoutText}>{t('settings_logout_button', language)}</Text>
                         <FontAwesome5 name="sign-out-alt" size={16} color={C.danger} />
                     </PressableScale>
                 </Accordion>
@@ -1971,6 +1980,7 @@ export default function ProfileScreen() {
     // --- 1. HOOKS, CONTEXT & NAVIGATION ---
     // ========================================================================
     const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
+    const language = useCurrentLanguage();
     const { colors: C, activeThemeId, changeTheme } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const router = useRouter();
@@ -1992,7 +2002,7 @@ export default function ProfileScreen() {
         { id: 'analysis', label: 'تحليل', icon: 'chart-pie' },
         { id: 'migration', label: 'البديل', icon: 'exchange-alt' },
         { id: 'ingredients', label: 'مكوناتي', icon: 'flask' },
-        { id: 'settings', label: 'إعداداتي', icon: 'cog' },
+        { id: 'settings', label: t('tab_my_settings', language), icon: 'cog' },
         { id: 'reminders', label: 'تنبيهاتي', icon: 'clock' },
 
     ];

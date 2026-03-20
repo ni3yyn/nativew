@@ -12,6 +12,7 @@ import { useTheme } from '../../context/ThemeContext';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { calculateBioMatch } from '../../utils/matchCalculator';
 import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService';
+import { getLocalizedValue, normalizeLanguage } from '../../i18n';
 
 // --- DATA IMPORTS ---
 import {
@@ -202,7 +203,8 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
 
     const getLabel = (id, list) => {
         const item = list.find(i => i.id === id);
-        return item ? (item.label || item.name) : id;
+        const language = normalizeLanguage(profile?.settings?.language);
+        return item ? getLocalizedValue(item.label || item.name, language) : id;
     };
 
     const handleProductPress = (item) => {
