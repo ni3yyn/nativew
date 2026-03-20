@@ -12,6 +12,8 @@ import { formatRelativeTime } from '../../utils/formatters';
 import { calculateBioMatch } from '../../utils/matchCalculator';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../config/supabase';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- GLOBAL AUDIO TRACKING (Prevents overlapping audio in FlatList) ---
 let globalSound = null;
@@ -35,6 +37,7 @@ const stopGlobalAudio = async () => {
 
 // --- MAIN CARD ---
 const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS),[COLORS]);
@@ -45,7 +48,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         if (!products || products.length === 0) return null;
         return (
             <View style={{ marginTop: 15 }}>
-                <Text style={styles.sectionLabel}>المنتجات المستخدمة:</Text>
+                <Text style={styles.sectionLabel}>{t('community_post_used_products', language)}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 5 }}>
                     {products.map((p, index) => (
                         <TouchableOpacity
@@ -58,7 +61,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.jpName} numberOfLines={2}>{p.name}</Text>
                                 <Text style={styles.jpPrice}>
-                                    {p.price ? `${p.price} دج` : 'السعر غير محدد'}
+                                    {p.price ? `${p.price} ${t('community_currency_dzd', language)}` : t('community_price_unspecified', language)}
                                 </Text>
                             </View>
                             <FontAwesome5 name="plus-circle" size={16} color={COLORS.textSecondary} />
@@ -107,7 +110,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     <View style={{ flex: 1, marginRight: 15, justifyContent: 'center' }}>
                         <Text style={styles.taggedProductName}>{p.taggedProduct.name}</Text>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
-                            <Text style={styles.tapToView}>اضغط للتحليل والحفظ</Text>
+                            <Text style={styles.tapToView}>{t('community_post_tap_to_analyze', language)}</Text>
                             <FontAwesome5 name="chevron-left" size={10} color={COLORS.accentGreen} style={{ marginRight: 4 }} />
                         </View>
                     </View>
@@ -131,7 +134,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 <View style={styles.journeyMetaRow}>
                     <View style={styles.journeyBadge}>
                         <FontAwesome5 name="clock" size={12} color={COLORS.gold} />
-                        <Text style={styles.journeyBadgeText}>المدة: {p.duration}</Text>
+                        <Text style={styles.journeyBadgeText}>{t('community_duration', language)}: {p.duration}</Text>
                     </View>
                 </View>
             ) : null}
@@ -140,12 +143,12 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             ) : (
                 <View style={styles.beforeAfterContainer}>
                     <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.beforeImage && onImagePress(p.beforeImage)}>
-                        <Text style={styles.baLabel}>قبل</Text>
+                        <Text style={styles.baLabel}>{t('community_before', language)}</Text>
                         <Image source={{ uri: p.beforeImage }} style={styles.baImage} />
                     </TouchableOpacity>
                     <View style={styles.baDivider}><FontAwesome5 name="arrow-left" size={14} color={COLORS.textSecondary} /></View>
                     <TouchableOpacity style={styles.baImageWrapper} onPress={() => p.afterImage && onImagePress(p.afterImage)}>
-                        <Text style={styles.baLabel}>بعد</Text>
+                        <Text style={styles.baLabel}>{t('community_after', language)}</Text>
                         <Image source={{ uri: p.afterImage }} style={styles.baImage} />
                     </TouchableOpacity>
                 </View>
@@ -168,7 +171,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
     const RoutineProductPill = ({ product, onPress: onPillPress }) => {
         const imageUri = product.productImage || product.image || product.imageUrl;
-        const name = product.productName || product.name || product.details || 'منتج';
+        const name = product.productName || product.name || product.details || t('community_product', language);
         const score = product.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0;
         const type = product.productType || product.type || product.analysisData?.product_type || 'other';
 
@@ -208,7 +211,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             onViewProduct({
                 ...prod,
                 id: prod.id || 'unknown',
-                productName: prod.productName || prod.name || 'منتج',
+                productName: prod.productName || prod.name || t('community_product', language),
                 productImage: prod.productImage || prod.image || null,
                 marketingClaims: prod.marketingClaims ||[],
                 analysisData: prod.analysisData || {
@@ -248,7 +251,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                             <Feather name={icon} size={14} color={color} />
                             <Text style={[styles.routinePeriodTitle, { color: color }]}>{title}</Text>
                         </View>
-                        <Text style={styles.routineStepCount}>{allProducts.length} منتجات</Text>
+                        <Text style={styles.routineStepCount}>{allProducts.length} {t('community_products', language)}</Text>
                     </View>
                     {allProducts.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10, gap: 8 }}>
@@ -259,7 +262,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                             ))}
                         </ScrollView>
                     ) : (
-                        <Text style={styles.routineEmptyText}>لا توجد منتجات مسجلة</Text>
+                        <Text style={styles.routineEmptyText}>{t('community_no_products_registered', language)}</Text>
                     )}
                 </View>
             );
@@ -269,8 +272,8 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             <View>
                 <Text style={styles.postContent}>{p.content}</Text>
                 <View style={{ gap: 10, marginTop: 5 }}>
-                    {renderPeriod('الصباح', 'sun', COLORS.gold, rawAm)}
-                    {renderPeriod('المساء', 'moon', COLORS.purple, rawPm)}
+                    {renderPeriod(t('community_morning', language), 'sun', COLORS.gold, rawAm)}
+                    {renderPeriod(t('community_evening', language), 'moon', COLORS.purple, rawPm)}
                 </View>
             </View>
         );
@@ -392,7 +395,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 if (isMounted.current) {
                     setIsLoading(false);
                     setIsPlaying(false);
-                    Alert.alert("خطأ", "تعذر تشغيل الملف الصوتي.");
+                    Alert.alert(t('community_error_title', language), t('community_audio_play_failed', language));
                 }
             }
         };
@@ -529,7 +532,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 if (isMounted.current) {
                     setIsLoading(false);
                     setIsPlaying(false);
-                    Alert.alert("خطأ", "تعذر تشغيل الصوت، يرجى التحقق من الانترنت.");
+                    Alert.alert(t('community_error_title', language), t('community_audio_check_internet', language));
                 }
             }
         };
@@ -546,7 +549,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
             <View style={{ marginBottom: 5 }}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                     <FontAwesome5 name="check-circle" solid size={12} color={COLORS.info} />
-                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.info }}>نصيحة موثقة من الإدارة</Text>
+                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.info }}>{t('community_verified_admin_tip', language)}</Text>
                 </View>
 
                 {validTitle && (
@@ -600,7 +603,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                             activeOpacity={0.7}
                         >
                             <Feather name={isExpanded ? "chevron-up" : "book-open"} size={18} color={COLORS.info} />
-                            <Text style={styles.readToggleText}>{isExpanded ? "إغلاق" : "قراءة"}</Text>
+                            <Text style={styles.readToggleText}>{isExpanded ? t('community_close', language) : t('community_read', language)}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -620,7 +623,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                                 activeOpacity={0.8}
                             >
                                 <FontAwesome5 name="search" size={14} color="#FFF" />
-                                <Text style={styles.pillCtaText}>إفحصي منتجك الآن</Text>
+                                <Text style={styles.pillCtaText}>{t('community_scan_product_now', language)}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -640,12 +643,12 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
 
     const getTypeConfig = () => {
         switch (post.type) {
-            case 'review': return { icon: 'star', color: COLORS.accentGreen, label: 'تجربة' };
-            case 'journey': return { icon: 'hourglass-half', color: COLORS.gold, label: 'رحلة' };
-            case 'qa': return { icon: 'question-circle', color: COLORS.blue, label: 'سؤال' };
-            case 'routine_rate': return { icon: 'clipboard-list', color: COLORS.purple, label: 'تقييم' };
-            case 'tips': return { icon: 'lightbulb', color: COLORS.info, label: 'معلومة' };
-            default: return { icon: 'pen', color: COLORS.textSecondary, label: 'عام' };
+            case 'review': return { icon: 'star', color: COLORS.accentGreen, label: t('community_type_review', language) };
+            case 'journey': return { icon: 'hourglass-half', color: COLORS.gold, label: t('community_type_journey', language) };
+            case 'qa': return { icon: 'question-circle', color: COLORS.blue, label: t('community_type_question', language) };
+            case 'routine_rate': return { icon: 'clipboard-list', color: COLORS.purple, label: t('community_type_routine_rate', language) };
+            case 'tips': return { icon: 'lightbulb', color: COLORS.info, label: t('community_type_tip', language) };
+            default: return { icon: 'pen', color: COLORS.textSecondary, label: t('community_type_general', language) };
         }
     };
     const config = getTypeConfig();
@@ -657,7 +660,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                     style={styles.userInfo}
                     onPress={() => onProfilePress && onProfilePress(post.userId, {
                         ...(post.authorSettings || {}),
-                        name: post.userName || 'مستخدم وثيق'
+                        name: post.userName || t('community_default_user', language)
                     })}
                     activeOpacity={0.7}
                 >
@@ -716,7 +719,7 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton} onPress={() => onOpenComments(post)}>
                     <FontAwesome5 name="comment-alt" size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.actionText}>الردود</Text>
+                    <Text style={styles.actionText}>{t('community_replies', language)}</Text>
                     <Text style={styles.statText}>{post.commentsCount || 0}</Text>
                 </TouchableOpacity>
             </View>
