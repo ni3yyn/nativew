@@ -10,9 +10,12 @@ import * as Haptics from 'expo-haptics';
 import { createStyles, COLORS as DEFAULT_COLORS } from './oilguard.styles'; // Adjust path to where your styles file is
 import { PRODUCT_TYPES } from '../../constants/productData'; // Adjust path to constants
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -38,7 +41,7 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
         toggleGrid();
     };
 
-    const currentLabel = PRODUCT_TYPES.find(t => t.id === productType)?.label || 'غير محدد';
+    const currentLabel = PRODUCT_TYPES.find(t => t.id === productType)?.label || t('oilguard_unspecified', language);
     const currentIcon = PRODUCT_TYPES.find(t => t.id === productType)?.icon || 'box-open';
 
     // Limit max height to 350 or content size
@@ -47,8 +50,8 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
     return (
         <View style={styles.rs_Container}>
             <View style={styles.rs_CenterContent}>
-                <Text style={styles.rs_Title}>التحقق من المنتج</Text>
-                <Text style={styles.rs_Subtitle}>هل هذا التصنيف صحيح؟</Text>
+                <Text style={styles.rs_Title}>{t('oilguard_review_title', language)}</Text>
+                <Text style={styles.rs_Subtitle}>{t('oilguard_review_subtitle', language)}</Text>
             </View>
 
             <View style={styles.rs_HeroWrapper}>
@@ -62,7 +65,7 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
                 <View style={styles.rs_LabelContainer}>
                     <Text style={styles.rs_LabelText}>{currentLabel}</Text>
                     <TouchableOpacity activeOpacity={0.7} onPress={toggleGrid} style={styles.rs_EditBtn}>
-                        <Text style={styles.rs_EditBtnText}>تغيير التصنيف</Text>
+                        <Text style={styles.rs_EditBtnText}>{t('oilguard_change_category', language)}</Text>
                         <FontAwesome5 name={showGrid ? "chevron-up" : "chevron-down"} size={12} color={COLORS.accentGreen} />
                     </TouchableOpacity>
                 </View>
@@ -119,7 +122,7 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={styles.rs_ConfirmGradient}
                     >
-                        <Text style={styles.rs_ConfirmText}>نعم، تابع للتحليل</Text>
+                        <Text style={styles.rs_ConfirmText}>{t('oilguard_confirm_analysis', language)}</Text>
                         <FontAwesome5 name="arrow-left" color={COLORS.textOnAccent} />
                     </LinearGradient>
                 </TouchableOpacity>

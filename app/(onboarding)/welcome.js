@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  StyleSheet, View, Text, TextInput, TouchableOpacity, 
-  Dimensions, KeyboardAvoidingView, Platform, ScrollView, 
+import {
+  StyleSheet, View, Text, TextInput, TouchableOpacity,
+  Dimensions, KeyboardAvoidingView, Platform, ScrollView,
   Animated, Easing, ImageBackground, StatusBar, Keyboard // <--- 1. ADD Keyboard IMPORT
 } from 'react-native';
 
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase';
-import { useRouter, useLocalSearchParams } from 'expo-router'; 
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppContext } from '../../src/context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AlertService } from '../../src/services/alertService'; 
+import { AlertService } from '../../src/services/alertService';
+import { t, getLocalizedValue, interpolate } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import {
+  basicSkinTypes,
+  basicScalpTypes,
+  commonConditions,
+  commonAllergies,
+} from '../../src/data/allergiesandconditions';
 
 // --- CONFIGURATION ---
 
@@ -21,86 +29,69 @@ const { width, height } = Dimensions.get('window');
 const BG_IMAGE = require('../../assets/lolo.jpg');
 
 const COLORS = {
-  background: '#1A2D27', 
-  card: '#253D34',      
-  border: 'rgba(90, 156, 132, 0.25)', 
-  textDim: '#6B7C76',   
-  accentGreen: '#5A9C84', 
-  primary: '#A3E4D7',    
-  textPrimary: '#F1F3F2',   
-  textSecondary: '#A3B1AC', 
-  textOnAccent: '#1A2D27',  
-  danger: '#ef4444', 
-  glassTint: 'rgba(26, 45, 39, 0.85)', 
+  background: '#1A2D27',
+  card: '#253D34',
+  border: 'rgba(90, 156, 132, 0.25)',
+  textDim: '#6B7C76',
+  accentGreen: '#5A9C84',
+  primary: '#A3E4D7',
+  textPrimary: '#F1F3F2',
+  textSecondary: '#A3B1AC',
+  textOnAccent: '#1A2D27',
+  danger: '#ef4444',
+  glassTint: 'rgba(26, 45, 39, 0.85)',
 };
 
 // --- DATA CONSTANTS ---
-const SKIN_OPTIONS = [
-    { id: 'oily', label: 'دهنية', icon: 'tint' },
-    { id: 'dry', label: 'جافة', icon: 'leaf' },
-    { id: 'combo', label: 'مختلطة', icon: 'adjust' },
-    { id: 'normal', label: 'عادية', icon: 'smile' },
-];
+const SKIN_OPTIONS = basicSkinTypes.map((item) => ({
+  ...item,
+  icon: item.id === 'oily' ? 'tint' : item.id === 'dry' ? 'leaf' : item.id === 'combo' ? 'adjust' : 'smile',
+}));
 
-const SCALP_OPTIONS = [
-    { id: 'oily', label: 'دهنية', icon: 'tint' },
-    { id: 'dry', label: 'جافة', icon: 'leaf' },
-    { id: 'normal', label: 'عادية', icon: 'user' }
-];
+const SCALP_OPTIONS = basicScalpTypes.map((item) => ({
+  ...item,
+  icon: item.id === 'normal' ? 'user' : item.id === 'dry' ? 'leaf' : 'tint',
+}));
 
 const GOALS_LIST = [
-    { id: 'acne', name: 'مكافحة حب الشباب', desc: 'التخلص من البثور وآثارها' },
-    { id: 'anti_aging', name: 'مكافحة الشيخوخة', desc: 'تقليل التجاعيد والخطوط الدقيقة' },
-    { id: 'brightening', name: 'نضارة وتفتيح', desc: 'توحيد لون البشرة وإزالة التصبغات' },
-    { id: 'hydration', name: 'ترطيب عميق', desc: 'علاج الجفاف وتقوية حاجز البشرة' },
-    { id: 'texture_pores', name: 'تحسين الملمس', desc: 'تضييق المسام وتنعيم البشرة' },
-    { id: 'hair_growth', name: 'تكثيف الشعر', desc: 'علاج التساقط وزيادة الكثافة' },
+    { id: 'acne', name: { ar: 'مكافحة حب الشباب', en: 'Acne control' }, desc: { ar: 'التخلص من البثور وآثارها', en: 'Reduce breakouts and marks' } },
+    { id: 'anti_aging', name: { ar: 'مكافحة الشيخوخة', en: 'Anti-aging' }, desc: { ar: 'تقليل التجاعيد والخطوط الدقيقة', en: 'Reduce fine lines and wrinkles' } },
+    { id: 'brightening', name: { ar: 'نضارة وتفتيح', en: 'Brightening' }, desc: { ar: 'توحيد لون البشرة وإزالة التصبغات', en: 'Even tone and reduce pigmentation' } },
+    { id: 'hydration', name: { ar: 'ترطيب عميق', en: 'Deep hydration' }, desc: { ar: 'علاج الجفاف وتقوية حاجز البشرة', en: 'Treat dryness and support skin barrier' } },
+    { id: 'texture_pores', name: { ar: 'تحسين الملمس', en: 'Texture improvement' }, desc: { ar: 'تضييق المسام وتنعيم البشرة', en: 'Refine pores and smooth texture' } },
+    { id: 'hair_growth', name: { ar: 'تكثيف الشعر', en: 'Hair density' }, desc: { ar: 'علاج التساقط وزيادة الكثافة', en: 'Help with shedding and density' } },
 ];
 
-const CONDITIONS_LIST = [
-    { id: 'acne_prone', category: 'skin_concern', name: 'حب الشباب (بشرة معرضة)' },
-    { id: 'sensitive_skin', category: 'skin_concern', name: 'بشرة حساسة' },
-    { id: 'rosacea_prone', category: 'skin_concern', name: 'الوردية' },
-    { id: 'sensitive_scalp', category: 'scalp_concern', name: 'فروة رأس حساسة' },
-    { id: 'dandruff', category: 'scalp_concern', name: 'قشرة الرأس' },
-    { id: 'pregnancy_nursing', category: 'health', name: 'الحمل والرضاعة' },
-];
+const CONDITIONS_LIST = commonConditions;
+const ALLERGIES_LIST = commonAllergies;
 
-const ALLERGIES_LIST = [
-    { id: 'nuts', name: 'مكسرات' },
-    { id: 'soy', name: 'صويا' },
-    { id: 'fragrance', name: 'عطور' },
-    { id: 'salicylates', name: 'الساليسيلات' },
-    { id: 'gluten', name: 'الغلوتين' },
-];
-
-const getStepConfig = (gender) => {
+const getStepConfig = (gender, language) => {
   const isFemale = gender === 'أنثى';
   return [
-    { id: 'gender', title: 'لنتعرف عليكِ', subtitle: 'نخصص التجربة بناء على نوعك', type: 'single' },
-    { id: 'name', title: isFemale ? 'ما هو اسمكِ؟' : 'ما هو اسمك؟', subtitle: isFemale ? 'الاسم الذي تحبين أن نناديك به' : 'الاسم الذي تحب أن نناديك به', type: 'input' },
-    { id: 'skin', title: isFemale ? 'نوع بشرتكِ؟' : 'نوع بشرتك؟', subtitle: isFemale ? 'أساس العناية ببشرتكِ' : 'أساس العناية ببشرتك', type: 'single' },
-    { id: 'scalp', title: isFemale ? 'فروة رأسكِ؟' : 'فروة رأسك؟', subtitle: isFemale ? 'مهم لتحليل الشامبو المناسب لكِ' : 'مهم لتحليل الشامبو المناسب لك', type: 'single' },
-    { id: 'goals', title: isFemale ? 'ما هي أهدافك؟' : 'ما هي أهدافك؟', subtitle: isFemale ? 'لنختار لكِ الروتين والمنتجات المثالية' : 'لنختار لك الروتين والمنتجات المثالية', type: 'multi' },
-    { id: 'conditions', title: isFemale ? 'مخاوف صحية؟' : 'مخاوف صحية؟', subtitle: isFemale ? 'لتنبيهكِ من المنتجات التي قد تضركِ' : 'لتنبيهك من المنتجات التي قد تضرك', type: 'multi' },
-    { id: 'allergies', title: isFemale ? 'لديكِ حساسية؟' : 'لديك حساسية؟', subtitle: isFemale ? 'لتحذيركِ فوريا من المكونات' : 'لتحذيرك فوريا من المكونات', type: 'multi' },
-    { id: 'finish', title: isFemale ? 'جاهزة!' : 'جاهز!', subtitle: isFemale ? 'تم إعداد مختبركِ الشخصي' : 'تم إعداد مختبرك الشخصي', type: 'action' },
+    { id: 'gender', title: t('onboarding_step_gender_title', language), subtitle: t('onboarding_step_gender_subtitle', language), type: 'single' },
+    { id: 'name', title: t(isFemale ? 'onboarding_step_name_title_female' : 'onboarding_step_name_title_male', language), subtitle: t(isFemale ? 'onboarding_step_name_subtitle_female' : 'onboarding_step_name_subtitle_male', language), type: 'input' },
+    { id: 'skin', title: t(isFemale ? 'onboarding_step_skin_title_female' : 'onboarding_step_skin_title_male', language), subtitle: t(isFemale ? 'onboarding_step_skin_subtitle_female' : 'onboarding_step_skin_subtitle_male', language), type: 'single' },
+    { id: 'scalp', title: t(isFemale ? 'onboarding_step_scalp_title_female' : 'onboarding_step_scalp_title_male', language), subtitle: t(isFemale ? 'onboarding_step_scalp_subtitle_female' : 'onboarding_step_scalp_subtitle_male', language), type: 'single' },
+    { id: 'goals', title: t('onboarding_step_goals_title', language), subtitle: t(isFemale ? 'onboarding_step_goals_subtitle_female' : 'onboarding_step_goals_subtitle_male', language), type: 'multi' },
+    { id: 'conditions', title: t('onboarding_step_conditions_title', language), subtitle: t(isFemale ? 'onboarding_step_conditions_subtitle_female' : 'onboarding_step_conditions_subtitle_male', language), type: 'multi' },
+    { id: 'allergies', title: t(isFemale ? 'onboarding_step_allergies_title_female' : 'onboarding_step_allergies_title_male', language), subtitle: t(isFemale ? 'onboarding_step_allergies_subtitle_female' : 'onboarding_step_allergies_subtitle_male', language), type: 'multi' },
+    { id: 'finish', title: t(isFemale ? 'onboarding_step_finish_title_female' : 'onboarding_step_finish_title_male', language), subtitle: t(isFemale ? 'onboarding_step_finish_subtitle_female' : 'onboarding_step_finish_subtitle_male', language), type: 'action' },
   ];
 };
 
 // --- COMPONENT: ORGANIC SPORE ---
 const Spore = ({ size, startX, duration }) => {
-  const animY = useRef(new Animated.Value(0)).current; 
+  const animY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true })).start();
   }, []);
   const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
-  
+
   // 2. ADD pointerEvents="none" to ensure particles never block clicks
   return (
-    <Animated.View 
+    <Animated.View
         pointerEvents="none"
-        style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }} 
+        style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }}
     />
   );
 };
@@ -124,7 +115,7 @@ const SquareOption = ({ label, icon, selected, onPress, index }) => {
 };
 
 // --- COMPONENT: ROW OPTION ---
-const RowOption = ({ label, selected, onPress, index, category, description }) => {
+const RowOption = ({ label, selected, onPress, index, category, description, language }) => {
     const slide = useRef(new Animated.Value(50)).current;
     const fade = useRef(new Animated.Value(0)).current;
 
@@ -135,7 +126,11 @@ const RowOption = ({ label, selected, onPress, index, category, description }) =
         ]).start();
     }, []);
 
-    const catMap = { skin_concern: 'بشرة', scalp_concern: 'شعر', health: 'صحة' };
+    const catMap = {
+      skin_concern: t('onboarding_category_skin', language),
+      scalp_concern: t('onboarding_category_scalp', language),
+      health: t('onboarding_category_health', language),
+    };
     const subText = description || (category ? catMap[category] : null);
 
     return (
@@ -158,14 +153,15 @@ const RowOption = ({ label, selected, onPress, index, category, description }) =
 // --- MAIN SCREEN ---
 export default function WelcomeScreen() {
   const { user } = useAppContext();
+  const language = useCurrentLanguage();
   const router = useRouter();
-  const params = useLocalSearchParams(); 
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  
+
   const hasShownAlert = useRef(false);
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
-  const contentTransX = useRef(new Animated.Value(0)).current; 
+  const contentTransX = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   // --- Error Animation State ---
@@ -174,24 +170,24 @@ export default function WelcomeScreen() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    gender: '', 
-    skinType: '', 
-    scalpType: '', 
-    goals: [], 
-    conditions: [], 
-    allergies: [] 
+
+  const [formData, setFormData] = useState({
+    name: '',
+    gender: '',
+    skinType: '',
+    scalpType: '',
+    goals: [],
+    conditions: [],
+    allergies: []
   });
 
-  const STEPS = useMemo(() => getStepConfig(formData.gender), [formData.gender]);
+  const STEPS = useMemo(() => getStepConfig(formData.gender, language), [formData.gender, language]);
   const particles = useMemo(() => [...Array(20)].map((_, i) => ({
     id: i,
-    size: Math.random()*5+2, 
-    startX: Math.random()*width, 
+    size: Math.random()*5+2,
+    startX: Math.random()*width,
     duration: 15000+Math.random()*10000,
-    delay: Math.random()*5000 
+    delay: Math.random()*5000
   })), []);
 
   useEffect(() => {
@@ -199,14 +195,14 @@ export default function WelcomeScreen() {
         hasShownAlert.current = true;
         setTimeout(() => {
             AlertService.show({
-                title: "تحديث البيانات مطلوب",
-                message: "حدث خطأ تقني بسيط تسبب في إعادة ضبط تفضيلات بشرتك. \n\nلضمان دقة التحليل، يرجى إعادة اختيار نوع بشرتك وأهدافك.",
-                type: 'info', 
-                buttons: [{ text: "حسناً", style: "primary" }]
+                title: t('onboarding_repair_title', language),
+                message: t('onboarding_repair_message', language),
+                type: 'info',
+                buttons: [{ text: t('onboarding_ok', language), style: "primary" }]
             });
         }, 500);
     }
-  }, [params]);
+  }, [params, language]);
 
   useEffect(() => {
       Animated.timing(progressAnim, {
@@ -220,15 +216,15 @@ export default function WelcomeScreen() {
         toValue: showNameError ? 1 : 0,
         duration: 300,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: false 
+        useNativeDriver: false
     }).start();
   }, [showNameError]);
 
   const changeStep = (dir) => {
       const next = currentStep + dir;
-      if(next < 0 || next >= STEPS.length) { 
-          if(next >= STEPS.length) finishOnboarding(); 
-          return; 
+      if(next < 0 || next >= STEPS.length) {
+          if(next >= STEPS.length) finishOnboarding();
+          return;
       }
 
       setShowNameError(false);
@@ -238,14 +234,14 @@ export default function WelcomeScreen() {
           Animated.timing(contentTransX, { toValue: dir > 0 ? -40 : 40, duration: 200, useNativeDriver: true })
       ]).start(() => {
           setCurrentStep(next);
-          contentTransX.setValue(dir > 0 ? 40 : -40); 
-          
+          contentTransX.setValue(dir > 0 ? 40 : -40);
+
           setTimeout(() => {
               Animated.parallel([
                 Animated.timing(contentOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
                 Animated.spring(contentTransX, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
               ]).start();
-          }, 50); 
+          }, 50);
       });
   };
 
@@ -283,30 +279,30 @@ export default function WelcomeScreen() {
     try {
         await updateDoc(doc(db, 'profiles', user.uid), { settings: formData, onboardingComplete: true });
         router.replace('/profile');
-    } catch (e) { console.error(e); } 
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
   const renderContent = () => {
       switch(currentStep) {
-          case 0: return ( 
+          case 0: return (
               <View style={styles.gridCenter}>
-                  <SquareOption index={0} label="أنثى" icon="venus" selected={formData.gender === 'أنثى'} onPress={() => handleSingleSelect('gender', 'أنثى')} />
-                  <SquareOption index={1} label="ذكر" icon="mars" selected={formData.gender === 'ذكر'} onPress={() => handleSingleSelect('gender', 'ذكر')} />
+                  <SquareOption index={0} label={t('onboarding_gender_female', language)} icon="venus" selected={formData.gender === 'أنثى'} onPress={() => handleSingleSelect('gender', 'أنثى')} />
+                  <SquareOption index={1} label={t('onboarding_gender_male', language)} icon="mars" selected={formData.gender === 'ذكر'} onPress={() => handleSingleSelect('gender', 'ذكر')} />
               </View>
           );
-          case 1: return ( 
+          case 1: return (
               <View style={styles.nameContainer}>
-                  <TextInput 
-                    style={[styles.bigInput, showNameError && { borderBottomColor: COLORS.danger, color: COLORS.danger }]} 
-                    placeholder="الاسم الكريم..." 
+                  <TextInput
+                    style={[styles.bigInput, showNameError && { borderBottomColor: COLORS.danger, color: COLORS.danger }]}
+                    placeholder={t('onboarding_name_placeholder', language)}
                     placeholderTextColor={COLORS.textDim}
-                    value={formData.name} 
+                    value={formData.name}
                     onChangeText={t => {
                         setFormData({...formData, name: t});
                         if (t.trim().length >= 4) setShowNameError(false);
-                    }} 
-                    textAlign="center" 
+                    }}
+                    textAlign="center"
                     autoFocus
                     returnKeyType="done"
                     onSubmitEditing={handleNextStep}
@@ -317,46 +313,47 @@ export default function WelcomeScreen() {
                       overflow: 'hidden',
                       justifyContent: 'center',
                   }}>
-                      <Text style={styles.errorText}>يجب أن يتكون الاسم من 4 أحرف على الأقل</Text>
+                      <Text style={styles.errorText}>{t('onboarding_name_error', language)}</Text>
                   </Animated.View>
-                  <Text style={styles.inputHint}>اضغط "التالي" للمتابعة</Text>
+                  <Text style={styles.inputHint}>{t('onboarding_name_hint', language)}</Text>
               </View>
           );
-          case 2: return ( 
+          case 2: return (
               <View style={styles.gridContainer}>
-                  {SKIN_OPTIONS.map((t, i) => <SquareOption index={i} key={t.id} label={t.label} icon={t.icon} selected={formData.skinType === t.id} onPress={() => handleSingleSelect('skinType', t.id)} />)}
+                  {SKIN_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.skinType === item.id} onPress={() => handleSingleSelect('skinType', item.id)} />)}
               </View>
           );
-          case 3: return ( 
+          case 3: return (
               <View style={styles.gridContainer}>
-                  {SCALP_OPTIONS.map((t, i) => <SquareOption index={i} key={t.id} label={t.label} icon={t.icon} selected={formData.scalpType === t.id} onPress={() => handleSingleSelect('scalpType', t.id)} />)}
+                  {SCALP_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.scalpType === item.id} onPress={() => handleSingleSelect('scalpType', item.id)} />)}
               </View>
           );
           case 4: return (
               <View style={styles.listContainer}>
                   {GOALS_LIST.map((g, i) => (
-                      <RowOption 
-                        index={i} 
-                        key={g.id} 
-                        label={g.name} 
-                        description={g.desc}
-                        selected={formData.goals.includes(g.id)} 
-                        onPress={() => toggleMulti('goals', g.id)} 
+                      <RowOption
+                        index={i}
+                        key={g.id}
+                        label={getLocalizedValue(g.name, language)}
+                        description={getLocalizedValue(g.desc, language)}
+                        selected={formData.goals.includes(g.id)}
+                        onPress={() => toggleMulti('goals', g.id)}
+                        language={language}
                       />
                   ))}
               </View>
           );
-          case 5: return ( 
+          case 5: return (
               <View style={styles.listContainer}>
-                  {CONDITIONS_LIST.map((c, i) => <RowOption index={i} key={c.id} label={c.name} category={c.category} selected={formData.conditions.includes(c.id)} onPress={() => toggleMulti('conditions', c.id)} />)}
+                  {CONDITIONS_LIST.map((c, i) => <RowOption index={i} key={c.id} label={getLocalizedValue(c.name, language)} category={c.category} selected={formData.conditions.includes(c.id)} onPress={() => toggleMulti('conditions', c.id)} language={language} />)}
               </View>
           );
-          case 6: return ( 
+          case 6: return (
               <View style={styles.listContainer}>
-                  {ALLERGIES_LIST.map((a, i) => <RowOption index={i} key={a.id} label={a.name} selected={formData.allergies.includes(a.id)} onPress={() => toggleMulti('allergies', a.id)} />)}
+                  {ALLERGIES_LIST.map((a, i) => <RowOption index={i} key={a.id} label={getLocalizedValue(a.name, language)} selected={formData.allergies.includes(a.id)} onPress={() => toggleMulti('allergies', a.id)} language={language} />)}
               </View>
           );
-          case 7: return ( 
+          case 7: return (
               <View style={styles.centerFlex}>
                   <View style={styles.successIcon}>
                       <FontAwesome5 name="check" size={55} color={COLORS.textOnAccent} />
@@ -370,25 +367,25 @@ export default function WelcomeScreen() {
 
   const isNextEnabled = () => {
       if(currentStep === 1 && formData.name.trim().length === 0) return false;
-      return true; 
+      return true;
   };
-  
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
         <LinearGradient colors={['rgba(26, 45, 39, 0.85)', 'rgba(26, 45, 39, 0.95)']} style={StyleSheet.absoluteFill} />
         {particles.map(p => <Spore key={p.id} {...p} />)}
-        
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "padding"} 
-            style={{flex: 1}} 
+
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "padding"}
+            style={{flex: 1}}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <View style={[styles.safeArea, { paddingTop: 40 + insets.top, paddingBottom: insets.bottom }]}>
-            
+
             <View style={styles.progressContainer}>
-              <Text style={styles.stepCounter}>الخطوة {currentStep + 1} من {STEPS.length}</Text>
+              <Text style={styles.stepCounter}>{interpolate(t('onboarding_step_counter', language), { current: currentStep + 1, total: STEPS.length })}</Text>
               <View style={styles.track}>
                 <Animated.View style={[styles.fill, { width: progressAnim.interpolate({inputRange:[0,1], outputRange:['0%','100%']}) }]} />
               </View>
@@ -402,14 +399,14 @@ export default function WelcomeScreen() {
                     </View>
 
                     <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
-                        <ScrollView 
-                            key={currentStep} 
-                            contentContainerStyle={{ 
-                                flexGrow: 1, 
-                                paddingBottom: 20, 
-                                paddingTop: currentStep === 1 ? 20 : 0, 
-                                justifyContent: currentStep === 1 ? 'flex-start' : 'center' 
-                            }} 
+                        <ScrollView
+                            key={currentStep}
+                            contentContainerStyle={{
+                                flexGrow: 1,
+                                paddingBottom: 20,
+                                paddingTop: currentStep === 1 ? 20 : 0,
+                                justifyContent: currentStep === 1 ? 'flex-start' : 'center'
+                            }}
                             showsVerticalScrollIndicator={false}
                             // 4. IMPORTANT: Allow taps to pass through even if keyboard logic is lingering
                             keyboardShouldPersistTaps="always"
@@ -426,13 +423,13 @@ export default function WelcomeScreen() {
                         ) : <View style={{ width: 50 }} />}
 
                         {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
-                            <TouchableOpacity 
-                                onPress={handleNextStep} 
-                                disabled={!isNextEnabled() || loading} 
+                            <TouchableOpacity
+                                onPress={handleNextStep}
+                                disabled={!isNextEnabled() || loading}
                                 style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
                             >
                                 <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.btnGradient} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
-                                    {loading ? <Text style={styles.btnText}>جاري الحفظ...</Text> : <Text style={styles.btnText}>{currentStep === 7 ? (formData.gender === 'أنثى' ? 'انطلقي' : 'انطلق') : 'التالي'}</Text>}
+                                    {loading ? <Text style={styles.btnText}>{t('onboarding_saving', language)}</Text> : <Text style={styles.btnText}>{currentStep === 7 ? (formData.gender === 'أنثى' ? t('onboarding_start_female', language) : t('onboarding_start_male', language)) : t('onboarding_next', language)}</Text>}
                                     {currentStep !== 7 && !loading && <Ionicons name="arrow-forward" size={18} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />}
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -469,42 +466,42 @@ const styles = StyleSheet.create({
   optionText: { fontSize: 16, fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, textAlign: 'center' },
   checkBadge: { position: 'absolute', top: 10, right: 10, backgroundColor: COLORS.accentGreen, padding: 4, borderRadius: 10 },
   rowContainer: { width: '100%' },
-  rowInner: { 
-    flexDirection: 'row-reverse', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderRadius: 16, 
-    backgroundColor: COLORS.card, 
-    borderWidth: 1, 
-    borderColor: COLORS.border 
+  rowInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border
 },
-rowSelected: { 
-    borderColor: COLORS.accentGreen, 
-    borderWidth: 1, 
-    backgroundColor: 'rgba(90, 156, 132, 0.15)' 
+rowSelected: {
+    borderColor: COLORS.accentGreen,
+    borderWidth: 1,
+    backgroundColor: 'rgba(90, 156, 132, 0.15)'
 },
-checkbox: { 
-    width: 22, 
-    height: 22, 
-    borderRadius: 6, 
-    borderWidth: 1.5, 
-    borderColor: COLORS.textDim, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginLeft: 15, 
-    marginRight: 0 
+checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.textDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 15,
+    marginRight: 0
 },
-rowText: { 
-    fontSize: 16, 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.textPrimary, 
+rowText: {
+    fontSize: 16,
+    fontFamily: 'Tajawal-Regular',
+    color: COLORS.textPrimary,
     flex: 1,
     textAlign: 'right'
 },
-rowSub: { 
-    fontSize: 12, 
-    fontFamily: 'Tajawal-Regular', 
-    color: COLORS.textSecondary, 
+rowSub: {
+    fontSize: 12,
+    fontFamily: 'Tajawal-Regular',
+    color: COLORS.textSecondary,
     marginTop: 4,
     textAlign: 'right'
 },

@@ -21,6 +21,8 @@ import { AlertService } from '../../services/alertService';
 import { deleteComment } from '../../services/communityService';
 import { uploadImageToCloudinary } from '../../services/imageService'; // <--- NEW IMPORT
 import FullImageViewer from '../common/FullImageViewer';
+import { t, interpolate } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 // ... (Keep existing sendPushNotification & getRandomColor & getRandomPopColor helpers exactly as they are) ...
 
 const sendPushNotification = async (targetUserId, title, body, dataPayload) => {
@@ -57,13 +59,11 @@ const getRandomPopColor = (themeColors) => {
     return Math.random() > 0.5 ? C.danger : C.accentGreen;
 };
 
-const QUICK_REPLIES = ["شكرا على المشاركة ✨", "وين لقيتيه؟", "اواه ماشي سومتو", "ما شاء الله ! 👏", "البركوكس بنين"];
-
 // ==================================================================
 // 2. COMPONENT: COMMENT ROW (Updated for Images)
 // ==================================================================
 
-const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false, onImagePress, COLORS, styles }) => {
+const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false, onImagePress, COLORS, styles, language }) => {
     const C = COLORS || DEFAULT_COLORS;
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
     const [isLiked, setIsLiked] = useState(item.isLikedByCurrentUser || false);
@@ -132,12 +132,12 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
     const handleLongPress = () => {
         if (!isMe) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        AlertService.delete(isReply ? "حذف الرد" : "حذف التعليق", "هل أنت متأكد؟", () => onDelete(item.id));
+        AlertService.delete(isReply ? t('community_delete_reply', language) : t('community_delete_comment', language), t('community_confirm_question', language), () => onDelete(item.id));
     };
 
     const timeAgo = item.createdAt
         ? formatDistanceToNow(new Date(item.createdAt), { locale: ar, addSuffix: false })
-        : 'الآن';
+        : t('community_now', language);
 
     return (
         <View style={[styles.rowContainer, isReply && styles.rowContainerReply]}>
@@ -164,7 +164,7 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
                 >
                     <View style={styles.bubbleHeader}>
                         <Text style={styles.userName}>{item.userName}</Text>
-                        {isMe && <View style={styles.meBadge}><Text style={styles.meBadgeText}>أنا</Text></View>}
+                        {isMe && <View style={styles.meBadge}><Text style={styles.meBadgeText}>{t('community_me', language)}</Text></View>}
                     </View>
 
                     {/* --- TEXT CONTENT --- */}
@@ -199,7 +199,7 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
                         {likesCount > 0 && <Text style={[styles.actionText, isLiked && { color: C.danger }]}>{likesCount}</Text>}
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => onReply(item)} style={styles.actionBtn}>
-                        <Text style={styles.actionText}>رد</Text>
+                        <Text style={styles.actionText}>{t('community_reply', language)}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -211,6 +211,7 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
 // 3. MAIN COMPONENT: COMMENT MODAL
 // ==================================================================
 const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -223,6 +224,13 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const [selectedImage, setSelectedImage] = useState(null);
     const [isSending, setIsSending] = useState(false);
     const [viewingImage, setViewingImage] = useState(null);
+    const quickReplies = useMemo(() => ([
+        t('community_quick_reply_1', language),
+        t('community_quick_reply_2', language),
+        t('community_quick_reply_3', language),
+        t('community_quick_reply_4', language),
+        t('community_quick_reply_5', language),
+    ]), [language]);
 
     const flatListRef = useRef();
     const inputRef = useRef();
@@ -250,7 +258,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             createdAt: row.created_at,
             userId: row.firebase_user_id,
             parentId: row.parent_id,
-            userName: row.author_snapshot?.name || 'مستخدم وثيق',
+            userName: row.author_snapshot?.name || t('community_default_user', language),
             authorSettings: row.author_snapshot || {},
             likesCount: row.likes_count || 0,
             isLikedByCurrentUser: isLiked
@@ -320,7 +328,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 setSelectedImage(result.assets[0].uri);
             }
         } catch (error) {
-            AlertService.error("خطأ", "تعذر فتح معرض الصور");
+            AlertService.error(t('community_error_title', language), t('community_open_gallery_failed', language));
         }
     };
 
@@ -361,7 +369,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         clearInput();
 
         const authorSnapshot = {
-            name: currentUser.settings?.name || currentUser.name || 'مستخدم وثيق',
+            name: currentUser.settings?.name || currentUser.name || t('community_default_user', language),
             skinType: currentUser.settings?.skinType || null
         };
         const tempId = Math.random().toString();
@@ -419,20 +427,20 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
             // Logic: If text is empty, notification says "📷 Photo", otherwise "📷 [Text]"
             const notifBody = tempImageUri
-                ? (finalContent ? `📷 ${finalContent}` : '📷 شارك صورة')
+                ? (finalContent ? `📷 ${finalContent}` : `📷 ${t('community_shared_photo', language)}`)
                 : finalContent;
 
             if (replyingTo && replyingTo.targetUserId !== currentUser.uid) {
                 await sendPushNotification(
                     replyingTo.targetUserId,
-                    `رد جديد من ${authorSnapshot.name} ↩️`,
-                    `رد عليك: "${notifBody}"`,
+                    interpolate(t('community_push_new_reply', language), { name: authorSnapshot.name }),
+                    interpolate(t('community_push_reply_on_you', language), { body: notifBody }),
                     notificationData
                 );
             } else if (!replyingTo && post.userId !== currentUser.uid) {
                 await sendPushNotification(
                     post.userId,
-                    `تعليق جديد من ${authorSnapshot.name} 💬`,
+                    interpolate(t('community_push_new_comment', language), { name: authorSnapshot.name }),
                     `${notifBody}`,
                     notificationData
                 );
@@ -440,7 +448,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
         } catch (error) {
             console.error("Comment Error:", error);
-            AlertService.error("خطأ", "لم يتم إرسال التعليق.");
+            AlertService.error(t('community_error_title', language), t('community_comment_send_failed', language));
 
             // Revert optimistic update
             setCommentsList(prev => prev.filter(c => c.id !== tempId));
@@ -462,7 +470,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
             setCommentsList(prevList);
-            AlertService.error("خطأ", "تعذر حذف التعليق");
+            AlertService.error(t('community_error_title', language), t('community_delete_comment_failed', language));
         }
     };
 
@@ -476,7 +484,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     <View style={styles.grabber} />
                     <View style={styles.headerContent}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                            <Text style={styles.title}>التعليقات</Text>
+                            <Text style={styles.title}>{t('community_comments', language)}</Text>
                             <View style={styles.badge}><Text style={styles.badgeText}>{commentsList.length}</Text></View>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -506,6 +514,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                                     isReply={!!item.parentId}
                                     COLORS={COLORS}
                                     styles={styles}
+                                    language={language}
                                 />
                             )}
                             keyboardShouldPersistTaps="handled"
@@ -514,8 +523,8 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                                     <View style={styles.emptyIcon}>
                                         <MaterialCommunityIcons name="comment-text-multiple-outline" size={40} color={COLORS.textDim} />
                                     </View>
-                                    <Text style={styles.emptyTitle}>لا توجد تعليقات بعد</Text>
-                                    <Text style={styles.emptyDesc}>كن أول من يبدأ النقاش</Text>
+                                    <Text style={styles.emptyTitle}>{t('community_no_comments_yet', language)}</Text>
+                                    <Text style={styles.emptyDesc}>{t('community_be_first_discussion', language)}</Text>
                                 </View>
                             }
                         />
@@ -530,7 +539,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                             <View style={styles.replyBannerContent}>
                                 <View style={styles.replyVerticalLine} />
                                 <View>
-                                    <Text style={styles.replyLabel}>الرد على</Text>
+                                    <Text style={styles.replyLabel}>{t('community_replying_to', language)}</Text>
                                     <Text style={styles.replyName}>{replyingTo.userName}</Text>
                                 </View>
                             </View>
@@ -555,7 +564,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         <View style={styles.chipsContainer}>
                             <FlatList
                                 horizontal
-                                data={QUICK_REPLIES}
+                                data={quickReplies}
                                 keyExtractor={(item) => item}
                                 renderItem={({ item }) => (
                                     <TouchableOpacity style={styles.chip} onPress={() => handleSend(item)}>
@@ -586,7 +595,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         <TextInput
                             ref={inputRef}
                             style={styles.input}
-                            placeholder={replyingTo ? "اكتب ردك هنا..." : "أضف تعليقاً..."}
+                            placeholder={replyingTo ? t('community_write_reply', language) : t('community_add_comment', language)}
                             placeholderTextColor={COLORS.textDim}
                             value={comment}
                             onChangeText={setComment}

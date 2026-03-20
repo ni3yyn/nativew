@@ -31,9 +31,12 @@ import UserProfileModal from '../../src/components/community/UserProfileModal';
 import CommunityRefreshHandler from '../../src/components/community/CommunityRefreshHandler';
 import SortTabs from '../../src/components/community/SortTabs';
 import CommunityIntro from '../../src/components/community/CommunityIntro';
+import { t } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
 
 const NewPostsToast = ({ visible, onPress, COLORS, styles }) => {
+    const language = useCurrentLanguage();
     const slideAnim = useRef(new Animated.Value(-100)).current;
     useEffect(() => {
         Animated.spring(slideAnim, { toValue: visible ? 20 : -100, friction: 7, useNativeDriver: true }).start();
@@ -42,7 +45,7 @@ const NewPostsToast = ({ visible, onPress, COLORS, styles }) => {
         <Animated.View style={[styles.toastContainer, { transform: [{ translateY: slideAnim }] }]}>
             <TouchableOpacity onPress={onPress} style={styles.toastButton}>
                 <Feather name="arrow-up" size={16} color={COLORS.accentGreen} />
-                <Text style={styles.toastText}>منشورات جديدة</Text>
+                <Text style={styles.toastText}>{t('community_new_posts', language)}</Text>
             </TouchableOpacity>
         </Animated.View>
     );
@@ -56,6 +59,7 @@ export default function CommunityScreen() {
     const insets = useSafeAreaInsets();
     const { openPostId } = useLocalSearchParams();
     const router = useRouter();
+    const language = useCurrentLanguage();
 
     // --- STATE ---
     const [viewMode, setViewMode] = useState('menu');
@@ -236,7 +240,7 @@ export default function CommunityScreen() {
                 return {
                     id: post.id,
                     userId: post.firebase_user_id,
-                    userName: post.author_snapshot?.name || 'مستخدم وثيق',
+                    userName: post.author_snapshot?.name || t('community_default_user', language),
                     authorSettings: post.author_snapshot || {},
 
                     type: post.type,
@@ -269,7 +273,7 @@ export default function CommunityScreen() {
 
         } catch (error) {
             console.error("Feed Error:", error);
-            if (!isBackground) AlertService.error("خطأ", "تعذر تحميل المنشورات.");
+            if (!isBackground) AlertService.error(t('community_error_title', language), t('community_load_posts_error', language));
         } finally {
             if (!isBackground) {
                 setLoading(false);
@@ -340,7 +344,7 @@ export default function CommunityScreen() {
             await createPost(
                 payload,
                 user.uid,
-                userProfile?.settings?.name || 'مستخدم وثيق',
+                userProfile?.settings?.name || t('community_default_user', language),
                 userProfile?.settings || {}
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -371,12 +375,12 @@ export default function CommunityScreen() {
 
     const handleDeleteWrapper = (postId) => {
         AlertService.delete(
-            "حذف المنشور",
-            "هل أنت متأكد من حذف هذا المنشور؟",
+            t('community_delete_post_title', language),
+            t('community_delete_post_confirm', language),
             async () => {
                 await deletePost(postId);
                 setAllPosts(prev => prev.filter(p => p.id !== postId));
-                AlertService.success("تم الحذف", "تم حذف المنشور بنجاح.");
+                AlertService.success(t('community_deleted_title', language), t('community_deleted_message', language));
             }
         );
     };
@@ -387,7 +391,7 @@ export default function CommunityScreen() {
         );
 
         if (productExists) {
-            AlertService.show({ title: "موجود بالفعل", message: "هذا المنتج موجود بالفعل في رفّك.", type: 'info' });
+            AlertService.show({ title: t('community_exists_title', language), message: t('community_exists_message', language), type: 'info' });
             setViewingProduct(null);
             return;
         }
@@ -395,7 +399,7 @@ export default function CommunityScreen() {
         try {
             await saveProductToShelf(user.uid, product);
             setViewingProduct(null);
-            AlertService.success("تم الحفظ", "تمت إضافة المنتج إلى رفّك بنجاح.");
+            AlertService.success(t('community_saved_title', language), t('community_saved_message', language));
         } catch (e) { console.error(e); }
     };
 
@@ -414,8 +418,8 @@ export default function CommunityScreen() {
                 <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
                 <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 25 }]}>
                     <View>
-                        <Text style={styles.headerTitle}>مجتمع وثيق</Text>
-                        <Text style={styles.headerSubtitle}>تجارب حقيقية لجمال آمن</Text>
+                        <Text style={styles.headerTitle}>{t('community_title', language)}</Text>
+                        <Text style={styles.headerSubtitle}>{t('community_subtitle', language)}</Text>
                     </View>
                     <View style={styles.headerIconBtn}>
                         <FontAwesome5 name="users" size={20} color={COLORS.textPrimary} />
@@ -454,7 +458,7 @@ export default function CommunityScreen() {
                     </TouchableOpacity>
                     <View>
                         <Text style={styles.headerTitle}>{selectedCategory.label}</Text>
-                        <Text style={styles.headerSubtitle}>أحدث المشاركات</Text>
+                        <Text style={styles.headerSubtitle}>{t('community_latest_posts', language)}</Text>
                     </View>
                 </View>
                 <View style={[styles.catIconBoxSmall, { backgroundColor: (COLORS[selectedCategory?.colorKey] || COLORS.primary) + '20' }]}>
@@ -502,10 +506,10 @@ export default function CommunityScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
-                            <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? 'لا توجد نتائج تطابق بحثك.' : 'القسم فارغ حاليا.'}</Text>
+                            <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? t('community_no_search_results', language) : t('community_empty_section', language)}</Text>
                             {(!searchQuery && !isBioFilterActive && (selectedCategory.id !== 'tips' || isAdmin)) && (
                                 <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
-                                    <Text style={styles.emptyActionText}>كوني أنتِ الأولى</Text>
+                                    <Text style={styles.emptyActionText}>{t('community_be_first', language)}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>

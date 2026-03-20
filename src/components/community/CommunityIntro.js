@@ -10,6 +10,8 @@ import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,50 +19,41 @@ const { width, height } = Dimensions.get('window');
 const SLIDES = [
     {
         id: 'welcome',
-        title: "مجتمع وثيق",
-        subtitle: "ابحثي.. اسألي.. شاركي",
-        desc: "المكان الوحيد الذي تجدين فيه إجابات علمية لتساؤلاتك، وتشاركين فيه خبرتك مع أشخاص يشبهونك تماما.",
         icon: "users",
         color: DEFAULT_COLORS.primary,
         bgGradient: ['#1A2D27', '#14532D']
     },
     {
         id: 'match',
-        title: "توأم بشرتك",
-        subtitle: "تطابق حيوي (Bio-Match)",
-        desc: "لا تضيعي وقتك. نحن نفلتر لكِ المنشورات لتري فقط تجارب الأشخاص الذين يطابقون بشرتك، شعرك، ومشاكلك الصحية.",
         icon: "fingerprint",
         color: DEFAULT_COLORS.blue,
         bgGradient: ['#1A2D27', '#172554']
     },
     {
         id: 'review',
-        title: "تسوّقي بذكاء",
-        subtitle: "تجارب حقيقية",
-        desc: "اكتشفي حقيقة المنتجات قبل شرائها من خلال 'تحليل وثيق' وتقييمات المجتمع، وساعدي غيرك بمشاركة رأيك.",
         icon: "star",
         color: DEFAULT_COLORS.accentGreen,
         bgGradient: ['#1A2D27', '#064E3B']
     },
     {
         id: 'journey',
-        title: "نتائج، لا وعود",
-        subtitle: "رحلة البشرة",
-        desc: "تصفحي صور 'قبل وبعد' لتستلهمي الحلول الواقعية، أو وثّقي رحلتك الخاصة لتتابعي تقدمك.",
         icon: "hourglass-half",
         color: DEFAULT_COLORS.gold,
         bgGradient: ['#1A2D27', '#451a03']
     },
     {
         id: 'qa_routine',
-        title: "حسّني روتينك",
-        subtitle: "استشارات وتقييم",
-        desc: "هل ترتيب منتجاتك صحيح؟ اعرضي روتينك الحالي ليقوم الخبراء والذكاء الاصطناعي بتحسينه لكِ.",
         icon: "clipboard-check",
         color: DEFAULT_COLORS.purple,
         bgGradient: ['#1A2D27', '#2e1065']
     }
 ];
+
+const getSlideContent = (id, language) => ({
+    title: t(`community_intro_${id}_title`, language),
+    subtitle: t(`community_intro_${id}_subtitle`, language),
+    desc: t(`community_intro_${id}_desc`, language),
+});
 
 // --- 2. COMPONENTS ---
 
@@ -89,7 +82,7 @@ const AnimatedBackground = ({ scrollX }) => {
 };
 
 // Continuous Smooth Gesture Animation
-const SwipeHint = () => {
+const SwipeHint = ({ language }) => {
     const translateX = useRef(new Animated.Value(20)).current; // Start right
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -122,7 +115,7 @@ const SwipeHint = () => {
             <Animated.View style={{ transform: [{ translateX }], opacity }}>
                 <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color="rgba(255,255,255,0.6)" />
             </Animated.View>
-            <Text style={staticStyles.swipeText}>اسحب للتالي</Text>
+            <Text style={staticStyles.swipeText}>{t('community_intro_swipe_next', language)}</Text>
         </View>
     );
 };
@@ -132,6 +125,7 @@ const CommunityIntro = ({ visible, onClose }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
     const scrollX = useRef(new Animated.Value(0)).current;
     const [currentIndex, setCurrentIndex] = useState(0);
     const [dontShowAgain, setDontShowAgain] = useState(true); // Default to hiding it in the future
@@ -156,6 +150,7 @@ const CommunityIntro = ({ visible, onClose }) => {
     };
 
     const renderItem = ({ item, index }) => {
+        const slideContent = getSlideContent(item.id, language);
         // Parallax effect for content inside the slide
         const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
@@ -199,12 +194,12 @@ const CommunityIntro = ({ visible, onClose }) => {
                 {/* Text Content */}
                 <Animated.View style={[styles.textWrapper, { transform: [{ translateX }], opacity }]}>
                     <View style={[styles.subtitleBadge, { borderColor: item.color + '50', backgroundColor: item.color + '10' }]}>
-                        <Text style={[styles.subtitle, { color: item.color }]}>{item.subtitle}</Text>
+                        <Text style={[styles.subtitle, { color: item.color }]}>{slideContent.subtitle}</Text>
                     </View>
 
-                    <Text style={styles.title}>{item.title}</Text>
+                    <Text style={styles.title}>{slideContent.title}</Text>
                     <View style={styles.divider} />
-                    <Text style={styles.desc}>{item.desc}</Text>
+                    <Text style={styles.desc}>{slideContent.desc}</Text>
                 </Animated.View>
             </View>
         );
@@ -256,7 +251,7 @@ const CommunityIntro = ({ visible, onClose }) => {
                     {/* Header Skip */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={handleFinish} style={styles.skipBtn}>
-                            <Text style={styles.skipText}>تخطي</Text>
+                            <Text style={styles.skipText}>{t('community_intro_skip', language)}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -319,7 +314,7 @@ const CommunityIntro = ({ visible, onClose }) => {
 
                             {/* 1. Swipe Hint (Fades Out) */}
                             <Animated.View style={[styles.absoluteCenter, { opacity: hintOpacity }]}>
-                                <SwipeHint />
+                                <SwipeHint language={language} />
                             </Animated.View>
 
                             {/* 2. Start Button (Fades In) */}
@@ -339,7 +334,7 @@ const CommunityIntro = ({ visible, onClose }) => {
                                         colors={['#FFF', '#E2E8F0']}
                                         style={styles.startBtnGradient}
                                     >
-                                        <Text style={styles.startBtnText}>انضمي للمجتمع</Text>
+                                        <Text style={styles.startBtnText}>{t('community_intro_join', language)}</Text>
                                         <Ionicons name="checkmark-circle" size={24} color="#1A2D27" />
                                     </LinearGradient>
                                 </TouchableOpacity>
@@ -357,7 +352,7 @@ const CommunityIntro = ({ visible, onClose }) => {
                                         size={20}
                                         color="rgba(255,255,255,0.5)"
                                     />
-                                    <Text style={styles.dontShowText}>عدم العرض مرة أخرى</Text>
+                                    <Text style={styles.dontShowText}>{t('community_intro_dont_show', language)}</Text>
                                 </TouchableOpacity>
                             </Animated.View>
 

@@ -3,13 +3,8 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
-
-const LOADING_STAGES = [
-  "تحليل التركيبة...",
-  "فحص المكونات...",
-  "مقارنة المعايير...",
-  "إعداد التقرير..."
-];
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- BUBBLE COMPONENT ---
 const GentleBubble = ({ delay }) => {
@@ -81,8 +76,15 @@ const GentleBubble = ({ delay }) => {
 // --- MAIN COMPONENT ---
 const LoadingScreen = () => {
   const { colors } = useTheme();
+  const language = useCurrentLanguage();
   const COLORS = colors || DEFAULT_COLORS;
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const loadingStages = useMemo(() => ([
+    t('oilguard_loading_stage_1', language),
+    t('oilguard_loading_stage_2', language),
+    t('oilguard_loading_stage_3', language),
+    t('oilguard_loading_stage_4', language),
+  ]), [language]);
 
   const [stageIndex, setStageIndex] = useState(0);
 
@@ -114,7 +116,7 @@ const LoadingScreen = () => {
         Animated.timing(fadeText, { toValue: 0, duration: 300, easing: Easing.ease, useNativeDriver: true }),
         Animated.delay(100),
       ]).start(() => {
-        setStageIndex((prev) => (prev + 1) % LOADING_STAGES.length);
+        setStageIndex((prev) => (prev + 1) % loadingStages.length);
         Animated.timing(fadeText, { toValue: 1, duration: 500, easing: Easing.ease, useNativeDriver: true }).start();
       });
     }, 2500);
@@ -207,9 +209,9 @@ const LoadingScreen = () => {
 
       {/* Text Section */}
       <View style={styles.textContainer}>
-        <Text style={styles.mainTitle}>جاري التحليل</Text>
+        <Text style={styles.mainTitle}>{t('oilguard_loading_main', language)}</Text>
         <Animated.Text style={[styles.subTitle, { opacity: fadeText }]}>
-          {LOADING_STAGES[stageIndex]}
+          {loadingStages[stageIndex]}
         </Animated.Text>
       </View>
     </View>

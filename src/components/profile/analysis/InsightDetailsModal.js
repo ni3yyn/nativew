@@ -5,6 +5,8 @@ import { ChartRing } from './AnalysisShared';
 import { WeatherDetailedSheet } from '../../profile/WeatherComponents';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../../src/context/ThemeContext';
+import { t, interpolate } from '../../../../src/i18n';
+import { useCurrentLanguage } from '../../../../src/hooks/useCurrentLanguage';
 
 const { height } = Dimensions.get('window');
 
@@ -12,21 +14,22 @@ const { height } = Dimensions.get('window');
 // --- CONFIG: MECHANISM VISUALIZATION ---
 // ========================================================================
 const MECHANISM_CONFIG = {
-    'exfoliation_bha': { label: 'تنظيف المسام', icon: 'bullseye-arrow', desc: 'تفكيك الدهون داخل المسام' },
-    'anti_bacterial': { label: 'مكافحة البكتيريا', icon: 'bacteria-outline', desc: 'القضاء على مسببات الحبوب' },
-    'sebum_control': { label: 'تنظيم الدهون', icon: 'water-off', desc: 'تقليل اللمعان والزيوت' },
-    'cell_turnover': { label: 'تجديد الخلايا', icon: 'refresh-circle', desc: 'تسريع ظهور بشرة جديدة' },
-    'collagen_stimulation': { label: 'تحفيز الكولاجين', icon: 'wall', desc: 'شد البشرة ومحاربة الخطوط' },
-    'tyrosinase_inhibitor': { label: 'تفتيح التصبغات', icon: 'brightness-6', desc: 'إيقاف إنتاج الميلانين' },
-    'exfoliation_aha': { label: 'تقشير سطحي', icon: 'layers-off', desc: 'إزالة الجلد الميت والباهت' },
-    'barrier_repair': { label: 'ترميم الحاجز', icon: 'shield-check', desc: 'تقوية دفاعات البشرة' },
-    'antioxidant': { label: 'مضاد أكسدة', icon: 'shield-sun', desc: 'الحماية من التلوث والشمس' },
-    'humectant': { label: 'ترطيب عميق', icon: 'water', desc: 'سحب الرطوبة للجلد' },
-    'general': { label: 'تأثير داعم', icon: 'star-four-points-outline', desc: 'تحسين صحة البشرة العامة' }
+    'exfoliation_bha': { label: 'Pore cleansing', icon: 'bullseye-arrow', desc: 'Breaks down pore oil' },
+    'anti_bacterial': { label: 'Anti-bacterial', icon: 'bacteria-outline', desc: 'Targets breakout-causing bacteria' },
+    'sebum_control': { label: 'Sebum control', icon: 'water-off', desc: 'Reduces oil and shine' },
+    'cell_turnover': { label: 'Cell turnover', icon: 'refresh-circle', desc: 'Speeds up skin renewal' },
+    'collagen_stimulation': { label: 'Collagen boost', icon: 'wall', desc: 'Supports firmness and lines' },
+    'tyrosinase_inhibitor': { label: 'Pigmentation brightening', icon: 'brightness-6', desc: 'Helps reduce melanin production' },
+    'exfoliation_aha': { label: 'Surface exfoliation', icon: 'layers-off', desc: 'Removes dull dead skin' },
+    'barrier_repair': { label: 'Barrier repair', icon: 'shield-check', desc: 'Strengthens skin defenses' },
+    'antioxidant': { label: 'Antioxidant', icon: 'shield-sun', desc: 'Helps protect from pollution/sun' },
+    'humectant': { label: 'Deep hydration', icon: 'water', desc: 'Draws moisture into skin' },
+    'general': { label: 'Supportive effect', icon: 'star-four-points-outline', desc: 'Improves overall skin health' }
 };
 
 export const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const { colors } = useTheme(); // Get colors from theme
+    const language = useCurrentLanguage();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const animController = useRef(new Animated.Value(0)).current;
 
@@ -34,13 +37,13 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const getSeverityTheme = (severity) => {
         switch (severity) {
             case 'critical':
-                return { color: colors.danger, bg: colors.danger + '1A', icon: 'shield-alert-outline', label: 'تنبيه عالي الخطورة' };
+                return { color: colors.danger, bg: colors.danger + '1A', icon: 'shield-alert-outline', label: t('insight_severity_critical', language) };
             case 'warning':
-                return { color: colors.warning, bg: colors.warning + '1A', icon: 'alert-circle-outline', label: 'تحذير متوسط' };
+                return { color: colors.warning, bg: colors.warning + '1A', icon: 'alert-circle-outline', label: t('insight_severity_warning', language) };
             case 'good':
-                return { color: colors.success, bg: colors.success + '1A', icon: 'check-circle-outline', label: 'مؤشر إيجابي' };
+                return { color: colors.success, bg: colors.success + '1A', icon: 'check-circle-outline', label: t('insight_severity_good', language) };
             default:
-                return { color: colors.info || colors.accentGreen, bg: (colors.info || colors.accentGreen) + '1A', icon: 'information-outline', label: 'معلومة' };
+                return { color: colors.info || colors.accentGreen, bg: (colors.info || colors.accentGreen) + '1A', icon: 'information-outline', label: t('insight_severity_info', language) };
         }
     };
 
@@ -88,7 +91,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
         return (
             <View style={[styles.actionCard, { borderColor: theme.color + '40', backgroundColor: theme.bg }]}>
                 <View style={styles.actionHeaderRow}>
-                    <Text style={[styles.actionTitle, { color: theme.color }]}>الخطوة المقترحة</Text>
+                    <Text style={[styles.actionTitle, { color: theme.color }]}>{t('insight_action_step', language)}</Text>
                     <MaterialCommunityIcons name="lightbulb-on" size={18} color={theme.color} />
                 </View>
                 <Text style={[styles.actionText, { color: colors.textPrimary }]}>{text}</Text>
@@ -102,7 +105,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const GoalBreakdown = ({ foundHeroes = [], missingHeroes = [] }) => {
         return (
             <View style={[styles.dnaContainer, { backgroundColor: colors.background }]}>
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>تحليل المكونات الفعالة</Text>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('insight_active_ingredients', language)}</Text>
 
                 {/* Found Ingredients */}
                 {foundHeroes.map((hero, index) => (
@@ -112,7 +115,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                         </View>
                         <View style={styles.dnaTextBox}>
                             <Text style={[styles.dnaTitle, { color: colors.textPrimary }]}>{hero}</Text>
-                            <Text style={[styles.dnaDesc, { color: colors.textSecondary }]}>موجود في روتينك ✅</Text>
+                            <Text style={[styles.dnaDesc, { color: colors.textSecondary }]}>{t('insight_exists_in_routine', language)}</Text>
                         </View>
                     </View>
                 ))}
@@ -125,7 +128,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                         </View>
                         <View style={styles.dnaTextBox}>
                             <Text style={[styles.dnaTitle, { color: colors.textSecondary }]}>{hero}</Text>
-                            <Text style={[styles.dnaDesc, { color: colors.textSecondary }]}>ينصح بإضافته 💡</Text>
+                            <Text style={[styles.dnaDesc, { color: colors.textSecondary }]}>{t('insight_recommended_add', language)}</Text>
                         </View>
                     </View>
                 ))}
@@ -163,7 +166,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 {/* 4. The Science (Culprits) */}
                 {culprits.length > 0 && (
                     <View style={styles.sectionContainer}>
-                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>المكونات المسببة</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('insight_culprit_ingredients', language)}</Text>
                         <View style={styles.chipContainer}>
                             {culprits.map((ing, i) => (
                                 <View key={i} style={[styles.chip, { backgroundColor: colors.background, borderColor: theme.color }]}>
@@ -178,7 +181,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 {/* 5. Affected Products */}
                 {insight.related_products?.length > 0 && (
                     <View style={styles.sectionContainer}>
-                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>المنتجات المعنية</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('insight_related_products', language)}</Text>
                         {insight.related_products.map((p, i) => (
                             <View key={i} style={[styles.productRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
                                 <View style={[styles.productIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -211,8 +214,8 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     <ChartRing percentage={score} color={ringColor} radius={60} strokeWidth={10} />
                     <View style={styles.goalHeaderText}>
                         <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>{insight.title}</Text>
-                        <Text style={[styles.goalScoreText, { color: ringColor }]}>{score}% متطابق</Text>
-                        <Text style={[styles.goalSubtitle, { color: colors.textSecondary }]}>{score >= 80 ? 'روتين مثالي لهذا الهدف!' : score >= 50 ? 'تحتاجين بعض الإضافات' : 'يحتاج لتغييرات جذرية'}</Text>
+                        <Text style={[styles.goalScoreText, { color: ringColor }]}>{interpolate(t('insight_goal_match', language), { score })}</Text>
+                        <Text style={[styles.goalSubtitle, { color: colors.textSecondary }]}>{score >= 80 ? t('insight_goal_perfect', language) : score >= 50 ? t('insight_goal_some_additions', language) : t('insight_goal_major_changes', language)}</Text>
                     </View>
                 </View>
 
@@ -223,8 +226,8 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                             <MaterialCommunityIcons name="weather-sunny-alert" size={22} color={colors.danger} />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={[styles.alertTitle, { color: colors.danger }]}>تنبيه الحماية</Text>
-                            <Text style={[styles.alertBody, { color: colors.danger }]}>تم خصم نقاط كبيرة لعدم وجود واقي شمس. هذا الهدف مستحيل التحقق بدونه.</Text>
+                            <Text style={[styles.alertTitle, { color: colors.danger }]}>{t('insight_protection_alert', language)}</Text>
+                            <Text style={[styles.alertBody, { color: colors.danger }]}>{t('insight_protection_alert_body', language)}</Text>
                         </View>
                     </View>
                 )}
@@ -236,7 +239,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 {insight.related_products?.length > 0 && (
                     <View style={styles.sectionContainer}>
                         <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>منتجات تخدم هذا الهدف</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('insight_products_supporting_goal', language)}</Text>
                         <View style={styles.productsWrap}>
                             {insight.related_products.map((p, i) => (
                                 <View key={i} style={[styles.miniProductPill, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -287,7 +290,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                                 style={[styles.closeButton, { backgroundColor: colors.textPrimary }]}
                                 activeOpacity={0.9}
                             >
-                                <Text style={[styles.closeButtonText, { color: colors.card }]}>إغلاق</Text>
+                                <Text style={[styles.closeButtonText, { color: colors.card }]}>{t('insight_close', language)}</Text>
                             </TouchableOpacity>
 
                         </ScrollView>

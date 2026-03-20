@@ -7,6 +7,8 @@ import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // ============================================================================
 // PART 0: ANALYTICS SERVICE (FULLY MOCKED FOR EXPO GO)
@@ -46,6 +48,7 @@ const { width, height } = Dimensions.get('window');
 // ============================================================================
 const DockSheet = ({ visible, onClose, type, onSelect }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     const [showModal, setShowModal] = useState(false);
     const [safeType, setSafeType] = useState(type);
@@ -99,15 +102,15 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
             return (
                 <>
                     <View style={styles.handle} />
-                    <Text style={styles.sheetTitle}>ماذا تريدين أن تفعلي؟</Text>
+                    <Text style={styles.sheetTitle}>{t('dock_camera_sheet_title', language)}</Text>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('scan_product')}>
                         <LinearGradient colors={[COLORS.accentGreen, COLORS.accentGreen]} style={styles.actionButtonMain}>
                             <View style={styles.iconBoxMain}>
                                 <MaterialIcons name="camera" size={24} color={COLORS.textOnAccent} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.btnTitleMain}>فحص منتج</Text>
-                                <Text style={styles.btnSubMain}>تحليل المكونات بالكاميرا</Text>
+                                <Text style={styles.btnTitleMain}>{t('dock_scan_product', language)}</Text>
+                                <Text style={styles.btnSubMain}>{t('dock_scan_product_sub', language)}</Text>
                             </View>
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textOnAccent} />
                         </LinearGradient>
@@ -119,8 +122,8 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                                 <MaterialIcons name="compare-arrows" size={24} color={COLORS.textPrimary} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.btnTitleSec}>مقارنة منتجين</Text>
-                                <Text style={styles.btnSubSec}>أيهما أفضل لبشرتك؟</Text>
+                                <Text style={styles.btnTitleSec}>{t('dock_compare_products', language)}</Text>
+                                <Text style={styles.btnSubSec}>{t('dock_compare_products_sub', language)}</Text>
                             </View>
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
                         </View>
@@ -132,13 +135,13 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
             return (
                 <>
                     <View style={styles.handle} />
-                    <Text style={styles.sheetTitle}>القائمة الكاملة</Text>
+                    <Text style={styles.sheetTitle}>{t('dock_full_menu', language)}</Text>
                     <View style={styles.menuGrid}>
                         <TouchableOpacity activeOpacity={0.7} onPress={() => handleAction('ingredients')} style={styles.menuItem}>
                             <View style={[styles.menuIconBox, { backgroundColor: COLORS.accentGreen + '26' }]}>
                                 <MaterialIcons name="science" size={22} color={COLORS.accentGreen} />
                             </View>
-                            <Text style={styles.menuText}>موسوعة مكوناتي</Text>
+                            <Text style={styles.menuText}>{t('dock_ingredients_menu', language)}</Text>
                             <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
@@ -146,7 +149,7 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <View style={[styles.menuIconBox, { backgroundColor: COLORS.gold + '26' }]}>
                                 <MaterialIcons name="swap-horiz" size={22} color={COLORS.gold} />
                             </View>
-                            <Text style={styles.menuText}>البديل الصحي (قريبا)</Text>
+                            <Text style={styles.menuText}>{t('dock_migration_menu', language)}</Text>
                             <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
@@ -154,7 +157,7 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <View style={[styles.menuIconBox, { backgroundColor: COLORS.primary + '26' }]}>
                                 <MaterialIcons name="alarm" size={22} color={COLORS.primary} />
                             </View>
-                            <Text style={styles.menuText}>تنبيهاتي المخصصة</Text>
+                            <Text style={styles.menuText}>{t('dock_reminders_menu', language)}</Text>
                             <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
@@ -162,7 +165,7 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <View style={[styles.menuIconBox, { backgroundColor: COLORS.textSecondary + '1A' }]}>
                                 <MaterialIcons name="settings" size={22} color={COLORS.textSecondary} />
                             </View>
-                            <Text style={styles.menuText}>الإعدادات</Text>
+                            <Text style={styles.menuText}>{t('dock_settings_menu', language)}</Text>
                             <MaterialIcons name="chevron-left" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                     </View>
@@ -265,6 +268,7 @@ const DockIcon = ({ icon, label, isActive, onPress, specialColor, enablePulse, i
 // ============================================================================
 export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
     const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
     const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
     const [sheetState, setSheetState] = useState(null);
     const cameraScale = useRef(new Animated.Value(1)).current;
@@ -334,21 +338,21 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                             </LinearGradient>
                         </Animated.View>
                     </TouchableOpacity>
-                    <Text style={styles.watheeqLabel}>وثيق</Text>
+                    <Text style={styles.watheeqLabel}>{t('brand_wathiq', language)}</Text>
                 </View>
 
                 <View style={styles.dockContainer}>
                     <View style={styles.dockSideGroup}>
-                        <DockIcon id="community" icon="groups" label="المجتمع" isActive={activeTab === 'community'} onPress={() => navigation.push('/community')} specialColor={COLORS.gold} />
-                        <DockIcon id="analysis" icon="bubble-chart" label="تحليل" isActive={activeTab === 'analysis'} onPress={() => onTabChange('analysis')} />
+                        <DockIcon id="community" icon="groups" label={t('dock_label_community', language)} isActive={activeTab === 'community'} onPress={() => navigation.push('/community')} specialColor={COLORS.gold} />
+                        <DockIcon id="analysis" icon="bubble-chart" label={t('dock_label_analysis', language)} isActive={activeTab === 'analysis'} onPress={() => onTabChange('analysis')} />
                     </View>
                     <View style={styles.centerSpacer} />
                     <View style={styles.dockSideGroup}>
-                        <DockIcon id="routine" icon="spa" label="روتيني" isActive={activeTab === 'routine'} onPress={() => onTabChange('routine')} enablePulse={true} />
+                        <DockIcon id="routine" icon="spa" label={t('dock_label_routine', language)} isActive={activeTab === 'routine'} onPress={() => onTabChange('routine')} enablePulse={true} />
                         <DockIcon
                             id="more"
                             icon="menu"
-                            label="المزيد"
+                            label={t('dock_label_more', language)}
                             isActive={isMoreActive}
                             onPress={() => {
                                 trackInteraction('dock_more_menu_open');

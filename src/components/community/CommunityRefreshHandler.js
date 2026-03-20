@@ -3,6 +3,8 @@ import { View, FlatList, RefreshControl, StyleSheet, Platform } from 'react-nati
 import * as Haptics from 'expo-haptics';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const CommunityRefreshHandler = ({
     data,
@@ -14,6 +16,7 @@ const CommunityRefreshHandler = ({
     ...props
 }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const [refreshing, setRefreshing] = useState(false);
 
@@ -56,7 +59,7 @@ const CommunityRefreshHandler = ({
                         progressBackgroundColor={COLORS.card}
                         // iOS Styling
                         tintColor={COLORS.accentGreen}
-                        title="جاري التحديث..."
+                        title={t('community_refreshing', language)}
                         titleColor={COLORS.accentGreen}
                     />
                 }

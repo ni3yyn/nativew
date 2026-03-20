@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 
 const FALLBACK_COLORS = {
@@ -124,6 +126,7 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, vari
 // --- 1. SHELF EMPTY STATE (Updated with instruction step) ---
 export const ShelfEmptyState = ({ onPress }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -137,20 +140,20 @@ export const ShelfEmptyState = ({ onPress }) => {
                     />
                 </View>
 
-                <Text style={styles.title}>أهلا بك في وثيق</Text>
+                <Text style={styles.title}>{t('empty_welcome_title', language)}</Text>
                 <Text style={styles.description}>
-                    للبدء في تحليل بشرتك وبناء روتينك، نحتاج أولا لمعرفة المنتجات التي تملكينها.
+                    {t('empty_welcome_desc', language)}
                 </Text>
 
                 <View style={styles.featuresList}>
-                    <FeatureItem icon="touch-app" text="اضغطي على زر 'إضافة منتج' في الأسفل" styles={styles} COLORS={COLORS} />
-                    <FeatureItem icon="qr-code-scanner" text="صوري قائمة مكونات المنتج" styles={styles} COLORS={COLORS} />
-                    <FeatureItem icon="insights" text="احصلي على تحليل مفصل للمنتج ومكوناته" styles={styles} COLORS={COLORS} />
-                    <FeatureItem icon="save" text="اضغطي على 'إضافة للرف'" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="touch-app" text={t('empty_shelf_step_1', language)} styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="qr-code-scanner" text={t('empty_shelf_step_2', language)} styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="insights" text={t('empty_shelf_step_3', language)} styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="save" text={t('empty_shelf_step_4', language)} styles={styles} COLORS={COLORS} />
                 </View>
 
                 <View style={{ width: '100%' }}>
-                    <WathiqButton label="إضافة منتج الآن" icon="add-a-photo" onPress={onPress} />
+                    <WathiqButton label={t('empty_add_product_now', language)} icon="add-a-photo" onPress={onPress} />
                 </View>
             </View>
         </FadeInView>
@@ -160,6 +163,7 @@ export const ShelfEmptyState = ({ onPress }) => {
 // --- 2. ANALYSIS EMPTY STATE (Updated Layout + Shimmer) ---
 export const AnalysisEmptyState = ({ onPress }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -173,8 +177,8 @@ export const AnalysisEmptyState = ({ onPress }) => {
                         <FontAwesome5 name="lock" size={20} color={COLORS.gold} />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.titleAlignRight}>التحليل بانتظار البيانات</Text>
-                        <Text style={styles.descAlignRight}>يجب إضافة منتجات للرف لفتح التحليل.</Text>
+                        <Text style={styles.titleAlignRight}>{t('empty_analysis_waiting_title', language)}</Text>
+                        <Text style={styles.descAlignRight}>{t('empty_analysis_waiting_desc', language)}</Text>
                     </View>
                 </View>
 
@@ -189,8 +193,8 @@ export const AnalysisEmptyState = ({ onPress }) => {
                             <View style={styles.stepLine} />
                         </View>
                         <View style={styles.stepContent}>
-                            <Text style={[styles.stepTitle, { color: COLORS.danger }]}>إضافة منتجات للرف</Text>
-                            <Text style={styles.stepDesc}>الخطوة الأولى</Text>
+                            <Text style={[styles.stepTitle, { color: COLORS.danger }]}>{t('empty_analysis_step_1_title', language)}</Text>
+                            <Text style={styles.stepDesc}>{t('empty_analysis_step_1_desc', language)}</Text>
                         </View>
                     </View>
 
@@ -200,8 +204,8 @@ export const AnalysisEmptyState = ({ onPress }) => {
                             <View style={styles.stepDotLocked} />
                         </View>
                         <View style={styles.stepContent}>
-                            <Text style={styles.stepTitleLocked}>فتح لوحة التحليل الشاملة</Text>
-                            <Text style={styles.stepDesc}>مغلق حالياً</Text>
+                            <Text style={styles.stepTitleLocked}>{t('empty_analysis_step_2_title', language)}</Text>
+                            <Text style={styles.stepDesc}>{t('empty_analysis_step_2_desc', language)}</Text>
                         </View>
                     </View>
                 </View>
@@ -209,19 +213,19 @@ export const AnalysisEmptyState = ({ onPress }) => {
                 {/* SHIMMER BUTTON: Under the Steps */}
                 <View style={{ width: '100%', marginBottom: 15 }}>
                     <FastShimmerButton>
-                        <WathiqButton label="إضافة منتجات للرف" icon="add" onPress={onPress} />
+                        <WathiqButton label={t('empty_analysis_add_products', language)} icon="add" onPress={onPress} />
                     </FastShimmerButton>
                 </View>
 
                 <View style={styles.divider} />
 
                 {/* 3. The Features (Motivation) */}
-                <Text style={styles.sectionHeader}>مالذي ستحصلين عليه؟</Text>
+                <Text style={styles.sectionHeader}>{t('empty_analysis_benefits_title', language)}</Text>
                 <View style={styles.featuresGrid}>
-                    <FeatureCard icon="shield" title="صحة الحاجز" desc="قياس الإجهاد الكيميائي" color={COLORS.success} styles={styles} COLORS={COLORS} />
-                    <FeatureCard icon="wb-sunny" title="المناخ والبشرة" desc="تحليل تأثير الطقس" color={COLORS.accentGreen} styles={styles} COLORS={COLORS} />
-                    <FeatureCard icon="verified" title="أهداف البشرة" desc="مدى توافق المنتجات" color={COLORS.gold} styles={styles} COLORS={COLORS} />
-                    <FeatureCard icon="warning" title="التعارضات" desc="تنبيهات الخلط الخاطئ" color={COLORS.danger} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="shield" title={t('empty_benefit_barrier_title', language)} desc={t('empty_benefit_barrier_desc', language)} color={COLORS.success} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="wb-sunny" title={t('empty_benefit_weather_title', language)} desc={t('empty_benefit_weather_desc', language)} color={COLORS.accentGreen} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="verified" title={t('empty_benefit_goals_title', language)} desc={t('empty_benefit_goals_desc', language)} color={COLORS.gold} styles={styles} COLORS={COLORS} />
+                    <FeatureCard icon="warning" title={t('empty_benefit_conflicts_title', language)} desc={t('empty_benefit_conflicts_desc', language)} color={COLORS.danger} styles={styles} COLORS={COLORS} />
                 </View>
 
             </View>
@@ -232,6 +236,7 @@ export const AnalysisEmptyState = ({ onPress }) => {
 // --- 3. ROUTINE EMPTY STATE ---
 export const RoutineEmptyState = ({ onPress }) => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -242,18 +247,18 @@ export const RoutineEmptyState = ({ onPress }) => {
                     <MaterialCommunityIcons name="timeline-clock-outline" size={40} color={COLORS.textSecondary} />
                 </View>
 
-                <Text style={styles.title}>بناء الروتين الذكي</Text>
+                <Text style={styles.title}>{t('empty_routine_title', language)}</Text>
                 <Text style={styles.description}>
-                    اتركي خوارزمية وثيق ترتب منتجاتك تلقائيا للحصول على أقصى فعالية.
+                    {t('empty_routine_desc', language)}
                 </Text>
 
                 <View style={styles.featuresList}>
-                    <FeatureItem icon="layers" text="الترتيب حسب اللزوجة (من الأخف للأثقل)" styles={styles} COLORS={COLORS} />
-                    <FeatureItem icon="wb-twilight" text="فصل المكونات النشطة (صباحا ومساء)" styles={styles} COLORS={COLORS} />
-                    <FeatureItem icon="shield" text="ضمان وجود طبقة الحماية والمرطب" styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="layers" text={t('empty_routine_step_1', language)} styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="wb-twilight" text={t('empty_routine_step_2', language)} styles={styles} COLORS={COLORS} />
+                    <FeatureItem icon="shield" text={t('empty_routine_step_3', language)} styles={styles} COLORS={COLORS} />
                 </View>
 
-                <WathiqButton label="إنشاء روتين تلقائي" icon="auto-fix-high" onPress={onPress} />
+                <WathiqButton label={t('empty_routine_cta', language)} icon="auto-fix-high" onPress={onPress} />
             </View>
         </FadeInView>
     );
@@ -262,6 +267,7 @@ export const RoutineEmptyState = ({ onPress }) => {
 // --- 4. INGREDIENTS EMPTY STATE ---
 export const IngredientsEmptyState = () => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -271,14 +277,14 @@ export const IngredientsEmptyState = () => {
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
                     <MaterialCommunityIcons name="flask-outline" size={36} color={COLORS.textDim} />
                 </View>
-                <Text style={[styles.title, { color: COLORS.textSecondary }]}>موسوعة المكونات</Text>
-                <Text style={styles.description}>بعد إضافة منتج للرف، ستظهر هنا بطاقات تعريفية ذكية لكل مكون.</Text>
+                <Text style={[styles.title, { color: COLORS.textSecondary }]}>{t('empty_ingredients_title', language)}</Text>
+                <Text style={styles.description}>{t('empty_ingredients_desc', language)}</Text>
 
                 <View style={{ flexDirection: 'row-reverse', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Badge text="الإسم العلمي" icon="science" styles={styles} COLORS={COLORS} />
-                    <Badge text="الوظيفة" icon="work-outline" styles={styles} COLORS={COLORS} />
-                    <Badge text="الفوائد" icon="favorite-border" styles={styles} COLORS={COLORS} />
-                    <Badge text="تنبيهات السلامة" icon="warning-amber" styles={styles} COLORS={COLORS} />
+                    <Badge text={t('empty_badge_scientific_name', language)} icon="science" styles={styles} COLORS={COLORS} />
+                    <Badge text={t('empty_badge_function', language)} icon="work-outline" styles={styles} COLORS={COLORS} />
+                    <Badge text={t('empty_badge_benefits', language)} icon="favorite-border" styles={styles} COLORS={COLORS} />
+                    <Badge text={t('empty_badge_safety', language)} icon="warning-amber" styles={styles} COLORS={COLORS} />
                 </View>
             </View>
         </FadeInView>
@@ -288,6 +294,7 @@ export const IngredientsEmptyState = () => {
 // --- 5. MIGRATION (GOOD) EMPTY STATE ---
 export const MigrationSuccessState = () => {
     const { colors } = useTheme();
+    const language = useCurrentLanguage();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -300,13 +307,13 @@ export const MigrationSuccessState = () => {
                 <View style={[styles.iconCircle, { borderColor: COLORS.success, backgroundColor: 'rgba(34, 197, 94, 0.05)' }]}>
                     <MaterialIcons name="verified-user" size={36} color={COLORS.success} />
                 </View>
-                <Text style={[styles.title, { color: COLORS.success }]}>منتجاتك نظيفة</Text>
+                <Text style={[styles.title, { color: COLORS.success }]}>{t('empty_clean_products_title', language)}</Text>
                 <Text style={styles.description}>
-                    رائع! لم يتم العثور على مكونات "شديدة الخطورة" أو مواد صناعية قاسية في رفّك الحالي.
+                    {t('empty_clean_products_desc', language)}
                 </Text>
                 <View style={{ marginTop: 10, paddingHorizontal: 15, paddingVertical: 8, backgroundColor: COLORS.background, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border }}>
                     <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, fontSize: 12, textAlign: 'center' }}>
-                        🌱 استمري في اختيار البدائل الصحية
+                        {t('empty_clean_products_tip', language)}
                     </Text>
                 </View>
             </LinearGradient>
