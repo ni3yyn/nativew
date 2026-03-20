@@ -233,6 +233,7 @@ export default function LoginScreen() {
                         gender: '',
                         skinType: '',
                         scalpType: '',
+                        language: 'ar',
                         goals: [],
                         conditions: [],
                         allergies:[]

@@ -291,15 +291,23 @@ export const AppProvider = ({ children }) => {
           isRepairing.current = true;
 
           // repair logic 
+          const defaultSettings = {
+             name: '',
+             gender: '',
+             skinType: '',
+             scalpType: '',
+             language: 'ar',
+             goals: [],
+             conditions: [],
+             allergies: []
+          };
+
           const repairData = {
              email: currentUser.email,
              createdAt: data?.createdAt || serverTimestamp(),
              onboardingComplete: data?.onboardingComplete || false, 
              notificationsEnabled: data?.notificationsEnabled || false,
-             settings: data?.settings || { 
-                 name: '', gender: '', skinType: '', scalpType: '',
-                 goals: [], conditions: [], allergies: []
-             },
+             settings: { ...defaultSettings, ...(data?.settings || {}) },
              routines: data?.routines || { am: [], pm: [] }
           };
 

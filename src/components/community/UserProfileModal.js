@@ -14,6 +14,7 @@ import { calculateBioMatch } from '../../utils/matchCalculator';
 import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService';
 import { getLocalizedValue, normalizeLanguage, t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { getLocalizedValue, normalizeLanguage } from '../../i18n';
 
 // --- DATA IMPORTS ---
 import {
