@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar, enUS } from 'date-fns/locale';
+import { t } from '../i18n';
 
 /**
  * Converts a file URI (local or remote) to a Base64 string.
@@ -29,10 +30,11 @@ export const uriToBase64 = async (uri) => {
 /**
  * Safely formats a date, whether it's a Firebase Timestamp or an ISO string from cache.
  * @param {object|string} dateValue - The value to format.
- * @returns {string} - The formatted relative time string (e.g., "قبل 5 دقائق").
+ * @param {string} language - 'ar' or 'en'
+ * @returns {string} - The formatted relative time string.
  */
-export const formatRelativeTime = (dateValue) => {
-    if (!dateValue) return 'الآن';
+export const formatRelativeTime = (dateValue, language = 'ar') => {
+    if (!dateValue) return t('time_now', language);
     
     try {
         let date;
@@ -47,13 +49,13 @@ export const formatRelativeTime = (dateValue) => {
         
         // Final check for validity
         if (isNaN(date.getTime())) {
-            return 'منذ فترة';
+            return t('time_ago', language);
         }
 
-        // Use addSuffix: false for a cleaner "5 دقائق" instead of "قبل 5 دقائق"
-        return formatDistanceToNow(date, { locale: ar, addSuffix: false });
+        const locale = language === 'ar' ? ar : enUS;
+        return formatDistanceToNow(date, { locale, addSuffix: false });
     } catch (e) {
         console.error("Date formatting error:", e, "Value:", dateValue);
-        return 'منذ فترة';
+        return t('time_ago', language);
     }
 };

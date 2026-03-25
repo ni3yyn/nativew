@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, Modal, StyleSheet, FlatList, TouchableOpacity, Pressable, Animated, Dimensions } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
-import { formatDistanceToNow } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar, enUS } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { height } = Dimensions.get('window');
 
@@ -12,8 +13,9 @@ import { useTheme } from '../../context/ThemeContext';
 // Theme Colors (Matching Profile.js)
 // --- REMOVED HARDCODED COLORS ---
 
-const NotificationItem = ({ item, onPress, COLORS, styles }) => {
-  const timeAgo = formatDistanceToNow(new Date(item.date), { locale: ar, addSuffix: true });
+const NotificationItem = ({ item, onPress, COLORS, styles, language }) => {
+  const dateLocale = language === 'ar' ? ar : enUS;
+  const timeAgo = formatDistanceToNow(new Date(item.date), { locale: dateLocale, addSuffix: true });
 
   // Determine Icon based on data content (optional logic)
   let icon = "bell";
@@ -46,6 +48,7 @@ const NotificationItem = ({ item, onPress, COLORS, styles }) => {
 };
 
 export default function NotificationsModal({ visible, onClose, notifications, onClear, onNotificationClick }) {
+  const language = useCurrentLanguage();
   const { colors: COLORS } = useTheme();
   const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -61,9 +64,9 @@ export default function NotificationsModal({ visible, onClose, notifications, on
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <TouchableOpacity onPress={onClear} style={styles.clearBtn}>
-                <Text style={styles.clearText}>مسح الكل</Text>
+                <Text style={styles.clearText}>{t('notifications_clear_all', language)}</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>الإشعارات</Text>
+              <Text style={styles.headerTitle}>{t('notifications_header', language)}</Text>
             </View>
           </View>
 
@@ -76,13 +79,14 @@ export default function NotificationsModal({ visible, onClose, notifications, on
                 onPress={onNotificationClick}
                 COLORS={COLORS}
                 styles={styles}
+                language={language}
               />
             )}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Feather name="bell-off" size={40} color={COLORS.textSecondary} />
-                <Text style={styles.emptyText}>لا توجد إشعارات حالياً</Text>
+                <Text style={styles.emptyText}>{t('notifications_empty', language)}</Text>
               </View>
             }
           />

@@ -61,9 +61,13 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 let AdsConsent;
 try {
-    // Try to load the native module
-    const mobileAds = require('react-native-google-mobile-ads');
-    AdsConsent = mobileAds.AdsConsent;
+    // Try to load the native module only if NOT on web
+    if (Platform.OS !== 'web') {
+        const mobileAds = require('react-native-google-mobile-ads');
+        AdsConsent = mobileAds.AdsConsent;
+    } else {
+        throw new Error('AdMob not supported on web');
+    }
 } catch (e) {
     // If it fails (Expo Go), create a dummy object
     console.log('AdMob native module not found (running in Expo Go). Using Mock.');
@@ -80,55 +84,56 @@ try {
 // Theme is now handled by ThemeContext
 import { useTheme, THEMES } from '../../src/context/ThemeContext';
 
-const HEADER_TITLES = {
-    shelf: { title: 'رف المنتجات', icon: 'list' },
-    routine: { title: 'روتين العناية', icon: 'calendar-check' },
-    analysis: { title: 'تحليل البشرة', icon: 'chart-pie' },
-    migration: { title: 'البديل الصحي', icon: 'exchange-alt' },
-    ingredients: { title: 'موسوعة المكونات', icon: 'flask' },
-    settings: { title: 'الإعدادات', icon: 'cog' },
-    reminders: { title: 'تنبيهاتي المخصصة', icon: 'clock' }, // <-- ADDED FOR REMINDERS
-
+const getHeaderTitle = (key, language) => {
+    const titles = {
+        shelf: { title: t('profile_header_shelf', language), icon: 'list' },
+        routine: { title: t('profile_header_routine', language), icon: 'calendar-check' },
+        analysis: { title: t('profile_header_analysis', language), icon: 'chart-pie' },
+        migration: { title: t('profile_header_migration', language), icon: 'exchange-alt' },
+        ingredients: { title: t('profile_header_ingredients', language), icon: 'flask' },
+        settings: { title: t('profile_header_settings', language), icon: 'cog' },
+        reminders: { title: t('profile_header_reminders', language), icon: 'clock' },
+    };
+    return titles[key] || { title: t('profile_title_fallback', language), icon: 'user' };
 };
 
 
 const HEALTH_OPTS = [
-    { id: 'acne_prone', label: 'حب الشباب' },
-    { id: 'sensitive_skin', label: 'بشرة حساسة' },
-    { id: 'rosacea_prone', label: 'الوردية' },
-    { id: 'eczema', label: 'إكزيما' },
-    { id: 'pregnancy', label: 'حمل/رضاعة' }
+    { id: 'acne_prone', label: t('health_opt_acne', 'ar') },
+    { id: 'sensitive_skin', label: t('health_opt_sensitive', 'ar') },
+    { id: 'rosacea_prone', label: t('health_opt_rosacea', 'ar') },
+    { id: 'eczema', label: t('health_opt_eczema', 'ar') },
+    { id: 'pregnancy', label: t('health_opt_pregnancy', 'ar') }
 ];
 
 const BASIC_HAIR_TYPES = [
-    { id: 'straight', label: 'ناعم / مستقيم', icon: 'stream' },
-    { id: 'wavy', label: 'مموج', icon: 'water' },
-    { id: 'curly', label: 'مجعد', icon: 'holly-berry' },
-    { id: 'coily', label: 'أفرو / كيرلي جدا', icon: 'dna' }
+    { id: 'straight', label: t('hair_type_straight', 'ar'), icon: 'stream' },
+    { id: 'wavy', label: t('hair_type_wavy', 'ar'), icon: 'water' },
+    { id: 'curly', label: t('hair_type_curly', 'ar'), icon: 'holly-berry' },
+    { id: 'coily', label: t('hair_type_coily', 'ar'), icon: 'dna' }
 ];
 const BASIC_SKIN_TYPES = [
-    { id: 'oily', label: 'دهنية', icon: 'blurType' },
-    { id: 'dry', label: 'جافة', icon: 'leaf' },
-    { id: 'combo', label: 'مختلطة', icon: 'adjust' },
-    { id: 'normal', label: 'عادية', icon: 'smile' },
-    { id: 'sensitive', label: 'حساسة', icon: 'heartbeat' }
+    { id: 'oily', label: t('skin_type_oily', 'ar'), icon: 'blurType' },
+    { id: 'dry', label: t('skin_type_dry', 'ar'), icon: 'leaf' },
+    { id: 'combo', label: t('skin_type_combo', 'ar'), icon: 'adjust' },
+    { id: 'normal', label: t('skin_type_normal', 'ar'), icon: 'smile' },
+    { id: 'sensitive', label: t('skin_type_sensitive', 'ar'), icon: 'heartbeat' }
 ];
 
 const GOALS_LIST = [
-    { id: 'brightening', label: 'تفتيح ونضارة', icon: 'sun' },
-    { id: 'acne', label: 'مكافحة حب الشباب', icon: 'shield-alt' },
-    { id: 'anti_aging', label: 'مكافحة الشيخوخة', icon: 'hourglass-half' },
-    { id: 'hydration', label: 'ترطيب عميق', icon: 'blurType' },
-    { id: 'texture_pores', label: 'تحسين الملمس والمسام', icon: 'th-large' },
-
+    { id: 'brightening', label: t('goal_brightening', 'ar'), icon: 'sun' },
+    { id: 'acne', label: t('goal_acne', 'ar'), icon: 'shield-alt' },
+    { id: 'anti_aging', label: t('goal_anti_aging', 'ar'), icon: 'hourglass-half' },
+    { id: 'hydration', label: t('goal_hydration', 'ar'), icon: 'blurType' },
+    { id: 'texture_pores', label: t('goal_texture', 'ar'), icon: 'th-large' },
 ];
 
 const INGREDIENT_FILTERS = [
-    { id: 'all', label: 'الكل', icon: 'layer-group' },
-    { id: 'exfoliants', label: 'مقشرات', icon: 'magic' },
-    { id: 'hydrators', label: 'مرطبات', icon: 'blurType' },
-    { id: 'antioxidants', label: 'مضادات', icon: 'shield-alt' },
-    { id: 'oils', label: 'زيوت', icon: 'oil-can' },
+    { id: 'all', label: t('ing_filter_all', 'ar'), icon: 'layer-group' },
+    { id: 'exfoliants', label: t('ing_filter_exfoliants', 'ar'), icon: 'magic' },
+    { id: 'hydrators', label: t('ing_filter_hydrators', 'ar'), icon: 'blurType' },
+    { id: 'antioxidants', label: t('ing_filter_antioxidants', 'ar'), icon: 'shield-alt' },
+    { id: 'oils', label: t('ing_filter_oils', 'ar'), icon: 'oil-can' },
 ];
 
 
@@ -464,6 +469,7 @@ const SkeletonProductCard = ({ index }) => {
 const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage(); 
     const translateX = useRef(new Animated.Value(0)).current;
 
     const panResponder = useRef(
@@ -484,10 +490,9 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
 
     const score = product.analysisData?.oilGuardScore || 0;
 
-    // ✅ THE FIX: Use .find() on the imported array
-    const productTypeLabel = PRODUCT_TYPES.find(
-        type => type.id === product.analysisData?.product_type
-    )?.label || 'منتج'; // Fallback to 'منتج'
+    // ✅ FIX: Find the object first, then pass its labelKey to the translation function 't()'
+    const typeObj = PRODUCT_TYPES.find(type => type.id === product.analysisData?.product_type);
+    const productTypeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
     return (
         <View style={styles.productListItemWrapper}>
@@ -498,22 +503,15 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
             <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
                 <Pressable style={styles.productListItem} onPress={onPress}>
 
-                    {/* 1. Score Badge */}
                     <View style={styles.listItemScoreContainer}>
                         <WathiqScoreBadge score={score} size={54} />
                     </View>
 
-                    {/* 2. Product Info */}
                     <View style={styles.listItemContent}>
                         <Text style={styles.listItemName} numberOfLines={1}>{product.productName}</Text>
-
-                        {/* ✅ Label is now correctly looked up */}
-                        <Text style={styles.listItemType}>
-                            {productTypeLabel}
-                        </Text>
+                        <Text style={styles.listItemType}>{productTypeLabel}</Text>
                     </View>
 
-                    {/* 3. Product Image */}
                     <View style={styles.listImageWrapper}>
                         {product.productImage ? (
                             <Image source={{ uri: product.productImage }} style={styles.listProductImage} />
@@ -530,22 +528,21 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     );
 });
 
-
 // 3. The new sophisticated Bottom Sheet for product details
 const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
 
-    // -- Editing State --
     const [isEditing, setIsEditing] = useState(false);
-    const [editedName, setEditedName] = useState('');
+    const[editedName, setEditedName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const { user, savedProducts, setSavedProducts } = useAppContext();
-
+    
     useEffect(() => {
-        if (isVisible) {
-            if (product) setEditedName(product.productName);
+        if (isVisible && product) {
+            setEditedName(product.productName);
             setIsEditing(false);
 
             Animated.spring(animController, {
@@ -554,8 +551,15 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                 stiffness: 100,
                 useNativeDriver: true,
             }).start();
+        } else if (!isVisible) {
+            Animated.timing(animController, {
+                toValue: 0,
+                duration: 250,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }).start();
         }
-    }, [isVisible, product]);
+    },[isVisible, product, animController]);
 
     const handleClose = () => {
         Keyboard.dismiss();
@@ -569,17 +573,15 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         });
     };
 
-    // -- Renaming Logic (Existing) --
     const handleSaveName = async () => {
         if (!editedName.trim()) return;
-        if (editedName.trim() === product.productName) { setIsEditing(false); return; }
+        if (editedName.trim() === product?.productName) { setIsEditing(false); return; }
 
         setIsSaving(true);
         try {
             const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
             await updateDoc(productRef, { productName: editedName.trim() });
             
-            // Update Context locally to avoid refresh
             const updatedList = savedProducts.map(p => 
                 p.id === product.id ? { ...p, productName: editedName.trim() } : p
             );
@@ -588,34 +590,29 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setIsEditing(false);
         } catch (error) {
-            AlertService.error("خطأ", "تعذر تحديث الاسم");
+            AlertService.error(t('status_error', language), t('error_update_name', language));
         } finally {
             setIsSaving(false);
         }
     };
 
-    // -- Delete Logic (New) --
     const handleDeletePress = () => {
         AlertService.confirm(
-            "حذف المنتج",
-            "هل أنت متأكد من حذف هذا المنتج من الرف؟",
+            t('delete_product_title', language),
+            t('delete_product_confirm', language),
             async () => {
-                // Animate closing first
                 Animated.timing(animController, {
                     toValue: 0,
                     duration: 200,
                     useNativeDriver: true,
                 }).start(() => {
-                    onClose(); // Close modal
-                    setTimeout(() => onDelete(product.id), 300); // Trigger delete in parent
+                    onClose(); 
+                    setTimeout(() => onDelete(product.id), 300); 
                 });
             }
         );
     };
 
-    if (!product) return null;
-
-    // ... Helper functions (getAlertStyle) ...
     const getAlertStyle = (type) => {
         const safeType = type ? type.toLowerCase() : 'info';
         switch (safeType) {
@@ -630,22 +627,27 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         }
     };
 
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+    const translateY = animController.interpolate({ inputRange:[0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange:[0, 0.6] });
 
-    const { productImage } = product;
+    if (!product || !isVisible) return null;
+
+    const productImage = product?.productImage;
     const {
         oilGuardScore = 0,
-        finalVerdict = 'غير معروف',
+        finalVerdict = t('status_unknown', language),
         product_type = 'other',
-        detected_ingredients = [],
-        user_specific_alerts = [],
+        detected_ingredients =[],
+        user_specific_alerts =[],
         safety = { score: 0 },
         efficacy = { score: 0 }
-    } = product.analysisData || {};
+    } = product?.analysisData || {};
 
     const scoreColor = oilGuardScore >= 80 ? C.success : oilGuardScore >= 65 ? C.warning : C.danger;
-    const typeLabel = PRODUCT_TYPES.find(t => t.id === product_type)?.label || 'منتج';
+    
+    // ✅ FIX: Look up by labelKey instead of label, then translate
+    const typeObj = PRODUCT_TYPES.find(tObj => tObj.id === product_type);
+    const typeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -655,13 +657,12 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
 
             <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                 <View style={styles.sheetContent}>
-                    <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
+                    <View style={styles.sheetHandleBar}>
+                        <View style={styles.sheetHandle} />
+                    </View>
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-
-                        {/* 1. Header (Image + Editable Title) */}
                         <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                            {/* ... Image Logic (Same as before) ... */}
                             {productImage ? (
                                 <View style={styles.productImageContainer}>
                                     <Image source={{ uri: productImage }} style={styles.productRealImage} resizeMode="cover" />
@@ -676,11 +677,10 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                                     justifyContent: 'center', alignItems: 'center',
                                     marginBottom: 15, borderWidth: 2, borderColor: scoreColor
                                 }}>
-                                    <FontAwesome5 name={PRODUCT_TYPES.find(t => t.id === product_type)?.icon || 'tint'} size={32} color={scoreColor} />
+                                    <FontAwesome5 name={typeObj?.icon || 'tint'} size={32} color={scoreColor} />
                                 </View>
                             )}
 
-                            {/* Editable Title */}
                             {isEditing ? (
                                 <View style={styles.editTitleContainer}>
                                     <TextInput
@@ -710,31 +710,27 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                             <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, marginTop: 5 }}>{typeLabel}</Text>
                         </View>
 
-                        {/* --- NEW: ACTION ROW (Share & Delete) --- */}
                         <View style={styles.sheetActionsRow}>
-                            {/* Share Button (Takes remaining space) */}
                             <View style={{ flex: 1 }}>
                                 <PremiumShareButton
                                     analysis={product.analysisData}
-                                    product={product} // Pass the entire Firebase document object
+                                    product={product}
                                     typeLabel={typeLabel}
-                                    customStyle={[styles.sheetShareBtn, { backgroundColor: C.accentGreen + '15', borderColor: C.accentGreen + '40' }]} // Custom styling
+                                    customStyle={[styles.sheetShareBtn, { backgroundColor: C.accentGreen + '15', borderColor: C.accentGreen + '40' }]}
                                     iconSize={16}
                                     textColor={C.accentGreen}
                                 />
                             </View>
 
-                            {/* Delete Button */}
                             <TouchableOpacity 
                                 onPress={handleDeletePress} 
                                 style={[styles.sheetDeleteBtn, { backgroundColor: C.danger + '15', borderColor: C.danger + '40' }]}
                             >
                                 <FontAwesome5 name="trash-alt" size={16} color={C.danger} />
-                                <Text style={[styles.sheetBtnText, { color: C.danger }]}>حذف</Text>
+                                <Text style={[styles.sheetBtnText, { color: C.danger }]}>{t('action_delete', language)}</Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* 2. Main Score Card */}
                         <View style={styles.sheetSection}>
                             <View style={[styles.alertBox, { backgroundColor: scoreColor + '15', borderColor: scoreColor }]}>
                                 {!productImage && (
@@ -751,25 +747,23 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                             </View>
                         </View>
 
-                        {/* 3. Safety & Efficacy */}
                         <View style={styles.sheetPillarsContainer}>
                             <View style={styles.sheetPillar}>
                                 <FontAwesome5 name="magic" size={18} color={C.accentGreen} />
-                                <Text style={styles.sheetPillarLabel}>الفعالية</Text>
+                                <Text style={styles.sheetPillarLabel}>{t('oilguard_stat_efficacy', language)}</Text>
                                 <Text style={styles.sheetPillarValue}>{typeof efficacy === 'object' ? efficacy.score : efficacy}%</Text>
                             </View>
                             <View style={styles.sheetDividerVertical} />
                             <View style={styles.sheetPillar}>
                                 <FontAwesome5 name="shield-alt" size={18} color={C.gold} />
-                                <Text style={styles.sheetPillarLabel}>الأمان</Text>
+                                <Text style={styles.sheetPillarLabel}>{t('oilguard_stat_safety', language)}</Text>
                                 <Text style={styles.sheetPillarValue}>{typeof safety === 'object' ? safety.score : safety}%</Text>
                             </View>
                         </View>
 
-                        {/* 4. User Alerts */}
                         {user_specific_alerts.length > 0 && (
                             <View style={styles.sheetSection}>
-                                <Text style={[styles.sheetSectionTitle, { color: C.textPrimary }]}> ملاحظات خاصة لكِ</Text>
+                                <Text style={[styles.sheetSectionTitle, { color: C.textPrimary }]}>{t('profile_analysis_user_notes', language)}</Text>
                                 {user_specific_alerts.map((alert, i) => {
                                     const isObj = typeof alert === 'object' && alert !== null;
                                     const alertText = isObj ? alert.text : alert;
@@ -785,9 +779,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                             </View>
                         )}
 
-                        {/* 5. Ingredients */}
                         <View style={styles.sheetSection}>
-                            <Text style={styles.sheetSectionTitle}>المكونات المكتشفة ({detected_ingredients.length})</Text>
+                            <Text style={styles.sheetSectionTitle}>{t('sheet_detected_ingredients', language)} ({detected_ingredients.length})</Text>
                             <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
                                 {detected_ingredients.map((ing, i) => {
                                     const ingName = (typeof ing === 'object' && ing !== null) ? ing.name : ing;
@@ -801,7 +794,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                         </View>
 
                         <Pressable onPress={handleClose} style={[styles.closeButton, { marginTop: 20 }]}>
-                            <Text style={styles.closeButtonText}>إغلاق</Text>
+                            <Text style={styles.closeButtonText}>{t('sheet_close', language)}</Text>
                         </Pressable>
                     </ScrollView>
                 </View>
@@ -833,6 +826,8 @@ const GlobalInput = (props) => {
 const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    // ✅ FIX: Hook moved ABOVE the early return block
+    const language = useCurrentLanguage(); 
     const [refreshing, setRefreshing] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -848,6 +843,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
         setSelectedProduct(null); // Ensure modal closes
     };
 
+    // THIS IS THE EARLY RETURN THAT WAS BREAKING REACT HOOKS ORDER
     if (loading) {
         return (
             <View style={{ gap: 8, paddingTop: 20 }}>
@@ -863,17 +859,17 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
             <ContentCard delay={100} style={{ padding: 15, marginBottom: 20 }}>
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>إجمالي المنتجات</Text>
+                        <Text style={styles.statLabel}>{t('stat_total_products', language)}</Text>
                         <AnimatedCount value={products.length} style={styles.statValue} />
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>منتجات وقاية</Text>
+                        <Text style={styles.statLabel}>{t('stat_protection_products', language)}</Text>
                         <AnimatedCount value={products.filter(p => p.analysisData?.product_type === 'sunscreen').length} style={styles.statValue} />
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>منتجات فعالة</Text>
+                        <Text style={styles.statLabel}>{t('stat_effective_products', language)}</Text>
                         <AnimatedCount value={products.filter(p => p.analysisData?.efficacy?.score > 60).length} style={styles.statValue} />
                     </View>
                 </View>
@@ -906,7 +902,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
                 product={selectedProduct}
                 isVisible={!!selectedProduct}
                 onClose={() => setSelectedProduct(null)}
-                onDelete={handleProductDelete} // <--- Pass the delete handler here
+                onDelete={handleProductDelete}
             />
         </View>
     );
@@ -971,15 +967,20 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
 });
 
 // --- 2. MAIN SECTION CONTROLLER ---
+// --- 2. MAIN SECTION CONTROLLER ---
 const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage(); // ✅ Move this to the top with other hooks
+    
+    // All hooks must be declared at the top in the same order every time
     const [search, setSearch] = useState('');
     const [renderLimit, setRenderLimit] = useState(15);
     const [allIngredients, setAllIngredients] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState(null);
 
+    // This useEffect must always run
     useEffect(() => {
         const fetchIngredientsData = async () => {
             if (products.length === 0) {
@@ -1081,8 +1082,9 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
         // Debounce fetch slightly
         const timeout = setTimeout(fetchIngredientsData, 500);
         return () => clearTimeout(timeout);
-    }, [products, userProfile]);
+    }, [products, userProfile, cacheRef]); // ✅ Added cacheRef to dependencies
 
+    // These useMemo hooks must always run
     const filteredList = useMemo(() =>
         allIngredients.filter(ing =>
             (ing.displayName || ing.name).toLowerCase().includes(search.toLowerCase())
@@ -1091,11 +1093,14 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
     const visibleData = filteredList.slice(0, renderLimit);
 
+    // ✅ NO conditional returns before this point
+    // All hooks above this line are called in the same order every time
+
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.searchBar}>
                 <TextInput
-                    placeholder="بحث في المكونات..."
+                    placeholder={t('search_ingredients_placeholder', language)}
                     placeholderTextColor={C.textDim}
                     style={styles.searchInput}
                     value={search}
@@ -1123,7 +1128,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
             {visibleData.length < filteredList.length && (
                 <PressableScale onPress={() => setRenderLimit(l => l + 10)} style={styles.loadMoreButton}>
-                    <Text style={styles.loadMoreText}>عرض المزيد</Text>
+                    <Text style={styles.loadMoreText}>{t('load_more', language)}</Text>
                 </PressableScale>
             )}
 
@@ -1143,6 +1148,8 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaining }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    // ✅ FIX: Call hook before any early returns
+    const language = useCurrentLanguage(); 
     const animController = useRef(new Animated.Value(0)).current;
     const hasData = ingredient && visible;
 
@@ -1182,7 +1189,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
     if (!hasData) return null;
 
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange: [0, 0.6] });
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
 
     // Safety Color Logic
@@ -1218,7 +1225,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                                 {ingredient.chemicalType && (
                                     <View style={styles.ingBadge}><Text style={styles.ingBadgeText}>{ingredient.chemicalType}</Text></View>
                                 )}
-                                <View style={styles.ingBadge}><Text style={styles.ingBadgeText}>موجود في {productsContaining.length} منتج</Text></View>
+                                <View style={styles.ingBadge}><Text style={styles.ingBadgeText}>{t('ing_found_in', language)} {productsContaining.length} {t('ing_products_count', language)}</Text></View>
                             </View>
                         </View>
                     </View>
@@ -1227,7 +1234,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                         {/* Benefits */}
                         {ingredient.benefits && Object.keys(ingredient.benefits).length > 0 && (
                             <View style={styles.ingSection}>
-                                <Text style={styles.ingSectionTitle}>الفوائد الرئيسية</Text>
+                                <Text style={styles.ingSectionTitle}>{t('ing_main_benefits', language)}</Text>
                                 {Object.entries(ingredient.benefits).map(([benefit, score]) => (
                                     <View key={benefit} style={styles.benefitRow}>
                                         <Text style={styles.benefitLabel}>{benefit}</Text>
@@ -1241,7 +1248,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                         {/* Warnings */}
                         {ingredient.warnings && ingredient.warnings.length > 0 && (
                             <View style={styles.ingSection}>
-                                <Text style={styles.ingSectionTitle}>تنبيهات السلامة</Text>
+                                <Text style={styles.ingSectionTitle}>{t('ing_safety_warnings', language)}</Text>
                                 {ingredient.warnings.map((warn, i) => (
                                     <View key={i} style={[styles.warningBox, warn.level === 'risk' ? styles.warningBoxRisk : styles.warningBoxCaution]}>
                                         <FontAwesome5 name={warn.level === 'risk' ? "exclamation-circle" : "info-circle"} size={16} color={warn.level === 'risk' ? C.danger : C.warning} />
@@ -1251,15 +1258,14 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             </View>
                         )}
 
-                        {/* Synergies & Conflicts - FIX: Removed findIngredientData */}
+                        {/* Synergies & Conflicts */}
                         {(ingredient.synergy || ingredient.negativeSynergy) && (
                             <View style={styles.ingSection}>
-                                <Text style={styles.ingSectionTitle}>التفاعلات</Text>
+                                <Text style={styles.ingSectionTitle}>{t('ing_interactions', language)}</Text>
                                 <View style={{ flexDirection: 'row-reverse', gap: 10 }}>
                                     {ingredient.synergy && Object.keys(ingredient.synergy).length > 0 && (
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.interactionHeader}>✅ تآزر ممتاز مع</Text>
-                                            {/* Key is usually the ingredient ID/Name, so we just display it directly */}
+                                            <Text style={styles.interactionHeader}>{t('ing_synergy_with', language)}</Text>
                                             {Object.keys(ingredient.synergy).map((key) => (
                                                 <Text key={key} style={styles.synergyItem}>• {key}</Text>
                                             ))}
@@ -1270,8 +1276,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                                         <>
                                             <View style={{ width: 1, backgroundColor: C.border }} />
                                             <View style={{ flex: 1 }}>
-                                                <Text style={styles.interactionHeader}>❌ تجنب خلطه مع</Text>
-                                                {/* Display key directly since we don't have local lookup */}
+                                                <Text style={styles.interactionHeader}>{t('ing_conflict_with', language)}</Text>
                                                 {Object.keys(ingredient.negativeSynergy).map((key) => (
                                                     <Text key={key} style={styles.conflictItem}>• {key}</Text>
                                                 ))}
@@ -1284,7 +1289,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
                         {/* Products */}
                         <View style={styles.ingSection}>
-                            <Text style={styles.ingSectionTitle}>موجود في رفّك</Text>
+                            <Text style={styles.ingSectionTitle}>{t('ing_in_your_shelf', language)}</Text>
                             {productsContaining.map(p => (
                                 <View key={p.id} style={styles.productChip}>
                                     <FontAwesome5 name="check" size={10} color={C.accentGreen} />
@@ -1302,6 +1307,8 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 const MigrationSection = ({ products }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    // ✅ FIX: Get language once at component scope
+    const language = useCurrentLanguage(); 
     const [syntheticIngredients] = useState(['Paraben', 'Sulfate', 'Silicon', 'Fragrance', 'Alcohol', 'Mineral Oil']);
     const flagged = products.filter(p =>
         p.analysisData?.detected_ingredients?.some(i =>
@@ -1317,7 +1324,7 @@ const MigrationSection = ({ products }) => {
             duration: 800,
             useNativeDriver: true,
         }).start();
-    }, []);
+    },[]);
 
     const renderMigrationItem = ({ item, index }) => {
         const detectedSynthetics = syntheticIngredients.filter(bad =>
@@ -1346,24 +1353,25 @@ const MigrationSection = ({ products }) => {
                             </View>
                         </View>
                         <View style={[styles.badBadge, styles.criticalBadge]}>
-                            <Text style={[styles.badText, { color: '#000' }]}>صناعي</Text>
+                            {/* ✅ FIX: Use the resolved 'language' variable here */}
+                            <Text style={[styles.badText, { color: '#000' }]}>{t('ing_synthetic', language)}</Text>
                         </View>
                     </View>
 
                     <Text style={styles.migReason}>
-                        يحتوي على {detectedSynthetics.length} مكون صناعي
+                        {t('ing_contains', language)} {detectedSynthetics.length} {t('ing_synthetic_count', language)}
                     </Text>
 
                     <View style={styles.divider} />
 
                     <Text style={styles.migSuggestion}>
-                        💡 نقترح بديل طبيعي: زيت الأرغان أو صبار
+                        {t('ing_natural_suggestion', language)}
                     </Text>
 
                     <View style={styles.migrationTip}>
                         <FontAwesome5 name="lightbulb" size={12} color={C.gold} />
                         <Text style={styles.migrationTipText}>
-                            هذه المكونات قد تسبب تهيج للبشرة الحساسة
+                            {t('ing_irritation_warning', language)}
                         </Text>
                     </View>
                 </ContentCard>
@@ -1715,20 +1723,23 @@ const SettingsSection = ({ profile, onLogout }) => {
 };
 
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
+    // ✅ FIX: Added missing Theme & Style Hooks at the top before the early return
+    const { colors: C } = useTheme(); 
+    const styles = useMemo(() => createStyles(C), [C]); 
     const animController = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
-    }, [visible]);
+    },[visible]);
 
     const handleClose = () => {
         Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
     };
 
-    if (!insight) return null;
+    if (!insight) return null; // THIS EARLY RETURN WAS CRASHING IT IF HOOKS WERE BELOW IT
 
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange: [0, 0.6] });
 
     // Helper Colors
     const getSeverityColor = (s) => (s === 'critical' ? C.danger : s === 'warning' ? C.warning : C.success);
@@ -1737,10 +1748,9 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     // --- RENDERER: RICH GOAL DASHBOARD ---
     const renderGoalDashboard = (data) => {
         // 1. SAFETY CHECKS (Prevents Crash)
-        // Ensure arrays exist before checking .length
         const foundHeroes = data?.foundHeroes || [];
-        const missingHeroes = data?.missingHeroes || [];
-        const relatedProducts = insight.related_products || [];
+        const missingHeroes = data?.missingHeroes ||[];
+        const relatedProducts = insight.related_products ||[];
 
         return (
             <View>
@@ -1815,7 +1825,7 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 )}
             </View>
         );
-    }; // <--- CLOSING BRACE ADDED HERE
+    }; 
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -1831,12 +1841,12 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
 
                         {/* CONDITIONAL RENDERING LOGIC */}
 
-                        {/* A. WEATHER DASHBOARD (Use the special component) */}
+                        {/* A. WEATHER DASHBOARD */}
                         {(insight.customData?.type === 'weather_dashboard' || insight.customData?.type === 'weather_advice') ? (
                             <WeatherDetailedSheet insight={insight} />
                         ) :
 
-                            /* B. GOAL DASHBOARD (Use the specific renderer) */
+                            /* B. GOAL DASHBOARD */
                             (insight.type === 'goal_analysis' && insight.customData) ? (
                                 renderGoalDashboard(insight.customData)
                             ) : (
@@ -1992,13 +2002,13 @@ export default function ProfileScreen() {
     const scrollDistance = headerMaxHeight - headerMinHeight;
 
     const TABS = [
-        { id: 'shelf', label: 'رفي', icon: 'list' },
-        { id: 'routine', label: 'روتيني', icon: 'calendar-check' },
-        { id: 'analysis', label: 'تحليل', icon: 'chart-pie' },
-        { id: 'migration', label: 'البديل', icon: 'exchange-alt' },
-        { id: 'ingredients', label: 'مكوناتي', icon: 'flask' },
+        { id: 'shelf', label: t('profile_tab_shelf', language), icon: 'list' },
+        { id: 'routine', label: t('profile_tab_routine', language), icon: 'calendar-check' },
+        { id: 'analysis', label: t('profile_tab_analysis', language), icon: 'chart-pie' },
+        { id: 'migration', label: t('profile_tab_migration', language), icon: 'exchange-alt' },
+        { id: 'ingredients', label: t('profile_tab_ingredients', language), icon: 'flask' },
         { id: 'settings', label: t('tab_my_settings', language), icon: 'cog' },
-        { id: 'reminders', label: 'تنبيهاتي', icon: 'clock' },
+        { id: 'reminders', label: t('profile_header_reminders', language), icon: 'clock' },
 
     ];
 
@@ -2120,12 +2130,12 @@ export default function ProfileScreen() {
             let loc = await Location.getCurrentPositionAsync({});
 
             // C. Get City Name (Free Reverse Geocoding)
-            let cityName = 'موقعي';
+            let cityName = t('location_my_position', language);
             try {
                 const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=ar`;
                 const geoRes = await fetch(geoUrl);
                 const geoData = await geoRes.json();
-                cityName = geoData.city || geoData.locality || geoData.principalSubdivision || 'موقعي';
+                cityName = geoData.city || geoData.locality || geoData.principalSubdivision || t('location_my_position', language);
             } catch (e) {
                 console.log('City fetch warning:', e.message);
             }
@@ -2228,7 +2238,7 @@ export default function ProfileScreen() {
             await deleteDoc(doc(db, 'profiles', user.uid, 'savedProducts', id));
         } catch (error) {
             setSavedProducts(old);
-            Alert.alert("خطأ", "تعذر حذف المنتج");
+            Alert.alert(t('status_error', language), t('error_delete_product', language));
         }
     };
 
@@ -2276,7 +2286,7 @@ export default function ProfileScreen() {
                 ]}>
                     <View style={{ flex: 1, paddingRight: 10 }}>
                         <Text style={styles.welcomeText}>
-                            أهلا، {userProfile?.settings?.name?.split(' ')[0] || 'بك'}
+                            {t('welcome_back_prefix', language)}، {userProfile?.settings?.name?.split(' ')[0] || t('welcome_back_fallback', language)}
                         </Text>
                         <AuthenticHeader
                             productCount={savedProducts.length}
@@ -2295,10 +2305,10 @@ export default function ProfileScreen() {
                         <View style={{ width: 32 }} />
                         <View style={styles.collapsedTitleRow}>
                             <Text style={styles.collapsedTitle}>
-                                {HEADER_TITLES[activeTab]?.title || 'الملف الشخصي'}
+                                {getHeaderTitle(activeTab, language).title}
                             </Text>
                             <FontAwesome5
-                                name={HEADER_TITLES[activeTab]?.icon || 'user'}
+                                name={getHeaderTitle(activeTab, language).icon}
                                 size={12}
                                 color={C.textSecondary}
                             />
@@ -2391,7 +2401,7 @@ export default function ProfileScreen() {
                     )}
 
                     {activeTab === 'community' && (
-                        <View style={{ padding: 20 }}><Text style={{ color: 'white' }}>Community Screen</Text></View>
+                        <View style={{ padding: 20 }}><Text style={{ color: 'white' }}>{t('tab_community_placeholder', language)}</Text></View>
                     )}
 
                 </Animated.View>

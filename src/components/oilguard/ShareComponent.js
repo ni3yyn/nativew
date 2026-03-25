@@ -11,6 +11,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- REGISTRY IMPORT ---
 import { TEMPLATE_REGISTRY as ORIGINAL_REGISTRY } from './templates';
@@ -51,6 +53,7 @@ const PremiumShareButton = ({
     iconSize = 18, 
     textColor = '#E8F5E9' 
 }) => {
+    const language = useCurrentLanguage();
     const viewShotRef = useRef();
 
     // --- SMART DATA EXTRACTION ---
@@ -200,14 +203,14 @@ const PremiumShareButton = ({
     return (
         <>
             <Pressable onPress={() => setModalVisible(true)} style={[styles.trig, customStyle]}>
-                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} /><Text style={[styles.trigText, { color: textColor }]}>انشري النتيجة</Text>
+                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} /><Text style={[styles.trigText, { color: textColor }]}>{t('share_button_label', language)}</Text>
             </Pressable>
 
             <Modal visible={modalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setModalVisible(false)}>
                 <View style={styles.overlay}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
                     <View style={styles.sheet}>
-                        <View style={styles.sheetHead}><Text style={styles.sheetTitle}>تخصيص البطاقة</Text></View>
+                        <View style={styles.sheetHead}><Text style={styles.sheetTitle}>{t('share_modal_title', language)}</Text></View>
                         <ScrollView contentContainerStyle={{ padding: 25, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
                             
                             <View style={[styles.prevFrame, { borderColor: currentThemeData.accent }]}>
@@ -228,22 +231,22 @@ const PremiumShareButton = ({
                                     >
                                         <Feather name="image" size={18} color={(hasAttemptedShare && !isImageValid) ? "#FF4444" : currentThemeData.accent} />
                                         <Text style={[styles.actionText, { color: (hasAttemptedShare && !isImageValid) ? "#FF4444" : '#FFF' }]}>
-                                            {(hasAttemptedShare && !isImageValid) ? "يجب اختيار صورة للمنتج" : "إضافة صورة للمنتج"}
+                                            {(hasAttemptedShare && !isImageValid) ? t('share_error_image', language) : t('share_add_image', language)}
                                         </Text>
                                     </Pressable>
                                 ) : (
                                     <>
                                         <Pressable onPress={removeImage} style={[styles.actionBtn, { backgroundColor: '#221010' }]}>
                                             <FontAwesome5 name="trash" size={14} color="#FF4444" />
-                                            <Text style={[styles.actionText, { color: '#FF4444' }]}>حذف</Text>
+                                            <Text style={[styles.actionText, { color: '#FF4444' }]}>{t('share_remove_image', language)}</Text>
                                         </Pressable>
                                         <Pressable onPress={openEditor} style={[styles.actionBtn, { backgroundColor: '#1A1A1A', flex: 1.5 }]}>
                                             <MaterialIcons name="crop" size={18} color={currentThemeData.accent} />
-                                            <Text style={[styles.actionText, { color: '#FFF' }]}>تعديل الأبعاد</Text>
+                                            <Text style={[styles.actionText, { color: '#FFF' }]}>{t('share_crop_image', language)}</Text>
                                         </Pressable>
                                         <Pressable onPress={pickImage} style={[styles.actionBtn, { backgroundColor: '#1A1A1A' }]}>
                                             <Feather name="refresh-cw" size={16} color="#FFF" />
-                                            <Text style={[styles.actionText, { color: '#FFF' }]}>تغيير</Text>
+                                            <Text style={[styles.actionText, { color: '#FFF' }]}>{t('share_change_image', language)}</Text>
                                         </Pressable>
                                     </>
                                 )}
@@ -269,24 +272,24 @@ const PremiumShareButton = ({
                                     style={styles.list}
                                     contentContainerStyle={{ paddingLeft: 40 }}
                                 >
-                                    {EXTENDED_REGISTRY.map(t => (
-                                        <Pressable 
-                                            key={t.id} 
-                                            onPress={() => { setSelectedTemplateId(t.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
-                                            style={[styles.tempItem, selectedTemplateId === t.id && styles.tempActive]}
-                                        >
-                                            <View style={[styles.tempIcon, selectedTemplateId === t.id && { backgroundColor: currentThemeData.accent }]}>
-                                                <MaterialCommunityIcons 
-                                                    name={t.icon} 
-                                                    size={24} 
-                                                    color={selectedTemplateId === t.id ? currentThemeData.primary : '#666'} 
-                                                />
-                                            </View>
-                                            <Text style={[styles.tempText, { color: selectedTemplateId === t.id ? currentThemeData.accent : '#666' }]}>
-                                                {t.name}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
+                                    {EXTENDED_REGISTRY.map(template => (  // Change 't' to 'template'
+    <Pressable 
+        key={template.id} 
+        onPress={() => { setSelectedTemplateId(template.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
+        style={[styles.tempItem, selectedTemplateId === template.id && styles.tempActive]}
+    >
+        <View style={[styles.tempIcon, selectedTemplateId === template.id && { backgroundColor: currentThemeData.accent }]}>
+            <MaterialCommunityIcons 
+                name={template.icon} 
+                size={24} 
+                color={selectedTemplateId === template.id ? currentThemeData.primary : '#666'} 
+            />
+        </View>
+        <Text style={[styles.tempText, { color: selectedTemplateId === template.id ? currentThemeData.accent : '#666' }]}>
+            {t(`template_${template.id}_name`, language)}  {/* Use template.id */}
+        </Text>
+    </Pressable>
+))}
                                 </ScrollView>
                             </View>
 
@@ -295,7 +298,7 @@ const PremiumShareButton = ({
                                     styles.input, 
                                     (hasAttemptedShare && !isNameValid) && { borderWidth: 1, borderColor: '#FF4444', color: '#FF4444' }
                                 ]} 
-                                placeholder={ (hasAttemptedShare && !isNameValid) ? "الرجاء كتابة اسم المنتج" : "اسم المنتج..."}
+                                placeholder={ (hasAttemptedShare && !isNameValid) ? t('share_error_name', language) : t('share_placeholder_name', language)}
                                 placeholderTextColor={ (hasAttemptedShare && !isNameValid) ? "#FF4444" : "#666"} 
                                 value={productName} 
                                 onChangeText={setProductName} 
@@ -312,7 +315,7 @@ const PremiumShareButton = ({
 
                             <Pressable onPress={handleShare} disabled={isGenerating} style={{width:'100%'}}>
                                 <LinearGradient colors={currentThemeData.btn} style={styles.finalBtn}>
-                                    {isGenerating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.finalBtnText}>شاركي الوعي بضغطة</Text>}
+                                    {isGenerating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.finalBtnText}>{t('share_final_btn', language)}</Text>}
                                 </LinearGradient>
                             </Pressable>
                         </ScrollView>
@@ -324,7 +327,7 @@ const PremiumShareButton = ({
                 <View style={[styles.edContainer, { backgroundColor: currentThemeData.primary }]}>
                     <LinearGradient colors={currentThemeData.gradient} style={StyleSheet.absoluteFill} />
                     <View style={styles.edHeader}>
-                        <Text style={[styles.edTitle, { color: currentThemeData.text }]}>ضبط الصورة</Text>
+                        <Text style={[styles.edTitle, { color: currentThemeData.text }]}>{t('share_editor_title', language)}</Text>
                     </View>
 
                     <View style={styles.edWork}>
@@ -346,7 +349,7 @@ const PremiumShareButton = ({
                                 <Image source={{ uri: userImage }} style={{width: '100%', height: '100%'}} resizeMode="contain" />
                             </Animated.View>
                          </View>
-                         <Text style={[styles.edHint, { color: currentThemeData.text, opacity: 0.6 }]}>اسحبي للتحريك • استخدمي إصبعين للتكبير</Text>
+                         <Text style={[styles.edHint, { color: currentThemeData.text, opacity: 0.6 }]}>{t('share_editor_hint', language)}</Text>
                         <View style={styles.edSliderContainer}>
                              <Slider 
                                 style={{flex: 1, height: 40}} 
@@ -362,9 +365,9 @@ const PremiumShareButton = ({
 
                     <View style={styles.edFooter}>
                         <Pressable onPress={() => setEditorVisible(false)} style={[styles.edFooterBtn, { borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1 }]}>
-                            <Text style={[styles.edBtnText, { color: currentThemeData.text }]}>إلغاء</Text>
+                            <Text style={[styles.edBtnText, { color: currentThemeData.text }]}>{t('action_cancel', language)}</Text>
                         </Pressable>
-                        <Pressable onPress={() => { setImgPos({x: internalState.current.x, y: internalState.current.y, scale: internalState.current.scale}); setEditorVisible(false); }} style={[styles.edFooterBtn, { backgroundColor: currentThemeData.accent }]}><Text style={[styles.edBtnText, { color: currentThemeData.primary }]}>حفظ التعديل</Text></Pressable>
+                        <Pressable onPress={() => { setImgPos({x: internalState.current.x, y: internalState.current.y, scale: internalState.current.scale}); setEditorVisible(false); }} style={[styles.edFooterBtn, { backgroundColor: currentThemeData.accent }]}><Text style={[styles.edBtnText, { color: currentThemeData.primary }]}>{t('share_editor_save', language)}</Text></Pressable>
                     </View>
                 </View>
             </Modal>

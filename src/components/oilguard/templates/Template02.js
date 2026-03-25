@@ -1,6 +1,6 @@
-
-
 import React from 'react';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,39 +16,45 @@ const BackgroundDecor = ({ theme }) => (
     </View>
 );
 
-const WathiqLogo = ({ color }) => (
-    <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 48, color, letterSpacing: 4 }}>وثيق</Text>
-    </View>
-);
-
-const ScoreRing = ({ score, theme }) => {
-    const size = 140; const r = 55; const circ = 2 * Math.PI * r;
-    const color = score >= 80 ? '#10B981' : score >= 50 ? theme.accent : '#EF4444';
-    return (
-        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-                <Circle cx={size / 2} cy={size / 2} r={r} stroke={theme.text} strokeOpacity="0.1" strokeWidth="10" fill="none" />
-                <Circle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth="10" fill="none" strokeDasharray={circ} strokeDashoffset={circ - (score / 100) * circ} strokeLinecap="round" />
-            </Svg>
-            <View style={{ position: 'absolute', alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 42, color: theme.text }}>{score}</Text>
-                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: theme.text, opacity: 0.6 }}>درجة وثيق</Text>
-            </View>
-        </View>
-    );
-};
-
 // --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status) => {
+const getClaimStyle = (status, language) => {
     if (status.includes('✅')) return { color: '#10B981', icon: 'checkmark', bg: '#10B98120' }; // Verified
     if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf', bg: '#06B6D420' }; // Moderate
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'alert', bg: '#F59E0B20', note: '(نسبة غير فعالة)' }; // Angel
+    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'alert', bg: '#F59E0B20', note: t('oilguard_ineffective_ratio', language) }; // Angel
     // Red for both Lies and No Evidence
     return { color: '#EF4444', icon: 'close', bg: '#EF444420' };
 };
 
 export default function Template02({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
+    const language = useCurrentLanguage();
+    
+    // Define WathiqLogo inside the component
+    const WathiqLogo = ({ color }) => (
+        <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 48, color, letterSpacing: 4 }}>
+                {t('oilguard_wathiq_label', language)}
+            </Text>
+        </View>
+    );
+    
+    // Define ScoreRing inside the component to access language
+    const ScoreRing = ({ score, theme }) => {
+        const size = 140; const r = 55; const circ = 2 * Math.PI * r;
+        const color = score >= 80 ? '#10B981' : score >= 50 ? theme.accent : '#EF4444';
+        return (
+            <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+                <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+                    <Circle cx={size / 2} cy={size / 2} r={r} stroke={theme.text} strokeOpacity="0.1" strokeWidth="10" fill="none" />
+                    <Circle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth="10" fill="none" strokeDasharray={circ} strokeDashoffset={circ - (score / 100) * circ} strokeLinecap="round" />
+                </Svg>
+                <View style={{ position: 'absolute', alignItems: 'center' }}>
+                    <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 42, color: theme.text }}>{score}</Text>
+                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: theme.text, opacity: 0.6 }}>{t('oilguard_brand_score', language)}</Text>
+                </View>
+            </View>
+        );
+    };
+    
     const safe = analysis || {};
     const safetyScore = safe.safety?.score || 0;
     const efficacyScore = safe.efficacy?.score || 0;
@@ -112,7 +118,7 @@ export default function Template02({ analysis, typeLabel, productName, imageUri,
                     <Text style={[styles.claimsTitle, { color: theme.accent }]}>تحليل الادعاءات:</Text>
                     <View style={styles.gridContainer}>
                         {marketingResults.map((item, i) => {
-                            const style = getClaimStyle(item.status);
+                            const style = getClaimStyle(item.status, language);
                             return (
                                 <View key={i} style={[styles.gridItem, { borderColor: theme.border, backgroundColor: 'rgba(0,0,0,0.03)' }]}>
                                     <View style={[styles.iconCircle, { backgroundColor: style.bg }]}>
@@ -143,7 +149,7 @@ export default function Template02({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.socialRow}>
                     <View style={styles.socialItem}><FontAwesome5 name="instagram" size={14} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />
-                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={14} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text></View>
+                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={14} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>{t('oilguard_brand_name', language)}</Text></View>
                 </View>
                 <Text style={[styles.disclaimerText, { color: theme.text }]}>هذه النتيجة شخصية؛ قد تختلف الاستجابة حسب المستخدم*.</Text>
             </View>

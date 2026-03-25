@@ -2,11 +2,14 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, FlatList } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { PRODUCT_TYPES } from '../../constants/productData';
 
 export default function CategoryFilter({ activeCategory, onSelect }) {
+    const language = useCurrentLanguage();
     const { colors: C } = useTheme();
-    const categories = [{ id: 'all', label: 'الكل', icon: 'layer-group' }, ...PRODUCT_TYPES];
+    const categories = [{ id: 'all', label: t('catalog_category_all', language), icon: 'layer-group' }, ...PRODUCT_TYPES.map(pt => ({ ...pt, label: t(pt.labelKey, language) }))];
 
     return (
         <FlatList

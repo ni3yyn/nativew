@@ -5,6 +5,7 @@ import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+import { useRTL } from '../../../hooks/useRTL';
 import { PressableScale, StaggeredItem, ContentCard } from './AnalysisShared';
 import { WeatherMiniCard, WeatherCompactWidget, WeatherLoadingCard } from '../../profile/WeatherComponents';
 
@@ -12,7 +13,8 @@ import { WeatherMiniCard, WeatherCompactWidget, WeatherLoadingCard } from '../..
 const FocusInsight = ({ insight, onSelect }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const severityStyles = {
         critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
         warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
@@ -30,7 +32,7 @@ const FocusInsight = ({ insight, onSelect }) => {
                     <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
                     <View style={styles.focusInsightAction}>
                         <Text style={styles.focusInsightActionText}>{t('analysis_view_details', language)}</Text>
-                        <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
+                        <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={16} color={COLORS.accentGreen} />
                     </View>
                 </LinearGradient>
             </PressableScale>
@@ -42,7 +44,8 @@ const FocusInsight = ({ insight, onSelect }) => {
 const AllClearState = () => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     return (
         <StaggeredItem index={0} animated={false}>
             <ContentCard style={styles.allClearContainer} animated={false}>
@@ -60,11 +63,12 @@ const AllClearState = () => {
 const NightPrepMiniCard = ({ insight, onPress, index }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const data = insight.customData || {};
 
     return (
-        <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
+        <StaggeredItem index={index} style={{ width: 'auto', ...(isRTL ? { paddingLeft: 12 } : { paddingRight: 12 }) }} animated={false}>
             <PressableScale onPress={() => onPress(insight)}>
                 <View style={[styles.modernCardContainer, { borderColor: '#4338ca' }]}>
                     <LinearGradient
@@ -79,7 +83,7 @@ const NightPrepMiniCard = ({ insight, onPress, index }) => {
                         <View style={[styles.modernIconBox, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
                             <FontAwesome5 name="moon" size={12} color="#c7d2fe" />
                         </View>
-                        <View style={[styles.statusDot, { backgroundColor: '#818cf8' }]} />
+                        <View style={[styles.statusDot, { backgroundColor: '#818cf8', opacity: 0.8 }]} />
                     </View>
 
                     {/* Content */}
@@ -94,7 +98,7 @@ const NightPrepMiniCard = ({ insight, onPress, index }) => {
 
                     {/* Footer */}
                     <View style={styles.modernCardFooter}>
-                        <Text style={[styles.readMoreText, { color: '#a5b4fc' }]}>{t('analysis_add', language)}</Text>
+                        <Text style={[styles.readMoreText, { color: '#a5b4fc', marginTop: 2 }]}>{t('analysis_add', language)}</Text>
                         <Feather name="plus-circle" size={12} color="#a5b4fc" />
                     </View>
                 </View>
@@ -107,7 +111,8 @@ const NightPrepMiniCard = ({ insight, onPress, index }) => {
 const StandardInsightCard = ({ insight, onPress, index }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const getTheme = () => {
         switch (insight.severity) {
             case 'critical': return { border: COLORS.danger, icon: 'shield-alt', bg: [COLORS.danger + '26', COLORS.danger + '0D'] };
@@ -118,7 +123,7 @@ const StandardInsightCard = ({ insight, onPress, index }) => {
     const theme = getTheme();
 
     return (
-        <StaggeredItem index={index} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
+        <StaggeredItem index={index} style={{ width: 'auto', ...(isRTL ? { paddingLeft: 12 } : { paddingRight: 12 }) }} animated={false}>
             <PressableScale onPress={() => onPress(insight)}>
                 <View style={[styles.modernCardContainer, { borderColor: theme.border }]}>
                     <LinearGradient colors={theme.bg} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -133,7 +138,7 @@ const StandardInsightCard = ({ insight, onPress, index }) => {
                     </View>
                     <View style={styles.modernCardFooter}>
                         <Text style={[styles.readMoreText, { color: theme.border }]}>{t('analysis_more', language)}</Text>
-                        <Feather name="chevron-left" size={12} color={theme.border} />
+                        <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={12} color={theme.border} />
                     </View>
                 </View>
             </PressableScale>
@@ -157,13 +162,14 @@ export const AnalysisHero = ({ focusInsight, onSelect, onRetryWeather, onShowPer
 export const AnalysisCarousel = ({ insights, onSelect }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = React.useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     return (
         <View style={{ marginBottom: 25 }}>
-            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15 }}>
                 <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 25 }} style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 25 }} style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 {insights.map((insight, index) => {
                     // Check for Weather Alerts (secondary weather cards)
                     const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
@@ -182,26 +188,26 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isRTL) => StyleSheet.create({
     focusInsightCard: { borderRadius: 24, padding: 25, marginBottom: 25, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    focusInsightHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
-    focusInsightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary },
-    focusInsightSummary: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'right', marginTop: 12, lineHeight: 22 },
-    focusInsightAction: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignSelf: 'flex-start', marginTop: 20 },
+    focusInsightHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 },
+    focusInsightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary, textAlign: isRTL ? 'right' : 'left' },
+    focusInsightSummary: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', marginTop: 12, lineHeight: 22 },
+    focusInsightAction: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignSelf: isRTL ? 'flex-start' : 'flex-end', marginTop: 20 },
     focusInsightActionText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.accentGreen },
     allClearContainer: { alignItems: 'center', padding: 30, marginBottom: 25 },
     allClearIconWrapper: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.success + '1A', justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: COLORS.success + '33' },
     allClearTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary },
     allClearSummary: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 5, lineHeight: 20 },
-    carouselTitle: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 15, paddingHorizontal: 5 },
+    carouselTitle: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'center', paddingHorizontal: 5 },
 
     // Modern Mini Cards
     modernCardContainer: { width: 150, height: 160, borderRadius: 22, padding: 14, justifyContent: 'space-between', borderWidth: 1, backgroundColor: COLORS.card, overflow: 'hidden' },
-    modernCardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
+    modernCardHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' },
     modernIconBox: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     statusDot: { width: 6, height: 6, borderRadius: 3, opacity: 0.6 },
-    modernCardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, textAlign: 'right', lineHeight: 18, marginTop: 8, marginBottom: 4 },
-    modernCardFooter: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, opacity: 0.8 },
+    modernCardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, textAlign: isRTL ? 'right' : 'left', lineHeight: 18, marginTop: 8, marginBottom: 4 },
+    modernCardFooter: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 4, opacity: 0.8 },
     readMoreText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
-    nightMiniText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: '#c7d2fe', textAlign: 'right', lineHeight: 16 }
+    nightMiniText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: '#c7d2fe', textAlign: isRTL ? 'right' : 'left', lineHeight: 16 }
 });

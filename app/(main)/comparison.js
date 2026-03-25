@@ -14,6 +14,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import Fuse from 'fuse.js'; // Ensure this is installed: npm install fuse.js
 
 import { useAppContext } from '../../src/context/AppContext';
+import { t } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
 // --- SHARED RESOURCES ---
 import {
@@ -118,7 +120,7 @@ const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
     );
 };
 
-const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
+const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const globalStyles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -247,7 +249,7 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
                         {strongEvidence.length > 0 && (
                             <View style={styles.evidenceGroup}>
                                 <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>مكونات فعالة أساسية:</Text>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>{t('comp_essential_actives', language)}</Text>
                                     <FontAwesome5 name="check" size={10} color={COLORS.success} />
                                 </View>
                                 <View style={styles.chipContainer}>
@@ -264,7 +266,7 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
                         {weakEvidence.length > 0 && (
                             <View style={[styles.evidenceGroup, { marginTop: strongEvidence.length > 0 ? 12 : 0 }]}>
                                 <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>تراكيز ثانوية / منخفضة:</Text>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>{t('comp_secondary_traces', language)}</Text>
                                     <FontAwesome5 name="exclamation-triangle" size={10} color={COLORS.warning} />
                                 </View>
                                 <View style={styles.chipContainer}>
@@ -290,30 +292,30 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims }) => {
                 {/* Header Top Row: Title + Honesty Badge */}
                 <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View>
-                        <Text style={globalStyles.claimsTitle}>تحليل الادعاءات</Text>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: 'right' }}>كشف المبالغات التسويقية</Text>
+                        <Text style={globalStyles.claimsTitle}>{t('comp_claims_title', language)}</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: 'right' }}>{t('comp_claims_sub', language)}</Text>
                     </View>
 
                     <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
                         <Text style={[styles.honestyScore, { color: scoreColor }]}>{honestyScore}%</Text>
-                        <Text style={[styles.honestyLabel, { color: scoreColor }]}>مصداقية</Text>
+                        <Text style={[styles.honestyLabel, { color: scoreColor }]}>{t('comp_claims_credibility', language)}</Text>
                     </View>
                 </View>
 
                 {/* Switcher */}
                 <View style={styles.segmentTrack}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('A')} style={[styles.segmentBtn, activeSide === 'A' && { backgroundColor: PROD_COLORS.A }]}>
-                        <Text style={[styles.segmentText, activeSide === 'A' && { color: '#FFF' }]}>المنتج (أ)</Text>
+                        <Text style={[styles.segmentText, activeSide === 'A' && { color: '#FFF' }]}>{t('comp_slot_a', language)}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('B')} style={[styles.segmentBtn, activeSide === 'B' && { backgroundColor: PROD_COLORS.B }]}>
-                        <Text style={[styles.segmentText, activeSide === 'B' && { color: '#FFF' }]}>المنتج (ب)</Text>
+                        <Text style={[styles.segmentText, activeSide === 'B' && { color: '#FFF' }]}>{t('comp_slot_b', language)}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <Animated.View style={[globalStyles.claimsBody, { opacity: fadeAnim }]}>
                 {(!sortedData || sortedData.length === 0) ? (
-                    <Text style={{ textAlign: 'center', color: COLORS.textSecondary, margin: 20, fontFamily: 'Tajawal-Regular' }}>لا توجد ادعاءات تم تحليلها لهذا المنتج.</Text>
+                    <Text style={{ textAlign: 'center', color: COLORS.textSecondary, margin: 20, fontFamily: 'Tajawal-Regular' }}>{t('comp_claims_no_data', language)}</Text>
                 ) : (
                     sortedData.map((res, i) => <ClaimRow key={i} item={res} index={i} />)
                 )}
@@ -359,6 +361,7 @@ const AnimatedCheckbox = ({ isSelected }) => {
 // ============================================================================
 
 export default function ComparisonPage() {
+    const language = useCurrentLanguage();
     const { userProfile } = useAppContext();
     const insets = useSafeAreaInsets();
     const { colors } = useTheme();
@@ -461,7 +464,7 @@ export default function ComparisonPage() {
     };
 
     const handleOCR = async () => {
-        setLoadingText(scanMode === 'accurate' ? 'جاري تحليل الصور بدقة (Engine 3)...' : 'جاري التحليل السريع (AI Vision)...');
+        setLoadingText(scanMode === 'accurate' ? t('comp_loading_accurate', language) : t('comp_loading_fast', language));
         changeStep(1);
 
         setTimeout(async () => {
@@ -509,14 +512,14 @@ export default function ComparisonPage() {
                 changeStep(2);
             } catch (e) {
                 console.error("Comparison Analysis Error:", e);
-                Alert.alert("خطأ", "فشل تحليل الصور. يرجى التأكد من وضوح المكونات والمحاولة مرة أخرى.");
+                Alert.alert(t('status_error', language), t('comp_error_analysis', language));
                 changeStep(0);
             }
         }, 300);
     };
 
     const handleEval = async () => {
-        setLoadingText('مقارنة المعايير والمخاطر...');
+        setLoadingText(t('comp_evaluating', language));
         changeStep(4);
 
         setTimeout(async () => {
@@ -544,7 +547,7 @@ export default function ComparisonPage() {
                 setRight(p => ({ ...p, analysisData: e2 }));
                 changeStep(5);
             } catch (e) {
-                Alert.alert("خطأ", "فشل التقييم.");
+                Alert.alert(t('status_error', language), t('comp_error_eval', language));
                 changeStep(3);
             }
         }, 300);
@@ -564,7 +567,7 @@ export default function ComparisonPage() {
         <View style={globalStyles.inputStepContainer}>
             <View style={globalStyles.heroVisualContainer}>
                 <View style={styles.arenaSlotsRow}>
-                    {[{ d: left, s: setLeft, c: PROD_COLORS.A, l: 'أ' }, { d: right, s: setRight, c: PROD_COLORS.B, l: 'ب' }].map((slot, i) => (
+                    {[{ d: left, s: setLeft, c: PROD_COLORS.A, l: t('comp_slot_a_label', language) }, { d: right, s: setRight, c: PROD_COLORS.B, l: t('comp_slot_b_label', language) }].map((slot, i) => (
                         <TouchableOpacity activeOpacity={0.7} key={i} style={[styles.slotCard, slot.d.sourceData && { borderColor: slot.c, borderWidth: 2 }]}
                             onPress={async () => { if (slot.d.sourceData) return; const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }); if (!r.canceled && r.assets && r.assets.length > 0) slot.s(p => ({ ...p, sourceData: r.assets[0].uri })); }}>
 
@@ -583,13 +586,13 @@ export default function ComparisonPage() {
                                     <View style={styles.dashedIconCircle}>
                                         <FontAwesome5 name="plus" size={20} color={COLORS.textSecondary} />
                                     </View>
-                                    <Text style={styles.slotLabel}>المنتج {slot.l}</Text>
+                                    <Text style={styles.slotLabel}>{t('comp_slot_label', language)} {slot.l}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
                     ))}
                     <View style={styles.vsBadge}>
-                        <Text style={styles.vsText}>ضد</Text>
+                        <Text style={styles.vsText}>{t('comp_vs', language)}</Text>
                     </View>
                 </View>
             </View>
@@ -607,7 +610,7 @@ export default function ComparisonPage() {
                     ]}
                 >
                     <View style={globalStyles.deckHeader}>
-                        <Text style={globalStyles.deckTitle}>أيهما أنسب لي؟</Text>
+                        <Text style={globalStyles.deckTitle}>{t('comp_which_better', language)}</Text>
 
                         <View style={{
                             flexDirection: 'row',
@@ -637,7 +640,7 @@ export default function ComparisonPage() {
                                     fontFamily: 'Tajawal-Bold',
                                     fontSize: 13,
                                     color: scanMode === 'fast' ? COLORS.background : COLORS.textDim
-                                }}>وضع السرعة</Text>
+                                }}>{t('comp_scan_mode_fast', language)}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -658,7 +661,7 @@ export default function ComparisonPage() {
                                     fontFamily: 'Tajawal-Bold',
                                     fontSize: 13,
                                     color: scanMode === 'accurate' ? COLORS.background : COLORS.textDim
-                                }}>وضع الدقة</Text>
+                                }}>{t('comp_scan_mode_accurate', language)}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -672,8 +675,8 @@ export default function ComparisonPage() {
 
                         }}>
                             {scanMode === 'accurate'
-                                ? "يستغرق وقتاً أطول لكن ينصح به للمكونات بالعربية"
-                                : "تحليل سريع ينصح به للصور الواضحة ذات جودة عالية"}
+                                ? t('oilguard_mode_accurate_note', language)
+                                : t('oilguard_mode_fast_note', language)}
                         </Text>
 
                     </View>
@@ -692,8 +695,8 @@ export default function ComparisonPage() {
                                 <Ionicons name="flask" size={28} color={COLORS.textOnAccent} />
                             </View>
                             <View>
-                                <Text style={[globalStyles.primaryActionTitle, { color: COLORS.textOnAccent }]}>بدء المقارنة</Text>
-                                <Text style={[globalStyles.primaryActionSub, { color: COLORS.textOnAccent + 'CC' }]}>تحليل المكونات والادعاءات</Text>
+                                <Text style={[globalStyles.primaryActionTitle, { color: COLORS.textOnAccent }]}>{t('comp_start_btn_title', language)}</Text>
+                                <Text style={[globalStyles.primaryActionSub, { color: COLORS.textOnAccent + 'CC' }]}>{t('comp_start_btn_sub', language)}</Text>
                             </View>
                             <Ionicons name="chevron-back" size={24} color={COLORS.textOnAccent} style={{ opacity: 0.6, marginRight: 'auto' }} />
                         </LinearGradient>
@@ -800,8 +803,8 @@ export default function ComparisonPage() {
                     <View style={styles.headerBackdrop} />
 
                     <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
-                        <Text style={globalStyles.heroTitle}>ما هي وعود المنتج؟</Text>
-                        <Text style={globalStyles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
+                        <Text style={globalStyles.heroTitle}>{t('comp_claims_header', language)}</Text>
+                        <Text style={globalStyles.heroSub}>{t('comp_claims_subtitle', language)}</Text>
                     </Animated.View>
 
                     <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
@@ -810,7 +813,7 @@ export default function ComparisonPage() {
                                 <TouchableOpacity onPress={() => changeStep(step - 1)} style={globalStyles.backBtn}>
                                     <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                                 </TouchableOpacity>
-                                <Text style={styles.collapsedHeaderText}>ما هي وعود المنتج؟</Text>
+                                <Text style={styles.collapsedHeaderText}>{t('comp_claims_header', language)}</Text>
                                 <View style={{ width: 40 }} />
                             </View>
                         </SafeAreaView>
@@ -821,7 +824,7 @@ export default function ComparisonPage() {
                             <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={{ marginLeft: 10 }} />
                             <TextInput
                                 style={styles.claimsSearchInput}
-                                placeholder="ابحث عن إدعاء..."
+                                placeholder={t('oilguard_claims_search_placeholder', language)}
                                 placeholderTextColor={COLORS.textDim}
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
@@ -868,7 +871,7 @@ export default function ComparisonPage() {
                             <View style={[globalStyles.dashHeader, { justifyContent: 'center', marginBottom: 25 }]}>
                                 <View style={{ alignItems: 'center' }}>
                                     <Text style={[globalStyles.verdictBig, { color: winnerColor, fontSize: 24 }]}>
-                                        {winner === 'tie' ? 'تعادل في الأداء' : `المنتج (${winner === 'left' ? 'أ' : 'ب'}) يتفوق`}
+                                        {winner === 'tie' ? t('comp_tie', language) : t(winner === 'left' ? 'comp_winner_a' : 'comp_winner_b', language)}
                                     </Text>
                                     <Text style={globalStyles.verdictLabel}>{PRODUCT_TYPES.find(t => t.id === productType)?.label}</Text>
                                 </View>
@@ -880,13 +883,13 @@ export default function ComparisonPage() {
                                     <View style={styles.verdictPill}>
                                         <Text style={[styles.h2hScore, { color: PROD_COLORS.A }]}>{Math.round(sA)}%</Text>
                                         <Text style={[styles.verdictText, { color: sA > 75 ? COLORS.success : COLORS.textSecondary }]}>
-                                            {left.analysisData.finalVerdict || "جيد"}
+                                            {left.analysisData.finalVerdict || t('comp_verdict_good', language)}
                                         </Text>
                                     </View>
                                 </View>
 
                                 <View style={styles.vsCenter}>
-                                    <View style={styles.vsCircle}><Text style={styles.vsText}>ضد</Text></View>
+                                    <View style={styles.vsCircle}><Text style={styles.vsText}>{t('comp_vs', language)}</Text></View>
                                 </View>
 
                                 <View style={styles.h2hCol}>
@@ -894,7 +897,7 @@ export default function ComparisonPage() {
                                     <View style={styles.verdictPill}>
                                         <Text style={[styles.h2hScore, { color: PROD_COLORS.B }]}>{Math.round(sB)}%</Text>
                                         <Text style={[styles.verdictText, { color: sB > 75 ? COLORS.success : COLORS.textSecondary }]}>
-                                            {right.analysisData.finalVerdict || "جيد"}
+                                            {right.analysisData.finalVerdict || t('comp_verdict_good', language)}
                                         </Text>
                                     </View>
                                 </View>
@@ -902,12 +905,12 @@ export default function ComparisonPage() {
 
                             <View style={[globalStyles.statsGrid, { marginTop: 25, flexDirection: 'column', gap: 15 }]}>
                                 <MetricDuelRow
-                                    label="الأمان" icon="shield-alt"
+                                    label={t('oilguard_stat_safety', language)} icon="shield-alt"
                                     scoreA={left.analysisData.safety?.score || 0}
                                     scoreB={right.analysisData.safety?.score || 0}
                                 />
                                 <MetricDuelRow
-                                    label="الفعالية" icon="flask"
+                                    label={t('oilguard_stat_efficacy', language)} icon="flask"
                                     scoreA={left.analysisData.efficacy?.score || 0}
                                     scoreB={right.analysisData.efficacy?.score || 0}
                                 />
@@ -916,13 +919,13 @@ export default function ComparisonPage() {
                             <View style={[globalStyles.matchContainer, { marginTop: 15 }]}>
                                 <View style={globalStyles.matchHeader}>
                                     <View style={globalStyles.matchHeaderIcon}><FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} /></View>
-                                    <Text style={globalStyles.matchHeaderTitle}>تقرير الملاءمة الشخصية</Text>
+                                    <Text style={globalStyles.matchHeaderTitle}>{t('comp_personal_report_title', language)}</Text>
                                 </View>
                                 <View style={{ paddingHorizontal: 10, paddingBottom: 10 }}>
                                     {[left, right].map((prod, i) => {
                                         const reasons = Array.isArray(prod.analysisData.personalMatch?.reasons) ? prod.analysisData.personalMatch.reasons : [];
                                         const color = i === 0 ? PROD_COLORS.A : PROD_COLORS.B;
-                                        const label = i === 0 ? 'المنتج (أ)' : 'المنتج (ب)';
+                                        const label = i === 0 ? t('comp_slot_a', language) : t('comp_slot_b', language);
 
                                         return (
                                             <View key={i} style={{ marginTop: 10 }}>
@@ -937,7 +940,7 @@ export default function ComparisonPage() {
                                                 ) : (
                                                     <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                                                         <FontAwesome5 name="check-circle" color={COLORS.success} size={12} />
-                                                        <Text style={[globalStyles.matchText, { color: COLORS.textDim, fontSize: 12 }]}>لا توجد تعارضات صحية مكتشفة</Text>
+                                                        <Text style={[globalStyles.matchText, { color: COLORS.textDim, fontSize: 12 }]}>{t('comp_no_conflicts', language)}</Text>
                                                     </View>
                                                 )}
                                             </View>
@@ -953,11 +956,13 @@ export default function ComparisonPage() {
                     <MarketingClaimsSection
                         leftClaims={left.analysisData.marketing_results}
                         rightClaims={right.analysisData.marketing_results}
+                        language={language}  // Add this line
+
                     />
                 </StaggeredItem>
 
                 <TouchableOpacity activeOpacity={0.7} onPress={resetAll} style={styles.resetBtn}>
-                    <Text style={styles.resetText}>مقارنة جديدة</Text>
+                    <Text style={styles.resetText}>{t('comp_reset_btn', language)}</Text>
                     <FontAwesome5 name="redo" color={COLORS.textSecondary} />
                 </TouchableOpacity>
 

@@ -6,14 +6,16 @@ import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
-import { PressableScale, ContentCard, StaggeredItem } from '../../common/AnimatedComponents';
+import { useRTL } from '../../../hooks/useRTL';
+import { PressableScale, ContentCard, StaggeredItem } from './AnalysisShared';
 import { WeatherLoadingCard, WeatherCompactWidget } from '../WeatherComponents';
 
 // --- Sub-Component: Focus Insight ---
 const FocusInsight = ({ insight, onSelect }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const severityStyles = {
         critical: { icon: 'shield-alt', colors: ['#581c1c', '#3f2129'] },
         warning: { icon: 'exclamation-triangle', colors: ['#5a3a1a', '#422c1b'] },
@@ -31,7 +33,7 @@ const FocusInsight = ({ insight, onSelect }) => {
                     <Text style={styles.focusInsightSummary}>{insight.short_summary}</Text>
                     <View style={styles.focusInsightAction}>
                         <Text style={styles.focusInsightActionText}>{t('analysis_view_details', language)}</Text>
-                        <Feather name="chevron-left" size={16} color={COLORS.accentGreen} />
+                        <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={16} color={COLORS.accentGreen} />
                     </View>
                 </LinearGradient>
             </PressableScale>
@@ -43,7 +45,8 @@ const FocusInsight = ({ insight, onSelect }) => {
 const AllClearState = () => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     return (
         <StaggeredItem index={0} animated={false}>
             <ContentCard style={styles.allClearContainer} animated={false}>
@@ -89,7 +92,7 @@ export const AnalysisHero = ({
     return <FocusInsight insight={focusInsight} onSelect={onSelect} />;
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isRTL) => StyleSheet.create({
     focusInsightCard: {
         padding: 20,
         borderRadius: 24,
@@ -103,7 +106,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         elevation: 10,
     },
     focusInsightHeader: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: 12,
         marginBottom: 8,
@@ -113,20 +116,20 @@ const createStyles = (COLORS) => StyleSheet.create({
         fontSize: 18,
         color: '#fff',
         flex: 1,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     focusInsightSummary: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 14,
         color: 'rgba(255,255,255,0.9)',
         lineHeight: 22,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
         marginBottom: 16,
     },
     focusInsightAction: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: isRTL ? 'flex-end' : 'flex-start',
         gap: 6,
     },
     focusInsightActionText: {

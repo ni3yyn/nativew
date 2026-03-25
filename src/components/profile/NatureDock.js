@@ -305,7 +305,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
 
     const handleSheetSelection = (action) => {
         switch (action) {
-            case 'scan_product': navigation.push('/oilguard'); break;
+            case 'scan_product': navigation.push('/CatalogScreen'); break;
             case 'compare_products': navigation.push('/comparison'); break;
             case 'search_catalog': navigation.push('/CatalogScreen'); break;
             case 'ingredients': onTabChange('ingredients'); break;

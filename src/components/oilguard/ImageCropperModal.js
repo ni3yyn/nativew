@@ -13,7 +13,9 @@ import {
   StatusBar,
   Image as RNImage,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // ✅ Import it here
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { t } from '../../i18n';
 import Slider from '@react-native-community/slider';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -35,14 +37,15 @@ const COLORS = {
   danger: '#EF4444'
 };
 
-const ASPECT_RATIOS = [
-  { label: 'حر', value: null, icon: 'crop-free' },
-  { label: 'الأصلي', value: -1, icon: 'image' },
+const ASPECT_RATIOS = (lang) => [
+  { label: t('cropper_ratio_free', lang), value: null, icon: 'crop-free' },
+  { label: t('cropper_ratio_original', lang), value: -1, icon: 'image' },
   { label: '1:1', value: 1, icon: 'crop-square' },
   { label: '16:9', value: 16 / 9, icon: 'crop-16-9' },
 ];
 
 const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
+  const language = useCurrentLanguage();
   // --- STATE ---
   const [displayUri, setDisplayUri] = useState(null);
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
@@ -371,7 +374,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
 
         <SafeAreaView style={styles.header}>
           <View style={styles.ratioList}>
-            {ASPECT_RATIOS.map((item) => (
+            {ASPECT_RATIOS(language).map((item) => (
               <TouchableOpacity
                 key={item.label}
                 style={[styles.ratioBtn, currentRatio === item.value && styles.ratioBtnActive]}
@@ -388,7 +391,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
             ))}
           </View>
           <TouchableOpacity style={styles.resetBtn} onPress={resetEditor}>
-            <Text style={styles.resetText}>Reset</Text>
+            <Text style={styles.resetText}>{t('cropper_reset', language)}</Text>
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -397,7 +400,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
 
           {/* INSTRUCTION TEXT */}
           <View style={styles.instructionContainer}>
-            <Text style={styles.instructionText}>حدد قائمة المكونات فقط</Text>
+            <Text style={styles.instructionText}>{t('cropper_instruction', language)}</Text>
           </View>
 
           {/* LAYER 1: IMAGE (Background) */}

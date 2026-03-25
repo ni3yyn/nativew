@@ -298,7 +298,7 @@ export default function LoginScreen() {
                             {/* Logo Area */}
                             <View style={styles.brandContainer}>
                                 <AppLogo />
-                                <Text style={styles.brandTitle}>وثيق</Text>
+                                <Text style={styles.brandTitle}>{t('auth_brand_title', language)}</Text>
                                 <Text style={styles.brandSubtitle}>{t('auth_brand_subtitle', language)}</Text>
                             </View>
 

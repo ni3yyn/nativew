@@ -17,6 +17,8 @@ import { AlertService } from '../../../services/alertService';
 import { RoutineEmptyState } from '../EmptyStates';
 import { RoutineLogViewer } from './RoutineLogViewer';
 import { PressableScale, StaggeredItem } from '../analysis/AnalysisShared';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 const { width, height } = Dimensions.get('window');
@@ -26,6 +28,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
     const [stepName, setStepName] = useState('');
     const inputRef = useRef(null);
@@ -77,7 +80,7 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
             {/* LAYER 2: The Content (Z-Index: 100 - MUST BE HIGHER) */}
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "padding"}
-                style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }} // <--- CRITICAL FIX
+                style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }}
                 pointerEvents="box-none"
             >
                 <Animated.View
@@ -107,9 +110,9 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                             }}>
                                 <FontAwesome5 name="layer-group" size={24} color={C.accentGreen} />
                             </View>
-                            <Text style={styles.modalTitle}>إضافة خطوة جديدة</Text>
+                            <Text style={styles.modalTitle}>{t('routine_add_step_title', language)}</Text>
                             <Text style={styles.modalDescription}>
-                                أضفي مرحلة جديدة لروتينك (مثال: سيروم، تونر، علاج).
+                                {t('routine_add_step_desc', language)}
                             </Text>
                         </View>
 
@@ -117,11 +120,10 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                         <View style={styles.inputWrapper}>
                             <TextInput
                                 ref={inputRef}
-                                placeholder="اسم الخطوة..."
+                                placeholder={t('routine_step_name_placeholder', language)}
                                 placeholderTextColor={C.textDim}
                                 style={[
                                     styles.enhancedInput,
-                                    // 2. CONDITIONAL FONT: Regular if empty, Bold if typing
                                     { fontFamily: stepName.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular' }
                                 ]}
                                 value={stepName}
@@ -136,14 +138,14 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                         {/* Buttons */}
                         <View style={styles.promptButtonRow}>
                             <PressableScale style={[styles.promptButton, styles.promptButtonSecondary]} onPress={handleClose}>
-                                <Text style={styles.promptButtonTextSecondary}>إلغاء</Text>
+                                <Text style={styles.promptButtonTextSecondary}>{t('alert_cancel', language)}</Text>
                             </PressableScale>
                             <PressableScale
                                 style={[styles.promptButton, styles.promptButtonPrimary, !stepName.trim() && { opacity: 0.5 }]}
                                 onPress={handleAdd}
                                 disabled={!stepName.trim()}
                             >
-                                <Text style={styles.promptButtonTextPrimary}>إضافة</Text>
+                                <Text style={styles.promptButtonTextPrimary}>{t('action_add', language)}</Text>
                             </PressableScale>
                         </View>
                     </View>
@@ -158,42 +160,39 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const insets = useSafeAreaInsets();
+    const language = useCurrentLanguage();
     const [step, setStep] = useState(0);
 
     // Animation Controllers
-    const animX = useRef(new Animated.Value(width / 2)).current; // Start center
+    const animX = useRef(new Animated.Value(width / 2)).current;
     const animY = useRef(new Animated.Value(height / 2)).current;
-    const animR = useRef(new Animated.Value(0)).current; // Radius starts at 0 (pop effect)
+    const animR = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     // --- TARGET CONFIGURATION ---
-    // Precision tuning based on your layout styles
-    const TARGETS =[
+    const TARGETS = [
         {
             id: 'switcher',
-            title: "فترات الروتين",
-            text: "هنا يمكنك التبديل بين روتينك الصباحي والمسائي والخطوات الأسبوعية.",
-            // Position: Top Right-ish (Switch Container is Flex:1 starting from right)
+            title: t('routine_guide_switcher_title', language),
+            text: t('routine_guide_switcher_text', language),
             x: width / 2,
             y: insets.top + 145,
             radius: 80
         },
         {
             id: 'auto_build',
-            title: "روتين وثيق",
-            text: "دعي وثيق يبني لكِ روتينا مثاليا بضغطة زر.",
-            // Position: Top Left (AutoBuild is on the left in row-reverse)
+            title: t('routine_guide_auto_title', language),
+            text: t('routine_guide_auto_text', language),
             x: 45,
             y: insets.top + 145,
             radius: 35
         },
         {
             id: 'add_step',
-            title: "إضافة خطوة",
-            text: "زر الإضافة العائم يتيح لكِ إدراج منتجات جديدة يدويا.",
-            // Position: Bottom Right (FAB is bottom: 130, right: 20)
-            x: width - 52, // 20px margin + 32px half-width
-            y: height - 162, // 130px bottom + 32px half-height
+            title: t('routine_guide_add_title', language),
+            text: t('routine_guide_add_text', language),
+            x: width - 52,
+            y: height - 162,
             radius: 40
         }
     ];
@@ -201,12 +200,10 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
     const currentTarget = TARGETS[step];
 
     useEffect(() => {
-        // 1. Fade In Overlay
         if (step === 0) {
             Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
         }
 
-        // 2. Move Spotlight smoothly
         Animated.parallel([
             Animated.spring(animX, { toValue: currentTarget.x, friction: 6, tension: 50, useNativeDriver: true }),
             Animated.spring(animY, { toValue: currentTarget.y, friction: 6, tension: 50, useNativeDriver: true }),
@@ -219,7 +216,6 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
         if (step < TARGETS.length - 1) {
             setStep(s => s + 1);
         } else {
-            // Exit Animation: Expand hole to fill screen or fade out
             Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onDismiss);
         }
     };
@@ -227,15 +223,11 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
     return (
         <Modal transparent visible={true} animationType="none">
             <View style={styles.guideOverlay}>
-
-                {/* 1. SVG Mask Layer */}
                 <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
                     <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
                         <Defs>
                             <Mask id="mask" x="0" y="0" height="100%" width="100%">
-                                {/* White = Visible (Overlay) */}
                                 <Rect height="100%" width="100%" fill="#fff" />
-                                {/* Black = Invisible (The Hole) */}
                                 <AnimatedCircle
                                     cx={animX}
                                     cy={animY}
@@ -244,16 +236,12 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
                                 />
                             </Mask>
                         </Defs>
-
-                        {/* The Dark Overlay applying the mask */}
                         <Rect
                             height="100%"
                             width="100%"
                             fill="rgba(0, 0, 0, 0.85)"
                             mask="url(#mask)"
                         />
-
-                        {/* Optional: Glowing Ring around the hole */}
                         <AnimatedCircle
                             cx={animX}
                             cy={animY}
@@ -266,7 +254,6 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
                     </Svg>
                 </Animated.View>
 
-                {/* 2. Text Card (Floating) */}
                 <View style={styles.guideCardWrapper}>
                     <Animated.View style={[styles.guideCard, { opacity: fadeAnim }]}>
                         <View style={styles.guideHeader}>
@@ -280,19 +267,18 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
 
                         <View style={styles.guideFooter}>
                             <TouchableOpacity onPress={onDismiss}>
-                                <Text style={styles.guideSkip}>إنهاء</Text>
+                                <Text style={styles.guideSkip}>{t('action_finish', language)}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity onPress={handleNext} style={styles.guideNextBtn}>
                                 <Text style={styles.guideNextText}>
-                                    {step === TARGETS.length - 1 ? 'فهمت' : 'التالي'}
+                                    {step === TARGETS.length - 1 ? t('action_got_it', language) : t('common_next', language)}
                                 </Text>
                                 <FontAwesome5 name={step === TARGETS.length - 1 ? "check" : "arrow-left"} size={14} color="#1A2D27" />
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
                 </View>
-
             </View>
         </Modal>
     );
@@ -302,17 +288,16 @@ const RoutineOnboardingGuide = ({ onDismiss }) => {
 const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const productList = step.productIds.map(id => products.find(p => p.id === id)).filter(Boolean);
     const isStepFilled = productList.length > 0;
 
     return (
-        // Changed to TouchableOpacity to remove the "stretchy" entry animation
         <TouchableOpacity
             activeOpacity={0.9}
             onPress={onManage}
             style={styles.stepCardContainer}
         >
-            {/* HEADER: Number + Title + Delete */}
             <View style={styles.stepHeaderRow}>
                 <View style={styles.stepTitleGroup}>
                     <LinearGradient
@@ -327,7 +312,7 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
                     <View>
                         <Text style={styles.stepName}>{step.name}</Text>
                         <Text style={styles.stepSubText}>
-                            {isStepFilled ? `${productList.length} منتجات` : 'خطوة فارغة'}
+                            {isStepFilled ? `${productList.length} ${t('routine_step_filled', language)}` : t('routine_step_empty', language)}
                         </Text>
                     </View>
                 </View>
@@ -341,7 +326,6 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* BODY: Clean Product List */}
             <View style={styles.stepBody}>
                 {isStepFilled ? (
                     <ScrollView
@@ -372,7 +356,7 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
                     </ScrollView>
                 ) : (
                     <View style={styles.stepEmptyState}>
-                        <Text style={styles.stepEmptyLabel}>اضغط لإضافة منتجات</Text>
+                        <Text style={styles.stepEmptyLabel}>{t('routine_tap_to_add', language)}</Text>
                         <Feather name="plus-circle" size={16} color={C.accentGreen} />
                     </View>
                 )}
@@ -390,6 +374,7 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
 const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const [search, setSearch] = useState('');
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -408,10 +393,8 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
 
     if (!visible) return null;
 
-    // Ensure products is an array to prevent crashes
     const safeProducts = Array.isArray(products) ? products :[];
 
-    // Filter products based on search text
     const filtered = safeProducts.filter(p =>
         p.productName.toLowerCase().includes(search.toLowerCase())
     );
@@ -426,17 +409,16 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
                     { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }
                 ]}>
                     <View style={styles.selectionHeader}>
-                        <Text style={styles.selectionTitle}>اختر منتج</Text>
+                        <Text style={styles.selectionTitle}>{t('routine_select_product', language)}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeIconBtn}>
                             <FontAwesome5 name="times" size={16} color={C.textDim} />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Search Bar inside Modal */}
                     <View style={styles.modalSearchBar}>
                         <TextInput
                             style={styles.modalSearchInput}
-                            placeholder="بحث..."
+                            placeholder={t('common_search_placeholder', language)}
                             placeholderTextColor={C.textDim}
                             value={search}
                             onChangeText={setSearch}
@@ -476,7 +458,7 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
                             <View style={{ alignItems: 'center', marginTop: 30 }}>
                                 <FontAwesome5 name="search-minus" size={24} color={C.textDim} />
                                 <Text style={{ color: C.textDim, marginTop: 10, fontFamily: 'Tajawal-Regular' }}>
-                                    لا توجد نتائج
+                                    {t('catalog_no_results', language)}
                                 </Text>
                             </View>
                         }
@@ -487,14 +469,13 @@ const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
     );
 };
 
-// --- HELPER 5: Enhanced Step Editor with Animated Product Picker ---
 // --- HELPER 5: Enhanced Step Editor with Name Editing ---
 const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
     
-    // States for editing
     const [editedName, setEditedName] = useState('');
     const [currentProducts, setCurrentProducts] = useState([]);
     const [isAddModalVisible, setAddModalVisible] = useState(false);
@@ -502,7 +483,6 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     useEffect(() => {
         if (isVisible && step) {
             setEditedName(step.name);
-            // Map IDs to full product objects
             setCurrentProducts(step.productIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean));
             Animated.spring(animController, { toValue: 1, useNativeDriver: true }).start();
         }
@@ -528,7 +508,6 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
 
     const handleSaveChanges = () => {
         if (!editedName.trim()) return;
-        // Pass back ID, the NEW NAME, and IDs
         onSave(step.id, editedName.trim(), currentProducts.map(p => p.id));
         handleClose();
     };
@@ -549,32 +528,30 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
                     <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
                     <View style={{ padding: 20, flex: 1 }}>
-                        {/* HEADER SECTION: Name Editing */}
                         <View style={styles.stepModalHeader}>
                             <View style={{ flex: 1, marginLeft: 15 }}>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                     <Feather name="edit-3" size={14} color={C.accentGreen} />
-                                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.textSecondary }}>تعديل اسم الخطوة</Text>
+                                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.textSecondary }}>{t('routine_edit_step_name', language)}</Text>
                                 </View>
                                 <TextInput
                                     style={[styles.stepModalTitle, { textAlign: 'right', borderBottomWidth: 1, borderBottomColor: C.accentGreen + '40', paddingBottom: 5 }]}
                                     value={editedName}
                                     onChangeText={setEditedName}
-                                    placeholder="مثلاً: تنظيف عميق"
+                                    placeholder={t('routine_edit_step_placeholder', language)}
                                     placeholderTextColor={C.textDim}
                                 />
                             </View>
 
                             <PressableScale onPress={() => setAddModalVisible(true)} style={styles.addProductButton}>
                                 <Feather name="plus" size={16} color={C.textOnAccent} />
-                                <Text style={styles.addProductButtonText}>منتج</Text>
+                                <Text style={styles.addProductButtonText}>{t('action_add', language)}</Text>
                             </PressableScale>
                         </View>
 
-                        {/* STATS STRIP */}
                         <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 20, backgroundColor: C.background, padding: 12, borderRadius: 12 }}>
-                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 13, color: C.textSecondary }}>المنتجات المضافة:</Text>
-                            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 13, color: C.accentGreen }}>{currentProducts.length} منتجات</Text>
+                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 13, color: C.textSecondary }}>{t('routine_added_products', language)}</Text>
+                            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 13, color: C.accentGreen }}>{currentProducts.length} {t('routine_step_filled', language)}</Text>
                         </View>
 
                         <FlatList
@@ -596,7 +573,7 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
                                                 {item.productName}
                                             </Text>
                                             <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: C.textDim, textAlign: 'right' }}>
-                                                {item.analysisData?.product_type === 'sunscreen' ? 'حماية من الشمس' : 'عناية'}
+                                                {item.analysisData?.product_type === 'sunscreen' ? t('category_sunscreen', language) : t('common_care', language)}
                                             </Text>
                                         </View>
                                     </View>
@@ -614,20 +591,19 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
                                     <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
                                         <FontAwesome5 name="box-open" size={24} color={C.textDim} />
                                     </View>
-                                    <Text style={styles.stepModalEmptyText}>لم تضيفي منتجات لهذه الخطوة بعد</Text>
+                                    <Text style={styles.stepModalEmptyText}>{t('routine_no_products_yet', language)}</Text>
                                 </View>
                             }
                             contentContainerStyle={{ paddingBottom: 100 }}
                         />
 
-                        {/* Fixed Footer Save Button */}
                         <View style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
-                        <PressableScale onPress={handleSaveChanges} style={styles.saveStepButton}>
-    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
-        <Text style={styles.saveStepButtonText}>حفظ</Text>
-        <FontAwesome5 name="check-circle" size={18} color={C.textOnAccent} />
-    </View>
-</PressableScale>
+                            <PressableScale onPress={handleSaveChanges} style={styles.saveStepButton}>
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+                                    <Text style={styles.saveStepButtonText}>{t('action_save', language)}</Text>
+                                    <FontAwesome5 name="check-circle" size={18} color={C.textOnAccent} />
+                                </View>
+                            </PressableScale>
                         </View>
                     </View>
                 </View>
@@ -647,13 +623,13 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
 export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
+    const language = useCurrentLanguage();
     const { user } = useAppContext();
     const [routines, setRoutines] = useState({ am: [], pm: [], weekly: [] });
     const [activePeriod, setActivePeriod] = useState('am');
     const [selectedStep, setSelectedStep] = useState(null);
     const[showOnboarding, setShowOnboarding] = useState(false);
 
-    // Server-side Architect State
     const[routineLogs, setRoutineLogs] = useState([]);
     const [isBuilding, setIsBuilding] = useState(false);
 
@@ -672,7 +648,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
             console.error("Error saving routines:", error);
-            AlertService.error("خطأ", "تعذر حفظ الروتين.");
+            AlertService.error(t('common_error', language), t('routine_save_error', language));
         }
     };
 
@@ -694,8 +670,8 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 
     const handleDeleteStep = async (stepId) => {
         AlertService.delete(
-            "حذف الخطوة",
-            "هل أنت متأكد من حذف هذه الخطوة؟",
+            t('routine_delete_step_confirm_title', language),
+            t('routine_delete_step_confirm_message', language),
             async () => {
                 const newRoutines = JSON.parse(JSON.stringify(routines));
                 newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
@@ -709,7 +685,6 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
         const stepIndex = newRoutines[activePeriod].findIndex(s => s.id === stepId);
         
         if (stepIndex !== -1) {
-            // Update both the name and the product list
             newRoutines[activePeriod][stepIndex].name = newName;
             newRoutines[activePeriod][stepIndex].productIds = newProductIds;
             saveRoutines(newRoutines);
@@ -718,7 +693,11 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 
     const handleAutoBuildRoutine = () => {
         if (savedProducts.length < 2) {
-            AlertService.show({ title: "الرف غير كافٍ", message: "نحتاج إلى منتجين على الأقل لبناء روتين ذكي.", type: 'warning' });
+            AlertService.show({ 
+                title: t('routine_auto_build_error_title', language), 
+                message: t('routine_auto_build_error_message', language), 
+                type: 'warning' 
+            });
             return;
         }
         const runArchitect = async () => {
@@ -742,42 +721,44 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                 if (data.logs && Array.isArray(data.logs)) setRoutineLogs(data.logs);
 
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                AlertService.success("تم التحديث", "تم إعادة هيكلة الروتين بناء على تحليل وثيق.");
+                AlertService.success(t('common_updated', language), t('routine_auto_build_success', language));
             } catch (error) {
                 console.error("Routine Generation Error:", error);
-                AlertService.error("خطأ", "تعذر الاتصال بالخادم.");
+                AlertService.error(t('common_error', language), t('common_server_error', language));
             } finally {
                 setIsBuilding(false);
             }
         };
-        AlertService.confirm("روتين وثيق التلقائي", "سيتم إعادة ترتيب روتينك بالكامل. موافق؟", runArchitect);
+        AlertService.confirm(
+            t('routine_auto_build_confirm_title', language), 
+            t('routine_auto_build_confirm_message', language), 
+            runArchitect
+        );
     };
 
     const currentSteps = routines[activePeriod] ||[];
 
     return (
         <View style={{ flex: 1 }}>
-            {/* 1. Header: CLEANER (Just the Switcher) */}
             <View style={styles.routineHeaderContainer}>
                 <View style={styles.routineSwitchContainer}>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod === 'pm' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'pm' && styles.periodTextActive]}>المساء</Text>
+                        <Text style={[styles.periodText, activePeriod === 'pm' && styles.periodTextActive]}>{t('routine_period_evening', language)}</Text>
                         <Feather name="moon" size={14} color={activePeriod === 'pm' ? C.textOnAccent : C.textSecondary} />
                     </TouchableOpacity>
 
                     <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod === 'am' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'am' && styles.periodTextActive]}>الصباح</Text>
+                        <Text style={[styles.periodText, activePeriod === 'am' && styles.periodTextActive]}>{t('routine_period_morning', language)}</Text>
                         <Feather name="sun" size={14} color={activePeriod === 'am' ? C.textOnAccent : C.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('weekly')} style={[styles.periodBtn, activePeriod === 'weekly' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'weekly' && styles.periodTextActive]}>أسبوعي</Text>
+                        <Text style={[styles.periodText, activePeriod === 'weekly' && styles.periodTextActive]}>{t('routine_period_weekly', language)}</Text>
                         <Feather name="calendar" size={14} color={activePeriod === 'weekly' ? C.textOnAccent : C.textSecondary} />
                     </TouchableOpacity>
 
                 </View>
             </View>
 
-            {/* CONTENT AREA */}
             <View style={{ paddingBottom: 220, paddingTop: 10 }}>
                 <View style={{ marginBottom: 10 }}>
                     <RoutineLogViewer logs={routineLogs} />
@@ -800,12 +781,9 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                 )}
             </View>
 
-            {/* --- NEW: FLOATING ACTION CAPSULE --- */}
-            {/* Positioned at the bottom, above the Dock */}
             <View style={styles.floatingControlsContainer}>
                 <View style={styles.floatingCapsule}>
 
-                    {/* Left Action: Auto Build */}
                     <TouchableOpacity
                         style={styles.fabItem}
                         onPress={handleAutoBuildRoutine}
@@ -816,29 +794,26 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                         ) : (
                             <View style={styles.fabInner}>
                                 <MaterialCommunityIcons name="auto-fix" size={18} color={C.accentGreen} />
-                                <Text style={styles.fabText}>ترتيب ذكي</Text>
+                                <Text style={styles.fabText}>{t('routine_auto_build', language)}</Text>
                             </View>
                         )}
                     </TouchableOpacity>
 
-                    {/* Visual Divider */}
                     <View style={styles.fabDivider} />
 
-                    {/* Right Action: Add Step */}
                     <TouchableOpacity
                         style={styles.fabItem}
                         onPress={() => onOpenAddStepModal(handleAddStep)}
                     >
                         <View style={styles.fabInner}>
                             <Feather name="plus" size={18} color={C.accentGreen} />
-                            <Text style={styles.fabText}>إضافة خطوة</Text>
+                            <Text style={styles.fabText}>{t('routine_add_step', language)}</Text>
                         </View>
                     </TouchableOpacity>
 
                 </View>
             </View>
 
-            {/* MODALS */}
             {selectedStep && (
                 <StepEditorModal
                     isVisible={!!selectedStep}
@@ -853,12 +828,10 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
     );
 };
 
-
 // ============================================================================
 // --- STYLES FOR ROUTINE SECTION ---
 // ============================================================================
 const getStylesContent = (C) => ({
-    // Add Step Modal Styles
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 99 },
     sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.85, zIndex: 100, justifyContent: 'flex-end' },
     sheetContent: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 25 },
@@ -876,7 +849,6 @@ const getStylesContent = (C) => ({
     promptButtonTextPrimary: { color: C.textOnAccent, fontFamily: 'Tajawal-Bold' },
     promptButtonTextSecondary: { color: C.textSecondary, fontFamily: 'Tajawal-Bold' },
 
-    // Onboarding Guide Styles
     guideOverlay: { flex: 1, zIndex: 9999 },
     guideCardWrapper: { position: 'absolute', bottom: height * 0.12, width: '100%', alignItems: 'center', zIndex: 100, paddingHorizontal: 20 },
     guideCard: { width: '100%', backgroundColor: C.card, borderRadius: 28, padding: 24, borderWidth: 1, borderColor: C.border, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20 },
@@ -889,7 +861,6 @@ const getStylesContent = (C) => ({
     guideNextText: { fontFamily: 'Tajawal-Bold', color: C.textOnAccent, fontSize: 15 },
     guideSkip: { fontFamily: 'Tajawal-Bold', color: C.textDim, fontSize: 14, paddingVertical: 10, paddingHorizontal: 15 },
 
-    // Routine Step Card Styles
     stepCardContainer: { backgroundColor: C.card, borderRadius: 18, marginBottom: 12, borderWidth: 1, borderColor: C.border, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
     stepHeaderRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 12, paddingBottom: 0 },
     stepTitleGroup: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
@@ -907,7 +878,6 @@ const getStylesContent = (C) => ({
     stepEmptyLabel: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textDim },
     editIndicator: { position: 'absolute', bottom: 6, left: 12, opacity: 0.5 },
 
-    // Selection Modal Styles
     centeredModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 2000 },
     selectionCard: { width: '85%', backgroundColor: C.card, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 20 },
     selectionHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
@@ -921,7 +891,6 @@ const getStylesContent = (C) => ({
     selectionItemText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary, textAlign: 'right', marginHorizontal: 15 },
     selectionActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
 
-    // Step Editor Modal Styles
     stepModalHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     stepModalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: C.textPrimary },
     addProductButton: { flexDirection: 'row-reverse', gap: 6, backgroundColor: C.accentGreen, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
@@ -934,7 +903,6 @@ const getStylesContent = (C) => ({
     saveStepButton: { flexDirection: 'row-reverse', gap: 10, backgroundColor: C.accentGreen, padding: 16, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: C.accentGreen, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
     saveStepButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: C.textOnAccent },
 
-    // Main Routine Section Styles
     routineHeaderContainer: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 },
     routineSwitchContainer: { flex: 1, flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: C.border },
     periodBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingVertical: 10, borderRadius: 12 },

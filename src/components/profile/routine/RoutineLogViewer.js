@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 
 const FALLBACK_COLORS = {
     background: '#1A2D27',
@@ -21,6 +23,7 @@ export const RoutineLogViewer = ({ logs }) => {
     const { colors } = useTheme();
     const COLORS = colors || FALLBACK_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
     const [expanded, setExpanded] = useState(false);
 
     if (!logs || logs.length === 0) return null;
@@ -50,6 +53,15 @@ export const RoutineLogViewer = ({ logs }) => {
         }
     };
 
+    const getStatusText = (type) => {
+        switch (type) {
+            case 'error': return t('routine_log_status_error', language);
+            case 'warning': return t('routine_log_status_warning', language);
+            case 'success': return t('routine_log_status_success', language);
+            default: return t('routine_log_status_info', language);
+        }
+    };
+
     const errorCount = logs.filter(l => l.type === 'error').length;
     const warningCount = logs.filter(l => l.type === 'warning').length;
 
@@ -60,18 +72,18 @@ export const RoutineLogViewer = ({ logs }) => {
                     <View style={styles.iconBox}>
                         <MaterialCommunityIcons name="clipboard-text-search-outline" size={22} color={COLORS.accentGreen} />
                     </View>
-                    <Text style={styles.title}>تقرير روتين وثيق</Text>
+                    <Text style={styles.title}>{t('routine_log_title', language)}</Text>
                 </View>
 
                 <View style={styles.headerRight}>
                     {errorCount > 0 && (
                         <View style={[styles.badge, { backgroundColor: COLORS.danger + '33', borderColor: COLORS.danger + '66' }]}>
-                            <Text style={[styles.badgeText, { color: COLORS.danger }]}>{errorCount} استبعاد</Text>
+                            <Text style={[styles.badgeText, { color: COLORS.danger }]}>{errorCount} {t('routine_log_exclusion', language)}</Text>
                         </View>
                     )}
                     {warningCount > 0 && (
                         <View style={[styles.badge, { backgroundColor: COLORS.warning + '33', borderColor: COLORS.warning + '66' }]}>
-                            <Text style={[styles.badgeText, { color: COLORS.warning }]}>{warningCount} تنبيه</Text>
+                            <Text style={[styles.badgeText, { color: COLORS.warning }]}>{warningCount} {t('routine_log_alert', language)}</Text>
                         </View>
                     )}
                     <MaterialCommunityIcons
@@ -88,9 +100,7 @@ export const RoutineLogViewer = ({ logs }) => {
                         <View key={index} style={[styles.logItem, { borderRightColor: getColor(log.type) }]}>
                             <View style={styles.logHeader}>
                                 <Text style={[styles.logType, { color: getColor(log.type) }]}>
-                                    {log.type === 'error' ? 'استبعاد ⛔' :
-                                        log.type === 'warning' ? 'تعديل ⚠️' :
-                                            log.type === 'success' ? 'اعتماد ✅' : 'ملاحظة ℹ️'}
+                                    {getStatusText(log.type)}
                                 </Text>
                             </View>
 
@@ -112,7 +122,7 @@ export const RoutineLogViewer = ({ logs }) => {
                     ))}
 
                     <View style={styles.footer}>
-                        <Text style={styles.footerText}>تم البناء بواسطة الخوارزمية الطبية v2.0</Text>
+                        <Text style={styles.footerText}>{t('routine_log_footer', language)}</Text>
                     </View>
                 </View>
             )}

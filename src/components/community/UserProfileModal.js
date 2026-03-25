@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View, Text, Modal, StyleSheet, ScrollView,
-    TouchableOpacity, ActivityIndicator, Dimensions, Animated
+    TouchableOpacity, ActivityIndicator, Animated, Dimensions, Easing
 } from 'react-native';
-import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { doc, getDoc, collection, query, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -12,8 +12,14 @@ import { useTheme } from '../../context/ThemeContext';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { calculateBioMatch } from '../../utils/matchCalculator';
 import { getCachedUserProfile, cacheUserProfile } from '../../services/cachingService';
-import { getLocalizedValue, normalizeLanguage, t } from '../../i18n';
+import { getUserLevelData } from '../../utils/gamificationEngine'; 
+
+// --- i18n TRANSLATIONS & RTL ---
+import { t, getLocalizedValue } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useRTL } from '../../hooks/useRTL';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // --- DATA IMPORTS ---
 import {
@@ -23,200 +29,241 @@ import {
     basicScalpTypes
 } from '../../data/allergiesandconditions';
 
-const GOALS_LIST = [
-    { id: 'brightening', label: { ar: 'تفتيح و نضارة', en: 'Brightening & glow' } },
-    { id: 'acne', label: { ar: 'مكافحة حب الشباب', en: 'Acne control' } },
-    { id: 'anti_aging', label: { ar: 'مكافحة الشيخوخة', en: 'Anti-aging' } },
-    { id: 'hydration', label: { ar: 'ترطيب عميق', en: 'Deep hydration' } },
-    { id: 'texture_pores', label: { ar: 'تحسين الملمس والمسام', en: 'Texture & pores' } },
+// 🟢 PLACEHOLDER DUOLINGO BADGES 
+const PLACEHOLDER_BADGES =[
+    { id: 'inci_hunter', name: { ar: 'صائد المكونات', en: 'INCI Hunter' }, icon: 'flask', color: '#9C27B0', currentLevel: 3, currentScore: 45, nextTarget: 50, progressPercent: 90, isMaxed: false },
+    { id: 'community_star', name: { ar: 'نجم المجتمع', en: 'Community Star' }, icon: 'users', color: '#03A9F4', currentLevel: 1, currentScore: 2, nextTarget: 5, progressPercent: 40, isMaxed: false },
+    { id: 'shelf_founder', name: { ar: 'مؤسس الرف', en: 'Shelf Founder' }, icon: 'box-open', color: '#FF9800', currentLevel: 5, currentScore: 20, nextTarget: null, progressPercent: 100, isMaxed: true },
+    { id: 'first_blood', name: { ar: 'الخطوة الأولى', en: 'First Blood' }, icon: 'shoe-prints', color: '#8BC34A', currentLevel: 1, currentScore: 1, nextTarget: null, progressPercent: 100, isMaxed: true }
 ];
 
-// 🟢 CONFIG: Cache Duration (24 Hours in Milliseconds)
 const SHELF_CACHE_DURATION = 24 * 60 * 60 * 1000;
 
+// --- MICRO-COMPONENTS FOR ANIMATIONS ---
+const ShimmerBlock = ({ width, height, borderRadius, style, colors }) => {
+    const anim = useRef(new Animated.Value(0)).current;
+    
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(anim, { toValue: 1, duration: 1200, easing: Easing.linear, useNativeDriver: true })
+        ).start();
+    },[]);
+    
+    const translateX = anim.interpolate({ inputRange:[0, 1], outputRange:[-SCREEN_WIDTH, SCREEN_WIDTH] });
+    
+    return (
+        <View style={[{ width, height, borderRadius, backgroundColor: colors.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }, style]}>
+            <Animated.View style={{ ...StyleSheet.absoluteFillObject, transform: [{ translateX }] }}>
+                <LinearGradient colors={['transparent', colors.textDim + '20', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+            </Animated.View>
+        </View>
+    );
+};
+
+const AnimatedBadgeCard = ({ badge, COLORS, styles, language }) => {
+    const progressAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(progressAnim, { toValue: badge.progressPercent, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: false, delay: 400 }),
+            Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true, delay: 200 })
+        ]).start();
+    },[]);
+
+    const widthInterpolation = progressAnim.interpolate({ inputRange:[0, 100], outputRange:['0%', '100%'] });
+    const badgeName = getLocalizedValue(badge.name, language);
+
+    return (
+        <Animated.View style={[styles.compactDuolingoCard, { backgroundColor: COLORS.card, borderColor: COLORS.border, transform:[{ scale: scaleAnim }] }]}>
+            <View style={styles.badgeHeader}>
+                <View style={[styles.badgeIconBg, { backgroundColor: badge.color + '15', borderColor: badge.color + '40' }]}>
+                    <FontAwesome5 name={badge.icon} size={18} color={badge.color} />
+                    <View style={[styles.levelIndicator, { backgroundColor: badge.color, borderColor: COLORS.card }]}>
+                        <Text style={styles.levelText}>Lvl {badge.currentLevel}</Text>
+                    </View>
+                </View>
+                <Text style={[styles.badgeName, { color: COLORS.textPrimary }]} numberOfLines={1}>{badgeName}</Text>
+            </View>
+            <View style={styles.compactProgress}>
+                <View style={[styles.progressBarTrack, { backgroundColor: COLORS.border }]}>
+                    <Animated.View style={[styles.progressBarFill, { width: widthInterpolation, backgroundColor: badge.color }]} />
+                </View>
+                <Text style={[styles.progressText, { color: COLORS.textDim }]}>
+                    {badge.isMaxed ? t('action_finish', language) : `${badge.currentScore}/${badge.nextTarget}`}
+                </Text>
+            </View>
+        </Animated.View>
+    );
+};
+
+// --- MAIN COMPONENT ---
 const UserProfileModal = ({ visible, onClose, targetUserId, initialData, currentUser, onProductSelect }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    
     const language = useCurrentLanguage();
-    // 1. HYDRATION: Start with snapshot data if available (Instant Name)
-    const [profile, setProfile] = useState(initialData ? { settings: initialData } : null);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, rtl), [COLORS, rtl]);
+    
+    const[profile, setProfile] = useState({ settings: initialData?.settings || initialData || {}, points: initialData?.points || 0 });
     const [publicShelf, setPublicShelf] = useState([]);
-    const [loading, setLoading] = useState(!initialData);
+    const [loading, setLoading] = useState(true); 
     const [matchInfo, setMatchInfo] = useState({ score: 0, label: '', color: COLORS.textSecondary });
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Animation Refs
-    const slideAnim = useRef(new Animated.Value(50)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const heroAnim = useRef(new Animated.Value(0)).current;
+    const vitalAnim = useRef(new Animated.Value(0)).current;
+    const badgesAnim = useRef(new Animated.Value(0)).current;
+    const shelfAnim = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(1)).current;
 
-    const isMe = currentUser?.uid === targetUserId;
+    const isMe = currentUser?.uid === targetUserId?.id || currentUser?.uid === targetUserId;
 
     useEffect(() => {
         if (!visible || !targetUserId) return;
 
-        // Handle ID string/object
         const userIdString = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
 
-        // Reset UI
         setPublicShelf([]);
-        slideAnim.setValue(50);
-        fadeAnim.setValue(0);
+        [heroAnim, vitalAnim, badgesAnim, shelfAnim].forEach(anim => anim.setValue(0));
+        
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
+            ])
+        ).start();
 
-        // 🟢 1. INSTANT LOAD: Use passed data immediately. No Profile Fetch.
-        // Ensure we have a valid object to prevent "undefined" errors later
-        const safeSettings = initialData || {};
-        setProfile({ settings: safeSettings });
-
-        // Calculate Match if possible
-        if (currentUser?.settings && safeSettings) {
-            setMatchInfo(calculateBioMatch(currentUser.settings, safeSettings));
-        }
-
-        setLoading(true);
-
-
-
-
-        // --- SMART FETCH (Low Cost Strategy) ---
         const loadData = async () => {
+            setLoading(true);
             try {
-                // 1. CHECK CACHE
                 const cachedData = await getCachedUserProfile(userIdString);
                 const now = Date.now();
 
-                // 🟢 OPTIMIZATION: If cache exists AND is less than 24 hours old
+                let finalProfile = profile;
+                let finalShelf =[];
+
                 if (cachedData && (now - (cachedData.timestamp || 0) < SHELF_CACHE_DURATION)) {
-                    console.log("🟢 Using Cached Profile (0 Reads)");
-                    setProfile(cachedData.profile);
-                    setPublicShelf(cachedData.shelf || []);
-
-                    if (cachedData.profile && currentUser?.settings) {
-                        setMatchInfo(calculateBioMatch(currentUser.settings, cachedData.profile.settings));
+                    finalProfile = { settings: cachedData.profile?.settings || {}, points: cachedData.profile?.points || 0 };
+                    finalShelf = cachedData.shelf ||[];
+                } else {
+                    const profileRef = doc(db, 'profiles', userIdString);
+                    const profileSnap = await getDoc(profileRef);
+                    if (profileSnap.exists()) {
+                        const data = profileSnap.data();
+                        const freshSettings = data.settings || data;
+                        if (data.name && !freshSettings.name) freshSettings.name = data.name;
+                        finalProfile = { settings: freshSettings, points: data.points || 0 };
                     }
-
-                    setLoading(false);
-                    startAnimation();
-                    return; // 🛑 STOP HERE - SAVE READS
+                    const q = query(collection(db, 'profiles', userIdString, 'savedProducts'), orderBy('createdAt', 'desc'), limit(5));
+                    const snapshot = await getDocs(q);
+                    finalShelf = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    await cacheUserProfile(userIdString, finalProfile, finalShelf);
                 }
 
-                // 2. FETCH FRESH (Only if cache expired or missing)
-                console.log("🟠 Cache Expired/Missing - Fetching from Firestore (2 Reads)");
-
-                // A. Fetch Profile Doc
-                const profileRef = doc(db, 'profiles', userIdString);
-                const profileSnap = await getDoc(profileRef);
-                let freshSettings = safeSettings;
-                let freshProfileObj = profile;
-
-                if (profileSnap.exists()) {
-                    const data = profileSnap.data();
-                    freshSettings = data.settings || data;
-                    // Backward compatibility for root-level 'name'
-                    if (data.name && !freshSettings.name) freshSettings.name = data.name;
-
-                    freshProfileObj = { settings: freshSettings };
-                    setProfile(freshProfileObj);
-
-                    if (currentUser?.settings) {
-                        setMatchInfo(calculateBioMatch(currentUser.settings, freshSettings));
-                    }
+                setProfile(finalProfile);
+                setPublicShelf(finalShelf);
+                if (currentUser?.settings && finalProfile.settings) {
+                    setMatchInfo(calculateBioMatch(currentUser.settings, finalProfile.settings));
                 }
-
-                // B. Fetch Shelf (Limit 5)
-                const q = query(
-                    collection(db, 'profiles', userIdString, 'savedProducts'),
-                    orderBy('createdAt', 'desc'),
-                    limit(5)
-                );
-                const snapshot = await getDocs(q);
-                const freshShelf = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                setPublicShelf(freshShelf);
-
-                // C. Update Cache with new Timestamp
-                await cacheUserProfile(userIdString, freshProfileObj || { settings: initialData }, freshShelf);
-
-            } catch (e) {
-                console.error("Profile Fetch Error", e);
+            } catch (e) { 
+                console.error("Profile Fetch Error", e); 
             } finally {
                 setLoading(false);
-                startAnimation();
+                Animated.stagger(120,[
+                    Animated.spring(heroAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
+                    Animated.spring(vitalAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
+                    Animated.spring(badgesAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
+                    Animated.spring(shelfAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true })
+                ]).start();
             }
         };
 
-        loadData();
-    }, [visible, targetUserId, initialData]);
-
-    const startAnimation = () => {
-        Animated.parallel([
-            Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 8 }),
-            Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true })
-        ]).start();
-    };
+        setTimeout(loadData, 300); 
+    }, [visible, targetUserId]);
 
     const handleManualRefresh = async () => {
         const uid = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
         if (!uid) return;
-
         setIsRefreshing(true);
         try {
-            console.log("🔄 Manually refreshing profile...");
-
-            // 1. Fetch Fresh Profile Doc
             const profileRef = doc(db, 'profiles', uid);
             const profileSnap = await getDoc(profileRef);
 
             if (profileSnap.exists()) {
                 const data = profileSnap.data();
-                // Handle structure (settings object vs root)
                 const freshSettings = data.settings || data;
-
-                // Ensure name exists
                 if (data.name && !freshSettings.name) freshSettings.name = data.name;
+                
+                const freshProfileObj = { settings: freshSettings, points: data.points || 0 };
+                setProfile(freshProfileObj);
 
-                // Update Profile State
-                setProfile({ settings: freshSettings });
-
-                // Recalculate Match
                 if (currentUser?.settings) {
                     setMatchInfo(calculateBioMatch(currentUser.settings, freshSettings));
                 }
 
-                // 2. Refresh Shelf as well
-                const q = query(
-                    collection(db, 'profiles', uid, 'savedProducts'),
-                    orderBy('createdAt', 'desc'),
-                    limit(5)
-                );
+                const q = query(collection(db, 'profiles', uid, 'savedProducts'), orderBy('createdAt', 'desc'), limit(5));
                 const shelfSnap = await getDocs(q);
                 const freshShelf = shelfSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 setPublicShelf(freshShelf);
-
-                // Update Cache
-                cacheUserProfile(uid, { settings: freshSettings }, freshShelf);
+                cacheUserProfile(uid, freshProfileObj, freshShelf);
             }
-        } catch (error) {
-            console.error("Refresh Error:", error);
-        } finally {
-            setIsRefreshing(false);
-        }
+        } catch (error) { console.error(error); } finally { setIsRefreshing(false); }
     };
 
-    const getLabel = (id, list) => {
-        const item = list.find(i => i.id === id);
-        const language = normalizeLanguage(profile?.settings?.language);
-        return item ? getLocalizedValue(item.label || item.name, language) : id;
+    const getLabel = (id, list) => { 
+        const item = list.find(i => i.id === id); 
+        if (!item) return id;
+        return getLocalizedValue(item.label || item.name, language) || id; 
     };
 
-    const handleProductPress = (item) => {
-        if (onProductSelect) {
-            onClose();
-            onProductSelect({
-                ...item,
-                imageUrl: item.productImage
-            });
-        }
+    const getGoalLabel = (id) => {
+        const map = {
+            brightening: 'goal_brightening',
+            acne: 'goal_acne',
+            anti_aging: 'goal_anti_aging',
+            hydration: 'goal_hydration',
+            texture_pores: 'goal_texture'
+        };
+        return map[id] ? t(map[id], language) : id;
+    };
+    
+    const handleProductPress = (item) => { 
+        if (onProductSelect) { 
+            onClose(); 
+            onProductSelect({ ...item, imageUrl: item.productImage }); 
+        } 
+    };
+
+    const levelData = getUserLevelData ? getUserLevelData(profile.points || 0) : { currentLevel: { name: 'Level', color: COLORS.accentGreen, icon: 'star' } };
+    const currentLevel = levelData.currentLevel;
+
+    const getSlideStyle = (anim) => ({
+        opacity: anim,
+        transform:[{ translateY: anim.interpolate({ inputRange:[0, 1], outputRange: [40, 0] }) }]
+    });
+
+    const renderCompactTagRow = (data, list, icon, color, title, isGoal = false) => {
+        if (!data || data.length === 0) return null;
+        return (
+            <View style={styles.compactTagRow}>
+                <View style={styles.compactTagHeader}>
+                    <FontAwesome5 name={icon} size={12} color={color} />
+                    <Text style={[styles.compactTagLabel, { color: COLORS.textSecondary }]}>{title}</Text>
+                </View>
+                <View style={styles.compactChipContainer}>
+                    {data.map(item => (
+                        <View key={item} style={[styles.microChip, { borderColor: color + '40', backgroundColor: color + '10' }]}>
+                            <Text style={[styles.microChipText, { color }]}>
+                                {isGoal ? getGoalLabel(item) : getLabel(item, list)}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        );
     };
 
     if (!visible) return null;
@@ -224,237 +271,215 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <View style={styles.container}>
-
-                {/* Header */}
+                
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                    <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
                         <Ionicons name="close" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('community_profile_title', language)}</Text>
-                    <View style={{ width: 40 }} />
-                    <TouchableOpacity
-                        onPress={handleManualRefresh}
-                        disabled={isRefreshing}
-                        style={styles.refreshBtn}
-                    >
-                        {isRefreshing ? (
-                            <ActivityIndicator size="small" color={COLORS.accentGreen} />
-                        ) : (
-                            <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />
-                        )}
+                    <TouchableOpacity onPress={handleManualRefresh} disabled={loading || isRefreshing} style={styles.iconBtn}>
+                        {isRefreshing ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />}
                     </TouchableOpacity>
                 </View>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />
+                    <View style={styles.scrollContent}>
+                        <ShimmerBlock width="100%" height={120} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
+                        <ShimmerBlock width="30%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
+                        <ShimmerBlock width="100%" height={140} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
+                        <ShimmerBlock width="40%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
+                        <View style={{ flexDirection: rtl.flexDirection, gap: 12 }}>
+                            <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
+                            <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
+                        </View>
+                    </View>
                 ) : (
-
-                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-                        <ScrollView
-                            contentContainerStyle={styles.scrollContent}
-                            showsVerticalScrollIndicator={false}
-                            // 2. ADD THESE PROPS TO FORCE SCROLL BEHAVIOR
-                            bounces={true}
-                            alwaysBounceVertical={true}
-                            overScrollMode="always"
-                        >
-                            {/* 1. Identity Card */}
+                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={true}>
+                        
+                        <Animated.View style={getSlideStyle(heroAnim)}>
                             <LinearGradient
-                                colors={[String(COLORS.card), String(COLORS.card) + 'CC']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.idCard}
+                                colors={[currentLevel.color + '15', COLORS.card]}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                style={[styles.heroBento, { borderColor: currentLevel.color + '30' }]}
                             >
-                                <View style={[styles.matchRing, !isMe && { borderColor: matchInfo.color }]}>
-                                    <View style={styles.avatarLarge}>
-                                        <Text style={styles.avatarText}>
-                                            {/* Shows snapshot name first, then updates if fresh data loads */}
-                                            {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
+                                <View style={styles.heroRow}>
+                                    <View style={styles.heroInfo}>
+                                        <Text style={styles.userName} numberOfLines={1}>{profile?.settings?.name || t('community_default_user', language)}</Text>
+                                        <View style={[styles.rankPill, { backgroundColor: currentLevel.color + '20', borderColor: currentLevel.color + '40' }]}>
+                                            <FontAwesome5 name={currentLevel.icon} size={10} color={currentLevel.color} />
+                                            <Text style={[styles.rankText, { color: currentLevel.color }]}>{currentLevel.name}</Text>
+                                            <Text style={[styles.pointsText, { color: COLORS.textSecondary }]}>• {profile.points || 0} {t('catalog_points', language)}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.avatarWrapper}>
+                                        <Animated.View style={[styles.avatarGlow, { borderColor: currentLevel.color, transform: [{ scale: pulseAnim }] }]} />
+                                        <View style={[styles.avatar, { backgroundColor: COLORS.background }]}>
+                                            <Text style={[styles.avatarText, { color: currentLevel.color }]}>
+                                                {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+                                {!isMe && matchInfo.score > 0 && (
+                                    <View style={[styles.matchBanner, { backgroundColor: matchInfo.color + '10', borderColor: matchInfo.color + '30' }]}>
+                                        <MaterialCommunityIcons name="heart-pulse" size={16} color={matchInfo.color} />
+                                        <Text style={[styles.matchText, { color: matchInfo.color }]}>
+                                            {getLocalizedValue(matchInfo.label, language)} • {matchInfo.score}%
                                         </Text>
                                     </View>
-                                    {!isMe && matchInfo.score > 0 && (
-                                        <View style={[styles.matchBadge, { backgroundColor: matchInfo.color }]}>
-                                            <Text style={styles.matchBadgeText}>{matchInfo.score}%</Text>
-                                        </View>
-                                    )}
-                                </View>
-
-                                <Text style={styles.userName}>{profile?.settings?.name || t('community_default_user', language)}</Text>
-
-                                {/* Bio Match Indicator */}
-                                <Text style={[styles.matchLabel, { color: isMe ? COLORS.accentGreen : matchInfo.color }]}>
-                                    {isMe ? t('community_profile_me', language) : matchInfo.label || t('community_profile_match_loading', language)}
-                                </Text>
+                                )}
                             </LinearGradient>
+                        </Animated.View>
 
-                            {/* 2. Bio Stats (Skin & Hair) */}
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>{t('community_profile_traits', language)}</Text>
-                                <View style={styles.statsGrid}>
-                                    <View style={styles.statBox}>
-                                        <FontAwesome5 name="user-alt" size={18} color={COLORS.gold} />
-                                        <Text style={styles.statLabel}>{t('community_profile_skin', language)}</Text>
-                                        <Text style={styles.statValue}>
-                                            {getLabel(profile?.settings?.skinType, basicSkinTypes) || t('community_unspecified', language)}
-                                        </Text>
+                        <Animated.View style={[styles.bentoSection, getSlideStyle(vitalAnim)]}>
+                            <Text style={styles.sectionTitle}>{t('community_profile_traits', language)}</Text>
+                            <View style={[styles.unifiedBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                
+                                <View style={styles.vitalRow}>
+                                    <View style={styles.vitalItem}>
+                                        <View style={[styles.vitalIcon, { backgroundColor: COLORS.gold + '15' }]}><FontAwesome5 name="user-alt" size={14} color={COLORS.gold} /></View>
+                                        <View>
+                                            <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_skin', language)}</Text>
+                                            <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.skinType, basicSkinTypes) || t('community_unspecified', language)}</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.statBox}>
-                                        <FontAwesome5 name="cut" size={18} color={COLORS.blue} />
-                                        <Text style={styles.statLabel}>{t('community_profile_hair', language)}</Text>
-                                        <Text style={styles.statValue}>
-                                            {getLabel(profile?.settings?.scalpType, basicScalpTypes) || t('community_unspecified', language)}
-                                        </Text>
+                                    <View style={[styles.vitalDivider, { backgroundColor: COLORS.border }]} />
+                                    <View style={styles.vitalItem}>
+                                        <View style={[styles.vitalIcon, { backgroundColor: COLORS.blue + '15' }]}><FontAwesome5 name="cut" size={14} color={COLORS.blue} /></View>
+                                        <View>
+                                            <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_hair', language)}</Text>
+                                            <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.scalpType, basicScalpTypes) || t('community_unspecified', language)}</Text>
+                                        </View>
                                     </View>
                                 </View>
+
+                                {(profile?.settings?.goals?.length > 0 || profile?.settings?.conditions?.length > 0 || profile?.settings?.allergies?.length > 0) && (
+                                    <View style={[styles.tagsArea, { borderTopColor: COLORS.border }]}>
+                                        {renderCompactTagRow(profile.settings.goals, null, 'crosshairs', COLORS.accentGreen, t('settings_goals_title', language), true)}
+                                        {renderCompactTagRow(profile.settings.conditions, commonConditions, 'notes-medical', COLORS.gold, t('settings_conditions_title', language))}
+                                        {renderCompactTagRow(profile.settings.allergies, commonAllergies, 'exclamation-circle', COLORS.danger, t('settings_allergies_title', language))}
+                                    </View>
+                                )}
+
+                            </View>
+                        </Animated.View>
+
+                        <Animated.View style={[styles.bentoSection, getSlideStyle(badgesAnim)]}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>المهام والأوسمة</Text>
+                                <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{PLACEHOLDER_BADGES.length}</Text>
+                            </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesHScroll} snapToInterval={162} decelerationRate="fast">
+                                {PLACEHOLDER_BADGES.map((badge) => (
+                                    <AnimatedBadgeCard key={badge.id} badge={badge} COLORS={COLORS} styles={styles} language={language} />
+                                ))}
+                            </ScrollView>
+                        </Animated.View>
+
+                        <Animated.View style={[styles.bentoSection, { marginBottom: 10 }, getSlideStyle(shelfAnim)]}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>{t('profile_header_shelf', language)}</Text>
+                                <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{publicShelf.length}</Text>
                             </View>
 
-                            {/* 3. Detailed Tags (Conditions, Goals, Allergies) */}
-                            <View style={styles.tagsContainer}>
-                                {profile?.settings?.goals?.length > 0 && (
-                                    <View style={styles.tagGroup}>
-                                        <View style={styles.tagHeaderRow}>
-                                            <FontAwesome5 name="crosshairs" size={14} color={COLORS.accentGreen} />
-                                            <Text style={styles.tagGroupTitle}>{t('community_profile_goals', language)}</Text>
-                                        </View>
-                                        <View style={styles.chipsRow}>
-                                            {profile.settings.goals.map(g => (
-                                                <View key={g} style={[styles.chip, { borderColor: COLORS.accentGreen, backgroundColor: COLORS.accentGreen + '10' }]}>
-                                                    <Text style={[styles.chipText, { color: COLORS.accentGreen }]}>{getLabel(g, GOALS_LIST)}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View>
-                                )}
-
-                                {profile?.settings?.conditions?.length > 0 && (
-                                    <View style={styles.tagGroup}>
-                                        <View style={styles.tagHeaderRow}>
-                                            <FontAwesome5 name="notes-medical" size={14} color={COLORS.gold} />
-                                            <Text style={styles.tagGroupTitle}>{t('community_profile_conditions', language)}</Text>
-                                        </View>
-                                        <View style={styles.chipsRow}>
-                                            {profile.settings.conditions.map(c => (
-                                                <View key={c} style={[styles.chip, { borderColor: COLORS.gold, backgroundColor: COLORS.gold + '10' }]}>
-                                                    <Text style={[styles.chipText, { color: COLORS.gold }]}>{getLabel(c, commonConditions)}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View>
-                                )}
-
-                                {profile?.settings?.allergies?.length > 0 && (
-                                    <View style={styles.tagGroup}>
-                                        <View style={styles.tagHeaderRow}>
-                                            <FontAwesome5 name="exclamation-circle" size={14} color={COLORS.danger} />
-                                            <Text style={styles.tagGroupTitle}>{t('community_profile_allergies', language)}</Text>
-                                        </View>
-                                        <View style={styles.chipsRow}>
-                                            {profile.settings.allergies.map(a => (
-                                                <View key={a} style={[styles.chip, { borderColor: COLORS.danger, backgroundColor: COLORS.danger + '10' }]}>
-                                                    <Text style={[styles.chipText, { color: COLORS.danger }]}>{getLabel(a, commonAllergies)}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View>
-                                )}
-                            </View>
-
-                            {/* 4. Interactive Public Shelf */}
-                            <View style={styles.section}>
-                                <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                                    <Text style={styles.sectionTitle}>{t('community_profile_shelf_favorites', language)}</Text>
-                                    <Text style={{ color: COLORS.textDim, fontFamily: 'Tajawal-Regular', fontSize: 12 }}>{publicShelf.length} {t('community_products', language)}</Text>
+                            {publicShelf.length > 0 ? (
+                                <View style={[styles.shelfContainer, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                    {publicShelf.map((item, index) => (
+                                        <TouchableOpacity key={item.id} style={[styles.shelfItemCompact, { borderBottomColor: index === publicShelf.length - 1 ? 'transparent' : COLORS.background }]} onPress={() => handleProductPress(item)} activeOpacity={0.7}>
+                                            
+                                            {/* 🔥 FIX: Passed numeric size {42} instead of "small" */}
+                                            <WathiqScoreBadge score={item.analysisData?.oilGuardScore || 0} size={42} />
+                                            
+                                            <View style={styles.shelfItemInfo}>
+                                                <Text style={[styles.prodName, { color: COLORS.textPrimary }]} numberOfLines={1}>{item.productName}</Text>
+                                                <Text style={[styles.prodVerdict, { color: COLORS.textSecondary }]} numberOfLines={1}>
+                                                    {getLocalizedValue(item.analysisData?.finalVerdict, language) || t('common_product', language)}
+                                                </Text>
+                                            </View>
+                                            <Feather name={rtl.isRTL ? "chevron-left" : "chevron-right"} size={18} color={COLORS.textDim} />
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
+                            ) : (
+                                <View style={[styles.emptyShelfBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                    <Feather name="layers" size={28} color={COLORS.textDim} style={{ opacity: 0.5 }} />
+                                    <Text style={[styles.emptyText, { color: COLORS.textDim }]}>{t('community_profile_empty_shelf', language)}</Text>
+                                </View>
+                            )}
+                        </Animated.View>
 
-                                {publicShelf.length > 0 ? (
-                                    <View style={styles.shelfList}>
-                                        {publicShelf.map(item => (
-                                            <TouchableOpacity
-                                                key={item.id}
-                                                style={styles.shelfItem}
-                                                onPress={() => handleProductPress(item)}
-                                                activeOpacity={0.7}
-                                            >
-                                                <WathiqScoreBadge score={item.analysisData?.oilGuardScore || 0} />
-                                                <View style={{ flex: 1, marginRight: 15 }}>
-                                                    <Text style={styles.prodName} numberOfLines={1}>{item.productName}</Text>
-                                                    <Text style={styles.prodVerdict}>
-                                                        {item.analysisData?.finalVerdict || t('community_product', language)}
-                                                    </Text>
-                                                </View>
-                                                <View style={styles.prodIconBox}>
-                                                    <Feather name="chevron-left" size={20} color={COLORS.textDim} />
-                                                </View>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                ) : (
-                                    <View style={styles.emptyShelfBox}>
-                                        <Feather name="box" size={30} color={COLORS.textDim} style={{ opacity: 0.5 }} />
-                                        <Text style={styles.emptyText}>{t('community_profile_empty_shelf', language)}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        </ScrollView>
-                    </Animated.View>
+                    </ScrollView>
                 )}
             </View>
         </Modal>
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, rtl) => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
+    header: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary },
+    iconBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    scrollContent: { padding: 16, paddingBottom: 50 },
 
-    header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-    headerTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary },
-    closeBtn: { padding: 5 },
-    scrollContent: { padding: 20, paddingBottom: 50 },
+    heroBento: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 20 },
+    heroRow: { flexDirection: rtl.flexDirection, alignItems: 'center', justifyContent: 'space-between' },
+    heroInfo: { flex: 1, marginStart: 15 },
+    userName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, textAlign: rtl.textAlign, marginBottom: 6, color: COLORS.textPrimary },
+    rankPill: { flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, alignSelf: rtl.alignSelf, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1 },
+    rankText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    pointsText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    
+    avatarWrapper: { position: 'relative', justifyContent: 'center', alignItems: 'center' },
+    avatarGlow: { position: 'absolute', width: 78, height: 78, borderRadius: 39, borderWidth: 2, opacity: 0.4 },
+    avatar: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+    avatarText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 30 },
+    
+    matchBanner: { flexDirection: rtl.flexDirection, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10, borderRadius: 14, borderWidth: 1, marginTop: 15 },
+    matchText: { fontFamily: 'Tajawal-Bold', fontSize: 13 },
 
-    idCard: { alignItems: 'center', padding: 25, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, marginBottom: 25 },
-    matchRing: { padding: 4, borderWidth: 2, borderRadius: 60, position: 'relative', borderColor: 'transparent' },
-    avatarLarge: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
-    avatarText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 32, color: COLORS.accentGreen },
-    matchBadge: { position: 'absolute', bottom: -12, alignSelf: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, elevation: 5 },
-    matchBadgeText: { color: '#000', fontFamily: 'Tajawal-Bold', fontSize: 11 },
+    bentoSection: { marginBottom: 20 },
+    sectionHeaderRow: { flexDirection: rtl.flexDirection, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    sectionTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, textAlign: rtl.textAlign, color: COLORS.textPrimary },
+    countBadge: { fontFamily: 'Tajawal-Bold', fontSize: 12, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
 
-    userName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, marginTop: 15 },
-    matchLabel: { fontFamily: 'Tajawal-Regular', fontSize: 14, marginTop: 4 },
+    unifiedBox: { borderRadius: 24, padding: 16, borderWidth: 1 },
+    vitalRow: { flexDirection: rtl.flexDirection, alignItems: 'center', justifyContent: 'space-between' },
+    vitalItem: { flex: 1, flexDirection: rtl.flexDirection, alignItems: 'center', gap: 12 },
+    vitalIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    vitalSub: { fontFamily: 'Tajawal-Regular', fontSize: 11, textAlign: rtl.textAlign },
+    vitalMain: { fontFamily: 'Tajawal-Bold', fontSize: 14, textAlign: rtl.textAlign },
+    vitalDivider: { width: 1, height: 40, marginHorizontal: 15 },
+    
+    tagsArea: { marginTop: 15, paddingTop: 15, borderTopWidth: 1, gap: 10 },
+    compactTagRow: { flexDirection: rtl.flexDirection, alignItems: 'flex-start' },
+    compactTagHeader: { width: 70, flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, marginTop: 4 },
+    compactTagLabel: { fontFamily: 'Tajawal-Regular', fontSize: 11 },
+    compactChipContainer: { flex: 1, flexDirection: rtl.flexDirection, flexWrap: 'wrap', gap: 6 },
+    microChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+    microChipText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
 
-    section: { marginBottom: 30 },
-    sectionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 17, color: COLORS.textPrimary, textAlign: 'right' },
+    badgesHScroll: { gap: 12, paddingVertical: 5 },
+    compactDuolingoCard: { width: 150, borderRadius: 20, padding: 14, borderWidth: 1, marginEnd: 12 },
+    badgeHeader: { flexDirection: rtl.flexDirection, alignItems: 'center', gap: 10, marginBottom: 12 },
+    badgeIconBg: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    levelIndicator: { position: 'absolute', bottom: -6, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 6, borderWidth: 1 },
+    levelText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 8, color: '#FFF' },
+    badgeName: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 12, textAlign: rtl.textAlign },
+    
+    compactProgress: { flexDirection: rtl.flexDirection, alignItems: 'center', gap: 8 },
+    progressBarTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+    progressBarFill: { height: '100%', borderRadius: 3 },
+    progressText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
 
-    statsGrid: { flexDirection: 'row-reverse', gap: 15, marginTop: 15 },
-    statBox: { flex: 1, backgroundColor: COLORS.card, borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-    statLabel: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 8 },
-    statValue: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary, marginTop: 4 },
+    shelfContainer: { borderRadius: 24, padding: 10, borderWidth: 1 },
+    shelfItemCompact: { flexDirection: rtl.flexDirection, alignItems: 'center', padding: 10, borderBottomWidth: 1 },
+    shelfItemInfo: { flex: 1, marginEnd: 12, marginStart: 12 },
+    prodName: { fontFamily: 'Tajawal-Bold', fontSize: 13, textAlign: rtl.textAlign, marginBottom: 2 },
+    prodVerdict: { fontFamily: 'Tajawal-Regular', fontSize: 11, textAlign: rtl.textAlign },
 
-    tagsContainer: { marginBottom: 10 },
-    tagGroup: { marginBottom: 20 },
-    tagHeaderRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 10 },
-    tagGroupTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
-    chipsRow: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-    chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
-    chipText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-
-    shelfList: { gap: 12 },
-    shelfItem: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
-    prodName: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 2 },
-    prodVerdict: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
-    prodIconBox: { width: 36, height: 36, borderRadius: 12, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', marginLeft: 12 },
-
-    emptyShelfBox: { alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderRadius: 16 },
-    emptyText: { fontFamily: 'Tajawal-Regular', color: COLORS.textDim, textAlign: 'center', marginTop: 10 },
-    refreshBtn: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.card,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.border
-    }
+    emptyShelfBox: { alignItems: 'center', padding: 25, borderRadius: 24, borderWidth: 1, borderStyle: 'dashed' },
+    emptyText: { fontFamily: 'Tajawal-Regular', textAlign: 'center', marginTop: 10, fontSize: 13 }
 });
 
 export default UserProfileModal;

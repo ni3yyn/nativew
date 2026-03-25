@@ -6,13 +6,15 @@ import { ContentCard, PressableScale } from './AnalysisShared';
 import { useTheme } from '../../../context/ThemeContext';
 import { t, interpolate } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+import { useRTL } from '../../../hooks/useRTL';
 
 const { height } = Dimensions.get('window');
 
 // --- 1. LIQUID PROGRESS BAR ---
 const ClinicalProgressBar = ({ score, color }) => {
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const widthAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -46,7 +48,8 @@ const ClinicalProgressBar = ({ score, color }) => {
 const TugOfWarBar = ({ stress, repair }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const stressFlex = Math.max(stress, 0.5);
     const repairFlex = Math.max(repair, 0.5);
 
@@ -97,7 +100,8 @@ const TugOfWarBar = ({ stress, repair }) => {
 const ClinicalProductRow = ({ name, ingredients, type }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const isOffender = type === 'offender';
     const indicatorColor = isOffender ? COLORS.danger : COLORS.success;
     return (
@@ -108,7 +112,7 @@ const ClinicalProductRow = ({ name, ingredients, type }) => {
                 {ingredients && ingredients.length > 0 ? (
                     <Text style={styles.rationaleText}>
                         <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary }}>{t('barrier_reason', language)}</Text>
-                        {ingredients.join(' ، ')}
+                        {ingredients.join(isRTL ? ' ، ' : ', ')}
                     </Text>
                 ) : (
                     <Text style={styles.rationaleText}>{t('barrier_generic_formula', language)}</Text>
@@ -122,7 +126,8 @@ const ClinicalProductRow = ({ name, ingredients, type }) => {
 export const BarrierDetailsModal = ({ visible, onClose, data }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const slideAnim = useRef(new Animated.Value(height)).current;
 
     useEffect(() => {
@@ -164,7 +169,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
 
                         {/* 1. Friendly Explanation (New) */}
                         <View style={styles.friendlyBox}>
-                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                                 <FontAwesome5 name="lightbulb" size={14} color={COLORS.accentGreen} />
                                 <Text style={styles.friendlyTitle}>{t('barrier_how_it_works', language)}</Text>
                             </View>
@@ -204,7 +209,7 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                                 )) : <Text style={styles.emptyText}>--</Text>}
                             </View>
 
-                            <View style={{ width: 15, borderRightWidth: 1, borderColor: COLORS.border, opacity: 0.3 }} />
+                            <View style={{ width: 15, ...(isRTL ? { borderRightWidth: 1 } : { borderLeftWidth: 1 }), borderColor: COLORS.border, opacity: 0.3 }} />
 
                             {/* Builders */}
                             <View style={styles.column}>
@@ -235,7 +240,8 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
 export const BarrierCard = ({ barrier, onPress }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     return (
         <PressableScale onPress={onPress}>
             <ContentCard style={styles.card} animated={false}>
@@ -270,7 +276,7 @@ export const BarrierCard = ({ barrier, onPress }) => {
                                 : t('barrier_no_chemical_stress', language)}
                         </Text>
                         {barrier.contraindications && barrier.contraindications.length > 0 && (
-                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>
+                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 5 }}>
                                 <MaterialIcons name="error" size={14} color={COLORS.danger} />
                                 <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.danger }}>{t('barrier_important_alert', language)}</Text>
                             </View>
@@ -282,19 +288,19 @@ export const BarrierCard = ({ barrier, onPress }) => {
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isRTL) => StyleSheet.create({
     // GENERAL
     card: { marginBottom: 15, padding: 0, overflow: 'hidden' },
     cardPadding: { padding: 20 },
-    cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    titleRow: { flexDirection: 'row-reverse', gap: 8, alignItems: 'center' },
+    cardHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+    titleRow: { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8, alignItems: 'center' },
     cardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
-    metricContainer: { flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 12, marginBottom: 12 },
+    metricContainer: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 12, marginBottom: 12 },
     metricScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 40, lineHeight: 45 },
     metricTextContainer: { flex: 1, paddingBottom: 4 },
-    metricStatus: { fontFamily: 'Tajawal-Bold', fontSize: 16, marginBottom: 2, textAlign: 'right' },
-    metricDesc: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
-    footer: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 15, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
+    metricStatus: { fontFamily: 'Tajawal-Bold', fontSize: 16, marginBottom: 2, textAlign: isRTL ? 'right' : 'left' },
+    metricDesc: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left' },
+    footer: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', marginTop: 15, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
 
     // PROGRESS BAR
     barContainer: { height: 8, width: '100%', backgroundColor: COLORS.background, borderRadius: 4, overflow: 'hidden' },
@@ -315,7 +321,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     // EXPLANATION BOX
     friendlyBox: { backgroundColor: COLORS.background, padding: 15, borderRadius: 16, marginBottom: 25 },
     friendlyTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary },
-    friendlyText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, lineHeight: 20, textAlign: 'right', marginTop: 5 },
+    friendlyText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, lineHeight: 20, textAlign: isRTL ? 'right' : 'left', marginTop: 5 },
 
     // TUG OF WAR
     chartSection: { marginBottom: 30 },
@@ -334,21 +340,21 @@ const createStyles = (COLORS) => StyleSheet.create({
 
     // LISTS
     alertBox: { backgroundColor: COLORS.danger + '14', borderWidth: 1, borderColor: COLORS.danger + '33', padding: 15, borderRadius: 12, marginBottom: 25 },
-    alertHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 8 },
+    alertHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
     alertTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.danger },
-    alertText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
+    alertText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left' },
 
-    columnsContainer: { flexDirection: 'row-reverse', flex: 1 },
+    columnsContainer: { flexDirection: isRTL ? 'row-reverse' : 'row', flex: 1 },
     column: { flex: 1 },
-    colHeader: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-    colTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, textAlign: 'right' },
+    colHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    colTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, textAlign: isRTL ? 'right' : 'left' },
     countBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
     divider: { height: 3, width: '100%', marginBottom: 15, borderRadius: 2, opacity: 0.3 },
 
-    rowContainer: { flexDirection: 'row-reverse', marginBottom: 12, paddingRight: 8 },
-    indicatorLine: { width: 3, borderRadius: 1.5, marginLeft: 10, height: '80%', alignSelf: 'center' },
-    productName: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary, marginBottom: 3, textAlign: 'right' },
-    rationaleText: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim, textAlign: 'right', lineHeight: 14 },
+    rowContainer: { flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 12, ...(isRTL ? { paddingRight: 8 } : { paddingLeft: 8 }) },
+    indicatorLine: { width: 3, borderRadius: 1.5, ...(isRTL ? { marginLeft: 10 } : { marginRight: 10 }), height: '80%', alignSelf: 'center' },
+    productName: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary, marginBottom: 3, textAlign: isRTL ? 'right' : 'left' },
+    rationaleText: { fontFamily: 'Tajawal-Regular', fontSize: 10, color: COLORS.textDim, textAlign: isRTL ? 'right' : 'left', lineHeight: 14 },
     emptyText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textDim, textAlign: 'center', fontStyle: 'italic', marginTop: 10 },
 
     dismissBtn: { marginTop: 30, backgroundColor: COLORS.card, padding: 15, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },

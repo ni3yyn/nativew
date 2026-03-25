@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,15 +16,16 @@ const BackgroundDecor = ({ theme }) => (
 );
 
 // --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status) => {
+const getClaimStyle = (status, language) => {
     if (status.includes('✅')) return { color: '#10B981', icon: 'checkmark-circle' };
     if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf' };
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'alert-circle', note: '(نسبة غير فعالة)' };
+    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'alert-circle', note: t('oilguard_ineffective_ratio', language) };
     // Red for both Lies and No Evidence
     return { color: '#EF4444', icon: 'close-circle' };
 };
 
 export default function Template05({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
+    const language = useCurrentLanguage();
     const safe = analysis || {};
     const marketingResults = (safe.marketing_results || []).slice(0, 4);
 
@@ -31,7 +34,7 @@ export default function Template05({ analysis, typeLabel, productName, imageUri,
             <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
             <BackgroundDecor theme={theme} />
             
-            <View style={styles.header}><View style={[styles.brandBadge, { backgroundColor: theme.text }]}><Text style={[styles.brandText, { color: theme.primary }]}>وثيق</Text></View></View>
+            <View style={styles.header}><View style={[styles.brandBadge, { backgroundColor: theme.text }]}><Text style={[styles.brandText, { color: theme.primary }]}>{t('oilguard_wathiq_label', language)}</Text></View></View>
 
             <View style={styles.bentoContainer}>
                 
@@ -47,17 +50,17 @@ export default function Template05({ analysis, typeLabel, productName, imageUri,
                         <View style={[styles.typeFloatingBadge, { backgroundColor: theme.accent }]}><Text style={[styles.typeFloatingText, { color: theme.primary }]}>{typeLabel}</Text></View>
                     </View>
                     <View style={[styles.scoreBox, { backgroundColor: theme.accent }]}>
-                        <Text style={[styles.scoreTitle, { color: theme.primary }]}>درجة وثيق</Text>
+                        <Text style={[styles.scoreTitle, { color: theme.primary }]}>{t('oilguard_brand_score', language)}</Text>
                         <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore}%</Text>
                         <MaterialCommunityIcons name="star-face" size={40} color={theme.primary} style={{ marginTop: 5 }} />
                     </View>
                 </View>
 
                 <View style={[styles.verdictBox, { backgroundColor: theme.glass, borderColor: theme.border }]}>
-                    <Text style={[styles.pName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{productName || "اسم المنتج"}</Text>
+                    <Text style={[styles.pName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{productName || t('community_product', language)}</Text>
                     <View style={styles.miniPillsRow}>
-                        <View style={[styles.miniPill, {backgroundColor: `${theme.accent}20`}]}><Text style={[styles.miniPillText, {color: theme.text}]}>أمان {safe.safety?.score}%</Text></View>
-                        <View style={[styles.miniPill, {backgroundColor: `${theme.accent}20`}]}><Text style={[styles.miniPillText, {color: theme.text}]}>فعالية {safe.efficacy?.score}%</Text></View>
+                        <View style={[styles.miniPill, {backgroundColor: `${theme.accent}20`}]}><Text style={[styles.miniPillText, {color: theme.text}]}>${t('oilguard_safety', language)} {safe.safety?.score}%</Text></View>
+                        <View style={[styles.miniPill, {backgroundColor: `${theme.accent}20`}]}><Text style={[styles.miniPillText, {color: theme.text}]}>${t('oilguard_efficacy', language)} {safe.efficacy?.score}%</Text></View>
                     </View>
                     <View style={[styles.verdictRibbon, { backgroundColor: theme.text }]}><Text style={[styles.verdictText, { color: theme.primary }]}>{safe.finalVerdict}</Text></View>
                 </View>
@@ -66,7 +69,7 @@ export default function Template05({ analysis, typeLabel, productName, imageUri,
                     <View style={styles.claimsHeader}><Ionicons name="sparkles" size={20} color={theme.accent} /><Text style={[styles.claimsTitle, { color: theme.text }]}>نتائج تحليل الادعاءات</Text></View>
                     <View style={styles.claimsGrid}>
                         {marketingResults.map((item, i) => {
-                            const style = getClaimStyle(item.status);
+                            const style = getClaimStyle(item.status, language);
                             return (
                                 <View key={i} style={[styles.claimBubble, { backgroundColor: `${theme.accent}15` }]}>
                                     <Ionicons name={style.icon} size={16} color={style.color} />
@@ -85,9 +88,9 @@ export default function Template05({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.socialRow}>
                     <View style={styles.socialItem}><FontAwesome5 name="instagram" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />
-                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text></View>
+                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>{t('oilguard_brand_name', language)}</Text></View>
                 </View>
-                <Text style={[styles.disclaimerText, { color: theme.text }]}>*هذه النتيجة شخصية؛ قد تختلف الاستجابة حسب المستخدم.</Text>
+                <Text style={[styles.disclaimerText, { color: theme.text }]}>{t('oilguard_disclaimer', language)}</Text>
                 <Text style={[styles.webLink, { color: theme.accent }]}>WATHIQ.WEB.APP</Text>
             </View>
         </View>

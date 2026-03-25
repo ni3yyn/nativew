@@ -15,7 +15,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; // ✅ Import it here
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 const COLORS = {
   background: '#000000',
   accent: '#5A9C84',
@@ -30,6 +32,7 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const insets = useSafeAreaInsets();
+  const language = useCurrentLanguage();
 
   // --- STATE ---
   const [isCapturing, setIsCapturing] = useState(false);
@@ -195,7 +198,7 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
         <SafeAreaView style={styles.topSection}>
           <View style={styles.instructionPill}>
             <Ionicons name="scan-outline" size={16} color={COLORS.text} />
-            <Text style={styles.instructionText}>التقط صورة واضحة للمكونات فقط</Text>
+            <Text style={styles.instructionText}>{t('oilguard_camera_instruction', language)}</Text>
           </View>
         </SafeAreaView>
 

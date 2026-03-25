@@ -30,46 +30,40 @@ const getPrimaryGoal = (settings) => {
   return settings.goals[Math.floor(Math.random() * settings.goals.length)]; 
 };
 
-// ==============================================================================
-// 3. THE HYPER-RICH MESSAGE BANK
-// ==============================================================================
+import { t } from '../i18n';
 
 const MESSAGES = {
   morning: {
-    empty: (name) => [
-      `صباح الخير يا ${name} ☀️.. لنبدأ بإضافة أول منتج؟`,
-      `يا ${name}، بشرتك تستحق العناية.. وأضيفي منتجاتك الآن.`,
-      `بداية جديدة..مرحبا بك يا ${name} 🧴`,
+    empty: (name, lang) => [
+      t('msg_morning_empty', { name, lng: lang }),
     ],
-    winter: (name) => [
-      `صباح الخير يا ${name} ❄️.. الجو بارد وينشف البشرة، رطبي بعمق!`,
-      `يا ${name}، برد الصباح عدو الحاجز الجلدي.. لا تخرجي بدون ترطيب وحماية.`,
+    winter: (name, lang) => [
+      t('msg_morning_winter', { name, lng: lang }),
     ],
-    summer: (name) => [
-      `صباح النور يا ${name} ☀️!`,
-      `يا ${name}، الحرارة تفتح المسام.. غسول بارد وواقي شمس هم الحل.`,
+    summer: (name, lang) => [
+      t('msg_morning_summer', { name, lng: lang }),
     ],
-    acne: (name) => [`صباح التحدي يا ${name} 💪.. لا تلمسي الحبوب مهما كان الإغراء!`],
-    brightening: (name) => [`يا ${name}، التفتيح يبدأ من الحماية.. الشمس هي عدوة البقع الأولى.`],
-    anti_aging: (name) => [`صباح الشباب يا ${name} ✨.. 90% من التجاعيد سببها الشمس، احمي نفسك!`],
-    friday: (name) => [`يا ${name} 🕌.. اجعلي نور الوجه من نور الإيمان .`],
-    weekend: (name) => [`صباح الدلع والعطلة ☕.. خذي وقتك في الروتين، لا عجلة اليوم.`],
-    product: (name, pName) => [`يا ${name}، ${pName} يناديكِ من الرف.. لا تتجاهليه 😉`]
+    acne: (name, lang) => [t('msg_morning_acne', { name, lng: lang })],
+    brightening: (name, lang) => [t('msg_morning_brightening', { name, lng: lang })],
+    anti_aging: (name, lang) => [t('msg_morning_anti_aging', { name, lng: lang })],
+    friday: (name, lang) => [t('msg_morning_friday', { name, lng: lang })],
+    weekend: (name, lang) => [t('msg_morning_weekend', { name, lng: lang })],
+    product: (name, pName, lang) => [t('msg_morning_product', { name, pName, lng: lang })]
   },
   evening: {
-    empty: (name) => [
-      `مساء الخير يا ${name} 🌙.. لا تتركي رفّك فارغاً، ابدئي الآن!`,
+    empty: (name, lang) => [
+      t('msg_evening_empty', { name, lng: lang }),
     ],
-    winter: (name) => [`ليلة باردة يا ${name} 🥶.. بشرتك تحتاج طبقة ترطيب إضافية؟`],
-    summer: (name) => [`يوم طويل وحار.. بشرتك تحتاج تتنفس، التنظيف المزدوج ضروري 🌙`],
-    acne: (name) => [`عالجي الحبوب الآن لتختفي غداً.. التزامك يصنع الفرق.`],
-    anti_aging: (name) => [`تصبحي على خير.. الليل هو وقت الريتينول والترميم 🌙`],
-    thursdayNight: (name) => [`ليلة الجمعة.. وقت الدلع، التقشير، والماسك يا ${name} ✨`],
-    product: (name, pName) => [`قبل النوم.. ${pName} هو المكافأة التي تستحقينها ✨`]
+    winter: (name, lang) => [t('msg_evening_winter', { name, lng: lang })],
+    summer: (name, lang) => [t('msg_evening_summer', { name, lng: lang })],
+    acne: (name, lang) => [t('msg_evening_acne', { name, lng: lang })],
+    anti_aging: (name, lang) => [t('msg_evening_anti_aging', { name, lng: lang })],
+    thursdayNight: (name, lang) => [t('msg_evening_thursday', { name, lng: lang })],
+    product: (name, pName, lang) => [t('msg_evening_product', { name, pName, lng: lang })]
   }
 };
 
-const generateSmartMessage = (type, date, name, savedProducts, settings) => {
+const generateSmartMessage = (type, date, name, savedProducts, settings, lang) => {
   const season = getSeason(date);
   const goal = getPrimaryGoal(settings);
   const day = date.getDay(); 
@@ -79,20 +73,20 @@ const generateSmartMessage = (type, date, name, savedProducts, settings) => {
   const roll = Math.random(); 
 
   if (!savedProducts || savedProducts.length === 0) {
-    const msgList = MESSAGES[type].empty(name);
+    const msgList = MESSAGES[type].empty(name, lang);
     return msgList[Math.floor(Math.random() * msgList.length)];
   }
 
   if (savedProducts && savedProducts.length > 0 && roll < 0.35) {
     const p = savedProducts[Math.floor(Math.random() * savedProducts.length)];
-    const pName = p.productName ? p.productName.split(' ').slice(0, 2).join(' ') : 'منتجك';
-    const msgList = MESSAGES[type].product(name, pName);
+    const pName = p.productName ? p.productName.split(' ').slice(0, 2).join(' ') : t('notif_product_fallback', { lng: lang });
+    const msgList = MESSAGES[type].product(name, pName, lang);
     return msgList[Math.floor(Math.random() * msgList.length)];
   }
 
-  if (type === 'morning' && isFriday) return MESSAGES.morning.friday(name)[0];
-  if (type === 'morning' && isWeekend && roll > 0.7) return MESSAGES.morning.weekend(name)[0];
-  if (type === 'evening' && isThursday) return MESSAGES.evening.thursdayNight(name)[0];
+  if (type === 'morning' && isFriday) return MESSAGES.morning.friday(name, lang)[0];
+  if (type === 'morning' && isWeekend && roll > 0.7) return MESSAGES.morning.weekend(name, lang)[0];
+  if (type === 'evening' && isThursday) return MESSAGES.evening.thursdayNight(name, lang)[0];
 
   if (goal !== 'general' && roll < 0.65) {
     let goalKey = null;
@@ -101,12 +95,12 @@ const generateSmartMessage = (type, date, name, savedProducts, settings) => {
     else if (goal.includes('bright') || goal.includes('pigment')) goalKey = 'brightening';
 
     if (goalKey && MESSAGES[type][goalKey]) {
-        const msgList = MESSAGES[type][goalKey](name);
+        const msgList = MESSAGES[type][goalKey](name, lang);
         return msgList[Math.floor(Math.random() * msgList.length)];
     }
   }
 
-  const seasonBank = MESSAGES[type][season](name);
+  const seasonBank = MESSAGES[type][season](name, lang);
   return seasonBank[Math.floor(Math.random() * seasonBank.length)];
 };
 
@@ -161,7 +155,8 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     }
   }
 
-  const firstName = userName?.split(' ')[0] || 'غالية';
+  const lang = settings?.language || 'ar';
+  const firstName = userName?.split(' ')[0] || t('brand_wathiq_user', { lng: lang });
   const today = new Date();
 
   for (let i = 0; i < 7; i++) {
@@ -177,10 +172,10 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     morningTrigger.setHours(morningHour, morningMinute, 0, 0);
 
     if (morningTrigger > new Date()) {
-        const msg = generateSmartMessage('morning', targetDate, firstName, savedProducts, settings);
+        const msg = generateSmartMessage('morning', targetDate, firstName, savedProducts, settings, lang);
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: isWeekend ? "صباح العطلة والدلع ☕" : "صباح السرور ☀️",
+            title: isWeekend ? t('notif_morning_title_weekend', { lng: lang }) : t('notif_morning_title_standard', { lng: lang }),
             body: msg,
             data: { screen: 'routine', period: 'am', type: 'smart' },
             sound: true,
@@ -197,10 +192,10 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
     eveningTrigger.setHours(21, 30, 0, 0);
 
     if (eveningTrigger > new Date()) {
-        const msg = generateSmartMessage('evening', targetDate, firstName, savedProducts, settings);
+        const msg = generateSmartMessage('evening', targetDate, firstName, savedProducts, settings, lang);
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: "راهو الليل 🌙",
+            title: t('notif_evening_title', { lng: lang }),
             body: msg,
             data: { screen: 'routine', period: 'pm', type: 'smart' },
             sound: true,
@@ -248,8 +243,8 @@ export async function scheduleCustomReminder(reminder) {
 
       const id = await Notifications.scheduleNotificationAsync({
           content: {
-              title: reminder.title || 'تنبيه العناية ⏰',
-              body: reminder.body || 'حان وقت روتينك المخصص!',
+              title: reminder.title || t('notif_custom_title'),
+              body: reminder.body || t('notif_custom_body'),
               data: { screen: 'routine', type: 'custom', reminderId: reminder.id },
               sound: true,
           },
@@ -277,8 +272,8 @@ export async function testInstantNotification() {
   try {
       await Notifications.scheduleNotificationAsync({
           content: {
-              title: "تنبيه تجريبي 🚀",
-              body: "نظام التنبيهات يعمل! ظهرت بعد 10 ثوانٍ بالظبط.",
+              title: t('notif_test_title'),
+              body: t('notif_test_body'),
               sound: true,
           },
           trigger: {

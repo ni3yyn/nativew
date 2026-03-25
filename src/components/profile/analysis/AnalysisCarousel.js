@@ -4,8 +4,10 @@ import { View, Text, ScrollView, StyleSheet, I18nManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
-import { PressableScale, StaggeredItem } from '../../common/AnimatedComponents';
+import { PressableScale, StaggeredItem } from '../../common/Animations';
 import { WeatherMiniCard } from '../WeatherComponents';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../context/AppContext';
 
 const StandardInsightCard = ({ insight, onPress, index }) => {
     const { colors: COLORS } = useTheme();
@@ -42,7 +44,7 @@ const StandardInsightCard = ({ insight, onPress, index }) => {
                         </Text>
                     </View>
                     <View style={styles.modernCardFooter}>
-                        <Text style={[styles.readMoreText, { color: theme.border }]}>المزيد</Text>
+                        <Text style={[styles.readMoreText, { color: theme.border }]}>{t('oilguard_read_more', useCurrentLanguage())}</Text>
                         <Feather name="chevron-left" size={12} color={theme.border} />
                     </View>
                 </View>
@@ -57,7 +59,7 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
     return (
         <View style={{ marginBottom: 25 }}>
             <View style={styles.header}>
-                <Text style={styles.carouselTitle}>أبرز الملاحظات</Text>
+                <Text style={styles.carouselTitle}>{t('oilguard_highlights', useCurrentLanguage())}</Text>
             </View>
 
             <ScrollView

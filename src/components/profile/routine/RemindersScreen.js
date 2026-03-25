@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
@@ -10,22 +9,15 @@ import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useRemindersStore } from '../useRemindersStore';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
-
-const WEEKDAYS =[
-  { id: 1, label: 'أحد' },
-  { id: 2, label: 'إثنين' },
-  { id: 3, label: 'ثلاثاء' },
-  { id: 4, label: 'أربعاء' },
-  { id: 5, label: 'خميس' },
-  { id: 6, label: 'جمعة' },
-  { id: 7, label: 'سبت' },
-];
 
 export const RemindersScreen = () => {
   const { colors: C } = useTheme();
   const styles = useMemo(() => createStyles(C),[C]);
+  const language = useCurrentLanguage();
   
   const { reminders, addReminder, toggleReminder, deleteReminder } = useRemindersStore();
 
@@ -61,13 +53,24 @@ export const RemindersScreen = () => {
   };
 
   const formatTime = (hour, minute) => {
-    const ampm = hour >= 12 ? 'م' : 'ص';
+    const ampm = hour >= 12 ? t('reminders_time_pm', language) : t('reminders_time_am', language);
     const h = hour % 12 || 12;
     const m = minute.toString().padStart(2, '0');
     return `${h}:${m} ${ampm}`;
   };
 
-  const getDayLabel = (id) => WEEKDAYS.find(w => w.id === id)?.label || '';
+  const getDayLabel = (id) => {
+    const days = [
+      t('reminders_day_sun', language),
+      t('reminders_day_mon', language),
+      t('reminders_day_tue', language),
+      t('reminders_day_wed', language),
+      t('reminders_day_thu', language),
+      t('reminders_day_fri', language),
+      t('reminders_day_sat', language),
+    ];
+    return days[id - 1] || '';
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -79,7 +82,7 @@ export const RemindersScreen = () => {
     
     await addReminder({
       title: title.trim(),
-      body: 'حان وقت روتينك المخصص!',
+      body: t('reminders_body', language),
       type,
       weekday: type === 'weekly' ? selectedDay : undefined,
       hour: time.getHours(),
@@ -93,11 +96,11 @@ export const RemindersScreen = () => {
 
   const handleDelete = (id) => {
       Alert.alert(
-          "حذف التنبيه",
-          "هل أنت متأكد من حذف هذا التنبيه؟",[
-              { text: "إلغاء", style: "cancel" },
+          t('reminders_delete_title', language),
+          t('reminders_delete_message', language),[
+              { text: t('alert_cancel', language), style: "cancel" },
               { 
-                  text: "حذف", 
+                  text: t('alert_delete', language), 
                   style: "destructive", 
                   onPress: () => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -124,8 +127,8 @@ export const RemindersScreen = () => {
             <View style={styles.emptyIconBox}>
                 <Feather name="bell-off" size={36} color={C.primary} />
             </View>
-            <Text style={styles.emptyText}>لا توجد تنبيهات مخصصة بعد</Text>
-            <Text style={styles.emptySubText}>أضيفي تذكيراً لماسكاتك أو التقشير الأسبوعي</Text>
+            <Text style={styles.emptyText}>{t('reminders_empty_title', language)}</Text>
+            <Text style={styles.emptySubText}>{t('reminders_empty_subtitle', language)}</Text>
           </View>
         ) : (
           reminders.map((reminder) => (
@@ -137,7 +140,9 @@ export const RemindersScreen = () => {
                     </Text>
                     <View style={[styles.badge, !reminder.isActive && { backgroundColor: C.textDim + '20' }]}>
                         <Text style={[styles.badgeText, !reminder.isActive && { color: C.textDim }]}>
-                            {reminder.type === 'daily' ? 'يومياً' : `أسبوعياً (${getDayLabel(reminder.weekday)})`}
+                            {reminder.type === 'daily' 
+                              ? t('reminders_type_daily', language) 
+                              : `${t('reminders_type_weekly', language)} (${getDayLabel(reminder.weekday)})`}
                         </Text>
                     </View>
                 </View>
@@ -185,7 +190,7 @@ export const RemindersScreen = () => {
               }}
           >
               <Feather name="plus" size={20} color={C.primary} />
-              <Text style={styles.fabText}>إضافة تنبيه</Text>
+              <Text style={styles.fabText}>{t('reminders_add_btn', language)}</Text>
           </TouchableOpacity>
       </View>
 
@@ -208,8 +213,8 @@ export const RemindersScreen = () => {
                             <FontAwesome5 name="bell" size={20} color={C.primary} />
                         </View>
                         <View>
-                            <Text style={styles.modalTitle}>تنبيه جديد</Text>
-                            <Text style={styles.modalSubtitle}>أضيفي موعداً لخطوات العناية الخاصة بك</Text>
+                            <Text style={styles.modalTitle}>{t('reminders_new_title', language)}</Text>
+                            <Text style={styles.modalSubtitle}>{t('reminders_new_subtitle', language)}</Text>
                         </View>
                     </View>
 
@@ -217,7 +222,7 @@ export const RemindersScreen = () => {
                     <View style={styles.inputWrapper}>
                         <TextInput
                             style={[styles.input, { fontFamily: title.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular' }]}
-                            placeholder="اسم التنبيه (مثال: تقشير أسبوعي)..."
+                            placeholder={t('reminders_placeholder', language)}
                             placeholderTextColor={C.textDim}
                             value={title}
                             onChangeText={setTitle}
@@ -234,33 +239,33 @@ export const RemindersScreen = () => {
                             style={[styles.segmentBtn, type === 'weekly' && styles.segmentActive]}
                             onPress={() => { Haptics.selectionAsync(); setType('weekly'); }}
                         >
-                            <Text style={[styles.segmentText, type === 'weekly' && styles.segmentTextActive]}>أسبوعياً</Text>
+                            <Text style={[styles.segmentText, type === 'weekly' && styles.segmentTextActive]}>{t('reminders_type_weekly', language)}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={[styles.segmentBtn, type === 'daily' && styles.segmentActive]}
                             onPress={() => { Haptics.selectionAsync(); setType('daily'); }}
                         >
-                            <Text style={[styles.segmentText, type === 'daily' && styles.segmentTextActive]}>يومياً</Text>
+                            <Text style={[styles.segmentText, type === 'daily' && styles.segmentTextActive]}>{t('reminders_type_daily', language)}</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Weekdays */}
                     {type === 'weekly' && (
                         <View style={styles.weekdaysContainer}>
-                            {WEEKDAYS.map((day) => (
+                            {[1,2,3,4,5,6,7].map((dayId) => (
                                 <TouchableOpacity
-                                    key={day.id}
-                                    style={[styles.dayCircle, selectedDay === day.id && styles.dayCircleActive]}
-                                    onPress={() => { Haptics.selectionAsync(); setSelectedDay(day.id); }}
+                                    key={dayId}
+                                    style={[styles.dayCircle, selectedDay === dayId && styles.dayCircleActive]}
+                                    onPress={() => { Haptics.selectionAsync(); setSelectedDay(dayId); }}
                                 >
-                                    <Text style={[styles.dayText, selectedDay === day.id && styles.dayTextActive]}>{day.label}</Text>
+                                    <Text style={[styles.dayText, selectedDay === dayId && styles.dayTextActive]}>{getDayLabel(dayId)}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
                     )}
 
                     {/* Time Picker */}
-                    <Text style={styles.inputLabel}>وقت التذكير</Text>
+                    <Text style={styles.inputLabel}>{t('reminders_label_time', language)}</Text>
                     {Platform.OS === 'android' ? (
                         <TouchableOpacity style={styles.timeSelectorBtn} onPress={() => setShowTimePicker(true)}>
                             <Feather name="clock" size={20} color={C.primary} />
@@ -279,7 +284,7 @@ export const RemindersScreen = () => {
                     {/* Action Buttons */}
                     <View style={styles.promptButtonRow}>
                         <TouchableOpacity style={[styles.promptButton, styles.promptButtonSecondary]} onPress={handleCloseModal}>
-                            <Text style={styles.promptButtonTextSecondary}>إلغاء</Text>
+                            <Text style={styles.promptButtonTextSecondary}>{t('alert_cancel', language)}</Text>
                         </TouchableOpacity>
                         
                         {/* Properly filled disabled button state */}
@@ -292,7 +297,7 @@ export const RemindersScreen = () => {
                             disabled={!title.trim()}
                         >
                             <Text style={title.trim() ? styles.promptButtonTextPrimary : styles.promptButtonTextDisabled}>
-                                حفظ التنبيه
+                                {t('reminders_save_btn', language)}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -319,7 +324,7 @@ const createStyles = (C) => StyleSheet.create({
 
   // Cards
   card: { backgroundColor: C.card, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
-  cardInactive: { opacity: 0.5 }, // Fades entire card beautifully rather than breaking background colors
+  cardInactive: { opacity: 0.5 },
   cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   timeWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
   timeText: { fontFamily: 'Tajawal-Black', fontSize: 28, color: C.textPrimary, letterSpacing: 1 },
@@ -386,7 +391,7 @@ const createStyles = (C) => StyleSheet.create({
   
   // Soft Solid Cancel Button
   promptButtonSecondary: { backgroundColor: C.textDim + '15' },
-  promptButtonTextSecondary: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: C.textPrimary }, // Changed to primary text so it doesn't fade into the dim background
+  promptButtonTextSecondary: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: C.textPrimary },
   
   // Soft Solid Disabled State
   promptButtonDisabled: { backgroundColor: C.textDim + '15' },

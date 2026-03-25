@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,52 +37,18 @@ const COLORS = {
 
 // --- 1. DATA ---
 const SLIDES = [
-    {
-        id: 'welcome',
-        title: "أهلا بكِ في وثيق",
-        subtitle: "الجمال يبدأ بالحقيقة",
-        desc: "تجاوزي وعود الإعلانات واكتشفي الحقيقة العلمية لكل منتج. نحن هنا لتمكينك بالمعرفة وليس لبيع الأوهام.",
-        icon: "shield-alt",
-        color: COLORS.accentGreen,
-        bgGradient: [COLORS.background, '#064E3B']
-    },
-    {
-        id: 'oilguard',
-        title: "فاحص المكونات",
-        subtitle: "عين الخبير في جيبك",
-        desc: "صوري المكونات واحصلي فورا على تحليل كيميائي دقيق. نكشف لكِ السموم الخفية، المواد الحافظة، والفعالية الحقيقية.",
-        icon: "search-plus",
-        color: COLORS.gold,
-        bgGradient: [COLORS.background, '#14532D']
-    },
-    {
-        id: 'shelf',
-        title: "الرف الذكي",
-        subtitle: "تنظيم وتحليل",
-        desc: "رتبي منتجاتك رقميا، وسنقوم بتحليل التناغم بينها. هل تتعارض مكونات روتينك؟ وثيق سيخبرك قبل أن تضعيها على بشرتك.",
-        icon: "flask",
-        color: COLORS.primary,
-        bgGradient: [COLORS.background, '#065F46']
-    },
-    {
-        id: 'community',
-        title: "مجتمع وثيق",
-        subtitle: "تجارب تشبهكِ",
-        desc: "انضمي لمجتمع يعتمد على 'التطابق الحيوي'. شاركي تجاربك واقرئي تقييمات أشخاص يملكون نفس نوع بشرتك تماما.",
-        icon: "users",
-        color: '#6EE7B7',
-        bgGradient: [COLORS.background, '#047857']
-    },
-    {
-        id: 'comparison',
-        title: "حلبة المقارنة",
-        subtitle: "القرار العلمي",
-        desc: "محتارة بين منتجين؟ ضعيهما وجها لوجه في مقارنة علمية دقيقة تكشف الأفضل لكِ بناء على السعر، الأمان، والفعالية.",
-        icon: "balance-scale",
-        color: COLORS.textPrimary,
-        bgGradient: [COLORS.background, '#111827']
-    }
+    { id: 'slide1', icon: "shield-alt", color: COLORS.accentGreen, bgGradient: [COLORS.background, '#064E3B'] },
+    { id: 'slide2', icon: "search-plus", color: COLORS.gold, bgGradient: [COLORS.background, '#14532D'] },
+    { id: 'slide3', icon: "flask", color: COLORS.primary, bgGradient: [COLORS.background, '#065F46'] },
+    { id: 'slide4', icon: "users", color: '#6EE7B7', bgGradient: [COLORS.background, '#047857'] },
+    { id: 'slide5', icon: "balance-scale", color: COLORS.textPrimary, bgGradient: [COLORS.background, '#111827'] }
 ];
+
+const getSlideContent = (id, language) => ({
+    title: t(`intro_${id}_title`, language),
+    subtitle: t(`intro_${id}_subtitle`, language),
+    desc: t(`intro_${id}_desc`, language),
+});
 
 // --- 2. COMPONENTS ---
 
@@ -141,7 +109,7 @@ const Particle = ({ delay, duration, startX, size, color }) => {
     );
 };
 
-const SwipeHint = () => {
+const SwipeHint = ({ language }) => {
     const translateX = useRef(new Animated.Value(0)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -163,22 +131,23 @@ const SwipeHint = () => {
             <Animated.View style={{ transform: [{ translateX }], opacity }}>
                 <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color="rgba(255,255,255,0.6)" />
             </Animated.View>
-            <Text style={styles.swipeText}>اسحب للمتابعة</Text>
+            <Text style={styles.swipeText}>{t('intro_swipe_hint', language)}</Text>
         </View>
     );
 };
 
-const CustomSwitch = ({ value, onToggle, activeColor }) => (
+const CustomSwitch = ({ value, onToggle, activeColor, language }) => (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={styles.switchContainer}>
         <View style={[styles.checkboxBase, value && { borderColor: activeColor, backgroundColor: activeColor }]}>
             {value && <Ionicons name="checkmark" size={12} color="#000" />}
         </View>
-        <Text style={styles.switchText}>عدم الإظهار مجددا</Text>
+        <Text style={styles.switchText}>{t('intro_dont_show', language)}</Text>
     </TouchableOpacity>
 );
 
 // --- 3. MAIN COMPONENT ---
 const AppIntro = ({ visible, onClose }) => {
+    const language = useCurrentLanguage();
     const scrollX = useRef(new Animated.Value(0)).current;
     const flatListRef = useRef(null);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -223,6 +192,7 @@ const AppIntro = ({ visible, onClose }) => {
     };
 
     const renderItem = ({ item, index }) => {
+        const slideContent = getSlideContent(item.id, language);
         const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
         const scale = scrollX.interpolate({
@@ -271,11 +241,11 @@ const AppIntro = ({ visible, onClose }) => {
                 {/* Text */}
                 <Animated.View style={[styles.textWrapper, { transform: [{ translateX }], opacity }]}>
                     <View style={[styles.subtitleBadge, { borderColor: item.color + '40', backgroundColor: item.color + '10' }]}>
-                        <Text style={[styles.subtitle, { color: item.color }]}>{item.subtitle}</Text>
+                        <Text style={[styles.subtitle, { color: item.color }]}>{slideContent.subtitle}</Text>
                     </View>
-                    <Text style={styles.title}>{item.title}</Text>
+                    <Text style={styles.title}>{slideContent.title}</Text>
                     <View style={styles.divider} />
-                    <Text style={styles.desc}>{item.desc}</Text>
+                    <Text style={styles.desc}>{slideContent.desc}</Text>
                 </Animated.View>
             </View>
         );
@@ -316,7 +286,7 @@ const AppIntro = ({ visible, onClose }) => {
                     {/* Header: Skip Button */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={handleFinish} style={styles.skipBtn}>
-                            <Text style={styles.skipText}>تخطي</Text>
+                            <Text style={styles.skipText}>{t('intro_skip', language)}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -374,13 +344,14 @@ const AppIntro = ({ visible, onClose }) => {
                                     value={dontShowAgain}
                                     onToggle={() => setDontShowAgain(!dontShowAgain)}
                                     activeColor={currentSlide.color}
+                                    language={language}
                                 />
                             </View>
 
                             {/* Action Button / Hint */}
                             <View style={styles.actionArea}>
                                 <Animated.View style={[styles.absoluteCenter, { opacity: hintOpacity }]}>
-                                    <SwipeHint />
+                                    <SwipeHint language={language} />
                                 </Animated.View>
 
                                 <Animated.View style={[
@@ -390,7 +361,7 @@ const AppIntro = ({ visible, onClose }) => {
                                     <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.9}>
                                         <LinearGradient colors={[COLORS.primary, COLORS.accentGreen]} style={styles.startBtnGradient}>
                                             {/* Fixed: Removed extra whitespace that caused crashes */}
-                                            <Text style={[styles.startBtnText, { color: COLORS.textOnAccent }]}>انطلاق</Text>
+                                            <Text style={[styles.startBtnText, { color: COLORS.textOnAccent }]}>{t('intro_finish', language)}</Text>
                                             <Ionicons name="rocket-outline" size={24} color={COLORS.textOnAccent} />
                                         </LinearGradient>
                                     </TouchableOpacity>

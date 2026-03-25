@@ -1,9 +1,10 @@
 import { COLORS } from '../constants/theme';
+import { t } from '../i18n';
 
-export const calculateBioMatch = (currentUserSettings, authorSettings) => {
+export const calculateBioMatch = (currentUserSettings, authorSettings, language = 'ar') => {
     // 1. Safety Check
     if (!currentUserSettings || !authorSettings) {
-        return { score: 0, label: 'غير معروف', color: COLORS.textSecondary, matches: [] };
+        return { score: 0, label: t('match_unknown', language), color: COLORS.textSecondary, matches: [] };
     }
 
     let score = 0;
@@ -15,14 +16,14 @@ export const calculateBioMatch = (currentUserSettings, authorSettings) => {
     if (currentUserSettings.skinType && authorSettings.skinType && 
         currentUserSettings.skinType === authorSettings.skinType) {
         score += 25;
-        matches.push('بشرة');
+        matches.push(t('match_skin', language));
     }
 
     // 2. Scalp Type (25%)
     if (currentUserSettings.scalpType && authorSettings.scalpType && 
         currentUserSettings.scalpType === authorSettings.scalpType) {
         score += 25;
-        matches.push('شعر');
+        matches.push(t('match_hair', language));
     }
 
     // --- B. OVERLAP MATCHES (50% Total) ---
@@ -40,7 +41,7 @@ export const calculateBioMatch = (currentUserSettings, authorSettings) => {
         const overlap = shared.length / Math.max(userConds.length, 1);
         if (overlap > 0) {
             score += Math.round(overlap * 25);
-            matches.push('حالات');
+            matches.push(t('match_conditions', language));
         }
     }
 
@@ -55,7 +56,7 @@ export const calculateBioMatch = (currentUserSettings, authorSettings) => {
         const overlap = shared.length / Math.max(userGoals.length, 1);
         if (overlap > 0) {
             score += Math.round(overlap * 25);
-            matches.push('أهداف');
+            matches.push(t('match_goals', language));
         }
     }
 
@@ -64,16 +65,16 @@ export const calculateBioMatch = (currentUserSettings, authorSettings) => {
     let color = COLORS.textSecondary;
 
     if (score >= 80) {
-        label = 'تطابق عالي';
+        label = t('match_high', language);
         color = COLORS.accentGreen;
     } else if (score >= 50) {
-        label = 'تطابق جيد';
+        label = t('match_good', language);
         color = COLORS.gold;
     } else if (score > 20) {
-        label = 'تطابق محدود';
+        label = t('match_limited', language);
         color = COLORS.blue;
     } else {
-        label = 'لا يوجد تطابق';
+        label = t('match_none', language);
         color = COLORS.textDim;
     }
 

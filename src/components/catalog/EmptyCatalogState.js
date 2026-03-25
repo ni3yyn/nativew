@@ -2,22 +2,25 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const EmptyCatalogState = () => {
     const { colors: C } = useTheme();
+    const language = useCurrentLanguage();
 
     return (
         <View style={styles.emptyContainer}>
             <View style={[styles.emptyIconBox, { backgroundColor: C.card, borderColor: C.border }]}>
                 <FontAwesome5 name="box-open" size={40} color={C.textDim} />
             </View>
-            <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>لم نجد المنتج</Text>
+            <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>{t('catalog_empty_title', language)}</Text>
             <Text style={[styles.emptySub, { color: C.textDim }]}>
-                المنتج غير موجود في قاعدة البيانات، كوني أول من يضيفه واحصلي على 100 نقطة وثيق! 🏆
+                {t('catalog_empty_subtitle', language)}
             </Text>
             <TouchableOpacity style={[styles.addMissingBtn, { backgroundColor: C.accentGreen }]}>
                 <FontAwesome5 name="camera" size={14} color={C.textOnAccent} />
-                <Text style={[styles.addMissingText, { color: C.textOnAccent }]}>تصوير وإضافة المنتج</Text>
+                <Text style={[styles.addMissingText, { color: C.textOnAccent }]}>{t('catalog_add_new_product', language)}</Text>
             </TouchableOpacity>
         </View>
     );

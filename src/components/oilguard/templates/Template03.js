@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,15 +19,16 @@ const BackgroundDecor = ({ theme }) => (
 );
 
 // --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status) => {
+const getClaimStyle = (status, language) => {
     if (status.includes('✅')) return { color: '#10B981', icon: 'check', bg: '#10B981' };
     if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf', bg: '#06B6D4' };
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', bg: '#F59E0B', note: '(نسبة غير فعالة)' };
+    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', bg: '#F59E0B', note: t('oilguard_ineffective_ratio', language) };
     // Red for both Lies and No Evidence
     return { color: '#EF4444', icon: 'times', bg: '#EF4444' };
 };
 
 export default function Template03({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
+    const language = useCurrentLanguage();
     const safe = analysis || {};
     const safetyScore = safe.safety?.score || 0;
     const efficacyScore = safe.efficacy?.score || 0;
@@ -66,18 +69,18 @@ export default function Template03({ analysis, typeLabel, productName, imageUri,
             <View style={styles.miniStatsRow}>
                 <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                     <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
-                    <Text style={[styles.statVal, { color: theme.text }]}>أمان {safetyScore}%</Text>
+                    <Text style={[styles.statVal, { color: theme.text }]}>${t('oilguard_safety', language)} {safetyScore}%</Text>
                 </View>
                 <View style={[styles.statPill, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                     <Ionicons name="star" size={20} color={theme.accent} />
-                    <Text style={[styles.statVal, { color: theme.text }]}>فعالية {efficacyScore}%</Text>
+                    <Text style={[styles.statVal, { color: theme.text }]}>${t('oilguard_efficacy', language)} {efficacyScore}%</Text>
                 </View>
             </View>
 
             <View style={styles.claimsArea}>
                 <View style={styles.claimsGrid}>
                     {claims.map((c, i) => {
-                        const style = getClaimStyle(c.status);
+                        const style = getClaimStyle(c.status, language);
                         return (
                             <View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                                 <View style={[styles.claimIcon, { backgroundColor: style.bg }]}>
@@ -100,9 +103,9 @@ export default function Template03({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.socialRow}>
                     <View style={styles.socialItem}><FontAwesome5 name="instagram" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />
-                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text></View>
+                    <View style={styles.socialItem}><FontAwesome5 name="facebook" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>{t('oilguard_brand_name', language)}</Text></View>
                 </View>
-                <Text style={[styles.disclaimerText, { color: theme.text }]}>*هذه النتيجة شخصية؛ قد تختلف الاستجابة حسب المستخدم.</Text>
+                <Text style={[styles.disclaimerText, { color: theme.text }]}>{t('oilguard_disclaimer', language)}</Text>
             </View>
         </View>
     );

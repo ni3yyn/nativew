@@ -4,6 +4,8 @@ import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-ico
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { height } = Dimensions.get('window');
 
@@ -27,6 +29,7 @@ const getItemStyle = (type, COLORS) => {
 };
 
 const ScoreBreakdownModal = ({ visible, onClose, data }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -90,8 +93,8 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                             {/* Header */}
                             <View style={styles.headerRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.title}>تفاصيل التقييم</Text>
-                                    <Text style={styles.subtitle}>كيف حسبنا هذه النتيجة؟</Text>
+                                    <Text style={styles.title}>{t('breakdown_title', language)}</Text>
+                                    <Text style={styles.subtitle}>{t('breakdown_subtitle', language)}</Text>
                                 </View>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons name="chart-box-outline" size={24} color={COLORS.textPrimary} />
@@ -103,7 +106,7 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                             {/* Breakdown Items */}
                             {data.map((item, index) => {
                                 // Filter out calculation steps if needed, or keep for transparency
-                                if (item.type === 'calculation' && !item.text.includes('النهائي')) return null;
+                                if (item.type === 'calculation' && !item.text.includes(t('breakdown_final_score', language))) return null;
 
                                 const style = getItemStyle(item.type, COLORS);
 
@@ -138,7 +141,7 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                             <View style={styles.footerNote}>
                                 <MaterialCommunityIcons name="robot-outline" size={16} color={COLORS.textSecondary} />
                                 <Text style={styles.footerText}>
-                                    يعتمد هذا التحليل على خوارزميات كيميائية وقواعد بيانات علمية، لكنه لا يغني عن استشارة الطبيب.
+                                    {t('breakdown_disclaimer', language)}
                                 </Text>
                             </View>
 
@@ -148,7 +151,7 @@ const ScoreBreakdownModal = ({ visible, onClose, data }) => {
                                 style={styles.closeButton}
                                 activeOpacity={0.9}
                             >
-                                <Text style={styles.closeButtonText}>إغلاق</Text>
+                                <Text style={styles.closeButtonText}>{t('action_close', language)}</Text>
                             </TouchableOpacity>
 
                         </ScrollView>

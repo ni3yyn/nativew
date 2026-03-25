@@ -1,33 +1,31 @@
-import { COLORS } from './theme';
-
+// In categories.js, modify the CATEGORIES array:
 export const CATEGORIES = [
     {
         id: 'review',
-        label: 'تجارب حقيقية',
+        labelKey: 'community_cat_review',
         icon: 'star',
         colorKey: 'accentGreen',
-        desc: 'شاركي رأيكِ في المنتجات بناء على تحليلها.'
+        descKey: 'community_cat_review_desc'
     },
     {
         id: 'journey',
-        label: 'رحلة البشرة',
+        labelKey: 'community_cat_journey',
         icon: 'hourglass-half',
         colorKey: 'gold',
-        desc: 'وثّقي تطور بشرتكِ أو شعركِ مع الصور.'
+        descKey: 'community_cat_journey_desc'
     },
     {
         id: 'qa',
-        label: 'سؤال وجواب',
+        labelKey: 'community_cat_qa',
         icon: 'question-circle',
         colorKey: 'blue',
-        desc: 'اطلبي المساعدة من المجتمع والخبراء.'
+        descKey: 'community_cat_qa_desc'
     },
-    
     {
         id: 'tips',
-        label: 'ميني-بودكاست',
+        labelKey: 'community_cat_tips',
         icon: 'headphones',
         colorKey: 'success',
-        desc: 'صوتيات قصيرة عن المنتجات والعناية'
+        descKey: 'community_cat_tips_desc'
     }
 ];

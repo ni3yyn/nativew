@@ -41,7 +41,9 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
         toggleGrid();
     };
 
-    const currentLabel = PRODUCT_TYPES.find(t => t.id === productType)?.label || t('oilguard_unspecified', language);
+    const currentLabel = PRODUCT_TYPES.find(t_ => t_.id === productType) 
+        ? t(PRODUCT_TYPES.find(t_ => t_.id === productType).labelKey, language) 
+        : t('oilguard_unspecified', language);
     const currentIcon = PRODUCT_TYPES.find(t => t.id === productType)?.icon || 'box-open';
 
     // Limit max height to 350 or content size
@@ -94,15 +96,15 @@ export const ReviewStep = ({ productType, setProductType, onConfirm }) => {
                     contentContainerStyle={styles.rs_ChipGrid}
                     onContentSizeChange={(_, h) => setListContentHeight(h)}
                 >
-                    {PRODUCT_TYPES.map(t => (
+                    {PRODUCT_TYPES.map(t_ => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            key={t.id}
-                            onPress={() => handleSelect(t.id)}
-                            style={[styles.rs_TypeChip, productType === t.id && styles.rs_TypeChipActive]}
+                            key={t_.id}
+                            onPress={() => handleSelect(t_.id)}
+                            style={[styles.rs_TypeChip, productType === t_.id && styles.rs_TypeChipActive]}
                         >
-                            <FontAwesome5 name={t.icon} size={14} color={productType === t.id ? COLORS.textOnAccent : COLORS.textSecondary} />
-                            <Text style={[styles.rs_TypeChipText, productType === t.id && styles.rs_TypeChipTextActive]}>{t.label}</Text>
+                            <FontAwesome5 name={t_.icon} size={14} color={productType === t_.id ? COLORS.textOnAccent : COLORS.textSecondary} />
+                            <Text style={[styles.rs_TypeChipText, productType === t_.id && styles.rs_TypeChipTextActive]}>{t(t_.labelKey, language)}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>

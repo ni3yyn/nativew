@@ -8,10 +8,13 @@ import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { AlertService } from '../../services/alertService';
 import * as Haptics from 'expo-haptics';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width } = Dimensions.get('window');
 
 const GlobalAlertModal = () => {
+    const language = useCurrentLanguage(); // ✅ Moved to top - always called
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -20,45 +23,18 @@ const GlobalAlertModal = () => {
     const [config, setConfig] = useState({
         title: '',
         message: '',
-        type: 'info', // success, error, warning, delete, info
+        type: 'info',
         buttons: []
     });
 
     // Animations
-    const slideAnim = useRef(new Animated.Value(100)).current; // Start 100px below
+    const slideAnim = useRef(new Animated.Value(100)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        // Register this component with the service on mount
-        AlertService.setRef({
-            open: (newConfig) => {
-                setConfig(newConfig);
-                setVisible(true);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-                // FIX: Use Timing + Easing instead of Spring for instant clickability
-                Animated.parallel([
-                    Animated.timing(slideAnim, {
-                        toValue: 0,
-                        duration: 300,
-                        easing: Easing.out(Easing.cubic),
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(opacityAnim, {
-                        toValue: 1,
-                        duration: 300,
-                        useNativeDriver: true
-                    })
-                ]).start();
-            },
-            close: handleClose
-        });
-
-        return () => AlertService.setRef(null);
-    }, []);
+    // ✅ All hooks above this line
+    // Now it's safe to have conditional returns
 
     const handleClose = () => {
-        // Animate Out
         Animated.parallel([
             Animated.timing(slideAnim, {
                 toValue: 150,
@@ -81,9 +57,36 @@ const GlobalAlertModal = () => {
         handleClose();
     };
 
+    useEffect(() => {
+        AlertService.setRef({
+            open: (newConfig) => {
+                setConfig(newConfig);
+                setVisible(true);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+                Animated.parallel([
+                    Animated.timing(slideAnim, {
+                        toValue: 0,
+                        duration: 300,
+                        easing: Easing.out(Easing.cubic),
+                        useNativeDriver: true
+                    }),
+                    Animated.timing(opacityAnim, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: true
+                    })
+                ]).start();
+            },
+            close: handleClose
+        });
+
+        return () => AlertService.setRef(null);
+    }, []);
+
+    // ✅ This return is after all hooks, so it's safe
     if (!visible) return null;
 
-    // --- THEME LOGIC ---
     const getAlertTheme = () => {
         switch (config.type) {
             case 'success': return { icon: 'check-circle', color: COLORS.success || COLORS.accentGreen, bg: (COLORS.success || COLORS.accentGreen) + '20' };
@@ -98,39 +101,31 @@ const GlobalAlertModal = () => {
     return (
         <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose} statusBarTranslucent>
             <View style={styles.overlay} pointerEvents="box-none">
-
-                {/* Backdrop */}
                 <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
                     <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
                 </Animated.View>
 
-                {/* Modal Card */}
                 <Animated.View style={[
                     styles.alertContainer,
                     { transform: [{ translateY: slideAnim }], opacity: opacityAnim }
                 ]}>
-
-                    {/* Icon */}
                     <View style={[styles.iconContainer, { backgroundColor: alertTheme.bg }]}>
                         <FontAwesome5 name={alertTheme.icon} size={32} color={alertTheme.color} />
                     </View>
 
-                    {/* Text */}
                     <Text style={styles.title}>{config.title}</Text>
                     <Text style={styles.message}>{config.message}</Text>
 
-                    {/* Buttons */}
                     <View style={styles.buttonRow}>
                         {config.buttons.length > 0 ? (
                             config.buttons.map((btn, index) => {
-                                // Determine Button Style
                                 let btnBg = COLORS.card;
                                 let btnText = COLORS.textSecondary;
                                 let btnBorder = COLORS.border;
 
                                 if (btn.style === 'primary') {
                                     btnBg = COLORS.accentGreen;
-                                    btnText = COLORS.textOnAccent || '#ffffff'; // Use theme textOnAccent if available
+                                    btnText = COLORS.textOnAccent || '#ffffff';
                                     btnBorder = COLORS.accentGreen;
                                 } else if (btn.style === 'destructive') {
                                     btnBg = COLORS.danger + '20';
@@ -144,21 +139,20 @@ const GlobalAlertModal = () => {
                                         style={[styles.button, { backgroundColor: btnBg, borderColor: btnBorder }]}
                                         onPress={() => handleButtonPress(btn)}
                                         activeOpacity={0.7}
-                                        delayPressIn={0} // <--- FIX: Instant response
+                                        delayPressIn={0}
                                     >
                                         <Text style={[styles.buttonText, { color: btnText }]}>{btn.text}</Text>
                                     </TouchableOpacity>
                                 );
                             })
                         ) : (
-                            // Default OK button if none provided
                             <TouchableOpacity
                                 style={[styles.button, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]}
                                 onPress={handleClose}
                                 activeOpacity={0.8}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.buttonText, { color: COLORS.textOnAccent || '#ffffff' }]}>حسنا</Text>
+                                <Text style={[styles.buttonText, { color: COLORS.textOnAccent || '#ffffff' }]}>{t('announcement_ok', language)}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -189,13 +183,12 @@ const createStyles = (COLORS) => StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: COLORS.border,
-        // Shadow
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.5,
         shadowRadius: 20,
         elevation: 20,
-        zIndex: 2 // Sit on top of backdrop
+        zIndex: 2
     },
     iconContainer: {
         width: 70,
@@ -222,7 +215,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         lineHeight: 22,
     },
     buttonRow: {
-        flexDirection: 'row-reverse', // RTL Support
+        flexDirection: 'row-reverse',
         gap: 12,
         width: '100%',
     },
@@ -237,7 +230,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     buttonText: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 15,
-        marginBottom: 2 // Font baseline fix
+        marginBottom: 2
     }
 });
 

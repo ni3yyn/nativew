@@ -1,26 +1,26 @@
 export const PRODUCT_TYPES = [
-    { id: 'cleanser', label: 'غسول وجه', icon: 'soap' },
-    { id: 'skin_serum', label: 'سيروم للبشرة', icon: 'flask' },
-    { id: 'lotion_cream', label: 'مرطب', icon: 'hand-holding-water' },
-    { id: 'sunscreen', label: 'واقي شمس', icon: 'sun' },
-    { id: 'toner', label: 'تونر / ميست', icon: 'tint' },
-    { id: 'eye_cream', label: 'كريم للعين', icon: 'eye' }, // New
-    { id: 'mask', label: 'قناع وجه', icon: 'mask' },
-    { id: 'scrub', label: 'مقشر / سكراب', icon: 'cookie' }, // New
+    { id: 'cleanser', labelKey: 'product_type_cleanser', icon: 'soap' },
+    { id: 'skin_serum', labelKey: 'product_type_skin_serum', icon: 'flask' },
+    { id: 'lotion_cream', labelKey: 'product_type_lotion_cream', icon: 'hand-holding-water' },
+    { id: 'sunscreen', labelKey: 'product_type_sunscreen', icon: 'sun' },
+    { id: 'toner', labelKey: 'product_type_toner', icon: 'tint' },
+    { id: 'eye_cream', labelKey: 'product_type_eye_cream', icon: 'eye' }, // New
+    { id: 'mask', labelKey: 'product_type_mask', icon: 'mask' },
+    { id: 'scrub', labelKey: 'product_type_scrub', icon: 'cookie' }, // New
     
     // Hair Categories
-    { id: 'shampoo', label: 'شامبو', icon: 'spa' },
-    { id: 'conditioner', label: 'بلسم/مرطب شعر', icon: 'pump-soap' }, // New
-    { id: 'hair_mask', label: 'قناع شعر', icon: 'hand-sparkles' },
-    { id: 'hair_serum', label: 'سيروم للشعر', icon: 'spray-can' }, // New (Split)
-    { id: 'oil_blend', label: 'زيت (شعر/بشرة)', icon: 'leaf' },
-    { id: 'oil_replacement', label: 'بديل الزيت', icon: 'water' },
+    { id: 'shampoo', labelKey: 'product_type_shampoo', icon: 'spa' },
+    { id: 'conditioner', labelKey: 'product_type_conditioner', icon: 'pump-soap' }, // New
+    { id: 'hair_mask', labelKey: 'product_type_hair_mask', icon: 'hand-sparkles' },
+    { id: 'hair_serum', labelKey: 'product_type_hair_serum', icon: 'spray-can' }, // New (Split)
+    { id: 'oil_blend', labelKey: 'product_type_oil_blend', icon: 'leaf' },
+    { id: 'oil_replacement', labelKey: 'product_type_oil_replacement', icon: 'water' },
 
     
     // Body Categories
-    { id: 'body_wash', label: 'غسول للجسم', icon: 'bath' }, // New
+    { id: 'body_wash', labelKey: 'product_type_body_wash', icon: 'bath' }, // New
     
-    { id: 'other', label: 'آخر', icon: 'shopping-bag' },
+    { id: 'other', labelKey: 'product_type_other', icon: 'shopping-bag' },
 ];
 
 export const getClaimsByProductType = (productType) => {

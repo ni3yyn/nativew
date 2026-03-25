@@ -3,59 +3,62 @@ import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
+import { t, interpolate } from '../i18n';
+import { useCurrentLanguage } from '../hooks/useCurrentLanguage';
 
 // --- LOGIC: CONTEXT AWARE MESSAGES & ICONS ---
-const getAuthenticContent = (productCount, name, COLORS) => {
+const getAuthenticContent = (productCount, name, COLORS, language) => {
   const hour = new Date().getHours();
-  const firstName = name?.split(' ')[0] || 'جميلتي';
+  const firstName = name?.split(' ')[0] || t('header_default_name', language);
 
-  // 1. Context: Empty Shelf (The "Bismillah" Phase)
+  // 1. Context: Empty Shelf
   if (productCount === 0) {
     return [
-      { text: "الرف فارغ؟.. لنبدأ بأول منتج لديك", icon: "door-open", iconColor: COLORS.accentGreen },
-      { text: "كل بشرة جميلة تبدأ بمنتج واحد تضيفينه لوثيق", icon: "pen-nib", iconColor: COLORS.textSecondary },
-      { text: "متحيريش، افحصي أول منتج ونحن معك", icon: "hand-holding-heart", iconColor: COLORS.gold }
+      { text: t('header_empty_1', language), icon: "door-open", iconColor: COLORS.accentGreen },
+      { text: t('header_empty_2', language), icon: "pen-nib", iconColor: COLORS.textSecondary },
+      { text: t('header_empty_3', language), icon: "hand-holding-heart", iconColor: COLORS.gold }
     ];
   }
 
-  // 2. Context: Crowded Shelf (The "Baraka but Logic" Phase)
+  // 2. Context: Crowded Shelf
   if (productCount > 10) {
     return [
-      { text: "خيرات! لكن كثرة الأيادي تفسد الطبخة", icon: "exclamation-circle", iconColor: COLORS.textSecondary },
-      { text: "خزانة مليئة.. هل فعلا تحتاجين كل هذا؟", icon: "question", iconColor: COLORS.accentGreen },
-      { text: "الزين في البساطة، لا في التكدس", icon: "gem", iconColor: COLORS.gold }
+      { text: t('header_crowded_1', language), icon: "exclamation-circle", iconColor: COLORS.textSecondary },
+      { text: t('header_crowded_2', language), icon: "question", iconColor: COLORS.accentGreen },
+      { text: t('header_crowded_3', language), icon: "gem", iconColor: COLORS.gold }
     ];
   }
 
-  // 3. Context: Morning (The "Chatara" & Sun Anxiety)
+  // 3. Context: Morning
   if (hour >= 5 && hour < 12) {
     return [
-      { text: `صباح النشاط يا ${firstName}`, icon: "sun", iconColor: COLORS.gold },
-      { text: "نوضي وتوكلي على ربي.", icon: "search", iconColor: COLORS.textDim },
-      { text: "وجهك يستحق أن يشرق قبل الشمس", icon: "smile-beam", iconColor: COLORS.blue }
+      { text: interpolate(t('header_morning_1', language), { name: firstName }), icon: "sun", iconColor: COLORS.gold },
+      { text: t('header_morning_2', language), icon: "search", iconColor: COLORS.textDim },
+      { text: t('header_morning_3', language), icon: "smile-beam", iconColor: COLORS.blue }
     ];
   }
 
-  // 4. Context: Evening (The "Nqa" & Rest)
+  // 4. Context: Evening
   if (hour >= 18 || hour < 5) {
     return [
-      { text: "بالاكي يغلبك النعاس قبل الغسول!", icon: "exclamation-triangle", iconColor: COLORS.danger }, // The "motherly warning" tone
-      { text: "نامي بقلب ووجه صافيين", icon: "sparkles", iconColor: COLORS.blue },
-      { text: "تصبحين على خير.. شربتِ الماء؟ ", icon: "tint", iconColor: COLORS.accentGreen }
+      { text: t('header_evening_1', language), icon: "exclamation-triangle", iconColor: COLORS.danger },
+      { text: t('header_evening_2', language), icon: "sparkles", iconColor: COLORS.blue },
+      { text: t('header_evening_3', language), icon: "tint", iconColor: COLORS.accentGreen }
     ];
   }
 
-  // 5. Context: General Philosophy (The "Thallay" Spirit)
+  // 5. Context: General Philosophy
   return [
-    { text: "وثيق معاك كل يوم", icon: "hand-holding-heart", iconColor: COLORS.accentGreen },
-    { text: "لا تستعجلي.. الصبر مفتاح النضارة", icon: "hourglass-half", iconColor: COLORS.textDim },
-    { text: "وجهك مرآة صحتك.. أكرميه يكرمك", icon: "mirror", iconColor: COLORS.gold }
+    { text: t('header_general_1', language), icon: "hand-holding-heart", iconColor: COLORS.accentGreen },
+    { text: t('header_general_2', language), icon: "hourglass-half", iconColor: COLORS.textDim },
+    { text: t('header_general_3', language), icon: "mirror", iconColor: COLORS.gold }
   ];
 };
 
 
 const AuthenticHeader = ({ productCount, userName }) => {
   const { colors: COLORS } = useTheme();
+  const language = useCurrentLanguage();
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
   const [displayData, setDisplayData] = useState({ text: "", icon: "circle", color: COLORS.textDim });
@@ -70,8 +73,8 @@ const AuthenticHeader = ({ productCount, userName }) => {
 
   // Get data based on props
   const messages = useMemo(() =>
-    getAuthenticContent(productCount, userName, COLORS),
-    [productCount, userName, COLORS]);
+    getAuthenticContent(productCount, userName, COLORS, language),
+    [productCount, userName, COLORS, language]);
 
   // Typing Effect
   const startTyping = (messageData) => {

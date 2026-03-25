@@ -1,4 +1,4 @@
-// src/services/alertService.js
+import { t } from '../i18n';
 
 let alertRef = null;
 
@@ -28,7 +28,7 @@ export const AlertService = {
             title,
             message,
             type: 'success',
-            buttons: [{ text: 'حسنا', style: 'primary', onPress: onOk }]
+            buttons: [{ text: t('alert_ok'), style: 'primary', onPress: onOk }]
         });
     },
 
@@ -38,7 +38,7 @@ export const AlertService = {
             title,
             message,
             type: 'error',
-            buttons: [{ text: 'إغلاق', style: 'destructive' }]
+            buttons: [{ text: t('alert_close'), style: 'destructive' }]
         });
     },
 
@@ -49,8 +49,8 @@ export const AlertService = {
             message,
             type: 'warning',
             buttons: [
-                { text: 'إلغاء', style: 'secondary', onPress: onCancel },
-                { text: 'تأكيد', style: 'primary', onPress: onConfirm }
+                { text: t('alert_cancel'), style: 'secondary', onPress: onCancel },
+                { text: t('alert_confirm'), style: 'primary', onPress: onConfirm }
             ]
         });
     },
@@ -62,8 +62,8 @@ export const AlertService = {
             message,
             type: 'delete',
             buttons: [
-                { text: 'تراجع', style: 'secondary' },
-                { text: 'حذف', style: 'destructive', onPress: onDelete }
+                { text: t('alert_back'), style: 'secondary' },
+                { text: t('alert_delete'), style: 'destructive', onPress: onDelete }
             ]
         });
     }

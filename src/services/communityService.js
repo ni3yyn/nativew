@@ -5,6 +5,7 @@ import {
   import { db } from '../config/firebase';
   import { AlertService } from './alertService';
   import { supabase } from '../config/supabase';
+  import { t } from '../i18n';
   
   // --- POSTS (SUPABASE) ---
   
@@ -12,7 +13,7 @@ import {
     try {
         // 1. Prepare Author Snapshot
         const authorSnapshot = {
-            name: userName || 'مستخدم وثيق',
+            name: userName || t('brand_wathiq_user'),
             skinType: userSettings?.skinType || null,
             scalpType: userSettings?.scalpType || null,
             allergies: userSettings?.allergies || [],   // <--- ADDED
@@ -107,7 +108,7 @@ import {
         if (error) throw error;
     } catch (error) {
         console.error("Delete Post Error:", error);
-        AlertService.error("خطأ", "تعذر حذف المنشور.");
+        AlertService.error(t('alert_error_title'), t('alert_delete_post_error'));
         throw error;
     }
 };
@@ -142,7 +143,7 @@ import {
         });
     } catch (error) {
         console.error("Save Product Error:", error);
-        AlertService.error("خطأ", "تعذر حفظ المنتج في الرف.");
+        AlertService.error(t('alert_error_title'), t('alert_save_product_error'));
         throw error;
     }
   };

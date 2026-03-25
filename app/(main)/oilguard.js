@@ -14,7 +14,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
 import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
-import { useRouter, useIsFocused } from 'expo-router';
+import { useRouter, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
@@ -74,19 +74,28 @@ const normalizeForMatching = (name) => {
 const INTERSTITIAL_ID = 'ca-app-pub-6010052879824695/5539413194';
 
 let useInterstitialAd;
-const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
 
 if (isAdMobLinked) {
     // ✅ REAL ADMOB (For APK)
-    const adMob = require('react-native-google-mobile-ads');
-    useInterstitialAd = adMob.useInterstitialAd;
-    
-    // Initialize the SDK immediately (Prevents "Not Initialized" errors)
-    adMob.default().initialize(); 
+    try {
+        const adMob = require('react-native-google-mobile-ads');
+        useInterstitialAd = adMob.useInterstitialAd;
+        
+        // Initialize the SDK immediately (Prevents "Not Initialized" errors)
+        adMob.default().initialize(); 
+    } catch (e) {
+        console.warn("Failed to load Google Mobile Ads:", e);
+        setupMockAds();
+    }
 } else {
-    // 🛠 SMART MOCK (For Expo Go)
+    setupMockAds();
+}
+
+function setupMockAds() {
+    // 🛠 SMART MOCK (For Expo Go or Web)
     // This pretends to load an ad so you can test the UI flow
-    console.log("⚠️ Expo Go detected. Using Smart Mock for Ads.");
+    console.log(`⚠️ ${Platform.OS === 'web' ? 'Web' : 'Expo Go'} detected. Using Smart Mock for Ads.`);
     
     // We create a fake hook that uses React State to simulate loading
     useInterstitialAd = () => {
@@ -198,6 +207,12 @@ const ConfidenceRing = ({ confidence }) => {
     const animatedValue = useRef(new Animated.Value(0)).current;
 
     const confidenceMap = {
+        [t('confidence_high', useCurrentLanguage())]: { value: 100, color: COLORS.success },
+        [t('confidence_medium', useCurrentLanguage())]: { value: 65, color: COLORS.gold },
+        [t('confidence_low', useCurrentLanguage())]: { value: 35, color: COLORS.warning },
+        [t('confidence_very_low', useCurrentLanguage())]: { value: 15, color: COLORS.warning },
+        [t('confidence_none', useCurrentLanguage())]: { value: 0, color: COLORS.danger },
+        // Fallback to Arabic keys if data is raw
         'عالية': { value: 100, color: COLORS.success },
         'متوسطة': { value: 65, color: COLORS.gold },
         'منخفضة': { value: 35, color: COLORS.warning },
@@ -366,7 +381,7 @@ const MarketingClaimsSection = ({ results }) => {
                             <View style={styles.evidenceGroup}>
                                 {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
                                 <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>مكونات فعالة أساسية:</Text>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>{t('comp_essential_actives', useCurrentLanguage())}</Text>
                                     <FontAwesome5 name="check" size={10} color={COLORS.success} />
                                 </View>
                                 {/* === END OF CORRECTION === */}
@@ -382,7 +397,7 @@ const MarketingClaimsSection = ({ results }) => {
                             <View style={[styles.evidenceGroup, { marginTop: strongEvidence.length > 0 ? 12 : 0 }]}>
                                 {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
                                 <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>تراكيز ثانوية / منخفضة:</Text>
+                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>{t('comp_secondary_traces', useCurrentLanguage())}</Text>
                                     <FontAwesome5 name="exclamation-triangle" size={10} color={COLORS.warning} />
                                 </View>
                                 {/* === END OF CORRECTION === */}
@@ -412,12 +427,12 @@ const MarketingClaimsSection = ({ results }) => {
         <View style={styles.claimsContainer}>
             <View style={styles.claimsHeader}>
                 <View>
-                    <Text style={styles.claimsTitle}>تحليل الادعاءات</Text>
-                    <Text style={styles.claimsSubtitle}>كشف المبالغات التسويقية</Text>
+                    <Text style={styles.claimsTitle}>{t('comp_claims_title', useCurrentLanguage())}</Text>
+                    <Text style={styles.claimsSubtitle}>{t('comp_claims_sub', useCurrentLanguage())}</Text>
                 </View>
                 <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
                     <Text style={[styles.honestyScore, { color: scoreColor }]}>{score}%</Text>
-                    <Text style={[styles.honestyLabel, { color: scoreColor }]}>مصداقية</Text>
+                    <Text style={[styles.honestyLabel, { color: scoreColor }]}>{t('comp_claims_credibility', useCurrentLanguage())}</Text>
                 </View>
             </View>
 
@@ -426,7 +441,7 @@ const MarketingClaimsSection = ({ results }) => {
                     sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)
                 ) : (
                     <Text style={{ color: COLORS.textDim, textAlign: 'center', marginVertical: 20 }}>
-                        لم يتم تحديد ادعاءات للتحليل.
+                        {t('comp_claims_no_data', useCurrentLanguage())}
                     </Text>
                 )}
             </View>
@@ -827,7 +842,7 @@ const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
     );
 };
 
-const extractIngredientsFromAIText = async (inputData) => {
+const extractIngredientsFromAIText = async (inputData, language) => {
     let candidates = [];
     if (Array.isArray(inputData)) {
         candidates = inputData;
@@ -838,7 +853,7 @@ const extractIngredientsFromAIText = async (inputData) => {
     const simpleIngredients = candidates.map((name, index) => ({
         id: `temp-${index}`,
         name: name.trim(),
-        functionalCategory: 'جاري التحليل...',
+        functionalCategory: t('oilguard_analyzing', language),
         chemicalType: ''
     })).filter(i => i.name.length > 1);
 
@@ -933,7 +948,7 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                         <View style={styles.cardFooter}>
                             <View style={[styles.indicatorDot, { backgroundColor: COLORS.danger }]} />
                             <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
-                                المنتج كامل (خطأ)
+                                {t('oilguard_guide_wrong', useCurrentLanguage())}
                             </Text>
                         </View>
                     </View>
@@ -1210,7 +1225,7 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
                     {displayScore}
                 </Text>
                 <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
-                    وثيق
+                    {t('brand_name')}
                 </Text>
             </View>
         </View>
@@ -1340,7 +1355,7 @@ const MatchBreakdown = ({ reasons = [] }) => {
                 <View style={styles.matchHeaderIcon}>
                     <FontAwesome5 name="user-cog" size={12} color={COLORS.textPrimary} />
                 </View>
-                <Text style={styles.matchHeaderTitle}>تحليل التوافق الشخصي</Text>
+                <Text style={styles.matchHeaderTitle}>{t('oilguard_personal_analysis', useCurrentLanguage())}</Text>
             </View>
             <View style={styles.matchBody}>
                 {reasons.map((item, i) => {
@@ -1384,7 +1399,7 @@ const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
     return prevProps.isSelected === nextProps.isSelected;
 });
 
-const AgentLoadingView = () => {
+const AgentLoadingView = ({ language }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const [msgIndex, setMsgIndex] = useState(0);
@@ -1393,11 +1408,11 @@ const AgentLoadingView = () => {
     const progressAnim = useRef(new Animated.Value(0)).current;
 
     const messages = [
-        { text: "تحليل ملفك الشخصي...", icon: "user-cog" },
-        { text: "البحث في Tarzaali و Sephora...", icon: "search-location" },
-        { text: "فحص قوائم المكونات...", icon: "file-medical-alt" },
-        { text: "التحقق من معايير الأمان...", icon: "shield-alt" },
-        { text: "اختيار البديل الأفضل...", icon: "star" }
+        { text: t('oilguard_loading_profile', language), icon: "user-cog" },
+        { text: t('oilguard_loading_search', language), icon: "search-location" },
+        { text: t('oilguard_loading_ingredients', language), icon: "file-medical-alt" },
+        { text: t('oilguard_loading_safety', language), icon: "shield-alt" },
+        { text: t('oilguard_loading_best', language), icon: "star" }
     ];
 
     useEffect(() => {
@@ -1510,22 +1525,43 @@ export default function OilGuardEngine() {
     const router = useRouter();
     const { user, userProfile } = useAppContext();
     const insets = useSafeAreaInsets();
+    const params = useLocalSearchParams(); // <-- 1. جلب البيانات المرسلة
+    const autoStartSignature = useRef(null); // <-- لمنع تكرار العملية
+    const isAutoStart = params?.autoStart === 'true'; 
 
 
     const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
 
-    const [step, setStep] = useState(0);
+    const [step, setStep] = useState(isAutoStart ? 2 : 0); // بناءً عليه نحدد الخطوة
     const [loading, setLoading] = useState(false);
     const [isGeminiLoading, setIsGeminiLoading] = useState(false);
     const [ocrText, setOcrText] = useState('');
     const [manualIngredients, setManualIngredients] = useState('');
-    const [preProcessedIngredients, setPreProcessedIngredients] = useState([]);
-    const [productType, setProductType] = useState('other');
-    const [selectedClaims, setSelectedClaims] = useState([]);
+    const[preProcessedIngredients, setPreProcessedIngredients] = useState(() => {
+        if (isAutoStart && params?.ingredients) {
+            return params.ingredients.split(',').map(i => i.trim()).filter(Boolean).map((name, index) => ({
+                id: `temp-${index}`,
+                name: name,
+                functionalCategory: 'تم الجلب من الكتالوج',
+                chemicalType: ''
+            }));
+        }
+        return[];
+    });
+    const[productType, setProductType] = useState(params?.category || 'other');    const [selectedClaims, setSelectedClaims] = useState(() => {
+        if (isAutoStart && params?.marketingClaims) {
+            try {
+                return JSON.parse(params.marketingClaims);
+            } catch (e) {
+                return[];
+            }
+        }
+        return[];
+    });
     const [finalAnalysis, setFinalAnalysis] = useState(null);
     const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
     const [isSaveModalVisible, setSaveModalVisible] = useState(false);
-    const [productName, setProductName] = useState('');
+    const [productName, setProductName] = useState(isAutoStart ? (params.brand ? `${params.brand} ${params.productName}` : params.productName) : '');
     const [isSaving, setIsSaving] = useState(false);
     const [showSwipeHint, setShowSwipeHint] = useState(true);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -1537,7 +1573,7 @@ export default function OilGuardEngine() {
     const [fabMetrics, setFabMetrics] = useState({ x: 0, y: 0, width: 0, height: 0 });
     const [cropperVisible, setCropperVisible] = useState(false);
     const [tempImageUri, setTempImageUri] = useState(null);
-    const [frontImageUri, setFrontImageUri] = useState(null);
+    const [frontImageUri, setFrontImageUri] = useState(params?.imageUri || null);
     const [isManualModalVisible, setManualModalVisible] = useState(false); // <--- NEW STATE
     const [manualInputText, setManualInputText] = useState(''); // <--- NEW STATE
     const [isBreakdownModalVisible, setBreakdownModalVisible] = useState(false); // <--- ADD THIS
@@ -1548,7 +1584,7 @@ export default function OilGuardEngine() {
     const [recError, setRecError] = useState(false); // New state to track if search found nothing
     const [selectedRec, setSelectedRec] = useState(null);
     const [isDetailVisible, setDetailVisible] = useState(false);
-
+    
     const SCREEN_HEIGHT = Dimensions.get('window').height;
 
     const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -1695,6 +1731,7 @@ export default function OilGuardEngine() {
         isAdReadyRef.current = isLoaded; // Update the Ref
         if (isLoaded) console.log("✅ Ad is Ready (Ref Updated)!");
     }, [isLoaded]);
+
 
     // 2. Load Ad on Mount
     useEffect(() => {
@@ -2169,7 +2206,7 @@ export default function OilGuardEngine() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
-            console.error("Text Parse Error:", error);
+            console.error("Text Parse Error:", error);a
             Alert.alert(t('oilguard_error_title', language), t('oilguard_alert_parse_error_message', language));
             setIsGeminiLoading(false);
             setLoading(false);
@@ -2218,7 +2255,7 @@ export default function OilGuardEngine() {
             // ==============================================================
             try {
                 const updatedProductsForNotifs = [...(savedProducts || []), newProduct];
-                const userName = userProfile?.settings?.name || 'غالية';
+                const userName = userProfile?.settings?.name || t('brand_wathiq_user', language);
                 const userSettings = userProfile?.settings || {};
                 
                 await scheduleAuthenticNotifications(userName, updatedProductsForNotifs, userSettings);
@@ -2267,8 +2304,7 @@ export default function OilGuardEngine() {
     };
 
     const openSaveModal = () => {
-        setProductName('');
-        setFrontImageUri(null); // Force user to take a new pic of the front
+        // ترك البيانات كما هي لكي تظهر صورة واسم الكتالوج فوراً
         setSaveModalVisible(true);
     };
 
@@ -2341,10 +2377,10 @@ export default function OilGuardEngine() {
                         </Svg>
                     </View>
                     <Animated.Text style={[styles.loadingText, { opacity: textOpacity, marginTop: 20 }]}>
-                        جاري تحليل الصورة بالذكاء الاصطناعي...
+                        {t('oilguard_analyzing_ai', language)}
                     </Animated.Text>
                     <Text style={[styles.heroSub, { marginTop: 8 }]}>
-                        قد تستغرق هذه العملية بضع لحظات
+                        {t('oilguard_loading_note', language)}
                     </Text>
                 </StaggeredItem>
             </View>
@@ -2448,9 +2484,22 @@ export default function OilGuardEngine() {
                     <View style={styles.headerBackdrop} />
 
                     <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
-                        <Text style={styles.heroTitle}>{t('oilguard_claims_header', language)}</Text>
-                        <Text style={styles.heroSub}>حدد الادعاءات المكتوبة على العبوة.</Text>
-                    </Animated.View>
+    {isAutoStart ? (
+        <>
+            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.accentGreen, textAlign: 'right', marginBottom: 6 }}>
+                جاري تحليل:
+            </Text>
+            <Text style={[styles.heroTitle, { fontSize: 20 }]} numberOfLines={2} ellipsizeMode='tail'>
+                {productName}
+            </Text>
+        </>
+    ) : (
+        <>
+            <Text style={styles.heroTitle}>{t('oilguard_claims_header', language)}</Text>
+            <Text style={styles.heroSub}>{t('comp_claims_subtitle', language)}</Text>
+        </>
+    )}
+</Animated.View>
 
                     <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
                         <SafeAreaView>
@@ -2508,7 +2557,7 @@ export default function OilGuardEngine() {
                         extrapolate: 'clamp',
                     })
                 }]}>
-                    جاري تحليل التركيبة...
+                    {t('oilguard_loading_stage_1', language)}
                 </Animated.Text>
             </View>
         );
@@ -2677,7 +2726,7 @@ export default function OilGuardEngine() {
                                         color: COLORS.textPrimary,  // Brighter text
                                         letterSpacing: 0.3
                                     }}>
-                                        تحليل تفصيلي للدرجة
+                                        {t('oilguard_detailed_analysis', language)}
                                     </Text>
                                 </View>
 
@@ -2754,7 +2803,7 @@ export default function OilGuardEngine() {
                 {detectedIngredients.length > 0 && (
                     <StaggeredItem index={2}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 15, paddingHorizontal: 5 }}>
-                            <Text style={styles.resultsSectionTitle}>{`المكونات (${detectedIngredients.length})`}</Text>
+                            <Text style={styles.resultsSectionTitle}>{`${t('sheet_detected_ingredients', language)} (${detectedIngredients.length})`}</Text>
                             <View style={{ backgroundColor: COLORS.textPrimary + '1A', height: 1, flex: 1, marginRight: 15 }} />
                         </View>
 

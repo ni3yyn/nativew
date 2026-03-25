@@ -4,6 +4,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'rea
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +31,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                 <View style={s.topBar}>
                     <View style={s.matchBadge}>
                         <Ionicons name="sparkles" size={12} color={COLORS.background} />
-                        <Text style={s.matchBadgeText}>بديل مقترح</Text>
+                        <Text style={s.matchBadgeText}>{t('oilguard_suggested_alternative', useCurrentLanguage())}</Text>
                     </View>
                     <Text style={s.brandLabel}>{item.brand}</Text>
                 </View>
@@ -53,14 +55,14 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                         <View style={s.dataRow}>
                             <View style={s.scoreBox}>
                                 <Text style={s.scoreText}>{item.real_score}%</Text>
-                                <Text style={s.scoreLabel}>درجة وثيق</Text>
+                                <Text style={s.scoreLabel}>{t('oilguard_brand_score', useCurrentLanguage())}</Text>
                             </View>
 
                             <View style={s.divider} />
 
                             <View style={s.improvementBadge}>
                                 <FontAwesome5 name="arrow-up" size={10} color={COLORS.success} />
-                                <Text style={s.improvementText}>زيادة +{improvement}%</Text>
+                                <Text style={s.improvementText}>{t('oilguard_improvement', useCurrentLanguage())}{improvement}%</Text>
                             </View>
                         </View>
                     </View>
@@ -79,7 +81,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                                 style={loading ? s.rotating : null}
                             />
                         </View>
-                        <Text style={s.shuffleText}>بديل آخر</Text>
+                        <Text style={s.shuffleText}>{t('oilguard_another_alternative', useCurrentLanguage())}</Text>
                     </TouchableOpacity>
                 </View>
 

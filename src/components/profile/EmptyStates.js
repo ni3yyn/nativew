@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useRTL } from '../../hooks/useRTL';
 
 
 const FALLBACK_COLORS = {
@@ -83,9 +84,10 @@ const FastShimmerButton = ({ children }) => {
 
 // --- SHARED BUTTON ---
 const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, variant = 'primary' }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { colors: colorsFromTheme } = useTheme();
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     const IconComponent = iconFamily === "MaterialCommunityIcons" ? MaterialCommunityIcons :
         iconFamily === "FontAwesome5" ? FontAwesome5 : MaterialIcons;
@@ -125,10 +127,11 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, vari
 
 // --- 1. SHELF EMPTY STATE (Updated with instruction step) ---
 export const ShelfEmptyState = ({ onPress }) => {
-    const { colors } = useTheme();
+    const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     return (
         <FadeInView>
@@ -162,10 +165,11 @@ export const ShelfEmptyState = ({ onPress }) => {
 
 // --- 2. ANALYSIS EMPTY STATE (Updated Layout + Shimmer) ---
 export const AnalysisEmptyState = ({ onPress }) => {
-    const { colors } = useTheme();
+    const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     return (
         <FadeInView>
@@ -177,8 +181,8 @@ export const AnalysisEmptyState = ({ onPress }) => {
                         <FontAwesome5 name="lock" size={20} color={COLORS.gold} />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.titleAlignRight}>{t('empty_analysis_waiting_title', language)}</Text>
-                        <Text style={styles.descAlignRight}>{t('empty_analysis_waiting_desc', language)}</Text>
+                        <Text style={styles.titleAlignDynamic}>{t('empty_analysis_waiting_title', language)}</Text>
+                        <Text style={styles.descAlignDynamic}>{t('empty_analysis_waiting_desc', language)}</Text>
                     </View>
                 </View>
 
@@ -235,10 +239,11 @@ export const AnalysisEmptyState = ({ onPress }) => {
 
 // --- 3. ROUTINE EMPTY STATE ---
 export const RoutineEmptyState = ({ onPress }) => {
-    const { colors } = useTheme();
+    const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     return (
         <FadeInView>
@@ -266,10 +271,11 @@ export const RoutineEmptyState = ({ onPress }) => {
 
 // --- 4. INGREDIENTS EMPTY STATE ---
 export const IngredientsEmptyState = () => {
-    const { colors } = useTheme();
+    const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     return (
         <FadeInView>
@@ -280,11 +286,11 @@ export const IngredientsEmptyState = () => {
                 <Text style={[styles.title, { color: COLORS.textSecondary }]}>{t('empty_ingredients_title', language)}</Text>
                 <Text style={styles.description}>{t('empty_ingredients_desc', language)}</Text>
 
-                <View style={{ flexDirection: 'row-reverse', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Badge text={t('empty_badge_scientific_name', language)} icon="science" styles={styles} COLORS={COLORS} />
-                    <Badge text={t('empty_badge_function', language)} icon="work-outline" styles={styles} COLORS={COLORS} />
-                    <Badge text={t('empty_badge_benefits', language)} icon="favorite-border" styles={styles} COLORS={COLORS} />
-                    <Badge text={t('empty_badge_safety', language)} icon="warning-amber" styles={styles} COLORS={COLORS} />
+                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8, marginTop: 15, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Badge text={t('empty_badge_scientific_name', language)} icon="science" styles={styles} COLORS={COLORS} isRTL={isRTL}/>
+                    <Badge text={t('empty_badge_function', language)} icon="work-outline" styles={styles} COLORS={COLORS} isRTL={isRTL}/>
+                    <Badge text={t('empty_badge_benefits', language)} icon="favorite-border" styles={styles} COLORS={COLORS} isRTL={isRTL}/>
+                    <Badge text={t('empty_badge_safety', language)} icon="warning-amber" styles={styles} COLORS={COLORS} isRTL={isRTL}/>
                 </View>
             </View>
         </FadeInView>
@@ -293,10 +299,11 @@ export const IngredientsEmptyState = () => {
 
 // --- 5. MIGRATION (GOOD) EMPTY STATE ---
 export const MigrationSuccessState = () => {
-    const { colors } = useTheme();
+    const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
-    const COLORS = colors || FALLBACK_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const COLORS = colorsFromTheme || FALLBACK_COLORS;
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
 
     return (
         <FadeInView>
@@ -340,14 +347,14 @@ const FeatureCard = ({ icon, title, desc, color, styles, COLORS }) => (
     </View>
 );
 
-const Badge = ({ text, icon, styles, COLORS }) => (
+const Badge = ({ text, icon, styles, COLORS, isRTL }) => (
     <View style={styles.badge}>
-        {icon && <MaterialIcons name={icon} size={10} color={COLORS.textDim} style={{ marginLeft: 4 }} />}
+        {icon && <MaterialIcons name={icon} size={10} color={COLORS.textDim} style={isRTL ? { marginLeft: 4 } : { marginRight: 4 }} />}
         <Text style={styles.badgeText}>{text}</Text>
     </View>
 );
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isRTL) => StyleSheet.create({
     container: {
         alignItems: 'center',
         padding: 25,
@@ -389,37 +396,37 @@ const createStyles = (COLORS) => StyleSheet.create({
 
     // --- Specific Styles for Locked Analysis ---
     lockedHeader: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: 12,
         width: '100%',
         marginBottom: 15,
     },
-    titleAlignRight: {
+    titleAlignDynamic: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 16,
         color: COLORS.textPrimary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
-    descAlignRight: {
+    descAlignDynamic: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 12,
         color: COLORS.textSecondary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     stepsContainer: {
         width: '100%',
         marginBottom: 20,
-        paddingRight: 5,
+        ...(isRTL ? { paddingRight: 5 } : { paddingLeft: 5 }),
     },
     stepRow: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'flex-start',
         minHeight: 50,
     },
     stepIndicatorContainer: {
         alignItems: 'center',
-        marginLeft: 15,
+        ...(isRTL ? { marginLeft: 15 } : { marginRight: 15 }),
         width: 24,
     },
     stepDot: {
@@ -449,28 +456,28 @@ const createStyles = (COLORS) => StyleSheet.create({
     stepContent: {
         flex: 1,
         paddingTop: 1,
-        alignItems: 'flex-end',
-        paddingLeft: 10,
+        alignItems: isRTL ? 'flex-end' : 'flex-start',
+        ...(isRTL ? { paddingLeft: 10 } : { paddingRight: 10 }),
     },
     stepTitle: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
         color: COLORS.textPrimary,
         marginBottom: 2,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     stepTitleLocked: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
         color: COLORS.textDim,
         marginBottom: 2,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     stepDesc: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 11,
         color: COLORS.textSecondary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     divider: {
         width: '100%',
@@ -497,7 +504,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         marginBottom: 25,
     },
     featureRow: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: 8,
     },
@@ -505,13 +512,13 @@ const createStyles = (COLORS) => StyleSheet.create({
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
         color: COLORS.textPrimary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
         flex: 1,
     },
 
     // --- Grid for Analysis Features ---
     featuresGrid: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         flexWrap: 'wrap',
         gap: 10,
         justifyContent: 'center',
@@ -559,7 +566,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         backgroundColor: 'transparent',
     },
     actionButtonGradient: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
@@ -574,7 +581,7 @@ const createStyles = (COLORS) => StyleSheet.create({
 
     // --- Badges ---
     badge: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         backgroundColor: COLORS.textPrimary + '08',
         paddingHorizontal: 10,

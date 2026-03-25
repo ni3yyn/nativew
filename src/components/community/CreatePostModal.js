@@ -10,6 +10,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { CATEGORIES } from '../../constants/categories';
 import { compressImage, uploadImageToCloudinary } from '../../services/imageService';
 import { AlertService } from '../../services/alertService';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +48,7 @@ const ImageBox = ({ imageUri, onPress, label, onDelete, necessary, COLORS, style
 const MilestoneInput = ({ item, index, onPickImage, onChangeLabel, onDelete, canDelete, COLORS, styles }) => (
     <View style={styles.milestoneCard}>
         <View style={styles.milestoneHeader}>
-            <Text style={styles.milestoneIndex}>محطة {index + 1}</Text>
+            <Text style={styles.milestoneIndex}>{t('community_create_post_milestone_label', language, { index: index + 1 })}</Text>
             {canDelete && (
                 <TouchableOpacity onPress={onDelete}>
                     <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
@@ -60,15 +62,15 @@ const MilestoneInput = ({ item, index, onPickImage, onChangeLabel, onDelete, can
                 ) : (
                     <View style={{ alignItems: 'center' }}>
                         <Feather name="camera" size={20} color={COLORS.textDim} />
-                        <Text style={styles.tinyLabel}>صورة</Text>
+                        <Text style={styles.tinyLabel}>{t('community_create_post_milestone_image', language)}</Text>
                     </View>
                 )}
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
-                <Text style={styles.labelSmall}>التوقيت</Text>
+                <Text style={styles.labelSmall}>{t('community_create_post_milestone_time_label', language)}</Text>
                 <TextInput
                     style={styles.inputMilestone}
-                    placeholder="مثال: بعد شهر"
+                    placeholder={t('community_create_post_milestone_time_placeholder', language)}
                     placeholderTextColor={COLORS.textDim}
                     value={item.label}
                     onChangeText={onChangeLabel}
@@ -80,12 +82,18 @@ const MilestoneInput = ({ item, index, onPickImage, onChangeLabel, onDelete, can
 );
 
 // --- DURATION INPUT ---
-const DurationInput = ({ value, onChangeText, unit, onSelectUnit, COLORS, styles }) => {
+const DurationInput = ({ value, onChangeText, unit, onSelectUnit, COLORS, styles, language }) => {
+    const unitsLabels = {
+        'أيام': t('journey_unit_days', language),
+        'أسابيع': t('journey_unit_weeks', language),
+        'أشهر': t('journey_unit_months', language),
+        'سنوات': t('journey_unit_years', language)
+    };
     const units = ['أيام', 'أسابيع', 'أشهر', 'سنوات'];
     return (
         <View style={styles.durationContainer}>
             <View style={styles.fixedTextContainer}>
-                <Text style={styles.fixedText}>بعد</Text>
+                <Text style={styles.fixedText}>{t('journey_prefix_after', language)}</Text>
             </View>
             <TextInput
                 style={styles.durationNumInput}
@@ -103,7 +111,7 @@ const DurationInput = ({ value, onChangeText, unit, onSelectUnit, COLORS, styles
                         style={[styles.unitChip, unit === u && styles.unitChipActive]}
                         onPress={() => onSelectUnit(u)}
                     >
-                        <Text style={[styles.unitText, unit === u && { color: COLORS.textOnAccent }]}>{u}</Text>
+                        <Text style={[styles.unitText, unit === u && { color: COLORS.textOnAccent }]}>{unitsLabels[u]}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -114,6 +122,7 @@ const DurationInput = ({ value, onChangeText, unit, onSelectUnit, COLORS, styles
 // --- MAIN COMPONENT ---
 
 const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutines, defaultType, isAdmin }) => {
+    const language = useCurrentLanguage();
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -126,8 +135,8 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
     // JOURNEY STATE
     const [milestones, setMilestones] = useState([
-        { id: '1', label: 'البداية', image: null },
-        { id: '2', label: 'النتيجة', image: null }
+        { id: '1', label: t('journey_milestone_start', language), image: null },
+        { id: '2', label: t('journey_milestone_result', language), image: null }
     ]);
     const [journeyProducts, setJourneyProducts] = useState([]);
     const [durValue, setDurValue] = useState('');
@@ -144,8 +153,8 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             setImages({ main: null }); setJourneyProducts([]);
             setDurValue(''); setDurUnit('أشهر');
             setMilestones([
-                { id: Date.now().toString(), label: 'البداية', image: null },
-                { id: (Date.now() + 1).toString(), label: 'النتيجة', image: null }
+                { id: Date.now().toString(), label: t('journey_milestone_start', language), image: null },
+                { id: (Date.now() + 1).toString(), label: t('journey_milestone_result', language), image: null }
             ]);
         }
     }, [visible, defaultType]);
@@ -154,12 +163,12 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
     const requestImageSource = (callback, aspect = [4, 3]) => {
         AlertService.show({
-            title: "إرفاق صورة",
-            message: "اختر مصدر الصورة",
+            title: t('community_create_post_image_source_title', language),
+            message: t('community_create_post_image_source_msg', language),
             type: 'info',
             buttons: [
                 {
-                    text: 'المعرض',
+                    text: t('community_create_post_image_source_library', language),
                     style: 'secondary',
                     onPress: async () => {
                         const result = await ImagePicker.launchImageLibraryAsync({
@@ -172,7 +181,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                     }
                 },
                 {
-                    text: 'الكاميرا',
+                    text: t('community_create_post_image_source_camera', language),
                     style: 'primary',
                     onPress: async () => {
                         const result = await ImagePicker.launchCameraAsync({
@@ -184,7 +193,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         if (!result.canceled) callback(result.assets[0].uri);
                     }
                 },
-                { text: 'إلغاء', style: 'destructive' }
+                { text: t('community_create_post_image_source_cancel', language), style: 'destructive' }
             ]
         });
     };
@@ -262,7 +271,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                     return {
                         id: shelfItem.id,
                         // ✅ Use standard keys that match your Shelf schema
-                        productName: shelfItem.productName || shelfItem.name || 'منتج',
+                        productName: shelfItem.productName || shelfItem.name || t('product_type_other', language),
                         productImage: shelfItem.productImage || shelfItem.imageUrl || shelfItem.image || null,
                         oilGuardScore: Number(shelfItem.analysisData?.oilGuardScore || shelfItem.score || 0),
                         productType: shelfItem.analysisData?.product_type || shelfItem.type || 'other',
@@ -276,7 +285,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                     // Fallback using Routine Nickname
                     return {
                         id: id,
-                        productName: step.details || 'منتج غير متوفر',
+                        productName: step.details || t('weather_mini_unavailable', language),
                         productImage: null,
                         oilGuardScore: 0,
                         productType: 'other',
@@ -288,7 +297,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
             // Return Wrapper
             return {
-                stepName: step.name || "خطوة", 
+                stepName: step.name || t('weather_recommended', language), 
                 products: richProducts
             };
         });
@@ -300,30 +309,30 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
     const handleSubmit = async () => {
         // Validation: Content is required for ALL types (QA, Tips, Review, etc use it)
         if (!content.trim()) { 
-            AlertService.error("حقل فارغ", "يرجى كتابة المحتوى."); 
+            AlertService.error(t('community_create_post_validation_content', language), t('community_create_post_validation_content_msg', language)); 
             return; 
         }
 
         if (type === 'review') {
-            if (!selectedProduct) { AlertService.error("ناقص", "يرجى اختيار المنتج."); return; }
-            if (rating === 0) { AlertService.error("ناقص", "يرجى تحديد التقييم."); return; }
+            if (!selectedProduct) { AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_product_msg', language)); return; }
+            if (rating === 0) { AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_rating_msg', language)); return; }
         }
 
         if (type === 'journey') {
-            if (!durValue) { AlertService.error("ناقص", "يرجى تحديد مدة الرحلة."); return; }
-            if (journeyProducts.length === 0) { AlertService.error("ناقص", "حدد المنتجات المستخدمة."); return; }
-            if (milestones.filter(m => m.image).length < 2) { AlertService.error("ناقص", "الرحلة تحتاج صور (قبل وبعد)."); return; }
+            if (!durValue) { AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_journey_duration_msg', language)); return; }
+            if (journeyProducts.length === 0) { AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_journey_products_msg', language)); return; }
+            if (milestones.filter(m => m.image).length < 2) { AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_journey_images_msg', language)); return; }
         }
 
         if (type === 'qa' && !title.trim()) {
-            AlertService.error("ناقص", "يرجى كتابة عنوان للسؤال.");
+            AlertService.error(t('community_create_post_validation_product', language), t('community_create_post_validation_qa_title_msg', language));
             return;
         }
 
         if (type === 'routine_rate') {
             // Check if routine is empty
             if ((!userRoutines?.am || userRoutines.am.length === 0) && (!userRoutines?.pm || userRoutines.pm.length === 0)) {
-                AlertService.error("الروتين فارغ", "يرجى بناء روتينك في الملف الشخصي أولاً.");
+                AlertService.error(t('community_create_post_validation_empty_routine', language), t('community_create_post_validation_empty_routine_msg', language));
                 return;
             }
         }
@@ -386,7 +395,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             // 🔴 MODIFICATION END
 
             milestones: processedMilestones,
-            duration: type === 'journey' ? `بعد ${durValue} ${durUnit}` : null,
+            duration: type === 'journey' ? `${t('journey_prefix_after', language)} ${durValue} ${t('journey_unit_' + (durUnit === 'أيام' ? 'days' : durUnit === 'أسابيع' ? 'weeks' : durUnit === 'أشهر' ? 'months' : 'years'), language)}` : null,
             routineSnapshot
         };
 
@@ -404,7 +413,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <View style={styles.modalContainer}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>إنشاء منشور</Text>
+                    <Text style={styles.modalTitle}>{t('community_create_post_title', language)}</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                         <Ionicons name="close" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
@@ -422,7 +431,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                     onPress={() => setType(cat.id)}
                                 >
                                     <FontAwesome5 name={cat.icon} size={14} color={type === cat.id ? COLORS.textOnAccent : COLORS.textSecondary} />
-                                    <Text style={[styles.typeChipText, type === cat.id && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{cat.label}</Text>
+                                    <Text style={[styles.typeChipText, type === cat.id && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{t(cat.labelKey, language)}</Text>
                                 </TouchableOpacity>
                             );
                         })}
@@ -435,10 +444,10 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         {/* --- QA (Title Input) --- */}
                         {type === 'qa' && (
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>عنوان السؤال</Text>
+                                <Text style={styles.label}>{t('community_create_post_qa_title_label', language)}</Text>
                                 <TextInput
                                     style={styles.inputTitle}
-                                    placeholder="عنوان السؤال..."
+                                    placeholder={t('community_create_post_qa_title_placeholder', language)}
                                     placeholderTextColor={COLORS.textDim}
                                     value={title}
                                     onChangeText={setTitle}
@@ -452,16 +461,16 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                             <View style={styles.routinePreview}>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                     <FontAwesome5 name="clipboard-check" size={20} color={COLORS.purple} />
-                                    <Text style={[styles.label, { marginBottom: 0, color: COLORS.purple }]}>سيتم مشاركة روتينك الحالي</Text>
+                                    <Text style={[styles.label, { marginBottom: 0, color: COLORS.purple }]}>{t('community_create_post_routine_share_msg', language)}</Text>
                                 </View>
                                 <Text style={styles.routineInfo}>
-                                    • الصباح: {userRoutines?.am?.length || 0} خطوات
+                                    • {t('community_create_post_routine_am', language, { count: userRoutines?.am?.length || 0 })}
                                 </Text>
                                 <Text style={styles.routineInfo}>
-                                    • المساء: {userRoutines?.pm?.length || 0} خطوات
+                                    • {t('community_create_post_routine_pm', language, { count: userRoutines?.pm?.length || 0 })}
                                 </Text>
                                 <Text style={[styles.tinyLabel, { textAlign: 'right', marginTop: 8 }]}>
-                                    * سيظهر للمستخدمين المنتجات والصور كما هي في رفك.
+                                    {t('community_create_post_routine_disclaimer', language)}
                                 </Text>
                             </View>
                         )}
@@ -470,11 +479,11 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         {type !== 'tips' && (
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>
-                                    {type === 'qa' ? 'تفاصيل السؤال' : type === 'routine_rate' ? 'رأيك / استفسارك عن الروتين' : 'التفاصيل'}
+                                    {type === 'qa' ? t('community_create_post_details_label_qa', language) : type === 'routine_rate' ? t('community_create_post_details_label_routine', language) : t('community_create_post_details_label_default', language)}
                                 </Text>
                                 <TextInput
                                     style={styles.inputContent}
-                                    placeholder={type === 'journey' ? "صف رحلتك والنتائج..." : type === 'routine_rate' ? "مثال: هل ترتيب المنتجات صحيح؟ هل أحتاج سيروم فيتامين سي؟" : "التفاصيل..."}
+                                    placeholder={type === 'journey' ? t('community_create_post_placeholder_journey', language) : type === 'routine_rate' ? t('community_create_post_placeholder_routine', language) : t('community_create_post_placeholder_default', language)}
                                     placeholderTextColor={COLORS.textDim}
                                     multiline
                                     value={content}
@@ -489,10 +498,10 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
     <View>
         {/* Title Input */}
         <View style={styles.inputGroup}>
-            <Text style={styles.label}>عنوان النصيحة</Text>
+            <Text style={styles.label}>{t('community_create_post_tips_title_label', language)}</Text>
             <TextInput
                 style={styles.inputTitle}
-                placeholder="مثال: خرافات التسويق عن الكولاجين..."
+                placeholder={t('community_create_post_tips_title_placeholder', language)}
                 placeholderTextColor={COLORS.textDim}
                 value={title}
                 onChangeText={setTitle}
@@ -502,10 +511,10 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
         {/* Content Input */}
         <View style={styles.inputGroup}>
-            <Text style={styles.label}>المعلومة / النصيحة</Text>
+            <Text style={styles.label}>{t('community_create_post_tips_content_label', language)}</Text>
             <TextInput
                 style={styles.inputContent}
-                placeholder="اكتب النصيحة العلمية أو المعلومة هنا بالتفصيل..."
+                placeholder={t('community_create_post_tips_content_placeholder', language)}
                 placeholderTextColor={COLORS.textDim}
                 multiline
                 value={content}
@@ -516,12 +525,12 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
         {/* Image Input */}
         <View>
-            <Text style={styles.label}>صورة توضيحية (اختياري)</Text>
+            <Text style={styles.label}>{t('community_create_post_tips_image_label', language)}</Text>
             <ImageBox
                 imageUri={images.main}
                 onPress={() => pickImage('main')}
                 onDelete={() => removeImage('main')}
-                label="إرفاق صورة للنصيحة"
+                label={t('community_create_post_tips_image_btn', language)}
                 COLORS={COLORS}
                 styles={styles}
             />
@@ -532,10 +541,10 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         {/* --- JOURNEY --- */}
                         {type === 'journey' && (
                             <View>
-                                <Text style={styles.label}>المدة المستغرقة</Text>
-                                <DurationInput value={durValue} onChangeText={setDurValue} unit={durUnit} onSelectUnit={setDurUnit} COLORS={COLORS} styles={styles} />
+                                <Text style={styles.label}>{t('community_create_post_journey_duration', language)}</Text>
+                                <DurationInput value={durValue} onChangeText={setDurValue} unit={durUnit} onSelectUnit={setDurUnit} COLORS={COLORS} styles={styles} language={language} />
 
-                                <Text style={styles.label}>المنتجات المستخدمة & السعر (دج)</Text>
+                                <Text style={styles.label}>{t('community_create_post_journey_products', language)}</Text>
                                 <ScrollView style={{ maxHeight: 250 }} nestedScrollEnabled>
                                     {savedProducts.map(p => {
                                         const isSelected = journeyProducts.find(jp => jp.id === p.id);
@@ -560,7 +569,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                                 {isSelected && (
                                                     <TextInput
                                                         style={styles.priceInput}
-                                                        placeholder="السعر"
+                                                        placeholder={t('community_create_post_journey_products', language).split('&')[1].trim()}
                                                         placeholderTextColor={COLORS.textDim}
                                                         keyboardType="numeric"
                                                         value={isSelected.price}
@@ -570,14 +579,14 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                             </TouchableOpacity>
                                         );
                                     })}
-                                    {savedProducts.length === 0 && <Text style={styles.hintText}>رفّك فارغ. أضف منتجات أولاً.</Text>}
+                                    {savedProducts.length === 0 && <Text style={styles.hintText}>{t('community_create_post_journey_empty_shelf', language)}</Text>}
                                 </ScrollView>
 
                                 <View style={styles.divider} />
                                 <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                    <Text style={styles.label}>الجدول الزمني (صور)</Text>
+                                    <Text style={styles.label}>{t('community_create_post_journey_timeline', language)}</Text>
                                     <TouchableOpacity onPress={addMilestone} style={styles.addStepBtn}>
-                                        <Text style={styles.addStepText}>+ إضافة محطة</Text>
+                                        <Text style={styles.addStepText}>{t('community_create_post_journey_add_milestone', language)}</Text>
                                     </TouchableOpacity>
                                 </View>
                                 {milestones.map((m, index) => (
@@ -603,7 +612,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         {/* --- REVIEW --- */}
                         {type === 'review' && (
                             <View>
-                                <Text style={styles.label}>اختر المنتج</Text>
+                                <Text style={styles.label}>{t('community_create_post_review_select_product', language)}</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
                                     {savedProducts.map(p => (
                                         <TouchableOpacity
@@ -620,12 +629,12 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
-                                <Text style={styles.label}>التقييم</Text>
+                                <Text style={styles.label}>{t('community_create_post_review_rating', language)}</Text>
                                 <StarRatingInput rating={rating} onRate={setRating} COLORS={COLORS} styles={styles} />
                                 <View style={{ height: 15 }} />
-                                <Text style={styles.label}>صورة توضيحية (اختياري)</Text>
+                                <Text style={styles.label}>{t('community_create_post_review_image_label', language)}</Text>
                                 <ImageBox
-                                    label="إرفاق صورة جديدة"
+                                    label={t('community_create_post_review_image_btn', language)}
                                     imageUri={images.main}
                                     onPress={() => pickImage('main')}
                                     onDelete={() => removeImage('main')}
@@ -639,12 +648,12 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         {/* --- QA (Image Input) --- */}
                         {type === 'qa' && (
                             <View>
-                                <Text style={styles.label}>صورة توضيحية (اختياري)</Text>
+                                <Text style={styles.label}>{t('community_create_post_qa_image_label', language)}</Text>
                                 <ImageBox
                                     imageUri={images.main}
                                     onPress={() => pickImage('main')}
                                     onDelete={() => removeImage('main')}
-                                    label="إرفاق صورة"
+                                    label={t('community_create_post_qa_image_btn', language)}
                                     COLORS={COLORS}
                                     styles={styles}
                                 />
@@ -660,7 +669,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                         onPress={handleSubmit}
                         disabled={loading}
                     >
-                        {loading ? <ActivityIndicator color={COLORS.textOnAccent} /> : <Text style={styles.submitButtonText}>نشر الآن</Text>}
+                        {loading ? <ActivityIndicator color={COLORS.textOnAccent} /> : <Text style={styles.submitButtonText}>{t('community_create_post_submit', language)}</Text>}
                     </TouchableOpacity>
                 </View>
             </View>

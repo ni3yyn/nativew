@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { t } from '../../../i18n';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,15 +30,16 @@ const BackgroundDecor = ({ theme }) => (
 );
 
 // --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status) => {
+const getClaimStyle = (status, language) => {
     if (status.includes('✅')) return { color: '#10B981', icon: 'check' };
     if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf' };
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', note: '(نسبة غير فعالة)' };
+    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', note: t('oilguard_ineffective_ratio', language) };
     // Red for both Lies and No Evidence
     return { color: '#EF4444', icon: 'times' };
 };
 
 export default function Template06({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
+    const language = useCurrentLanguage();
     const safe = analysis || {};
     const claims = (safe.marketing_results || []).slice(0, 3);
     const safetyScore = safe.safety?.score || 0;
@@ -71,7 +74,7 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                     
                     <View style={[styles.scoreBadge, { backgroundColor: theme.accent }]}>
                         <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore}%</Text>
-                        <Text style={[styles.scoreLabel, { color: theme.primary }]}>درجة وثيق</Text>
+                        <Text style={[styles.scoreLabel, { color: theme.primary }]}>{t('oilguard_brand_score', language)}</Text>
                     </View>
                 </View>
             </View>
@@ -79,17 +82,17 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
             <View style={styles.infoSection}>
                 <Text style={[styles.pType, { color: theme.accent }]}>{typeLabel}</Text>
                 <Text style={[styles.pName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {productName || "اسم المنتج"}
+                    {productName || t('community_product', language)}
                 </Text>
                 
                 <View style={styles.statsRow}>
                     <View style={[styles.statPill, { borderColor: theme.border, backgroundColor: `${theme.text}10` }]}>
                         <Ionicons name="shield-checkmark" size={18} color={theme.accent} />
-                        <Text style={[styles.statText, { color: theme.text }]}>أمان {safetyScore}%</Text>
+                        <Text style={[styles.statText, { color: theme.text }]}>${t('oilguard_safety', language)} {safetyScore}%</Text>
                     </View>
                     <View style={[styles.statPill, { borderColor: theme.border, backgroundColor: `${theme.text}10` }]}>
                         <Ionicons name="star" size={18} color={theme.accent} />
-                        <Text style={[styles.statText, { color: theme.text }]}>فعالية {efficacyScore}%</Text>
+                        <Text style={[styles.statText, { color: theme.text }]}>${t('oilguard_efficacy', language)} {efficacyScore}%</Text>
                     </View>
                 </View>
 
@@ -102,9 +105,9 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
             </View>
 
             <View style={styles.claimsSection}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>تحليل الوعود التسويقية:</Text>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('oilguard_marketing_analysis', language)}:</Text>
                 {claims.map((c, i) => {
-                    const style = getClaimStyle(c.status);
+                    const style = getClaimStyle(c.status, language);
                     return (
                         <View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                             <View style={[styles.claimIcon, { backgroundColor: theme.accent }]}>
@@ -122,12 +125,12 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.disclaimerBox}>
                     <MaterialCommunityIcons name="information-variant" size={18} color={theme.text} style={{ opacity: 0.5 }} />
                     <Text style={[styles.disclaimerText, { color: theme.text }]}>
-                        *هذه النتيجة شخصية؛ قد تختلف الاستجابة حسب المستخدم.
+                        ${t('oilguard_disclaimer', language)}
                     </Text>
                 </View>
 
                 <View style={[styles.ctaButton, { backgroundColor: theme.text }]}>
-                    <Text style={[styles.ctaText, { color: theme.primary }]}>حللي منتجاتك الآن مجاناً</Text>
+                    <Text style={[styles.ctaText, { color: theme.primary }]}>{t('oilguard_cta_analyze', language)}</Text>
                     <View style={[styles.ctaIcon, { backgroundColor: theme.primary }]}>
                         <FontAwesome5 name="arrow-left" size={14} color={theme.text} />
                     </View>
@@ -141,7 +144,7 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />
                     <View style={styles.socialItem}>
                         <FontAwesome5 name="facebook" size={16} color={theme.accent} />
-                        <Text style={[styles.socialText, { color: theme.text }]}>وثيق محلل المكونات</Text>
+                        <Text style={[styles.socialText, { color: theme.text }]}>{t('oilguard_brand_name', language)}</Text>
                     </View>
                 </View>
                 

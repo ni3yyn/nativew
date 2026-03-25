@@ -426,22 +426,32 @@ export default function CommunityScreen() {
                     </View>
                 </View>
                 <ScrollView contentContainerStyle={styles.menuContainer}>
-                    {CATEGORIES.map((item) => {
-                        const catColor = COLORS[item.colorKey] || COLORS.primary;
-                        return (
-                            <TouchableOpacity key={item.id} style={styles.categoryCard} onPress={() => navigateToFeed(item)} activeOpacity={0.9}>
-                                <LinearGradient
-                                    colors={[String(COLORS.card), String(COLORS.card) + 'CC']}
-                                    style={StyleSheet.absoluteFill}
-                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                                />
-                                <View style={[styles.catIconBox, { backgroundColor: catColor + '20' }]}><FontAwesome5 name={item.icon} size={24} color={catColor} /></View>
-                                <View style={{ flex: 1 }}><Text style={styles.catTitle}>{item.label}</Text><Text style={styles.catDesc}>{item.desc}</Text></View>
-                                <FontAwesome5 name="chevron-left" size={16} color={COLORS.textDim} />
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
+    {CATEGORIES.map((item) => {
+        const catColor = COLORS[item.colorKey] || COLORS.primary;
+        return (
+            <TouchableOpacity key={item.id} style={styles.categoryCard} onPress={() => navigateToFeed(item)} activeOpacity={0.9}>
+                <LinearGradient
+                    colors={[String(COLORS.card), String(COLORS.card) + 'CC']}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                />
+                <View style={[styles.catIconBox, { backgroundColor: catColor + '20' }]}>
+                    <FontAwesome5 name={item.icon} size={24} color={catColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    {/* Use t() with the translation keys */}
+                    <Text style={styles.catTitle}>
+                        {t(item.labelKey, language)}
+                    </Text>
+                    <Text style={styles.catDesc}>
+                        {t(item.descKey, language)}
+                    </Text>
+                </View>
+                <FontAwesome5 name="chevron-left" size={16} color={COLORS.textDim} />
+            </TouchableOpacity>
+        );
+    })}
+</ScrollView>
                 <CommunityIntro visible={showIntro} onClose={() => setShowIntro(false)} />
             </View>
         );

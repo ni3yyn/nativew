@@ -12,18 +12,21 @@ import * as Location from 'expo-location'; // <--- ADD THIS
 import { useTimerStore } from './timerStore'; // Adjust the path as needed
 import { AlertService } from '../../services/alertService'; // <--- IMPORT THIS
 import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useRTL } from '../../hooks/useRTL';
 
 // --- THEME CONSTANTS ---
 // --- THEME CONSTANTS REMOVED (Using ThemeContext) ---
 
-const THEME_VARIANTS = {
-    pollution: { colors: ['#4c1d95', '#6d28d9'], icon: 'smog', label: 'خطر تلوث', shadow: '#6d28d9' },
-    dry: { colors: ['#1e3a8a', '#3b82f6'], icon: 'wind', label: 'جفاف شديد', shadow: '#3b82f6' },
-    uv: { colors: ['#7f1d1d', '#ea580c'], icon: 'sun', label: 'UV عالي', shadow: '#ea580c' },
-    humid: { colors: ['#7c2d12', '#d97706'], icon: 'tint', label: 'رطوبة عالية', shadow: '#d97706' },
-    perfect: { colors: ['#064e3b', '#10b981'], icon: 'smile-beam', label: 'طقس مثالي', shadow: '#10b981' },
-    unknown: { colors: ['#1f2937', '#4b5563'], icon: 'cloud', label: 'طقس', shadow: '#4b5563' }
-};
+const getThemeVariants = (language) => ({
+    pollution: { colors: ['#4c1d95', '#6d28d9'], icon: 'smog', label: t('weather_pollution_label', language), shadow: '#6d28d9' },
+    dry: { colors: ['#1e3a8a', '#3b82f6'], icon: 'wind', label: t('weather_dry_label', language), shadow: '#3b82f6' },
+    uv: { colors: ['#7f1d1d', '#ea580c'], icon: 'sun', label: t('weather_uv_label', language), shadow: '#ea580c' },
+    humid: { colors: ['#7c2d12', '#d97706'], icon: 'tint', label: t('weather_humid_label', language), shadow: '#d97706' },
+    perfect: { colors: ['#064e3b', '#10b981'], icon: 'smile-beam', label: t('weather_perfect_label', language), shadow: '#10b981' },
+    unknown: { colors: ['#1f2937', '#4b5563'], icon: 'cloud', label: t('weather_unknown_label', language), shadow: '#4b5563' }
+});
 
 const ARC_CONFIG = {
     width: 110,
@@ -51,7 +54,8 @@ Notifications.setNotificationHandler({
 // ============================================================================
 export const WeatherLoadingCard = () => {
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const opacity = useRef(new Animated.Value(0.3)).current;
 
     useEffect(() => {
@@ -69,7 +73,7 @@ export const WeatherLoadingCard = () => {
                 <View style={styles.loadingIcon}>
                     <ActivityIndicator size="small" color={COLORS.accentGreen} />
                 </View>
-                <View style={{ flex: 1, paddingRight: 16, gap: 12 }}>
+                <View style={{ flex: 1, ...(isRTL ? { paddingRight: 16 } : { paddingLeft: 16 }), gap: 12 }}>
                     <Animated.View style={[styles.skeletonLine, { width: '60%', height: 18, opacity }]} />
                     <Animated.View style={[styles.skeletonLine, { width: '40%', height: 14, opacity }]} />
                 </View>
@@ -82,8 +86,11 @@ export const WeatherLoadingCard = () => {
 //                       2. COMPACT WIDGET (Hero)
 // ============================================================================
 export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBlocked }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
+    const THEME_VARIANTS = getThemeVariants(language);
     const isPermissionError = insight.customData?.isPermissionError;
     const isServiceError = insight.customData?.isServiceError;
     const themeKey = insight.customData?.theme || 'unknown';
@@ -93,10 +100,10 @@ export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBl
         ...baseTheme,
         colors: isPermissionError ? ['#374151', '#4b5563'] : isServiceError ? ['#7f1d1d', '#991b1b'] : baseTheme.colors,
         icon: isPermissionError ? 'map-marker-alt' : isServiceError ? 'wifi' : baseTheme.icon,
-        title: isPermissionError ? 'الموقع غير مفعل' : isServiceError ? 'تعذر الاتصال' : baseTheme.label
+        title: isPermissionError ? t('weather_location_disabled', language) : isServiceError ? t('weather_connection_error', language) : baseTheme.label
     };
 
-    const actionIcon = isPermissionError ? "map-pin" : isServiceError ? "refresh-cw" : "arrow-left";
+    const actionIcon = isPermissionError ? "map-pin" : isServiceError ? "refresh-cw" : (isRTL ? "arrow-left" : "arrow-right");
 
     const handlePress = () => {
         Haptics.selectionAsync();
@@ -113,7 +120,7 @@ export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBl
                         <View style={styles.widgetIconCircle}><FontAwesome5 name={displayTheme.icon} size={24} color="#fff" /></View>
                         <View style={styles.widgetContent}>
                             <Text style={styles.widgetTitle}>{displayTheme.title}</Text>
-                            <Text style={styles.widgetSubtitle} numberOfLines={1}>{isPermissionError ? 'اضغطي لتفعيل الموقع' : insight.short_summary}</Text>
+                            <Text style={styles.widgetSubtitle} numberOfLines={1}>{isPermissionError ? t('weather_enable_location_tap', language) : insight.short_summary}</Text>
                         </View>
                         <View style={styles.widgetAction}><Feather name={actionIcon} size={20} color="rgba(255,255,255,0.9)" /></View>
                         <FontAwesome5 name={displayTheme.icon} size={140} color="rgba(255,255,255,0.06)" style={styles.widgetBgIcon} />
@@ -125,25 +132,27 @@ export const WeatherCompactWidget = ({ insight, onPress, onRetry, onPermissionBl
 };
 
 export const WeatherMiniCard = ({ insight, onPress }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const meta = insight.customData?.meta || {};
     const { temp, uvIndex } = meta;
 
     const getTheme = () => {
         const id = insight.id.toLowerCase();
-        if (insight.customData?.isPermissionError) return { colors: ['#4b5563', '#1f2937'], icon: 'map-marker-alt', label: 'الموقع' };
-        if (insight.customData?.isServiceError) return { colors: ['#d97706', '#92400e'], icon: 'wifi', label: 'غير متاح' };
-        if (insight.severity === 'good') return { colors: ['#10b981', '#059669'], icon: 'smile-beam', label: 'ممتاز' };
-        if (id.includes('uv')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', label: 'UV عالي' };
-        if (id.includes('dry')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'tint-slash', label: 'جفاف' };
-        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', label: 'طقس' };
+        if (insight.customData?.isPermissionError) return { colors: ['#4b5563', '#1f2937'], icon: 'map-marker-alt', label: t('weather_mini_location', language) };
+        if (insight.customData?.isServiceError) return { colors: ['#d97706', '#92400e'], icon: 'wifi', label: t('weather_mini_unavailable', language) };
+        if (insight.severity === 'good') return { colors: ['#10b981', '#059669'], icon: 'smile-beam', label: t('weather_mini_perfect', language) };
+        if (id.includes('uv')) return { colors: ['#ef4444', '#b91c1c'], icon: 'sun', label: t('weather_uv_label', language) };
+        if (id.includes('dry')) return { colors: ['#3b82f6', '#1d4ed8'], icon: 'tint-slash', label: t('weather_mini_dry', language) };
+        return { colors: [COLORS.accentGreen, '#4a8a73'], icon: 'cloud-sun', label: t('weather_unknown_label', language) };
     };
 
     const theme = getTheme();
 
     return (
-        <StaggeredItem index={0} style={{ width: 'auto', paddingLeft: 12 }} animated={false}>
+        <StaggeredItem index={0} style={{ width: 'auto', ...(isRTL ? { paddingLeft: 12 } : { paddingRight: 12 }) }} animated={false}>
             <PressableScale onPress={() => onPress(insight)}>
                 <View style={styles.miniCardContainer}>
                     <LinearGradient colors={theme.colors} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -158,7 +167,7 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
                         {temp !== undefined ? (
                             <View style={styles.glassPill}>
                                 <Text style={styles.glassPillText}>{Math.round(temp)}°</Text>
-                                {uvIndex !== undefined && <><View style={styles.glassSeparator} /><Text style={styles.glassPillText}>UV {Math.round(uvIndex)}</Text></>}
+                                {uvIndex !== undefined && <><View style={styles.glassSeparator} /><Text style={styles.glassPillText}>{t('weather_uv_short', language)} {Math.round(uvIndex)}</Text></>}
                             </View>
                         ) : (
                             <View style={styles.glassPill}><Text style={styles.glassPillText}>{theme.label}</Text></View>
@@ -174,8 +183,10 @@ export const WeatherMiniCard = ({ insight, onPress }) => {
 //               3. SMART SPF TIMER (LOGIC FIXED)
 // ============================================================================
 const SpfTimerWidget = ({ uvIndex = 0 }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     // 2. Store Hooks
     const {
         isActive,
@@ -253,7 +264,7 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
     const handleStart = async () => {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("تنبيه", "يجب تفعيل الإشعارات ليعمل المؤقت.");
+            Alert.alert(t('weather_spf_timer_alert_title', language), t('weather_spf_timer_alert_msg', language));
             return;
         }
 
@@ -274,8 +285,8 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
         // 4. Schedule with DATE trigger (Matches notificationHelper.js)
         const id = await Notifications.scheduleNotificationAsync({
             content: {
-                title: "☀️ وقت التجديد",
-                body: "انتهت فترة فعالية واقي الشمس. يرجى إعادة وضعه الآن.",
+                title: t('weather_spf_timer_notification_title', language),
+                body: t('weather_spf_timer_notification_body', language),
                 sound: 'default'
             },
             trigger: {
@@ -314,9 +325,9 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                 <View style={[styles.spfIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
                     <FontAwesome5 name="check" size={14} color="#10b981" />
                 </View>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={[styles.spfTitle, { color: '#d1fae5' }]}>الأجواء آمنة</Text>
-                    <Text style={[styles.spfDesc, { color: '#6ee7b7' }]}>مؤشر UV منخفض، لا حاجة للمؤقت.</Text>
+                <View style={{ flex: 1, ...(isRTL ? { paddingRight: 10 } : { paddingLeft: 10 }) }}>
+                    <Text style={[styles.spfTitle, { color: '#d1fae5', textAlign: isRTL ? 'right' : 'left' }]}>{t('weather_spf_safe_title', language)}</Text>
+                    <Text style={[styles.spfDesc, { color: '#6ee7b7', textAlign: isRTL ? 'right' : 'left' }]}>{t('weather_spf_safe_desc', language)}</Text>
                 </View>
             </View>
         );
@@ -372,7 +383,7 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                     ) : (
                         <View style={{ alignItems: 'center' }}>
                             <Text style={styles.ringVal}>{Math.round(recommendedDuration / 60)}</Text>
-                            <Text style={styles.ringUnit}>دقيقة</Text>
+                            <Text style={styles.ringUnit}>{t('weather_spf_unit_minute', language)}</Text>
                         </View>
                     )}
                 </View>
@@ -381,19 +392,19 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
             {/* 2. Controls (Right) */}
             <View style={styles.spfContent}>
                 {isActive ? (
-                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                        <Text style={styles.statusLabel}>المؤقت يعمل</Text>
+                    <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start', gap: 2 }}>
+                        <Text style={styles.statusLabel}>{t('weather_spf_timer_active', language)}</Text>
                         <Text style={styles.timerBigDisplay}>{formatTime(remainingSeconds)}</Text>
                         <PressableScale onPress={handleStop} style={styles.linkButton}>
-                            <Text style={styles.linkButtonText}>إلغاء المؤقت</Text>
+                            <Text style={styles.linkButtonText}>{t('weather_spf_timer_cancel', language)}</Text>
                         </PressableScale>
                     </View>
                 ) : (
-                    <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start', gap: 6 }}>
                         <View>
-                            <Text style={styles.spfTitle}>تجديد واقي الشمس</Text>
+                            <Text style={styles.spfTitle}>{t('weather_spf_timer_title', language)}</Text>
                             <Text style={styles.spfDesc}>
-                                مؤشر UV الحالي <Text style={{ color: COLORS.warning, fontFamily: 'Tajawal-Bold' }}>{uvIndex}</Text>
+                                {t('weather_spf_timer_current_uv', language)} <Text style={{ color: COLORS.warning, fontFamily: 'Tajawal-Bold' }}>{uvIndex}</Text>
                             </Text>
                         </View>
 
@@ -403,7 +414,7 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                 style={styles.startPillGradient}
                             >
-                                <Text style={styles.startPillText}>تشغيل</Text>
+                                <Text style={styles.startPillText}>{t('weather_spf_timer_start', language)}</Text>
                                 <FontAwesome5 name="play" size={10} color="#fff" />
                             </LinearGradient>
                         </PressableScale>
@@ -421,25 +432,27 @@ const SpfTimerWidget = ({ uvIndex = 0 }) => {
 
 // --- 4.1 SUN CYCLE (UV DRIVEN) ---
 const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
 
     // 1. Status Logic
-    let label = "آمن";
+    let label = t('weather_uv_status_safe', language);
     let color = COLORS.success;
     let percentage = 0;
 
     if (!isDay) {
-        label = "هدوء";
+        label = t('weather_uv_status_calm', language);
         color = "#94a3b8"; // Moon/Slate color
         percentage = 0;
     } else {
         const safeUV = Math.min(uvIndex, 11);
         percentage = safeUV / 11;
-        if (uvIndex >= 8) { label = "خطر جدا"; color = COLORS.danger; }
-        else if (uvIndex >= 6) { label = "خطر عالٍ"; color = COLORS.warning; }
-        else if (uvIndex >= 3) { label = "متوسط"; color = COLORS.gold; }
+        if (uvIndex >= 8) { label = t('weather_uv_status_danger', language); color = COLORS.danger; }
+        else if (uvIndex >= 6) { label = t('weather_uv_status_high_risk', language); color = COLORS.warning; }
+        else if (uvIndex >= 3) { label = t('weather_uv_status_moderate', language); color = COLORS.gold; }
     }
 
     // 2. Sun Position (Only needed for Day)
@@ -451,7 +464,7 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
                 <FontAwesome5 name={isDay ? "sun" : "moon"} size={12} color={color} />
-                <Text style={styles.featureTitle}>مؤشر UV</Text>
+                <Text style={styles.featureTitle}>{t('weather_uv_index_label', language)}</Text>
             </View>
 
             <View style={{ alignItems: 'center', marginTop: 4 }}>
@@ -509,8 +522,10 @@ const SunCycleWidget = ({ uvIndex = 0, isDay = true }) => {
 
 // --- 4.2 HYDRO-GAUGE (Skin Hydration) ---
 const HydroGauge = ({ humidity, dewPoint }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
 
     const safeHum = humidity !== undefined ? humidity : 50;
@@ -518,11 +533,11 @@ const HydroGauge = ({ humidity, dewPoint }) => {
 
     // Status Colors
     let color = COLORS.success;
-    let label = 'مريح';
-    if (safeDP < 10) { color = '#60a5fa'; label = 'جاف'; }
-    else if (safeDP <= 16) { color = COLORS.success; label = 'مثالي'; }
-    else if (safeDP <= 20) { color = COLORS.warning; label = 'رطب'; }
-    else { color = COLORS.danger; label = 'خانق'; }
+    let label = t('weather_humidity_status_comfortable', language);
+    if (safeDP < 10) { color = '#60a5fa'; label = t('weather_humidity_status_dry', language); }
+    else if (safeDP <= 16) { color = COLORS.success; label = t('weather_humidity_status_perfect', language); }
+    else if (safeDP <= 20) { color = COLORS.warning; label = t('weather_humidity_status_humid', language); }
+    else { color = COLORS.danger; label = t('weather_humidity_status_suffocating', language); }
 
     // Math for Fill Arc
     const percentage = Math.min(Math.max(safeHum / 100, 0), 1);
@@ -537,7 +552,7 @@ const HydroGauge = ({ humidity, dewPoint }) => {
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
                 <FontAwesome5 name={safeDP > 16 ? "tint" : "tint-slash"} size={12} color={color} />
-                <Text style={styles.featureTitle}>الرطوبة</Text>
+                <Text style={styles.featureTitle}>{t('weather_humidity_label', language)}</Text>
             </View>
 
             <View style={{ alignItems: 'center', marginTop: 4 }}>
@@ -566,19 +581,21 @@ const HydroGauge = ({ humidity, dewPoint }) => {
 
 // --- 4.3 PORE CLARITY ---
 const PoreClarityWidget = ({ aqi }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const { width, height, cx, cy, r, strokeWidth } = ARC_CONFIG;
     const safeAqi = aqi !== undefined ? aqi : 50;
 
     let color = COLORS.success;
-    let label = 'نقي';
+    let label = t('weather_aqi_status_pure', language);
 
     // Scale AQI (0-300 usually, but we cap at 150 for the meter visual)
     const percentage = Math.min(safeAqi / 150, 1);
 
-    if (safeAqi > 100) { color = COLORS.danger; label = 'ملوث'; }
-    else if (safeAqi > 50) { color = COLORS.warning; label = 'متوسط'; }
+    if (safeAqi > 100) { color = COLORS.danger; label = t('weather_aqi_status_polluted', language); }
+    else if (safeAqi > 50) { color = COLORS.warning; label = t('weather_aqi_status_moderate', language); }
 
     const endAngle = Math.PI * (1 - percentage);
     const x = cx + r * Math.cos(endAngle);
@@ -589,7 +606,7 @@ const PoreClarityWidget = ({ aqi }) => {
         <View style={styles.featureCard}>
             <View style={styles.featureHeader}>
                 <FontAwesome5 name="lungs" size={12} color={color} />
-                <Text style={styles.featureTitle}>جودة الهواء</Text>
+                <Text style={styles.featureTitle}>{t('weather_aqi_label', language)}</Text>
             </View>
 
             <View style={{ alignItems: 'center', marginTop: 4 }}>
@@ -617,8 +634,10 @@ const PoreClarityWidget = ({ aqi }) => {
 //                       5. HOURLY TIMELINE
 // ============================================================================
 const HourlySkinRisk = ({ forecast }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     if (!forecast || forecast.length === 0) return null;
 
     const currentHourIndex = new Date().getHours();
@@ -627,7 +646,7 @@ const HourlySkinRisk = ({ forecast }) => {
         const date = new Date(isoString);
         let hours = date.getHours();
         const isCurrent = hours === currentHourIndex;
-        const ampm = hours >= 12 ? 'م' : 'ص';
+        const ampm = hours >= 12 ? t('weather_time_pm', language) : t('weather_time_am', language);
 
         // Visual hour formatting
         const displayHour = hours % 12 || 12;
@@ -645,7 +664,7 @@ const HourlySkinRisk = ({ forecast }) => {
         <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeaderRow}>
                 <FontAwesome5 name="clock" size={14} color={COLORS.accentGreen} />
-                <Text style={styles.sectionTitle}>مؤشر البشرة (12 ساعة)</Text>
+                <Text style={styles.sectionTitle}>{t('weather_skin_index_12h', language)}</Text>
             </View>
 
             <View style={styles.timelineContainer}>
@@ -663,7 +682,7 @@ const HourlySkinRisk = ({ forecast }) => {
                         const color = hour.color || COLORS.success;
                         const icon = hour.icon || (isNight ? 'moon' : 'sun');
                         // Shorten label for cleaner UI if needed
-                        const label = hour.label || 'آمن';
+                        const label = hour.label || t('weather_uv_status_safe', language);
 
                         // Dynamic Height Calculation
                         const barHeight = Math.min(Math.max((hour.uv * 6) + 20, 20), 65);
@@ -706,7 +725,7 @@ const HourlySkinRisk = ({ forecast }) => {
                                 <View style={styles.timeLabelContainer}>
                                     {isCurrent ? (
                                         <View style={styles.nowBadge}>
-                                            <Text style={styles.nowText}>الآن</Text>
+                                            <Text style={styles.nowText}>{t('weather_time_now', language)}</Text>
                                         </View>
                                     ) : (
                                         <>
@@ -728,15 +747,17 @@ const HourlySkinRisk = ({ forecast }) => {
 //                       6. ACCESSORIES GRID
 // ============================================================================
 const AccessoriesSection = ({ accessories }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     if (!accessories || accessories.length === 0) return null;
 
     return (
         <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeaderRow}>
                 <FontAwesome5 name="tshirt" size={14} color={COLORS.accentGreen} />
-                <Text style={styles.sectionTitle}>تجهيزات الخروج</Text>
+                <Text style={styles.sectionTitle}>{t('weather_gear_title', language)}</Text>
             </View>
             <View style={styles.accessoriesGrid}>
                 {accessories.map((item, i) => (
@@ -748,7 +769,7 @@ const AccessoriesSection = ({ accessories }) => {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.accessoryText}>{item.label}</Text>
                                 {/* Added a subtle sub-label for context if available, or just visual balance */}
-                                <Text style={styles.accessorySubText}>موصى به</Text>
+                                <Text style={styles.accessorySubText}>{t('weather_recommended', language)}</Text>
                             </View>
                             {/* Checkmark to show it's a "ToDo" item */}
                             <View style={styles.accessoryCheck}>
@@ -766,12 +787,15 @@ const AccessoriesSection = ({ accessories }) => {
 //                       7. MAIN SHEET (Detailed View)
 // ============================================================================
 export const WeatherDetailedSheet = ({ insight }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const data = insight.customData;
 
     if (!data) return null;
 
+    const THEME_VARIANTS = getThemeVariants(language);
     const themeKey = data.theme || 'unknown';
     const theme = THEME_VARIANTS[themeKey] || THEME_VARIANTS.unknown;
 
@@ -821,7 +845,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
             {/* 3. METRICS SCROLL (Indicators) */}
             <View style={{ marginTop: 20 }}>
-                <Text style={[styles.sectionTitle, { marginRight: 8, marginBottom: 10 }]}>مؤشرات الجو</Text>
+                <Text style={[styles.sectionTitle, { marginRight: 8, marginBottom: 10 }]}>{t('weather_indicators_title', language)}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, flexDirection: 'row-reverse', gap: 10 }}>
                     {/* Pass isDay to SunCycle */}
                     <SunCycleWidget uvIndex={uvIndex} isDay={isDay} />
@@ -844,7 +868,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                 <View style={styles.sectionWrapper}>
                     <View style={styles.sectionHeaderRow}>
                         <FontAwesome5 name="chart-pie" size={14} color={COLORS.accentGreen} />
-                        <Text style={styles.sectionTitle}>تحليل الأثر</Text>
+                        <Text style={styles.sectionTitle}>{t('weather_impact_analysis', language)}</Text>
                     </View>
                     <View style={styles.impactCard}>
                         <View style={styles.impactSide}>
@@ -852,7 +876,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                                 <View style={[styles.impactIconBox, { backgroundColor: COLORS.accentGreen + '15' }]}>
                                     <FontAwesome5 name="user-alt" size={12} color={COLORS.accentGreen} />
                                 </View>
-                                <Text style={styles.impactTitle}>البشرة</Text>
+                                <Text style={styles.impactTitle}>{t('weather_impact_skin', language)}</Text>
                             </View>
                             <Text style={styles.impactBody}>{data.impact.skin}</Text>
                         </View>
@@ -862,7 +886,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                                 <View style={[styles.impactIconBox, { backgroundColor: COLORS.gold + '15' }]}>
                                     <FontAwesome5 name="cut" size={12} color={COLORS.gold} />
                                 </View>
-                                <Text style={styles.impactTitle}>الشعر</Text>
+                                <Text style={styles.impactTitle}>{t('weather_impact_hair', language)}</Text>
                             </View>
                             <Text style={styles.impactBody}>{data.impact.hair}</Text>
                         </View>
@@ -875,7 +899,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                 <View style={styles.sectionWrapper}>
                     <View style={styles.sectionHeaderRow}>
                         <FontAwesome5 name="magic" size={14} color={COLORS.accentGreen} />
-                        <Text style={styles.sectionTitle}>توصيات الروتين</Text>
+                        <Text style={styles.sectionTitle}>{t('weather_routine_recommendations', language)}</Text>
                     </View>
 
                     {/* Container with visual separation but no heavy boxing */}
@@ -900,8 +924,10 @@ export const WeatherDetailedSheet = ({ insight }) => {
 };
 
 const CleanRoutineItem = ({ item }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const isOwned = !!item.product;
     const isAdviceOnly = !item.product && !item.missing_suggestion; // e.g., "Skip Moisturizer"
 
@@ -917,11 +943,11 @@ const CleanRoutineItem = ({ item }) => {
     } else if (isAdviceOnly) {
         statusColor = COLORS.blue;
         icon = "lightbulb";
-        subText = item.missing_suggestion || "نصيحة سلوكية";
+        subText = item.missing_suggestion || t('weather_advice_behavioral', language);
     } else {
         statusColor = COLORS.warning;
         icon = "shopping-bag";
-        subText = `مقترح: ${item.missing_suggestion}`; // Generic ingredient
+        subText = `${t('weather_suggestion_label', language)}: ${item.missing_suggestion}`; // Generic ingredient
     }
 
     return (
@@ -959,8 +985,10 @@ const CleanRoutineItem = ({ item }) => {
 // ============================================================================
 
 export const LocationPermissionModal = ({ visible, onClose }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     const [showModal, setShowModal] = useState(visible);
 
     const slideAnim = useRef(new Animated.Value(100)).current;
@@ -1010,13 +1038,13 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                 onClose();
             } else {
                 AlertService.show({
-                    title: "الإذن مطلوب",
-                    message: "يبدو أنك قمت برفض الإذن سابقا. يرجى تفعيل الموقع يدويا من إعدادات الهاتف.",
+                    title: t('weather_permission_required_title', language),
+                    message: t('weather_permission_required_msg', language),
                     type: 'warning',
                     buttons: [
-                        { text: "إلغاء", style: "secondary" },
+                        { text: t('weather_permission_cancel', language), style: "secondary" },
                         {
-                            text: "الإعدادات",
+                            text: t('weather_permission_settings', language),
                             style: "primary",
                             onPress: () => {
                                 Linking.openSettings();
@@ -1056,9 +1084,9 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                         </LinearGradient>
                     </View>
 
-                    <Text style={styles.modalTitle}>اكتشفي مناخ بشرتك</Text>
+                    <Text style={styles.modalTitle}>{t('weather_discovery_title', language)}</Text>
                     <Text style={styles.modalBody}>
-                        اسمحي لنا بتحليل طقس منطقتك لتفعيل الميزات الذكية:
+                        {t('weather_discovery_desc', language)}
                     </Text>
 
                     <View style={styles.featureListContainer}>
@@ -1066,19 +1094,19 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                             <View style={[styles.featureIconBox, { backgroundColor: COLORS.gold + '26' }]}>
                                 <FontAwesome5 name="clock" size={14} color={COLORS.gold} />
                             </View>
-                            <Text style={styles.featureText}>مؤقت ذكي لتجديد واقي الشمس</Text>
+                            <Text style={styles.featureText}>{t('weather_feature_spf_timer', language)}</Text>
                         </View>
                         <View style={styles.featureRow}>
                             <View style={[styles.featureIconBox, { backgroundColor: COLORS.danger + '26' }]}>
                                 <FontAwesome5 name="sun" size={14} color={COLORS.danger} />
                             </View>
-                            <Text style={styles.featureText}>تحذيرات فورية من الأشعة UV</Text>
+                            <Text style={styles.featureText}>{t('weather_feature_uv_alerts', language)}</Text>
                         </View>
                         <View style={styles.featureRow}>
                             <View style={[styles.featureIconBox, { backgroundColor: (COLORS.info || COLORS.accentGreen) + '26' }]}>
                                 <FontAwesome5 name="wind" size={14} color={COLORS.blue} />
                             </View>
-                            <Text style={styles.featureText}>تحليل التلوث وجودة الهواء</Text>
+                            <Text style={styles.featureText}>{t('weather_feature_aqi_analysis', language)}</Text>
                         </View>
                     </View>
 
@@ -1089,7 +1117,7 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                             activeOpacity={0.7}
                             delayPressIn={0} // <--- FIX: Removes tap delay
                         >
-                            <Text style={styles.btnSecondaryText}>لاحقا</Text>
+                            <Text style={styles.btnSecondaryText}>{t('weather_btn_later', language)}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -1098,7 +1126,7 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
                             activeOpacity={0.8}
                             delayPressIn={0} // <--- FIX: Removes tap delay
                         >
-                            <Text style={styles.btnPrimaryText}>تفعيل الميزات</Text>
+                            <Text style={styles.btnPrimaryText}>{t('weather_btn_activate', language)}</Text>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
@@ -1109,8 +1137,10 @@ export const LocationPermissionModal = ({ visible, onClose }) => {
 
 
 export const NightPrepCard = ({ data, onPress }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     if (!data) return null;
 
     return (
@@ -1131,7 +1161,7 @@ export const NightPrepCard = ({ data, onPress }) => {
                             <View style={[styles.iconBox, { backgroundColor: data.color + '30' }]}>
                                 <FontAwesome5 name={data.icon} size={16} color={data.color} />
                             </View>
-                            <Text style={styles.nightTag}>خطة الليلة لطقس الغد</Text>
+                            <Text style={styles.nightTag}>{t('weather_night_prep_tag', language)}</Text>
                         </View>
 
                         <Text style={styles.nightTitle}>{data.title}</Text>
@@ -1140,7 +1170,7 @@ export const NightPrepCard = ({ data, onPress }) => {
                         </Text>
 
                         <View style={styles.nightActionRow}>
-                            <Text style={styles.nightBtnText}>إضافة للروتين المسائي</Text>
+                            <Text style={styles.nightBtnText}>{t('weather_night_prep_add', language)}</Text>
                             <Feather name="plus-circle" size={16} color="#c7d2fe" />
                         </View>
                     </View>
@@ -1154,8 +1184,10 @@ export const NightPrepCard = ({ data, onPress }) => {
 
 // 2. INTERACTIVE EXPOSURE SLIDER (The Context Switcher)
 export const ExposureSlider = ({ value, onChange }) => {
+    const language = useCurrentLanguage();
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const { isRTL } = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
     // Value: 0 (Indoors), 1 (Commute), 2 (Outdoors)
 
     // We use the prop 'value' to drive the animation, not internal state
@@ -1171,9 +1203,9 @@ export const ExposureSlider = ({ value, onChange }) => {
     }, [value]);
 
     const options = [
-        { label: 'داخل المنزل', icon: 'home' },   // Index 0
-        { label: 'خروج محدود', icon: 'walking' }, // Index 1
-        { label: 'خارج المنزل', icon: 'sun' },    // Index 2
+        { label: t('weather_day_nature_indoors', language), icon: 'home' },   // Index 0
+        { label: t('weather_day_nature_limited', language), icon: 'walking' }, // Index 1
+        { label: t('weather_day_nature_outdoors', language), icon: 'sun' },    // Index 2
     ];
 
     const handlePress = (index) => {
@@ -1184,10 +1216,10 @@ export const ExposureSlider = ({ value, onChange }) => {
     return (
         <View style={styles.sliderContainer}>
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 5 }}>
-                <Text style={styles.sliderTitle}>طبيعة يومك:</Text>
+                <Text style={styles.sliderTitle}>{t('weather_day_nature_title', language)}</Text>
                 <View style={{ backgroundColor: COLORS.accentGreen + '1A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
                     <Text style={{ color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Regular' }}>
-                        {value === 0 ? 'تنبيهات منخفضة' : value === 2 ? 'تنبيهات قصوى' : 'تنبيهات قياسية'}
+                        {value === 0 ? t('weather_day_nature_low', language) : value === 2 ? t('weather_day_nature_high', language) : t('weather_day_nature_stable', language)}
                     </Text>
                 </View>
             </View>
@@ -1200,9 +1232,16 @@ export const ExposureSlider = ({ value, onChange }) => {
                    We use 'right' property for interpolation to match RTL logic.
                 */}
                 <Animated.View style={[styles.sliderPill, {
-                    right: widthAnim.interpolate({
-                        inputRange: [0, 1, 2],
-                        outputRange: ['1%', '34%', '67%'] // Moves from Right to Left
+                    ...(isRTL ? {
+                        right: widthAnim.interpolate({
+                            inputRange: [0, 1, 2],
+                            outputRange: ['1%', '34%', '67%']
+                        })
+                    } : {
+                        left: widthAnim.interpolate({
+                            inputRange: [0, 1, 2],
+                            outputRange: ['1%', '34%', '67%']
+                        })
                     })
                 }]} />
 
@@ -1236,14 +1275,14 @@ export const ExposureSlider = ({ value, onChange }) => {
 // ============================================================================
 //                       STYLES (COMPLETE & FIXED)
 // ============================================================================
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isRTL) => StyleSheet.create({
     // --- Skeleton ---
     loadingCard: {
-        flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 24, padding: 16, marginBottom: 20,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 24, padding: 16, marginBottom: 20,
         borderWidth: 1, borderColor: COLORS.border,
     },
     loadingIcon: {
-        width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.accentGreen + '1A', alignItems: 'center', justifyContent: 'center', marginLeft: 16,
+        width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.accentGreen + '1A', alignItems: 'center', justifyContent: 'center', ...(isRTL ? { marginLeft: 16 } : { marginRight: 16 }),
     },
     skeletonLine: { backgroundColor: COLORS.accentGreen + '33', borderRadius: 4 },
 
@@ -1253,15 +1292,15 @@ const createStyles = (COLORS) => StyleSheet.create({
         shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 12,
     },
     widgetGradient: {
-        flexDirection: 'row-reverse', alignItems: 'center', padding: 22, borderRadius: 32, overflow: 'hidden', position: 'relative',
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', padding: 22, borderRadius: 32, overflow: 'hidden', position: 'relative',
     },
     widgetIconCircle: {
-        width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 16,
+        width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', ...(isRTL ? { marginLeft: 16 } : { marginRight: 16 }),
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     },
-    widgetContent: { flex: 1, justifyContent: 'center', paddingRight: 4 },
-    widgetTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: '#fff', textAlign: 'right', marginBottom: 2, textShadowColor: 'rgba(0,0,0,0.2)', textShadowRadius: 5 },
-    widgetSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: 'rgba(255,255,255,0.95)', textAlign: 'right' },
+    widgetContent: { flex: 1, justifyContent: 'center', ...(isRTL ? { paddingRight: 4 } : { paddingLeft: 4 }) },
+    widgetTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: '#fff', textAlign: isRTL ? 'right' : 'left', marginBottom: 2, textShadowColor: 'rgba(0,0,0,0.2)', textShadowRadius: 5 },
+    widgetSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: 'rgba(255,255,255,0.95)', textAlign: isRTL ? 'right' : 'left' },
     widgetAction: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 18 },
     widgetBgIcon: { position: 'absolute', left: -25, bottom: -25, opacity: 0.08, transform: [{ rotate: '15deg' }] },
 
@@ -1270,20 +1309,20 @@ const createStyles = (COLORS) => StyleSheet.create({
         width: 150, height: 160, borderRadius: 24, padding: 16, justifyContent: 'space-between',
         overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6,
     },
-    miniCardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
+    miniCardHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' },
     miniIconCircle: {
         width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)',
         alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff', opacity: 0.9, shadowColor: '#fff', shadowOpacity: 0.5, shadowRadius: 4 },
     miniCardTitle: {
-        fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#fff', textAlign: 'right', lineHeight: 22,
+        fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#fff', textAlign: isRTL ? 'right' : 'left', lineHeight: 22,
         textShadowColor: 'rgba(0,0,0,0.15)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3,
     },
-    miniCardFooter: { flexDirection: 'row-reverse' },
+    miniCardFooter: { flexDirection: isRTL ? 'row-reverse' : 'row' },
     glassPill: {
-        flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignSelf: 'flex-start',
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignSelf: isRTL ? 'flex-start' : 'flex-end',
     },
     glassPillText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
     glassSeparator: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
@@ -1293,11 +1332,9 @@ const createStyles = (COLORS) => StyleSheet.create({
         backgroundColor: COLORS.card,
         borderRadius: 26,
         padding: 18,
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         marginBottom: 20,
-        // No border, just subtle depth
-
     },
 
     // Safe State
@@ -1306,13 +1343,13 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     spfIconCircle: {
         width: 36, height: 36, borderRadius: 18,
-        alignItems: 'center', justifyContent: 'center', marginLeft: 12
+        alignItems: 'center', justifyContent: 'center', ...(isRTL ? { marginLeft: 12 } : { marginRight: 12 })
     },
 
     // Layout
     spfContent: {
         flex: 1,
-        paddingRight: 16, // Space between text and ring
+        ...(isRTL ? { paddingRight: 16 } : { paddingLeft: 16 }), // Space between text and ring
         justifyContent: 'center',
     },
 
@@ -1321,14 +1358,14 @@ const createStyles = (COLORS) => StyleSheet.create({
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 16,
         color: COLORS.textPrimary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
         marginBottom: 2
     },
     spfDesc: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 13,
         color: COLORS.textSecondary,
-        textAlign: 'right'
+        textAlign: isRTL ? 'right' : 'left'
     },
     statusLabel: {
         fontFamily: 'Tajawal-Bold',
@@ -1446,7 +1483,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         marginTop: 0
     },
     // Hydro
-    hydroContainer: { flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 8, flex: 1, paddingBottom: 5 },
+    hydroContainer: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, flex: 1, ...(isRTL ? { paddingBottom: 5 } : { paddingBottom: 5 }) }, // paddingBottom same for both
     hydroBarBg: { width: 6, height: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, justifyContent: 'flex-end', overflow: 'hidden' },
     hydroBarFill: { width: '100%', borderRadius: 3 },
 
@@ -1471,13 +1508,13 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     timelineScrollContent: {
         paddingHorizontal: 20,
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         paddingBottom: 5 // Extra padding for shadows
     },
     timeSlot: {
         alignItems: 'center',
         width: 60,
-        marginLeft: 8,
+        ...(isRTL ? { marginLeft: 8 } : { marginRight: 8 }),
         justifyContent: 'flex-end',
         borderRadius: 12,
         paddingVertical: 4
@@ -1489,7 +1526,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderColor: COLORS.accentGreen + '33',
     },
     timelinePill: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         paddingHorizontal: 6,
         paddingVertical: 3,
@@ -1619,18 +1656,18 @@ const createStyles = (COLORS) => StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
     },
     locationText: { fontFamily: 'Tajawal-Bold', fontSize: 11, color: '#fff' },
-    headerCenter: { alignItems: 'center', marginTop: 15, marginBottom: 20 },
+    headerCenter: { alignItems: 'center', marginVertical: 24, textAlign: 'center' }, // Central alignment stays center
     headerIconRing: {
         width: 65, height: 65, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center', justifyContent: 'center', marginBottom: 15, marginTop: 20,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10
     },
-    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: '#fff', textAlign: 'center', marginBottom: 6 },
-    headerSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: '85%', lineHeight: 24 },
+    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 26, color: '#fff', textAlign: 'center', marginTop: 8 },
+    headerSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: '85%', lineHeight: 24, marginTop: 2 },
     metricPill: {
-        flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 18, paddingVertical: 12, borderRadius: 24,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', gap: 10
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+        gap: 8, alignSelf: 'center'
     },
     metricLabel: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: 'rgba(255,255,255,0.9)' },
     metricValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, color: '#fff' },
@@ -1673,27 +1710,27 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 75, backgroundColor: '#818cf8', opacity: 0.2, filter: 'blur(30px)'
     },
     nightPrepContent: { flex: 1, justifyContent: 'space-between' },
-    nightHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+    nightHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 },
     iconBox: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     nightTag: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#c7d2fe' },
-    nightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: '#fff', textAlign: 'right', marginTop: 4 },
-    nightBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: '#e0e7ff', textAlign: 'right', maxWidth: '85%', lineHeight: 20 },
-    nightActionRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, opacity: 0.8 },
+    nightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: '#fff', textAlign: isRTL ? 'right' : 'left', marginTop: 4 },
+    nightBody: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: '#e0e7ff', textAlign: isRTL ? 'right' : 'left', maxWidth: '85%', lineHeight: 20 },
+    nightActionRow: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, opacity: 0.8 },
     nightBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: '#c7d2fe' },
-    bgMoon: { position: 'absolute', left: -20, bottom: -20, opacity: 0.1, transform: [{ rotate: '15deg' }] },
+    bgMoon: { position: 'absolute', ...(isRTL ? { left: -20 } : { right: -20 }), bottom: -20, opacity: 0.1, transform: [{ rotate: '15deg' }] },
 
     // --- Slider ---
     sliderContainer: { marginBottom: 20, paddingHorizontal: 4 },
     sliderTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
     sliderTrack: {
-        flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 16, height: 48,
+        flexDirection: isRTL ? 'row-reverse' : 'row', backgroundColor: COLORS.background, borderRadius: 16, height: 48,
         borderWidth: 1, borderColor: COLORS.border, position: 'relative', justifyContent: 'space-between',
     },
     sliderPill: {
         position: 'absolute', top: 4, bottom: 4, width: '32%', backgroundColor: COLORS.accentGreen, borderRadius: 12,
         shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4, zIndex: 1,
     },
-    sliderOption: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 10, height: '100%' },
+    sliderOption: { flex: 1, flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 10, height: '100%' },
     sliderText: { fontSize: 11, paddingBottom: 2 },
 
     // --- Modal ---
@@ -1708,10 +1745,11 @@ const createStyles = (COLORS) => StyleSheet.create({
     modalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, marginBottom: 8, textAlign: 'center' },
     modalBody: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20 },
     featureListContainer: { width: '100%', marginBottom: 25, gap: 12 },
-    featureRow: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.background, padding: 10, borderRadius: 12, gap: 12 },
+    featureRow: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', backgroundColor: COLORS.background, padding: 10, borderRadius: 12, gap: 12 },
     featureIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    featureText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
-    modalActions: { flexDirection: 'row-reverse', width: '100%', gap: 12 },
+    featureText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, flex: 1, textAlign: isRTL ? 'right' : 'left' },
+    accessoriesGrid: { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 12, marginTop: 15 },
+    modalActions: { flexDirection: isRTL ? 'row-reverse' : 'row', width: '100%', gap: 12 },
     btnPrimary: { flex: 1, backgroundColor: COLORS.accentGreen, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
     btnPrimaryText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: '#ffffff', marginBottom: 2 },
     btnSecondary: { flex: 0.4, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
@@ -1728,7 +1766,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderColor: COLORS.border,
     },
     cleanRowContainer: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         paddingVertical: 12,
     },
@@ -1738,7 +1776,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 20, // Circular
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 14, // Spacing from text (RTL)
+        ...(isRTL ? { marginLeft: 14 } : { marginRight: 14 }), // Spacing from text
     },
     cleanContent: {
         flex: 1,
@@ -1746,7 +1784,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         gap: 2,
     },
     cleanHeader: {
-        flexDirection: 'row-reverse',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
@@ -1754,7 +1792,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         fontFamily: 'Tajawal-Bold',
         fontSize: 14,
         color: COLORS.textPrimary,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
     },
     cleanStepTag: {
         fontFamily: 'Tajawal-Regular',
@@ -1769,7 +1807,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     cleanProductText: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 12,
-        textAlign: 'right',
+        textAlign: isRTL ? 'right' : 'left',
         opacity: 0.9,
     },
     cleanDivider: {

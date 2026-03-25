@@ -9,8 +9,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
-import { t } from '../../i18n';
-import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // --- THEME CONFIG ---
 const { height } = Dimensions.get('window');
@@ -23,7 +21,6 @@ const getTextDirection = (text) => {
 
 export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     const { colors } = useTheme();
-    const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
@@ -131,8 +128,8 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                     <FontAwesome5 name="search" size={18} color={COLORS.accentGreen} />
                                 </View>
                                 <View style={styles.headerTexts}>
-                                    <Text style={styles.headerTitle}>{t('oilguard_manual_title', language)}</Text>
-                                    <Text style={styles.headerSub}>{t('oilguard_manual_subtitle', language)}</Text>
+                                    <Text style={styles.headerTitle}>إدخال المكونات يدويا</Text>
+                                    <Text style={styles.headerSub}>تحليل فوري عبر النص</Text>
                                 </View>
                                 <TouchableOpacity onPress={closeSheet} style={styles.closeBtn}>
                                     <Ionicons name="close" size={24} color={COLORS.textSecondary} />
@@ -142,17 +139,17 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                             <View style={styles.instructionsContainer}>
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="pen" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>{t('oilguard_manual_instruction_write', language)}</Text>
+                                    <Text style={styles.instructionText}>اكتب المكونات</Text>
                                 </View>
                                 <View style={styles.verticalLine} />
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="comma" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>{t('oilguard_manual_instruction_commas', language)}</Text>
+                                    <Text style={styles.instructionText}>افصل بفواصل</Text>
                                 </View>
                                 <View style={styles.verticalLine} />
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="translate" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>{t('oilguard_manual_instruction_language', language)}</Text>
+                                    <Text style={styles.instructionText}>بأي لغة</Text>
                                 </View>
                             </View>
 
@@ -164,7 +161,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                         { textAlign: inputDirection }
                                     ]}
                                     multiline
-                                    placeholder={t('oilguard_manual_placeholder', language)}
+                                    placeholder="مثال: Water, Glycerin, Niacinamide..."
                                     placeholderTextColor={COLORS.textSecondary}
                                     value={text}
                                     onChangeText={handleTextChange}
@@ -181,7 +178,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                     style={styles.gradientBtn}
                                 >
-                                    <Text style={styles.submitBtnText}>{t('oilguard_manual_submit', language)}</Text>
+                                    <Text style={styles.submitBtnText}>تحليل المكونات</Text>
                                     <FontAwesome5 name="flask" size={16} color={COLORS.textOnAccent} />
                                 </LinearGradient>
                             </TouchableOpacity>

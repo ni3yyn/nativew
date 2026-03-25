@@ -8,6 +8,8 @@ import { FontAwesome5, MaterialIcons, Ionicons, MaterialCommunityIcons as Commun
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
 import FullImageViewer from '../common/FullImageViewer';
+import { t, interpolate } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { height, width } = Dimensions.get('window');
 
@@ -30,24 +32,25 @@ const ClaimRow = ({ result, index, isLast }) => {
 
     const getStatusConfig = (statusRaw) => {
         const str = statusRaw ? statusRaw.toString() : '';
+        const language = useCurrentLanguage();
 
         // BLUE: Significant (بنسبة معتبرة)
         if (str.includes('معتبرة')) {
-            return { color: '#4D96FF', icon: 'check-double', bg: 'rgba(77, 150, 255, 0.1)', label: 'قوي وفعال', bars: 3 };
+            return { color: '#4D96FF', icon: 'check-double', bg: 'rgba(77, 150, 255, 0.1)', label: t('oilguard_status_strong', language), bars: 3 };
         }
         // GREEN: Moderate (بنسبة متوسطة)
         if (str.includes('متوسطة') || str.includes('✅') || str.includes('🌿')) {
-            return { color: COLORS.accentGreen, icon: 'check', bg: COLORS.accentGreen + '1A', label: 'فعالية جيدة', bars: 2 };
+            return { color: COLORS.accentGreen, icon: 'check', bg: COLORS.accentGreen + '1A', label: t('oilguard_status_good', language), bars: 2 };
         }
         // YELLOW: Low (منخفض)
         if (str.includes('منخفض') || str.includes('⚠️')) {
-            return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)', label: 'تأثير هامشي', bars: 1 };
+            return { color: '#FFB84C', icon: 'exclamation-circle', bg: 'rgba(255, 184, 76, 0.1)', label: t('oilguard_status_marginal', language), bars: 1 };
         }
         // RED: Deception
         if (str.includes('❌') || str.includes('كذب') || str.includes('🚫')) {
-            return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)', label: 'غير موجود', bars: 0 };
+            return { color: '#FF6B6B', icon: 'times-circle', bg: 'rgba(255, 107, 107, 0.1)', label: t('oilguard_status_not_found', language), bars: 0 };
         }
-        return { color: COLORS.textDim, icon: 'info-circle', bg: 'rgba(255, 255, 255, 0.05)', label: 'تحليل جاري', bars: 0 };
+        return { color: COLORS.textDim, icon: 'info-circle', bg: 'rgba(255, 255, 255, 0.05)', label: t('oilguard_status_analyzing', language), bars: 0 };
     };
 
     const config = getStatusConfig(result.status);
@@ -100,14 +103,14 @@ const ClaimRow = ({ result, index, isLast }) => {
                     </View>
                     {allIngredients.length > 0 && (
                         <View style={s.ingSection}>
-                            <Text style={s.ingSectionTitle}>المكونات المسؤولة:</Text>
+                            <Text style={s.ingSectionTitle}>{t('oilguard_responsible_ingredients', useCurrentLanguage())}</Text>
                             <View style={s.chipContainer}>
                                 {allIngredients.map((ing, i) => {
                                     const isTrace = result.traditionallyProven?.includes(ing);
                                     return (
                                         <View key={i} style={[s.chip, { backgroundColor: config.bg, borderColor: `${config.color}${isTrace ? '20' : '40'}`, borderStyle: isTrace ? 'dashed' : 'solid', borderWidth: 1 }]}>
                                             <Text style={[s.chipText, { color: config.color, opacity: isTrace ? 0.7 : 1 }]}>
-                                                {typeof ing === 'object' ? ing.name : ing}{isTrace && ' (أثر)'}
+                                                {typeof ing === 'object' ? ing.name : ing}{isTrace && ` ${t('oilguard_trace', useCurrentLanguage())}`}
                                             </Text>
                                         </View>
                                     );
@@ -135,6 +138,8 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
     const [ingExpanded, setIngExpanded] = useState(false);
     const ingAnim = useRef(new Animated.Value(0)).current;
     const [ingContentHeight, setIngContentHeight] = useState(0);
+
+    const language = useCurrentLanguage();
 
     if (!item) return null;
 
@@ -192,7 +197,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                     </View>
                                     <View style={s.verifiedIndicator}>
                                         <MaterialIcons name="verified-user" size={14} color={COLORS.success} />
-                                        <Text style={s.verifiedIndicatorText}>درجة وثيق</Text>
+                                        <Text style={s.verifiedIndicatorText}>{t('oilguard_brand_score', language)}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -202,13 +207,13 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                         <View style={s.statsGrid}>
                             <View style={s.statGlassCard}>
                                 <View style={s.statIconCircle}><FontAwesome5 name="shield-alt" size={14} color={COLORS.success} /></View>
-                                <Text style={s.statLabel}>درجة الأمان</Text>
+                                <Text style={s.statLabel}>{t('oilguard_safety_score', language)}</Text>
                                 <Text style={[s.statValue, { color: COLORS.success }]}>{item.safety}%</Text>
                                 <View style={s.progressBar}><View style={[s.progressFill, { width: `${item.safety}%`, backgroundColor: COLORS.success }]} /></View>
                             </View>
                             <View style={s.statGlassCard}>
                                 <View style={s.statIconCircle}><FontAwesome5 name="flask" size={14} color={COLORS.info} /></View>
-                                <Text style={s.statLabel}>فعالية التركيبة</Text>
+                                <Text style={s.statLabel}>{t('oilguard_efficacy_score', language)}</Text>
                                 <Text style={[s.statValue, { color: COLORS.info }]}>{item.efficacy}%</Text>
                                 <View style={s.progressBar}><View style={[s.progressFill, { width: `${item.efficacy}%`, backgroundColor: COLORS.info }]} /></View>
                             </View>
@@ -218,7 +223,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                         {item.reasons?.length > 0 && (
                             <View style={s.sectionCard}>
                                 <View style={s.sectionHeader}>
-                                    <Text style={s.sectionTitle}>التوافق الشخصي</Text>
+                                    <Text style={s.sectionTitle}>{t('oilguard_personal_compatibility', language)}</Text>
                                     <FontAwesome5 name="user-check" size={14} color={COLORS.accentGreen} />
                                 </View>
                                 <View style={s.compatibilityList}>
@@ -243,11 +248,11 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                 <View style={s.marketingHeader}>
                                     <View style={s.honestyCircle}>
                                         <Text style={[s.honestyValue, { color: getScoreColor(marketingScore) }]}>{marketingScore}%</Text>
-                                        <Text style={s.honestySub}>صدق</Text>
+                                        <Text style={s.honestySub}>{t('oilguard_honesty', language)}</Text>
                                     </View>
                                     <View style={{ alignItems: 'flex-end' }}>
-                                        <Text style={s.sectionTitle}>تحليل الادعاءات</Text>
-                                        <Text style={s.sectionSubtitle}>مقارنة الوعود بالتركيبة الكيميائية</Text>
+                                        <Text style={s.sectionTitle}>{t('oilguard_marketing_analysis', language)}</Text>
+                                        <Text style={s.sectionSubtitle}>{t('oilguard_marketing_comparison', language)}</Text>
                                     </View>
                                 </View>
                                 <View style={s.claimsList}>
@@ -265,8 +270,10 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                     <Ionicons name="chevron-down" size={20} color={COLORS.accentGreen} />
                                 </Animated.View>
                                 <View style={s.ingHeaderInfo}>
-                                    <Text style={s.sectionTitle}>قائمة المكونات</Text>
-                                    <Text style={s.ingCountLabel}>{item.ingredients?.length || 0} مكون تم تحليله</Text>
+                                    <Text style={s.sectionTitle}>{t('oilguard_ingredients_list', language)}</Text>
+                                    <Text style={s.ingCountLabel}>
+                                        {interpolate(t('oilguard_analyzed_count', language), { count: item.ingredients?.length || 0 })}
+                                    </Text>
                                 </View>
                                 <View style={[s.statIconCircle, { marginBottom: 0, backgroundColor: COLORS.accentGreen + '1A' }]}>
                                     <FontAwesome5 name="dna" size={14} color={COLORS.accentGreen} />
@@ -287,13 +294,13 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                                     </View>
                                     <View style={s.ingSourceNote}>
                                         <Ionicons name="information-circle-outline" size={12} color={COLORS.textDim} />
-                                        <Text style={s.ingSourceText}>تم استخراج هذه القائمة برمجياً من عبوة المنتج.</Text>
+                                        <Text style={s.ingSourceText}>{t('oilguard_source_note', language)}</Text>
                                     </View>
                                 </View>
                             </Animated.View>
                             {!ingExpanded && (
                                 <TouchableOpacity onPress={toggleIngredients} style={s.expandHint}>
-                                    <Text style={s.expandHintText}>اضغط لعرض القائمة الكاملة</Text>
+                                    <Text style={s.expandHintText}>{t('oilguard_show_full_list_hint', language)}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -304,7 +311,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                     {/* CTA FOOTER */}
                     <View style={s.stickyFooter}>
                         <TouchableOpacity style={s.primaryBtn} onPress={() => Linking.openURL(item.link)}>
-                            <Text style={s.primaryBtnText}>عرض السعر في الجزائر</Text>
+                            <Text style={s.primaryBtnText}>{t('oilguard_view_price_dz', language)}</Text>
                             <FontAwesome5 name="shopping-bag" size={16} color={COLORS.background} />
                         </TouchableOpacity>
                     </View>

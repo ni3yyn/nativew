@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
+import { t } from '../../src/i18n';
+import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
 const IS_SMALL_DEVICE = height < 700;
@@ -14,43 +16,43 @@ const IS_SMALL_DEVICE = height < 700;
 // ============================================================================
 // 1) Slides (use single accent color from theme)
 // ============================================================================
-const getSlides = (C) => {
+const getSlides = (C, language) => {
   const accent = C.accentGreen || C.primary || C.accent || C.accentGlow || '#5A9C84';
 
   return [
     {
       id: '1',
-      title: 'وأخيرا راح الشقى 😌',
-      description: 'الآن يمكنك البحث مباشرة داخل وثيق عن المنتجات و فحصها دون التنقل للمحل!',
-      buttonText: 'اهيه؟',
+      title: t('catintro_slide1_title', language),
+      description: t('catintro_slide1_desc', language),
+      buttonText: t('catintro_slide1_btn', language),
       icon: 'search-location',
       color: accent,
       bgGradient: [C.background, C.card]
     },
     {
       id: '2',
-      title: 'بصح وثيق يحتاجك 🤝',
-      description: 'بعض المعلومات ناقصة كيما السعر والإدعاءات و حتى منتجات ناقصين.',
-      buttonText: 'اهيه وش ندير؟',
+      title: t('catintro_slide2_title', language),
+      description: t('catintro_slide2_desc', language),
+      buttonText: t('catintro_slide2_btn', language),
       icon: 'hand-holding-heart',
       color: accent,
       bgGradient: [C.background, C.card]
     },
     {
       id: '3',
-      title: 'مشاركة بسيييطة منك ✨',
-      description: 'ساهمي فالكاتالوغ حتى تفيدي كل البنات و ضيفي منتجاتك المفقودين داخل وثيق.',
-      buttonText: 'متفاهمين',
+      title: t('catintro_slide3_title', language),
+      description: t('catintro_slide3_desc', language),
+      buttonText: t('catintro_slide3_btn', language),
       icon: 'magic',
       color: accent,
       bgGradient: [C.background, C.card]
     },
     {
       id: '4',
-      title: 'عمري واطلعي نيفو 🏆',
-      description: 'كل متساهمي فوثيق يزيد مستواك و تربحي شارات و نقاط ينفعوك مبعد 😉',
-      buttonText: 'اييييي ماذابيا',
-      secondaryButton: 'تابعنا على فيسبوك',
+      title: t('catintro_slide4_title', language),
+      description: t('catintro_slide4_desc', language),
+      buttonText: t('catintro_slide4_btn', language),
+      secondaryButton: t('catintro_facebook_btn', language),
       icon: 'crown',
       color: accent,
       bgGradient: [C.background, C.card]
@@ -259,8 +261,9 @@ const MagicalIcon = ({ icon, color }) => {
 //    - buttons & pagination moved into renderItem and animated by scrollX
 // ============================================================================
 export default function CatalogIntro({ visible, onFinish }) {
+  const language = useCurrentLanguage();
   const { colors: C, activeThemeId } = useTheme();
-  const SLIDES = getSlides(C);
+  const SLIDES = getSlides(C, language);
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
@@ -404,7 +407,7 @@ export default function CatalogIntro({ visible, onFinish }) {
           {/* Header (no background behind skip; removed any circle) */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => onFinish()} style={[styles.skipBtn]}>
-              <Text style={[styles.skipText, { color: C.textDim }]}>تخطي</Text>
+              <Text style={[styles.skipText, { color: C.textDim }]}>{t('community_intro_skip', language)}</Text>
             </TouchableOpacity>
           </View>
 

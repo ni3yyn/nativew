@@ -120,11 +120,12 @@ const useSilentUpdates = () => {
 
 const useAppOpenAd = () => {
   useEffect(() => {
-    const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+    const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
     if (!isAdMobLinked) return;
 
     try {
-      const { AppOpenAd, AdEventType } = require('react-native-google-mobile-ads');
+      const adMob = require('react-native-google-mobile-ads');
+      const { AppOpenAd, AdEventType } = adMob;
       const adUnitId = 'ca-app-pub-6010052879824695/8213348420';
       
       const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
@@ -403,9 +404,10 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   // --- INIT ADMOB ---
   useEffect(() => {
     try {
-      const isAdMobLinked = !!NativeModules.RNGoogleMobileAdsModule;
+      const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
       if (isAdMobLinked) {
-        const mobileAds = require('react-native-google-mobile-ads').default;
+        const adMob = require('react-native-google-mobile-ads');
+        const mobileAds = adMob.default;
         mobileAds().initialize();
       }
     } catch (e) {
@@ -532,7 +534,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
           }
 
           // D. SCHEDULE NOTIFICATIONS
-          const name = userProfile.settings?.name || 'غالية';
+          const name = userProfile.settings?.name || t('brand_wathiq_user', language);
           const settings = userProfile.settings || {};
           const products = savedProducts || [];
 

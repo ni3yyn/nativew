@@ -6,7 +6,7 @@ const ThemeContext = createContext();
 export const THEMES = {
     original: {
         id: 'original',
-        label: 'أصلي',
+        label: 'theme_original',
         colors: {
             background: '#1A2D27',
             card: '#253D34',
@@ -30,7 +30,7 @@ export const THEMES = {
     },
     baby_pink: {
         id: 'baby_pink',
-        label: 'وردي',
+        label: 'theme_baby_pink',
         colors: {
             background: '#FFEBF0',       
             card: '#FFD9E4',             
@@ -55,7 +55,7 @@ export const THEMES = {
     },
     clinical_blue: {
         id: 'clinical_blue',
-        label: 'ليلي',
+        label: 'theme_clinical_blue',
         colors: {
             background: '#0B111A',       // Very deep, dark night-sky blue
             card: '#151F2E',             // Dark navy slate for cards
