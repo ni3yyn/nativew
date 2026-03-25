@@ -6,9 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../../src/context/ThemeContext';
-import { t } from '../../src/i18n';
-import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import { useTheme } from '../../context/ThemeContext';
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
 const IS_SMALL_DEVICE = height < 700;
@@ -177,12 +177,10 @@ const RandomSpore = ({ seed, color, particleModeAnim }) => {
         position: 'absolute',
         left: seed.x,
         top: seed.y,
-        // --- FIX STARTS HERE ---
-        width: 30,             // Give the container enough space for the heart
-        height: 30,            // so it doesn't clip
+        width: 30,
+        height: 30,
         justifyContent: 'center', 
         alignItems: 'center',
-        // --- FIX ENDS HERE ---
         transform: [{ translateY: moveY }, { translateX: moveX }, { scale }, { rotate: rotateDeg }],
         opacity: Animated.multiply(opacity, edgeOpacity) 
       }}
@@ -208,12 +206,9 @@ const FloatingSpores = ({ count = 25, color, particleModeAnim }) => {
   const seeds = useMemo(() => {
     return Array.from({ length: count }).map(() => ({
       x: Math.random() * width,
-      // START FROM HALF SCREEN:
-      // We start them between 40% and 60% of the screen height 
-      // so they don't all appear on a single perfectly straight line.
       y: (height * 0.45) + (Math.random() * (height * 0.2)), 
       size: 3 + Math.random() * 6,
-      duration: 6000 + Math.random() * 8000, // Slower for smoother feel
+      duration: 6000 + Math.random() * 8000,
       delay: Math.random() * 3000,
       horiz: 10 + Math.random() * 60,
       rotateDuration: 4000 + Math.random() * 6000
@@ -254,13 +249,9 @@ const MagicalIcon = ({ icon, color }) => {
 };
 
 // ============================================================================
-// 4) Main component — built from your original file, with:
-//    - single theme accent color
-//    - persistent particles (FloatingSpores rendered once globally)
-//    - particleModeAnim animated to 1 when currentIndex===1
-//    - buttons & pagination moved into renderItem and animated by scrollX
+// 4) Main component — with "don't show again" functionality
 // ============================================================================
-export default function CatalogIntro({ visible, onFinish }) {
+export default function CatalogIntro({ visible, onFinish, onDontShowAgain }) {
   const language = useCurrentLanguage();
   const { colors: C, activeThemeId } = useTheme();
   const SLIDES = getSlides(C, language);
@@ -268,6 +259,7 @@ export default function CatalogIntro({ visible, onFinish }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // control particle morphing (dot -> heart)
   const particleModeAnim = useRef(new Animated.Value(0)).current;
@@ -297,8 +289,15 @@ export default function CatalogIntro({ visible, onFinish }) {
     if (currentIndex < SLIDES.length - 1) {
       flatListRef.current.scrollToIndex({ index: currentIndex + 1, animated: true });
     } else {
-      onFinish();
+      handleFinish();
     }
+  };
+
+  const handleFinish = () => {
+    if (dontShowAgain && onDontShowAgain) {
+      onDontShowAgain();
+    }
+    onFinish();
   };
 
   const renderItem = ({ item, index }) => {
@@ -347,24 +346,34 @@ export default function CatalogIntro({ visible, onFinish }) {
           {/* Buttons */}
           <View style={styles.buttonWrapper}>
             {index === SLIDES.length - 1 && (
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { borderColor: C.border, backgroundColor: C.card }]}
-                onPress={() => Linking.openURL('https://facebook.com/wathiqapp')}
-                activeOpacity={0.92}
-              >
-                <MaterialCommunityIcons name="facebook" size={20} color={C.textPrimary} />
-                <Text style={[styles.secondaryBtnText, { color: C.textPrimary }]}>{item.secondaryButton}</Text>
-              </TouchableOpacity>
+              <>
+                
+
+                {/* Secondary Facebook button */}
+                <TouchableOpacity
+                  style={[styles.secondaryBtn, { borderColor: C.border, backgroundColor: C.card }]}
+                  onPress={() => Linking.openURL('https://facebook.com/wathiqapp')}
+                  activeOpacity={0.92}
+                >
+                  <MaterialCommunityIcons name="facebook" size={20} color={C.textPrimary} />
+                  <Text style={[styles.secondaryBtnText, { color: C.textPrimary }]}>{item.secondaryButton}</Text>
+                </TouchableOpacity>
+              </>
             )}
 
+            {/* Primary button */}
             <TouchableOpacity
               style={[styles.primaryBtn, { shadowColor: item.color }]}
               onPress={handleNext}
               activeOpacity={0.92}
             >
-              <LinearGradient colors={[item.color, item.color]} style={[styles.primaryBtnGradient, { borderColor: C.border }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <LinearGradient 
+                colors={[item.color, item.color]} 
+                style={[styles.primaryBtnGradient, { borderColor: C.border }]} 
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 1 }}
+              >
                 <Text style={[styles.primaryBtnText, { color: C.textOnAccent }]}>{item.buttonText}</Text>
-
                 {index === SLIDES.length - 1 ? (
                   <Ionicons name="sparkles" size={20} color={C.textOnAccent} />
                 ) : (
@@ -372,6 +381,28 @@ export default function CatalogIntro({ visible, onFinish }) {
                 )}
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* "Don't show again" checkbox */}
+            <TouchableOpacity 
+                  style={styles.dontShowAgainContainer}
+                  onPress={() => setDontShowAgain(!dontShowAgain)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.checkbox, 
+                    { 
+                      borderColor: C.border,
+                      backgroundColor: dontShowAgain ? (C.accentGreen || C.primary) : 'transparent'
+                    }
+                  ]}>
+                    {dontShowAgain && (
+                      <Ionicons name="checkmark" size={14} color={C.textOnAccent || '#FFFFFF'} />
+                    )}
+                  </View>
+                  <Text style={[styles.dontShowAgainText, { color: C.textSecondary }]}>
+                    {t('catintro_dont_show_again', language) || "Don't show again"}
+                  </Text>
+                </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -406,8 +437,8 @@ export default function CatalogIntro({ visible, onFinish }) {
         <SafeAreaView style={{ flex: 1 }}>
           {/* Header (no background behind skip; removed any circle) */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => onFinish()} style={[styles.skipBtn]}>
-              <Text style={[styles.skipText, { color: C.textDim }]}>{t('community_intro_skip', language)}</Text>
+            <TouchableOpacity onPress={() => handleFinish()} style={[styles.skipBtn]}>
+              <Text style={[styles.skipText, { color: C.textDim }]}>{t('community_intro_skip', language) || 'Skip'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -531,7 +562,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingTop: 14,
     paddingBottom: Platform.OS === 'ios' ? 36 : 26,
-    // keep it inside the natural flow — no absolute positioning to avoid covering text
   },
 
   pagination: {
@@ -546,12 +576,39 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
+    top: 40
   },
 
   buttonWrapper: {
     width: '100%',
     gap: 12,
+    top: 30,
   },
+
+  // "Don't show again" checkbox styles
+  dontShowAgainContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    top: 50,
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dontShowAgainText: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 14,
+  },
+
   primaryBtn: {
     width: '100%',
     borderRadius: 20,

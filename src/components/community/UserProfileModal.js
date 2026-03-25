@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View, Text, Modal, StyleSheet, ScrollView,
-    TouchableOpacity, ActivityIndicator, Animated, Dimensions, Easing
+    TouchableOpacity, ActivityIndicator, Animated, Dimensions, Easing, Pressable
 } from 'react-native';
 import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,7 +19,7 @@ import { t, getLocalizedValue } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // --- DATA IMPORTS ---
 import {
@@ -108,10 +108,12 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     
     const[profile, setProfile] = useState({ settings: initialData?.settings || initialData || {}, points: initialData?.points || 0 });
     const [publicShelf, setPublicShelf] = useState([]);
-    const [loading, setLoading] = useState(true); 
+    const[loading, setLoading] = useState(true); 
     const [matchInfo, setMatchInfo] = useState({ score: 0, label: '', color: COLORS.textSecondary });
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Animations
+    const animState = useRef(new Animated.Value(0)).current;
     const heroAnim = useRef(new Animated.Value(0)).current;
     const vitalAnim = useRef(new Animated.Value(0)).current;
     const badgesAnim = useRef(new Animated.Value(0)).current;
@@ -120,6 +122,30 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
 
     const isMe = currentUser?.uid === targetUserId?.id || currentUser?.uid === targetUserId;
 
+    // Entrance Physics for the Modal
+    useEffect(() => {
+        if (visible) {
+            Animated.spring(animState, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [visible]);
+
+    const handleClose = () => {
+        Animated.timing(animState, {
+            toValue: 0,
+            duration: 300,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+        }).start(() => {
+            onClose();
+        });
+    };
+
+    // Data loading & inner staggered animations
     useEffect(() => {
         if (!visible || !targetUserId) return;
 
@@ -181,7 +207,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
         };
 
         setTimeout(loadData, 300); 
-    }, [visible, targetUserId]);
+    },[visible, targetUserId]);
 
     const handleManualRefresh = async () => {
         const uid = typeof targetUserId === 'object' ? targetUserId.id : targetUserId;
@@ -232,8 +258,15 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
     
     const handleProductPress = (item) => { 
         if (onProductSelect) { 
-            onClose(); 
-            onProductSelect({ ...item, imageUrl: item.productImage }); 
+            Animated.timing(animState, {
+                toValue: 0,
+                duration: 300,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+            }).start(() => {
+                onClose(); 
+                onProductSelect({ ...item, imageUrl: item.productImage }); 
+            });
         } 
     };
 
@@ -242,7 +275,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
 
     const getSlideStyle = (anim) => ({
         opacity: anim,
-        transform:[{ translateY: anim.interpolate({ inputRange:[0, 1], outputRange: [40, 0] }) }]
+        transform:[{ translateY: anim.interpolate({ inputRange:[0, 1], outputRange:[40, 0] }) }]
     });
 
     const renderCompactTagRow = (data, list, icon, color, title, isGoal = false) => {
@@ -266,163 +299,179 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
         );
     };
 
+    const overlayOpacity = animState.interpolate({ inputRange:[0, 1], outputRange: [0, 1] });
+    const modalTranslateY = animState.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_HEIGHT, 0] });
+
     if (!visible) return null;
 
     return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-            <View style={styles.container}>
-                
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-                        <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{t('community_profile_title', language)}</Text>
-                    <TouchableOpacity onPress={handleManualRefresh} disabled={loading || isRefreshing} style={styles.iconBtn}>
-                        {isRefreshing ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />}
-                    </TouchableOpacity>
-                </View>
-
-                {loading ? (
-                    <View style={styles.scrollContent}>
-                        <ShimmerBlock width="100%" height={120} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
-                        <ShimmerBlock width="30%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
-                        <ShimmerBlock width="100%" height={140} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
-                        <ShimmerBlock width="40%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
-                        <View style={{ flexDirection: rtl.flexDirection, gap: 12 }}>
-                            <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
-                            <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
-                        </View>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+            <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+                <Animated.View style={[styles.container, { transform: [{ translateY: modalTranslateY }] }]}>
+                    
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={handleClose} style={styles.iconBtn}>
+                            <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>{t('community_profile_title', language)}</Text>
+                        <TouchableOpacity onPress={handleManualRefresh} disabled={loading || isRefreshing} style={styles.iconBtn}>
+                            {isRefreshing ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />}
+                        </TouchableOpacity>
                     </View>
-                ) : (
-                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={true}>
-                        
-                        <Animated.View style={getSlideStyle(heroAnim)}>
-                            <LinearGradient
-                                colors={[currentLevel.color + '15', COLORS.card]}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                                style={[styles.heroBento, { borderColor: currentLevel.color + '30' }]}
-                            >
-                                <View style={styles.heroRow}>
-                                    <View style={styles.heroInfo}>
-                                        <Text style={styles.userName} numberOfLines={1}>{profile?.settings?.name || t('community_default_user', language)}</Text>
-                                        <View style={[styles.rankPill, { backgroundColor: currentLevel.color + '20', borderColor: currentLevel.color + '40' }]}>
-                                            <FontAwesome5 name={currentLevel.icon} size={10} color={currentLevel.color} />
-                                            <Text style={[styles.rankText, { color: currentLevel.color }]}>{currentLevel.name}</Text>
-                                            <Text style={[styles.pointsText, { color: COLORS.textSecondary }]}>• {profile.points || 0} {t('catalog_points', language)}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.avatarWrapper}>
-                                        <Animated.View style={[styles.avatarGlow, { borderColor: currentLevel.color, transform: [{ scale: pulseAnim }] }]} />
-                                        <View style={[styles.avatar, { backgroundColor: COLORS.background }]}>
-                                            <Text style={[styles.avatarText, { color: currentLevel.color }]}>
-                                                {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                </View>
-                                {!isMe && matchInfo.score > 0 && (
-                                    <View style={[styles.matchBanner, { backgroundColor: matchInfo.color + '10', borderColor: matchInfo.color + '30' }]}>
-                                        <MaterialCommunityIcons name="heart-pulse" size={16} color={matchInfo.color} />
-                                        <Text style={[styles.matchText, { color: matchInfo.color }]}>
-                                            {getLocalizedValue(matchInfo.label, language)} • {matchInfo.score}%
-                                        </Text>
-                                    </View>
-                                )}
-                            </LinearGradient>
-                        </Animated.View>
 
-                        <Animated.View style={[styles.bentoSection, getSlideStyle(vitalAnim)]}>
-                            <Text style={styles.sectionTitle}>{t('community_profile_traits', language)}</Text>
-                            <View style={[styles.unifiedBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
-                                
-                                <View style={styles.vitalRow}>
-                                    <View style={styles.vitalItem}>
-                                        <View style={[styles.vitalIcon, { backgroundColor: COLORS.gold + '15' }]}><FontAwesome5 name="user-alt" size={14} color={COLORS.gold} /></View>
-                                        <View>
-                                            <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_skin', language)}</Text>
-                                            <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.skinType, basicSkinTypes) || t('community_unspecified', language)}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={[styles.vitalDivider, { backgroundColor: COLORS.border }]} />
-                                    <View style={styles.vitalItem}>
-                                        <View style={[styles.vitalIcon, { backgroundColor: COLORS.blue + '15' }]}><FontAwesome5 name="cut" size={14} color={COLORS.blue} /></View>
-                                        <View>
-                                            <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_hair', language)}</Text>
-                                            <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.scalpType, basicScalpTypes) || t('community_unspecified', language)}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-
-                                {(profile?.settings?.goals?.length > 0 || profile?.settings?.conditions?.length > 0 || profile?.settings?.allergies?.length > 0) && (
-                                    <View style={[styles.tagsArea, { borderTopColor: COLORS.border }]}>
-                                        {renderCompactTagRow(profile.settings.goals, null, 'crosshairs', COLORS.accentGreen, t('settings_goals_title', language), true)}
-                                        {renderCompactTagRow(profile.settings.conditions, commonConditions, 'notes-medical', COLORS.gold, t('settings_conditions_title', language))}
-                                        {renderCompactTagRow(profile.settings.allergies, commonAllergies, 'exclamation-circle', COLORS.danger, t('settings_allergies_title', language))}
-                                    </View>
-                                )}
-
+                    {loading ? (
+                        <View style={styles.scrollContent}>
+                            <ShimmerBlock width="100%" height={120} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
+                            <ShimmerBlock width="30%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
+                            <ShimmerBlock width="100%" height={140} borderRadius={24} style={{ marginBottom: 20 }} colors={COLORS} />
+                            <ShimmerBlock width="40%" height={20} borderRadius={10} style={{ alignSelf: rtl.alignSelf, marginBottom: 15 }} colors={COLORS} />
+                            <View style={{ flexDirection: rtl.flexDirection, gap: 12 }}>
+                                <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
+                                <ShimmerBlock width={150} height={80} borderRadius={20} colors={COLORS} />
                             </View>
-                        </Animated.View>
-
-                        <Animated.View style={[styles.bentoSection, getSlideStyle(badgesAnim)]}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionTitle}>المهام والأوسمة</Text>
-                                <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{PLACEHOLDER_BADGES.length}</Text>
-                            </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesHScroll} snapToInterval={162} decelerationRate="fast">
-                                {PLACEHOLDER_BADGES.map((badge) => (
-                                    <AnimatedBadgeCard key={badge.id} badge={badge} COLORS={COLORS} styles={styles} language={language} />
-                                ))}
-                            </ScrollView>
-                        </Animated.View>
-
-                        <Animated.View style={[styles.bentoSection, { marginBottom: 10 }, getSlideStyle(shelfAnim)]}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionTitle}>{t('profile_header_shelf', language)}</Text>
-                                <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{publicShelf.length}</Text>
-                            </View>
-
-                            {publicShelf.length > 0 ? (
-                                <View style={[styles.shelfContainer, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
-                                    {publicShelf.map((item, index) => (
-                                        <TouchableOpacity key={item.id} style={[styles.shelfItemCompact, { borderBottomColor: index === publicShelf.length - 1 ? 'transparent' : COLORS.background }]} onPress={() => handleProductPress(item)} activeOpacity={0.7}>
-                                            
-                                            {/* 🔥 FIX: Passed numeric size {42} instead of "small" */}
-                                            <WathiqScoreBadge score={item.analysisData?.oilGuardScore || 0} size={42} />
-                                            
-                                            <View style={styles.shelfItemInfo}>
-                                                <Text style={[styles.prodName, { color: COLORS.textPrimary }]} numberOfLines={1}>{item.productName}</Text>
-                                                <Text style={[styles.prodVerdict, { color: COLORS.textSecondary }]} numberOfLines={1}>
-                                                    {getLocalizedValue(item.analysisData?.finalVerdict, language) || t('common_product', language)}
+                        </View>
+                    ) : (
+                        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={true}>
+                            
+                            <Animated.View style={getSlideStyle(heroAnim)}>
+                                <LinearGradient
+                                    colors={[currentLevel.color + '15', COLORS.card]}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                    style={[styles.heroBento, { borderColor: currentLevel.color + '30' }]}
+                                >
+                                    <View style={styles.heroRow}>
+                                        <View style={styles.heroInfo}>
+                                            <Text style={styles.userName} numberOfLines={1}>{profile?.settings?.name || t('community_default_user', language)}</Text>
+                                            <View style={[styles.rankPill, { backgroundColor: currentLevel.color + '20', borderColor: currentLevel.color + '40' }]}>
+                                                <FontAwesome5 name={currentLevel.icon} size={10} color={currentLevel.color} />
+                                                <Text style={[styles.rankText, { color: currentLevel.color }]}>{currentLevel.name}</Text>
+                                                <Text style={[styles.pointsText, { color: COLORS.textSecondary }]}>• {profile.points || 0} {t('catalog_points', language)}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.avatarWrapper}>
+                                            <Animated.View style={[styles.avatarGlow, { borderColor: currentLevel.color, transform: [{ scale: pulseAnim }] }]} />
+                                            <View style={[styles.avatar, { backgroundColor: COLORS.background }]}>
+                                                <Text style={[styles.avatarText, { color: currentLevel.color }]}>
+                                                    {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
                                                 </Text>
                                             </View>
-                                            <Feather name={rtl.isRTL ? "chevron-left" : "chevron-right"} size={18} color={COLORS.textDim} />
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            ) : (
-                                <View style={[styles.emptyShelfBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
-                                    <Feather name="layers" size={28} color={COLORS.textDim} style={{ opacity: 0.5 }} />
-                                    <Text style={[styles.emptyText, { color: COLORS.textDim }]}>{t('community_profile_empty_shelf', language)}</Text>
-                                </View>
-                            )}
-                        </Animated.View>
+                                        </View>
+                                    </View>
+                                    {!isMe && matchInfo.score > 0 && (
+                                        <View style={[styles.matchBanner, { backgroundColor: matchInfo.color + '10', borderColor: matchInfo.color + '30' }]}>
+                                            <MaterialCommunityIcons name="heart-pulse" size={16} color={matchInfo.color} />
+                                            <Text style={[styles.matchText, { color: matchInfo.color }]}>
+                                                {getLocalizedValue(matchInfo.label, language)} • {matchInfo.score}%
+                                            </Text>
+                                        </View>
+                                    )}
+                                </LinearGradient>
+                            </Animated.View>
 
-                    </ScrollView>
-                )}
-            </View>
+                            <Animated.View style={[styles.bentoSection, getSlideStyle(vitalAnim)]}>
+                                <Text style={styles.sectionTitle}>{t('community_profile_traits', language)}</Text>
+                                <View style={[styles.unifiedBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                    
+                                    <View style={styles.vitalRow}>
+                                        <View style={styles.vitalItem}>
+                                            <View style={[styles.vitalIcon, { backgroundColor: COLORS.gold + '15' }]}><FontAwesome5 name="user-alt" size={14} color={COLORS.gold} /></View>
+                                            <View>
+                                                <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_skin', language)}</Text>
+                                                <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.skinType, basicSkinTypes) || t('community_unspecified', language)}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={[styles.vitalDivider, { backgroundColor: COLORS.border }]} />
+                                        <View style={styles.vitalItem}>
+                                            <View style={[styles.vitalIcon, { backgroundColor: COLORS.blue + '15' }]}><FontAwesome5 name="cut" size={14} color={COLORS.blue} /></View>
+                                            <View>
+                                                <Text style={[styles.vitalSub, { color: COLORS.textSecondary }]}>{t('community_profile_hair', language)}</Text>
+                                                <Text style={[styles.vitalMain, { color: COLORS.textPrimary }]}>{getLabel(profile?.settings?.scalpType, basicScalpTypes) || t('community_unspecified', language)}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {(profile?.settings?.goals?.length > 0 || profile?.settings?.conditions?.length > 0 || profile?.settings?.allergies?.length > 0) && (
+                                        <View style={[styles.tagsArea, { borderTopColor: COLORS.border }]}>
+                                            {renderCompactTagRow(profile.settings.goals, null, 'crosshairs', COLORS.accentGreen, t('settings_goals_title', language), true)}
+                                            {renderCompactTagRow(profile.settings.conditions, commonConditions, 'notes-medical', COLORS.gold, t('settings_conditions_title', language))}
+                                            {renderCompactTagRow(profile.settings.allergies, commonAllergies, 'exclamation-circle', COLORS.danger, t('settings_allergies_title', language))}
+                                        </View>
+                                    )}
+
+                                </View>
+                            </Animated.View>
+
+                            <Animated.View style={[styles.bentoSection, getSlideStyle(badgesAnim)]}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>الأوسمة (قريبا جدا) </Text>
+                                    <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{PLACEHOLDER_BADGES.length}</Text>
+                                </View>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesHScroll} snapToInterval={162} decelerationRate="fast">
+                                    {PLACEHOLDER_BADGES.map((badge) => (
+                                        <AnimatedBadgeCard key={badge.id} badge={badge} COLORS={COLORS} styles={styles} language={language} />
+                                    ))}
+                                </ScrollView>
+                            </Animated.View>
+
+                            <Animated.View style={[styles.bentoSection, { marginBottom: 10 }, getSlideStyle(shelfAnim)]}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>{t('profile_header_shelf', language)}</Text>
+                                    <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{publicShelf.length}</Text>
+                                </View>
+
+                                {publicShelf.length > 0 ? (
+                                    <View style={[styles.shelfContainer, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                        {publicShelf.map((item, index) => (
+                                            <TouchableOpacity key={item.id} style={[styles.shelfItemCompact, { borderBottomColor: index === publicShelf.length - 1 ? 'transparent' : COLORS.background }]} onPress={() => handleProductPress(item)} activeOpacity={0.7}>
+                                                
+                                                <WathiqScoreBadge score={item.analysisData?.oilGuardScore || 0} size={42} />
+                                                
+                                                <View style={styles.shelfItemInfo}>
+                                                    <Text style={[styles.prodName, { color: COLORS.textPrimary }]} numberOfLines={1}>{item.productName}</Text>
+                                                    <Text style={[styles.prodVerdict, { color: COLORS.textSecondary }]} numberOfLines={1}>
+                                                        {getLocalizedValue(item.analysisData?.finalVerdict, language) || t('common_product', language)}
+                                                    </Text>
+                                                </View>
+                                                <Feather name={rtl.isRTL ? "chevron-left" : "chevron-right"} size={18} color={COLORS.textDim} />
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                ) : (
+                                    <View style={[styles.emptyShelfBox, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
+                                        <Feather name="layers" size={28} color={COLORS.textDim} style={{ opacity: 0.5 }} />
+                                        <Text style={[styles.emptyText, { color: COLORS.textDim }]}>{t('community_profile_empty_shelf', language)}</Text>
+                                    </View>
+                                )}
+                            </Animated.View>
+
+                        </ScrollView>
+                    )}
+                </Animated.View>
+            </Animated.View>
         </Modal>
     );
 };
 
 const createStyles = (COLORS, rtl) => StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        justifyContent: 'flex-end',
+    },
+    container: { 
+        height: SCREEN_HEIGHT * 0.93,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        overflow: 'hidden',
+        backgroundColor: COLORS.background 
+    },
     header: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
     headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary },
     iconBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
     scrollContent: { padding: 16, paddingBottom: 50 },
 
-    heroBento: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 20 },
+    heroBento: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 24 },
     heroRow: { flexDirection: rtl.flexDirection, alignItems: 'center', justifyContent: 'space-between' },
     heroInfo: { flex: 1, marginStart: 15 },
     userName: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, textAlign: rtl.textAlign, marginBottom: 6, color: COLORS.textPrimary },
@@ -456,7 +505,7 @@ const createStyles = (COLORS, rtl) => StyleSheet.create({
     compactTagHeader: { width: 70, flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, marginTop: 4 },
     compactTagLabel: { fontFamily: 'Tajawal-Regular', fontSize: 11 },
     compactChipContainer: { flex: 1, flexDirection: rtl.flexDirection, flexWrap: 'wrap', gap: 6 },
-    microChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+    microChip: { left: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
     microChipText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
 
     badgesHScroll: { gap: 12, paddingVertical: 5 },

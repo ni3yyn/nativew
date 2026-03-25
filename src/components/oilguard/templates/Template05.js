@@ -84,7 +84,7 @@ export default function Template05({ analysis, typeLabel, productName, imageUri,
             </View>
 
             <View style={styles.footer}>
-                <View style={[styles.marketingPill, { backgroundColor: theme.text }]}><FontAwesome5 name="magic" size={14} color={theme.primary} /><Text style={[styles.marketingText, { color: theme.primary }]}>افحصي منتجاتك مجاناً عبر وثيق</Text></View>
+                <View style={[styles.marketingPill, { backgroundColor: theme.text }]}><FontAwesome5 name="magic" size={14} color={theme.primary} /><Text style={[styles.marketingText, { color: theme.primary }]}>افحصي منتجاتك مجانا عبر وثيق</Text></View>
                 <View style={styles.socialRow}>
                     <View style={styles.socialItem}><FontAwesome5 name="instagram" size={16} color={theme.accent} /><Text style={[styles.socialText, { color: theme.text }]}>wathiq.ai</Text></View>
                     <View style={[styles.socialSep, { backgroundColor: theme.border }]} />

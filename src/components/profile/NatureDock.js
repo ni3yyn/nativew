@@ -115,6 +115,19 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textOnAccent} />
                         </LinearGradient>
                     </TouchableOpacity>
+
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('search_catalog')}>
+                        <View style={styles.actionButtonSecondary}>
+                            <View style={styles.iconBoxSec}>
+                                <MaterialIcons name="search" size={24} color={COLORS.textPrimary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.btnTitleSec}>{t('dock_catalog', language)}</Text>
+                                <Text style={styles.btnSubSec}>{t('dock_catalog_sub', language)}</Text>
+                            </View>
+                            <MaterialIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
+                        </View>
+                    </TouchableOpacity>
                     
                     <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('compare_products')}>
                         <View style={styles.actionButtonSecondary}>
@@ -305,7 +318,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
 
     const handleSheetSelection = (action) => {
         switch (action) {
-            case 'scan_product': navigation.push('/CatalogScreen'); break;
+            case 'scan_product': navigation.push('/oilguard'); break;
             case 'compare_products': navigation.push('/comparison'); break;
             case 'search_catalog': navigation.push('/CatalogScreen'); break;
             case 'ingredients': onTabChange('ingredients'); break;

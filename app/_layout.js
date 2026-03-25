@@ -93,7 +93,7 @@ const useSilentUpdates = () => {
         
         if (update.isAvailable) {
           await Updates.fetchUpdateAsync();
-          isUpdatePending = true; // التحديث نزل وصار جاهزاً
+          isUpdatePending = true; // التحديث نزل وصار جاهزا
           console.log("✅ تم تحميل التحديث الصامت بنجاح. ينتظر إعادة التشغيل.");
         }
       } catch (e) {
@@ -359,7 +359,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.4.0';
+  const APP_VERSION = '1.5.0';
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();

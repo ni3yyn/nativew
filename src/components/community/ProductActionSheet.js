@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View, Text, TouchableOpacity, Modal, StyleSheet, Image,
-    ActivityIndicator, ScrollView, LayoutAnimation, Animated, Easing
+    ActivityIndicator, ScrollView, LayoutAnimation, Animated, Easing,
+    Dimensions, Pressable
 } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
@@ -11,6 +12,8 @@ import { reevaluateProductForUser } from '../../services/communityService';
 import { getClaimsByProductType } from '../../constants/productData';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /**
  * A self-animating scroll indicator to cue users that more content is available.
@@ -31,7 +34,7 @@ const ScrollHint = ({ visible, color, containerStyle }) => {
         } else {
             Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }).start();
         }
-    }, [visible]);
+    },[visible]);
 
     if (!visible) return null;
 
@@ -45,6 +48,28 @@ const ScrollHint = ({ visible, color, containerStyle }) => {
     );
 };
 
+// --- Staggered Animation Component ---
+const StaggeredView = ({ children, index }) => {
+    const anim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.spring(anim, {
+            toValue: 1,
+            friction: 7,
+            tension: 50,
+            delay: 100 + index * 50,
+            useNativeDriver: true,
+        }).start();
+    }, [index]);
+
+    const translateY = anim.interpolate({ inputRange: [0, 1], outputRange:[30, 0] });
+    return (
+        <Animated.View style={{ opacity: anim, transform: [{ translateY }] }}>
+            {children}
+        </Animated.View>
+    );
+};
+
 const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const language = useCurrentLanguage();
     const { colors } = useTheme();
@@ -52,15 +77,18 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const { userProfile } = useAppContext();
 
-    const [personalScore, setPersonalScore] = useState(null);
+    const[personalScore, setPersonalScore] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [activeTab, setActiveTab] = useState('personal');
-    const [isDataMissing, setIsDataMissing] = useState(false);
+    const[isDataMissing, setIsDataMissing] = useState(false);
 
     const [isEditingClaims, setIsEditingClaims] = useState(false);
     const [currentClaims, setCurrentClaims] = useState([]);
 
-    const [showScrollHint, setShowScrollHint] = useState(true);
+    const[showScrollHint, setShowScrollHint] = useState(true);
+
+    // Animation Ref
+    const animState = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible && product) {
@@ -69,10 +97,18 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
             setIsEditingClaims(false);
             setShowScrollHint(true);
 
-            const initialClaims = product.marketingClaims || product.claims || [];
+            // Trigger entrance physics animation
+            Animated.spring(animState, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
+                useNativeDriver: true,
+            }).start();
+
+            const initialClaims = product.marketingClaims || product.claims ||[];
             setCurrentClaims(initialClaims);
 
-            const ingredients = product.analysisData?.detected_ingredients || product.ingredients || [];
+            const ingredients = product.analysisData?.detected_ingredients || product.ingredients ||[];
 
             if (!ingredients || ingredients.length === 0) {
                 setIsDataMissing(true);
@@ -83,12 +119,42 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                 }
             }
         }
-    }, [visible, product, userProfile]);
+    },[visible, product, userProfile]);
+
+    const handleClose = () => {
+        Animated.timing(animState, {
+            toValue: 0,
+            duration: 300,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+        }).start(() => {
+            onClose();
+        });
+    };
+
+    const handleSaveClick = () => {
+        Animated.timing(animState, {
+            toValue: 0,
+            duration: 300,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+        }).start(() => {
+            onSave({
+                ...product,
+                productName: displayName,
+                name: displayName,
+                analysisData: { ...displayData, detected_ingredients: product.analysisData?.detected_ingredients || product.ingredients ||[] },
+                marketingClaims: currentClaims,
+                productImage: displayImage,
+                imageUrl: displayImage
+            });
+        });
+    };
 
     const calculatePersonalScore = async (claimsToUse) => {
         setIsCalculating(true);
         try {
-            const ingredientsRaw = product.analysisData?.detected_ingredients || product.ingredients || [];
+            const ingredientsRaw = product.analysisData?.detected_ingredients || product.ingredients ||[];
             const tempProduct = {
                 ...product,
                 marketingClaims: claimsToUse,
@@ -115,7 +181,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const toggleClaim = (claim) => {
         const newClaims = currentClaims.includes(claim)
             ? currentClaims.filter(c => c !== claim)
-            : [...currentClaims, claim];
+            :[...currentClaims, claim];
         setCurrentClaims(newClaims);
     };
 
@@ -140,8 +206,8 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
     const originalAnalysis = product.analysisData || {
         oilGuardScore: product.score || 0,
-        personalMatch: { status: 'neutral', reasons: [] },
-        marketing_results: [],
+        personalMatch: { status: 'neutral', reasons:[] },
+        marketing_results:[],
     };
 
     const displayData = (activeTab === 'personal' && personalScore) ? personalScore : originalAnalysis;
@@ -154,6 +220,9 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     else if (matchStatus === 'warning') { verdictColor = COLORS.gold; verdictText = t('community_sheet_caution', language); verdictIcon = "exclamation-triangle"; }
     else if (score < 50) { verdictColor = COLORS.danger; verdictText = t('community_sheet_low_quality', language); verdictIcon = "thumbs-down"; }
     if (activeTab === 'original') { verdictText = t('community_sheet_overall_rating', language); }
+
+    const overlayOpacity = animState.interpolate({ inputRange: [0, 1], outputRange:[0, 1] });
+    const modalTranslateY = animState.interpolate({ inputRange:[0, 1], outputRange: [SCREEN_HEIGHT, 0] });
 
     const renderAlerts = () => {
         const rawAlerts = displayData.personalMatch?.reasons || displayData.user_specific_alerts || [];
@@ -171,7 +240,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     };
 
     const renderMarketingClaims = () => {
-        const claimsData = displayData.marketing_results || [];
+        const claimsData = displayData.marketing_results ||[];
         if (claimsData.length === 0) {
             const message = activeTab === 'personal' ? t('community_sheet_no_claims_personal', language) : t('community_sheet_no_claims_original', language);
             return (<View style={[styles.alertBox, { borderColor: COLORS.border, borderStyle: 'dashed' }]}><Text style={[styles.alertText, { color: COLORS.textDim }]}>{message}</Text></View>);
@@ -187,50 +256,87 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     };
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-            <View style={styles.sheetBackdrop}>
-                <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-                <View style={[styles.sheetContainer, isEditingClaims && { maxHeight: '90%' }]}>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+            <Animated.View style={[styles.sheetBackdrop, { opacity: overlayOpacity }]}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+                <Animated.View style={[styles.sheetContainer, isEditingClaims && { maxHeight: '90%' }, { transform: [{ translateY: modalTranslateY }] }]}>
                     <View style={styles.sheetHandle} />
-                    {displayImage && !isEditingClaims && (<View style={styles.imageHeader}><Image source={{ uri: displayImage }} style={styles.sheetMainImage} resizeMode="cover" />{personalScore && activeTab === 'original' && (<View style={styles.comparisonBadge}><Text style={styles.compText}>{personalScore.oilGuardScore > (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_better', language) : personalScore.oilGuardScore < (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_worse', language) : t('community_sheet_comparison_same', language)}</Text></View>)}</View>)}
+                    
+                    {displayImage && !isEditingClaims && (
+                        <StaggeredView index={0}>
+                            <View style={styles.imageHeader}>
+                                <Image source={{ uri: displayImage }} style={styles.sheetMainImage} resizeMode="cover" />
+                                {personalScore && activeTab === 'original' && (
+                                    <View style={styles.comparisonBadge}>
+                                        <Text style={styles.compText}>
+                                            {personalScore.oilGuardScore > (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_better', language) : personalScore.oilGuardScore < (originalAnalysis.oilGuardScore || 0) ? t('community_sheet_comparison_worse', language) : t('community_sheet_comparison_same', language)}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </StaggeredView>
+                    )}
+                    
                     <View style={styles.content}>
-                        <View style={styles.tabContainer}>
-                            <TouchableOpacity style={[styles.tab, activeTab === 'original' && styles.activeTab]} onPress={() => setActiveTab('original')}><Text style={[styles.tabText, activeTab === 'original' && { color: COLORS.textPrimary }]}>{t('community_sheet_original_tab', language)}</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.tab, activeTab === 'personal' && styles.activeTab, isDataMissing && { opacity: 0.5 }]} onPress={() => !isDataMissing && setActiveTab('personal')} disabled={isDataMissing}>{isCalculating && activeTab === 'personal' ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Text style={[styles.tabText, activeTab === 'personal' && { color: COLORS.accentGreen }]}>{isDataMissing ? t('community_sheet_personal_unavailable', language) : t('community_sheet_personal_tab', language)}</Text>}</TouchableOpacity>
-                        </View>
-                        <TouchableOpacity style={styles.editClaimsBtn} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsEditingClaims(!isEditingClaims); }}><Text style={styles.editClaimsText}>{isEditingClaims ? t('community_sheet_close_edit', language) : t('community_sheet_edit_product_data', language)}</Text><Feather name={isEditingClaims ? "chevron-up" : "sliders"} size={14} color={COLORS.textSecondary} /></TouchableOpacity>
+                        <StaggeredView index={1}>
+                            <View style={styles.tabContainer}>
+                                <TouchableOpacity style={[styles.tab, activeTab === 'original' && styles.activeTab]} onPress={() => setActiveTab('original')}><Text style={[styles.tabText, activeTab === 'original' && { color: COLORS.textPrimary }]}>{t('community_sheet_original_tab', language)}</Text></TouchableOpacity>
+                                <TouchableOpacity style={[styles.tab, activeTab === 'personal' && styles.activeTab, isDataMissing && { opacity: 0.5 }]} onPress={() => !isDataMissing && setActiveTab('personal')} disabled={isDataMissing}>{isCalculating && activeTab === 'personal' ? <ActivityIndicator size="small" color={COLORS.accentGreen} /> : <Text style={[styles.tabText, activeTab === 'personal' && { color: COLORS.accentGreen }]}>{isDataMissing ? t('community_sheet_personal_unavailable', language) : t('community_sheet_personal_tab', language)}</Text>}</TouchableOpacity>
+                            </View>
+                            <TouchableOpacity style={styles.editClaimsBtn} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsEditingClaims(!isEditingClaims); }}><Text style={styles.editClaimsText}>{isEditingClaims ? t('community_sheet_close_edit', language) : t('community_sheet_edit_product_data', language)}</Text><Feather name={isEditingClaims ? "chevron-up" : "sliders"} size={14} color={COLORS.textSecondary} /></TouchableOpacity>
+                        </StaggeredView>
+
                         {isEditingClaims ? (
-                            <View style={styles.claimsEditor}><Text style={styles.claimsHint}>{t('community_sheet_claims_hint', language)}</Text><ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled><View style={styles.chipsContainer}>{possibleClaims.map((claim, i) => (<TouchableOpacity key={i} style={[styles.claimChip, currentClaims.includes(claim) && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} onPress={() => toggleClaim(claim)}><Text style={[styles.claimText, currentClaims.includes(claim) && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{claim}</Text></TouchableOpacity>))}</View></ScrollView><TouchableOpacity style={[styles.applyBtn, isDataMissing && { backgroundColor: COLORS.border }]} onPress={!isDataMissing ? applyNewClaims : null} disabled={isDataMissing}><Text style={styles.applyBtnText}>{isDataMissing ? t('community_sheet_no_ingredients_for_analysis', language) : t('community_sheet_recalculate', language)}</Text></TouchableOpacity></View>
+                            <StaggeredView index={2}>
+                                <View style={styles.claimsEditor}><Text style={styles.claimsHint}>{t('community_sheet_claims_hint', language)}</Text><ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled><View style={styles.chipsContainer}>{possibleClaims.map((claim, i) => (<TouchableOpacity key={i} style={[styles.claimChip, currentClaims.includes(claim) && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]} onPress={() => toggleClaim(claim)}><Text style={[styles.claimText, currentClaims.includes(claim) && { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' }]}>{claim}</Text></TouchableOpacity>))}</View></ScrollView><TouchableOpacity style={[styles.applyBtn, isDataMissing && { backgroundColor: COLORS.border }]} onPress={!isDataMissing ? applyNewClaims : null} disabled={isDataMissing}><Text style={styles.applyBtnText}>{isDataMissing ? t('community_sheet_no_ingredients_for_analysis', language) : t('community_sheet_recalculate', language)}</Text></TouchableOpacity></View>
+                            </StaggeredView>
                         ) : (
                             <View style={styles.scrollContainer}>
                                 <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-                                    {(activeTab === 'personal' && isCalculating) ? (<ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginVertical: 40 }} />) : (
+                                    {(activeTab === 'personal' && isCalculating) ? (
+                                        <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginVertical: 40 }} />
+                                    ) : (
                                         <>
-                                            <View style={styles.sheetHeader}><View style={[styles.sheetIconBox, { backgroundColor: verdictColor + '20' }]}><FontAwesome5 name={verdictIcon} size={24} color={verdictColor} /></View><View style={{ flex: 1, marginRight: 15 }}><Text style={styles.sheetTitle} numberOfLines={2}>{displayName}</Text><Text style={[styles.sheetVerdict, { color: verdictColor }]}>{verdictText}</Text></View><View style={[styles.bigScoreCircle, { borderColor: verdictColor }]}><Text style={[styles.bigScoreText, { color: verdictColor }]}>{score}</Text></View></View>
+                                            <StaggeredView index={2}>
+                                                <View style={styles.sheetHeader}><View style={[styles.sheetIconBox, { backgroundColor: verdictColor + '20' }]}><FontAwesome5 name={verdictIcon} size={24} color={verdictColor} /></View><View style={{ flex: 1, marginRight: 15 }}><Text style={styles.sheetTitle} numberOfLines={2}>{displayName}</Text><Text style={[styles.sheetVerdict, { color: verdictColor }]}>{verdictText}</Text></View><View style={[styles.bigScoreCircle, { borderColor: verdictColor }]}><Text style={[styles.bigScoreText, { color: verdictColor }]}>{score}</Text></View></View>
+                                            </StaggeredView>
 
-                                            {/* --- FIX: Personal analysis is now conditional --- */}
                                             {activeTab === 'personal' && (
-                                                <View style={styles.alertsContainer}>
-                                                    <Text style={styles.sectionHeader}>{t('community_sheet_personal_details', language)}</Text>
-                                                    {renderAlerts()}
-                                                </View>
+                                                <StaggeredView index={3}>
+                                                    <View style={styles.alertsContainer}>
+                                                        <Text style={styles.sectionHeader}>{t('community_sheet_personal_details', language)}</Text>
+                                                        {renderAlerts()}
+                                                    </View>
+                                                </StaggeredView>
                                             )}
 
-                                            {/* Marketing claims are always shown */}
-                                            <View style={styles.claimsAnalysisContainer}>
-                                                <Text style={styles.sectionHeader}>{t('community_sheet_claims_credibility', language)}</Text>
-                                                {renderMarketingClaims()}
-                                            </View>
+                                            <StaggeredView index={activeTab === 'personal' ? 4 : 3}>
+                                                <View style={styles.claimsAnalysisContainer}>
+                                                    <Text style={styles.sectionHeader}>{t('community_sheet_claims_credibility', language)}</Text>
+                                                    {renderMarketingClaims()}
+                                                </View>
+                                            </StaggeredView>
                                         </>
                                     )}
                                 </ScrollView>
                                 <ScrollHint visible={showScrollHint && !isCalculating && !!personalScore && activeTab === 'personal'} color={COLORS.textPrimary} containerStyle={styles.scrollHintContainer} />
                             </View>
                         )}
-                        <View style={styles.sheetActions}><TouchableOpacity style={styles.sheetBtnSecondary} onPress={onClose}><Text style={styles.sheetBtnTextSec}>{t('community_close', language)}</Text></TouchableOpacity><TouchableOpacity style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} onPress={() => onSave({ ...product, productName: displayName, name: displayName, analysisData: { ...displayData, detected_ingredients: product.analysisData?.detected_ingredients || product.ingredients || [] }, marketingClaims: currentClaims, productImage: displayImage, imageUrl: displayImage })} ><Text style={styles.sheetBtnTextPrim}>{t('community_sheet_save_to_shelf', language)}</Text><FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} /></TouchableOpacity></View>
+                        
+                        <StaggeredView index={5}>
+                            <View style={styles.sheetActions}>
+                                <TouchableOpacity style={styles.sheetBtnSecondary} onPress={handleClose}>
+                                    <Text style={styles.sheetBtnTextSec}>{t('community_close', language)}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} onPress={handleSaveClick}>
+                                    <Text style={styles.sheetBtnTextPrim}>{t('community_sheet_save_to_shelf', language)}</Text>
+                                    <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />
+                                </TouchableOpacity>
+                            </View>
+                        </StaggeredView>
                     </View>
-                </View>
-            </View>
+                </Animated.View>
+            </Animated.View>
         </Modal>
     );
 };

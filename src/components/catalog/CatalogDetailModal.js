@@ -462,7 +462,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         لا نملك قائمة المكونات 😞
                       </Text>
                       <Text style={[styles.hologramBody, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                        صوري الكلمات الإنجليزية خلف العبوة لاستخراجها فوراً.
+                        صوري الكلمات الإنجليزية خلف العبوة لاستخراجها فورا.
                       </Text>
                       <View style={[styles.hologramAction, { backgroundColor: C.gold }]}>
                         <Text style={styles.hologramActionTxt}>تصوير وإضافة المكونات</Text>
@@ -543,7 +543,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                   <View style={[styles.disabledOverlayFill, { backgroundColor: C.background, borderColor: C.textDim + '50', flexDirection: rtl.flexDirection }]}>
                     <MaterialCommunityIcons name="robot-dead-outline" size={24} color={C.textDim} />
                     <Text style={[styles.btnArchitectText, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                      أضيفي المكونات أولاً للتفعيل
+                      أضيفي المكونات أولا للتفعيل
                     </Text>
                   </View>
                 ) : (

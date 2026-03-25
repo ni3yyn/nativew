@@ -12,12 +12,12 @@ export const BOUNTY_REWARDS = {
 };
 
 export const USER_LEVELS =[
-    { id: 1, name: 'عضو مبتدئ', minPoints: 0, icon: 'seedling', color: '#8BC34A' },
-    { id: 2, name: 'مستكشف الجمال', minPoints: 150, icon: 'search', color: '#03A9F4' },
-    { id: 3, name: 'باحث نشط', minPoints: 500, icon: 'flask', color: '#9C27B0' },
-    { id: 4, name: 'محلل محترف', minPoints: 1500, icon: 'microscope', color: '#FF9800' },
-    { id: 5, name: 'خبير وثيق', minPoints: 3000, icon: 'medal', color: '#FFC107' },
-    { id: 6, name: 'أسطورة الكتالوج', minPoints: 6000, icon: 'crown', color: '#FFD700' },
+    { id: 1, name: 'عضوة مبتدئة', minPoints: 0, icon: 'seedling', color: '#8BC34A' },
+    { id: 2, name: 'مستكشفة الجمال', minPoints: 150, icon: 'search', color: '#03A9F4' },
+    { id: 3, name: 'باحثة نشطة', minPoints: 500, icon: 'flask', color: '#9C27B0' },
+    { id: 4, name: 'محللة محترفة', minPoints: 2000, icon: 'microscope', color: '#FF9800' },
+    { id: 5, name: 'خبيرة وثيق', minPoints: 4500, icon: 'medal', color: '#FFC107' },
+    { id: 6, name: 'أسطورة الكتالوج', minPoints: 10000, icon: 'crown', color: '#FFD700' },
 ];
 
 export const getUserLevelData = (currentPoints) => {

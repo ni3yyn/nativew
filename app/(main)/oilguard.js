@@ -1532,7 +1532,7 @@ export default function OilGuardEngine() {
 
     const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
 
-    const [step, setStep] = useState(isAutoStart ? 2 : 0); // بناءً عليه نحدد الخطوة
+    const [step, setStep] = useState(isAutoStart ? 2 : 0); // بناء عليه نحدد الخطوة
     const [loading, setLoading] = useState(false);
     const [isGeminiLoading, setIsGeminiLoading] = useState(false);
     const [ocrText, setOcrText] = useState('');
@@ -2250,7 +2250,7 @@ export default function OilGuardEngine() {
             await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), newProduct);
     
             // ==============================================================
-            // 3. ✨ تحديث الإشعارات الذكية فوراً بعد حفظ المنتج ✨
+            // 3. ✨ تحديث الإشعارات الذكية فورا بعد حفظ المنتج ✨
             // ندمج المنتجات القديمة مع المنتج الجديد لكي تحصل دالة الإشعارات على أحدث قائمة
             // ==============================================================
             try {
@@ -2304,7 +2304,7 @@ export default function OilGuardEngine() {
     };
 
     const openSaveModal = () => {
-        // ترك البيانات كما هي لكي تظهر صورة واسم الكتالوج فوراً
+        // ترك البيانات كما هي لكي تظهر صورة واسم الكتالوج فورا
         setSaveModalVisible(true);
     };
 

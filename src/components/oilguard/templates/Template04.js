@@ -116,7 +116,7 @@ export default function Template04({ analysis, typeLabel, productName, imageUri,
                 </View>
 
                 <View style={[styles.ctaButton, { backgroundColor: theme.text }]}>
-                    <Text style={[styles.ctaText, { color: theme.primary }]}>حللي منتجاتك مجاناً عبر WATHIQ.WEB.APP</Text>
+                    <Text style={[styles.ctaText, { color: theme.primary }]}>حللي منتجاتك مجانا عبر WATHIQ.WEB.APP</Text>
                 </View>
 
                 <View style={styles.socialRow}>

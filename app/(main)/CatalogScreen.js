@@ -1,10 +1,11 @@
-// CatalogScreen.js - Updated version
+// CatalogScreen.js - Updated version with intro and "don't show again" functionality
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/context/ThemeContext';
 import { t, interpolate } from '../../src/i18n/index';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
@@ -18,12 +19,17 @@ import RewardsBanner from '../../src/components/catalog/RewardsBanner';
 import BountyModal from '../../src/components/catalog/BountyModal';
 import FilterModal from '../../src/components/catalog/FilterModal';
 import AddProductModal from '../../src/components/catalog/AddProductModal';
+import CatalogIntro from '../../src/components/catalog/CatalogIntro'; // Import the intro component
 
 import { submitBounty, submitNewProduct } from '../../src/services/bountyService'; 
 import { AlertService } from '../../src/services/alertService';
 import { CatalogService } from '../../src/services/catalogService';
 
 import { getPointsForField } from '../../src/utils/gamificationEngine';
+
+// Storage keys
+const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
+const DEV_MODE_KEY = '@dev_mode_enabled'; // For testing
 
 const getPriceValue = (price) => {
     if (!price) return null;
@@ -58,6 +64,46 @@ export default function CatalogScreen() {
   const[isAddProductVisible, setAddProductVisible] = useState(false);
   
   const[userPoints, setUserPoints] = useState(userProfile?.points || 0);
+  
+  // Intro state
+  const [showIntro, setShowIntro] = useState(false);
+  const [checkingIntro, setCheckingIntro] = useState(true);
+  const [devMode, setDevMode] = useState(false);
+
+  // Check if intro should be shown
+  useEffect(() => {
+    const checkIntroStatus = async () => {
+      try {
+        // Check dev mode first
+        const devModeEnabled = await AsyncStorage.getItem(DEV_MODE_KEY);
+        const isDevMode = devModeEnabled === 'true';
+        setDevMode(isDevMode);
+        
+        // If dev mode is enabled, always show intro for testing
+        if (isDevMode) {
+          setShowIntro(true);
+          setCheckingIntro(false);
+          return;
+        }
+        
+        // Check if user has seen intro before
+        const hasSeenIntro = await AsyncStorage.getItem(CATALOG_INTRO_SEEN_KEY);
+        
+        if (hasSeenIntro !== 'true') {
+          setShowIntro(true);
+        } else {
+          setShowIntro(false);
+        }
+      } catch (error) {
+        console.error('Error checking intro status:', error);
+        setShowIntro(true); // Show intro on error to be safe
+      } finally {
+        setCheckingIntro(false);
+      }
+    };
+    
+    checkIntroStatus();
+  }, []);
 
   useEffect(() => {
       if (userProfile?.points !== undefined) {
@@ -65,7 +111,11 @@ export default function CatalogScreen() {
       }
   }, [userProfile?.points]);
 
-  useEffect(() => { loadData(); },[]);
+  useEffect(() => { 
+    if (!showIntro && !checkingIntro) {
+      loadData(); 
+    }
+  }, [showIntro, checkingIntro]);
 
   const loadData = async (force = false) => {
     try {
@@ -93,6 +143,52 @@ export default function CatalogScreen() {
       setProducts(cachedData ||[]);
       setSyncing(false);
       setLoading(false);
+    }
+  };
+
+  // Handle intro finish - save preference and close
+  const handleIntroFinish = async () => {
+    try {
+      // Save that user has seen intro
+      await AsyncStorage.setItem(CATALOG_INTRO_SEEN_KEY, 'true');
+      setShowIntro(false);
+      
+      // Load data after intro closes
+      loadData();
+    } catch (error) {
+      console.error('Error saving intro preference:', error);
+      setShowIntro(false);
+      loadData();
+    }
+  };
+  
+  // Dev toggle function (can be triggered via gesture or hidden button)
+  const toggleDevMode = async () => {
+    try {
+      const newDevMode = !devMode;
+      await AsyncStorage.setItem(DEV_MODE_KEY, newDevMode.toString());
+      setDevMode(newDevMode);
+      
+      // Fixed: Use AlertService.show or AlertService.success instead of AlertService.info
+      AlertService.success(
+        'Dev Mode',
+        `Dev mode ${newDevMode ? 'enabled' : 'disabled'}. ${newDevMode ? 'Intro will show on next refresh.' : ''}`
+      );
+      
+      // If enabling dev mode, show intro immediately
+      if (newDevMode) {
+        setShowIntro(true);
+      } else {
+        // If disabling, make sure intro preference is respected
+        const hasSeenIntro = await AsyncStorage.getItem(CATALOG_INTRO_SEEN_KEY);
+        if (hasSeenIntro === 'true') {
+          setShowIntro(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling dev mode:', error);
+      // Fixed: Use AlertService.error instead of AlertService.info
+      AlertService.error('Error', 'Failed to toggle dev mode');
     }
   };
 
@@ -181,6 +277,20 @@ export default function CatalogScreen() {
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
+  // Show loading while checking intro status
+  if (checkingIntro) {
+    return (
+      <View style={[styles.center, { backgroundColor: C.background }]}>
+        <ActivityIndicator size="large" color={C.accentGreen} />
+      </View>
+    );
+  }
+
+  // Show intro modal
+  if (showIntro) {
+    return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
+  }
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
@@ -191,10 +301,21 @@ export default function CatalogScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
+      {/* Hidden dev mode toggle button (long press on title to toggle) */}
+      <TouchableOpacity 
+        style={styles.devModeToggle}
+        onLongPress={toggleDevMode}
+        activeOpacity={0.7}
+      >
+        <View style={{ height: 1, width: 1, opacity: 0 }} />
+      </TouchableOpacity>
+      
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         
         <View style={styles.topRow}>
-          <Text style={[styles.title, { color: C.textPrimary }]}>{t('catalog_title', language)}</Text>
+          <TouchableOpacity onLongPress={toggleDevMode} activeOpacity={0.7}>
+            <Text style={[styles.title, { color: C.textPrimary }]}>{t('catalog_title', language)}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => loadData(true)} disabled={syncing}>
              {syncing ? <ActivityIndicator size="small" color={C.gold} /> : <Feather name="refresh-cw" size={20} color={C.textDim} />}
           </TouchableOpacity>
@@ -304,5 +425,15 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     shadowOpacity: 0.3, 
     shadowRadius: 8, 
     elevation: 8 
+  },
+  
+  // Hidden dev mode toggle area
+  devModeToggle: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 50,
+    height: 50,
+    zIndex: 999,
   },
 });
