@@ -169,7 +169,15 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
             <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15 }}>
                 <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 5, paddingBottom: 25 }} style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    
+    contentContainerStyle={[
+        styles.carouselContentContainer,
+        { flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }
+    ]}
+>
                 {insights.map((insight, index) => {
                     // Check for Weather Alerts (secondary weather cards)
                     const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';

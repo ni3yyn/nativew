@@ -272,3 +272,20 @@
 
 # Keep internal Expo Updates state machine
 -keep class expo.modules.updates.statemachine.** { *; }
+
+# 1. Generated Room Database code (Crucial: keeps the update-tracking DB from being renamed)
+-keep class * extends androidx.room.RoomDatabase
+-keep class * extends androidx.sqlite.db.SupportSQLiteOpenHelper
+-keep class * extends androidx.sqlite.db.SupportSQLiteOpenHelper$Factory
+
+# 2. Update Verification Logic (Essential for SDK 54 to "trust" the new manifest)
+-keep class expo.modules.updates.manifest.** { *; }
+-keep class expo.modules.updates.selectionpolicy.** { *; }
+-keep class expo.modules.updates.loader.** { *; }
+
+# 3. The "Switch" (Keeps the native code that swaps the old JS bundle for the new one)
+-keep class com.facebook.react.bridge.JSBundleLoader { *; }
+-keep class com.facebook.react.bridge.CatalystInstanceImpl { *; }
+
+# 4. Critical Metadata (Prevents type-check failures during the update boot process)
+-keepattributes Signature, *Annotation*, EnclosingMethod, InnerClasses

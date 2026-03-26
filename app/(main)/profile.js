@@ -233,7 +233,9 @@ const Spore = ({ size, startX, duration, delay }) => {
     });
 
     return (
-        <Animated.View style={{
+        <Animated.View 
+        pointerEvents="none"
+        style={{
             position: 'absolute',
             zIndex: 0,
             width: size,
@@ -2191,6 +2193,8 @@ export default function ProfileScreen() {
                 scrollEventThrottle={16}
                 onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
                 showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
