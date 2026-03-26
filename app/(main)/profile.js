@@ -3,7 +3,8 @@ import {
     StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable, Image,
     Dimensions, ScrollView, Animated, ImageBackground, Modal, FlatList, BackHandler,
     Platform, UIManager, Alert, StatusBar, ActivityIndicator, LayoutAnimation,
-    RefreshControl, Keyboard, Easing, I18nManager, AppState, KeyboardAvoidingView
+    RefreshControl, Keyboard, Easing, I18nManager, AppState, KeyboardAvoidingView,
+    InteractionManager
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import { TouchableWithoutFeedback } from 'react-native';
@@ -30,7 +31,7 @@ import {
 } from '../../src/data/allergiesandconditions';
 import { PRODUCT_TYPES } from '../../src/constants/productData';
 import { AlertService } from '../../src/services/alertService';
-import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge'; // Ensure correct path
+import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge'; 
 import {
     ShelfEmptyState,
     AnalysisEmptyState,
@@ -52,6 +53,7 @@ import { RoutineSection, AddStepModal } from '../../src/components/profile/routi
 import { NatureDock } from '../../src/components/profile/NatureDock';
 import PremiumShareButton from '../../src/components/oilguard/ShareComponent';
 import { RemindersScreen } from '../../src/components/profile/routine/RemindersScreen';
+
 // --- 1. SYSTEM CONFIG ---
 
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
@@ -61,7 +63,6 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 let AdsConsent;
 try {
-    // Try to load the native module only if NOT on web
     if (Platform.OS !== 'web') {
         const mobileAds = require('react-native-google-mobile-ads');
         AdsConsent = mobileAds.AdsConsent;
@@ -69,11 +70,9 @@ try {
         throw new Error('AdMob not supported on web');
     }
 } catch (e) {
-    // If it fails (Expo Go), create a dummy object
     console.log('AdMob native module not found (running in Expo Go). Using Mock.');
     AdsConsent = {
         showPrivacyOptionsForm: async () => {
-            // Return a fake response so the app doesn't crash when clicked
             console.log('Privacy Form Mock triggered');
             return { status: 'mocked' };
         }
@@ -81,7 +80,6 @@ try {
 }
 
 // --- 2. THEME & ASSETS ---
-// Theme is now handled by ThemeContext
 import { useTheme, THEMES } from '../../src/context/ThemeContext';
 
 const getHeaderTitle = (key, language) => {
@@ -97,8 +95,7 @@ const getHeaderTitle = (key, language) => {
     return titles[key] || { title: t('profile_title_fallback', language), icon: 'user' };
 };
 
-
-const HEALTH_OPTS = [
+const HEALTH_OPTS =[
     { id: 'acne_prone', label: t('health_opt_acne', 'ar') },
     { id: 'sensitive_skin', label: t('health_opt_sensitive', 'ar') },
     { id: 'rosacea_prone', label: t('health_opt_rosacea', 'ar') },
@@ -106,13 +103,13 @@ const HEALTH_OPTS = [
     { id: 'pregnancy', label: t('health_opt_pregnancy', 'ar') }
 ];
 
-const BASIC_HAIR_TYPES = [
+const BASIC_HAIR_TYPES =[
     { id: 'straight', label: t('hair_type_straight', 'ar'), icon: 'stream' },
     { id: 'wavy', label: t('hair_type_wavy', 'ar'), icon: 'water' },
     { id: 'curly', label: t('hair_type_curly', 'ar'), icon: 'holly-berry' },
     { id: 'coily', label: t('hair_type_coily', 'ar'), icon: 'dna' }
 ];
-const BASIC_SKIN_TYPES = [
+const BASIC_SKIN_TYPES =[
     { id: 'oily', label: t('skin_type_oily', 'ar'), icon: 'blurType' },
     { id: 'dry', label: t('skin_type_dry', 'ar'), icon: 'leaf' },
     { id: 'combo', label: t('skin_type_combo', 'ar'), icon: 'adjust' },
@@ -120,7 +117,7 @@ const BASIC_SKIN_TYPES = [
     { id: 'sensitive', label: t('skin_type_sensitive', 'ar'), icon: 'heartbeat' }
 ];
 
-const GOALS_LIST = [
+const GOALS_LIST =[
     { id: 'brightening', label: t('goal_brightening', 'ar'), icon: 'sun' },
     { id: 'acne', label: t('goal_acne', 'ar'), icon: 'shield-alt' },
     { id: 'anti_aging', label: t('goal_anti_aging', 'ar'), icon: 'hourglass-half' },
@@ -128,7 +125,7 @@ const GOALS_LIST = [
     { id: 'texture_pores', label: t('goal_texture', 'ar'), icon: 'th-large' },
 ];
 
-const INGREDIENT_FILTERS = [
+const INGREDIENT_FILTERS =[
     { id: 'all', label: t('ing_filter_all', 'ar'), icon: 'layer-group' },
     { id: 'exfoliants', label: t('ing_filter_exfoliants', 'ar'), icon: 'magic' },
     { id: 'hydrators', label: t('ing_filter_hydrators', 'ar'), icon: 'blurType' },
@@ -136,13 +133,10 @@ const INGREDIENT_FILTERS = [
     { id: 'oils', label: t('ing_filter_oils', 'ar'), icon: 'oil-can' },
 ];
 
-
-
 // ============================================================================
 //                       CORE ANIMATION COMPONENTS
 // ============================================================================
 
-// 1. ENHANCED FLOATING SPORES with glass effect
 const Spore = ({ size, startX, duration, delay }) => {
     const { colors: C } = useTheme();
     const animY = useRef(new Animated.Value(0)).current;
@@ -151,6 +145,8 @@ const Spore = ({ size, startX, duration, delay }) => {
     const scale = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        let timeout;
+        
         const floatLoop = Animated.loop(
             Animated.timing(animY, {
                 toValue: 1,
@@ -207,24 +203,28 @@ const Spore = ({ size, startX, duration, delay }) => {
             delay
         });
 
-        const timeout = setTimeout(() => {
-            scaleIn.start();
-            floatLoop.start();
-            driftLoop.start();
-            opacityPulse.start();
-        }, delay);
+        // OPTIMIZATION: Defer particle start to prevent navigation lag
+        const task = InteractionManager.runAfterInteractions(() => {
+            timeout = setTimeout(() => {
+                scaleIn.start();
+                floatLoop.start();
+                driftLoop.start();
+                opacityPulse.start();
+            }, delay);
+        });
 
         return () => {
+            task.cancel();
             clearTimeout(timeout);
             floatLoop.stop();
             driftLoop.stop();
             opacityPulse.stop();
         };
-    }, []);
+    },[]);
 
     const translateY = animY.interpolate({
         inputRange: [0, 1],
-        outputRange: [height + 100, -100]
+        outputRange:[height + 100, -100]
     });
 
     const translateX = animX.interpolate({
@@ -234,24 +234,18 @@ const Spore = ({ size, startX, duration, delay }) => {
 
     return (
         <Animated.View style={{
-            position: 'absolute', // Moved here
-            zIndex: 0,            // Moved here
+            position: 'absolute',
+            zIndex: 0,
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: C.accentGlow, // Fixed variable name
+            backgroundColor: C.accentGlow,
             transform: [{ translateY }, { translateX }, { scale }],
             opacity,
         }} />
     );
 };
 
-
-// 2. TACTILE PRESSABLE (Haptics + Shrink)
-
-// RENAMED & REFACTORED ContentCard (formerly ContentCard)
-
-// 4. ANIMATED COUNTER
 const AnimatedCount = ({ value, style }) => {
     const [displayValue, setDisplayValue] = useState(0);
     const animValue = useRef(new Animated.Value(0)).current;
@@ -280,17 +274,15 @@ const AnimatedCount = ({ value, style }) => {
     return <Text style={style}>{displayValue}</Text>;
 };
 
-// 6. NATIVE CHART RING with enhanced animations
 const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
     const { colors: C } = useTheme();
     const finalColor = color || C.primary;
     const animatedValue = useRef(new Animated.Value(0)).current;
     const circumference = 2 * Math.PI * radius;
-    const [displayPercentage, setDisplayPercentage] = useState(0);
+    const[displayPercentage, setDisplayPercentage] = useState(0);
     const rotation = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Start rotation animation
         Animated.loop(
             Animated.timing(rotation, {
                 toValue: 1,
@@ -300,8 +292,6 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
             })
         ).start();
 
-
-        // Animate percentage
         Animated.timing(animatedValue, {
             toValue: percentage,
             duration: 1500,
@@ -325,7 +315,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
 
     return (
         <View style={{ width: radius * 2, height: radius * 2, alignItems: 'center', justifyContent: 'center' }}>
-            <Svg width={radius * 2} height={radius * 2} style={{ transform: [{ rotate: '-90deg' }] }}>
+            <Svg width={radius * 2} height={radius * 2} style={{ transform:[{ rotate: '-90deg' }] }}>
                 <Circle cx={radius} cy={radius} r={radius - strokeWidth / 2} stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} fill="none" />
                 <Circle
                     cx={radius} cy={radius} r={radius - strokeWidth / 2}
@@ -335,7 +325,6 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
                 />
             </Svg>
 
-            {/* Glow effect */}
             <Animated.View style={{
                 position: 'absolute',
                 width: radius * 2,
@@ -345,7 +334,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
                 opacity: 0.1,
                 transform: [{
                     scale: rotation.interpolate({
-                        inputRange: [0, 0.5, 1],
+                        inputRange:[0, 0.5, 1],
                         outputRange: [1, 1.1, 1]
                     })
                 }]
@@ -360,11 +349,8 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
     );
 };
 
-// --- COMPONENTS: ORGANIC DOCK ---
-
-// 7. ENHANCED ACCORDION with smooth height animation
 const Accordion = ({ title, icon, children, isOpen, onPress }) => {
-    const [contentHeight, setContentHeight] = useState(0);
+    const[contentHeight, setContentHeight] = useState(0);
     const heightAnim = useRef(new Animated.Value(0)).current;
     const rotateAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
     const { colors: C } = useTheme();
@@ -381,11 +367,10 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
                 friction: 9, tension: 60, useNativeDriver: false,
             })
         ]).start();
-    }, [isOpen, contentHeight]);
+    },[isOpen, contentHeight]);
 
     const onLayout = (event) => {
         const { height } = event.nativeEvent.layout;
-        // FIX: Update height if it changes by more than 1 pixel (handles new buttons being added)
         if (Math.abs(contentHeight - height) > 1) {
             setContentHeight(height);
         }
@@ -393,7 +378,7 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
 
     const rotateChevron = rotateAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0deg', '-180deg'],
+        outputRange:['0deg', '-180deg'],
     });
 
     return (
@@ -411,10 +396,6 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
             </TouchableOpacity>
 
             <Animated.View style={{ height: heightAnim, overflow: 'hidden' }}>
-                {/* 
-                    We place the measurement view 'absolute' so it doesn't take up space 
-                    while measuring, but inside the animated view so it clips.
-                */}
                 <View style={{ position: 'absolute', width: '100%', top: 0 }} onLayout={onLayout}>
                     <View style={styles.accordionBody}>
                         {children}
@@ -429,7 +410,6 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
 //                       ENHANCED MAIN SECTIONS
 // ============================================================================
 
-// 1. Skeleton Loader
 const SkeletonProductCard = ({ index }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -443,7 +423,7 @@ const SkeletonProductCard = ({ index }) => {
         return () => animation.stop();
     }, []);
 
-    const translateX = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-width, width] });
+    const translateX = shimmerAnim.interpolate({ inputRange:[0, 1], outputRange: [-width, width] });
     const ShimmeringView = ({ style }) => (
         <View style={[style, { overflow: 'hidden', backgroundColor: C.border }]}>
             <Animated.View style={{ ...StyleSheet.absoluteFillObject, transform: [{ translateX }] }}>
@@ -464,8 +444,6 @@ const SkeletonProductCard = ({ index }) => {
     );
 };
 
-
-// 2. The new interactive, swipeable product list item with Verdict Icons
 const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -489,8 +467,6 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     ).current;
 
     const score = product.analysisData?.oilGuardScore || 0;
-
-    // ✅ FIX: Find the object first, then pass its labelKey to the translation function 't()'
     const typeObj = PRODUCT_TYPES.find(type => type.id === product.analysisData?.product_type);
     const productTypeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
@@ -528,7 +504,6 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     );
 });
 
-// 3. The new sophisticated Bottom Sheet for product details
 const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -645,7 +620,6 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
 
     const scoreColor = oilGuardScore >= 80 ? C.success : oilGuardScore >= 65 ? C.warning : C.danger;
     
-    // ✅ FIX: Look up by labelKey instead of label, then translate
     const typeObj = PRODUCT_TYPES.find(tObj => tObj.id === product_type);
     const typeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
@@ -805,28 +779,25 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
 
 const GlobalInput = (props) => {
     const { colors: C } = useTheme();
-    // Determine font based on content presence
     const fontStyle = {
         fontFamily: (props.value && props.value.length > 0) ? 'Tajawal-Bold' : 'Tajawal-Regular'
     };
 
     return (
         <TextInput
-            {...props} // Pass all other props (placeholder, onChange, etc.)
+            {...props} 
             placeholderTextColor={props.placeholderTextColor || C.textDim}
             style={[
                 props.style,
-                fontStyle // Override font family dynamically
+                fontStyle
             ]}
         />
     );
 };
 
-// --- REPLACEMENT ShelfSection COMPONENT ---
 const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    // ✅ FIX: Hook moved ABOVE the early return block
     const language = useCurrentLanguage(); 
     const [refreshing, setRefreshing] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -840,10 +811,9 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     const handleProductDelete = (productId) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         onDelete(productId);
-        setSelectedProduct(null); // Ensure modal closes
+        setSelectedProduct(null);
     };
 
-    // THIS IS THE EARLY RETURN THAT WAS BREAKING REACT HOOKS ORDER
     if (loading) {
         return (
             <View style={{ gap: 8, paddingTop: 20 }}>
@@ -908,8 +878,6 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
     );
 };
 
-
-// --- 1. MEMOIZED LIST ITEM ---
 const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
     const { colors: C } = useTheme();
     const isRisk = item.warnings?.some(w => w.level === 'risk');
@@ -922,22 +890,18 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
                 disabled={!item.isRich}
             >
                 <View style={styles.ingCardContent}>
-
-                    {/* Count Badge */}
                     <View style={[styles.ingCountBadge, { backgroundColor: item.isRich ? C.accentGreen : C.card }]}>
                         <Text style={[styles.ingCountText, { color: item.isRich ? C.textOnAccent : C.textDim }]}>
                             {item.count}
                         </Text>
                     </View>
 
-                    {/* Text Info */}
                     <View style={styles.ingInfoContainer}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.ingNameText}>{item.displayName}</Text>
                             {isRisk && <FontAwesome5 name="exclamation-circle" size={12} color={C.danger} />}
                         </View>
 
-                        {/* Scientific Name (Style Added) */}
                         {item.scientific_name && (
                             <Text style={styles.ingSciText} numberOfLines={1}>{item.scientific_name}</Text>
                         )}
@@ -954,7 +918,6 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
                         </View>
                     </View>
 
-                    {/* Interactive Arrow */}
                     {item.isRich && (
                         <View style={{ paddingLeft: 8 }}>
                             <FontAwesome5 name="chevron-left" size={12} color={C.border} />
@@ -966,125 +929,112 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
     );
 });
 
-// --- 2. MAIN SECTION CONTROLLER ---
-// --- 2. MAIN SECTION CONTROLLER ---
 const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); // ✅ Move this to the top with other hooks
+    const language = useCurrentLanguage(); 
     
-    // All hooks must be declared at the top in the same order every time
     const [search, setSearch] = useState('');
     const [renderLimit, setRenderLimit] = useState(15);
     const [allIngredients, setAllIngredients] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const[loading, setLoading] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState(null);
 
-    // This useEffect must always run
     useEffect(() => {
-        const fetchIngredientsData = async () => {
-            if (products.length === 0) {
-                setAllIngredients([]);
-                return;
-            }
+        // OPTIMIZATION: Defer fetch until screen transition completes
+        const task = InteractionManager.runAfterInteractions(() => {
+            const fetchIngredientsData = async () => {
+                if (products.length === 0) {
+                    setAllIngredients([]);
+                    return;
+                }
 
-            const currentHash = generateFingerprint(products, userProfile?.settings);
+                const currentHash = generateFingerprint(products, userProfile?.settings);
 
-            // CHECK PARENT CACHE REF
-            if (cacheRef.current.hash === currentHash && cacheRef.current.data.length > 0) {
-                setAllIngredients(cacheRef.current.data);
-                return;
-            }
+                if (cacheRef.current.hash === currentHash && cacheRef.current.data.length > 0) {
+                    setAllIngredients(cacheRef.current.data);
+                    return;
+                }
 
-            setLoading(true);
+                setLoading(true);
 
-            // 1. Gather unique names from local shelf
-            const uniqueNames = new Set();
-            products.forEach(p => {
-                p.analysisData?.detected_ingredients?.forEach(i => {
-                    if (i.name) uniqueNames.add(i.name);
-                });
-            });
-            const ingredientsList = Array.from(uniqueNames);
-
-            try {
-                // 2. Call Evaluate API (Fixed URL: removed .js)
-                const response = await fetch(`${PROFILE_API_URL}/evaluate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ingredients_list: ingredientsList,
-                        product_type: 'other',
-                        user_profile: userProfile?.settings || {},
-                        selected_claims: []
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) throw new Error("Server fetch failed");
-
-                const serverData = data.detected_ingredients || [];
-
-                // 3. Merge Server Data with Local Shelf Counts
-                const aggregated = serverData.map(serverIng => {
-                    // Find occurrence in local shelf
-                    const productsContaining = products.filter(p =>
-                        p.analysisData?.detected_ingredients?.some(localIng =>
-                            // Match by ID if available, else Name
-                            (serverIng.id && localIng.id === serverIng.id) ||
-                            (localIng.name && localIng.name.toLowerCase() === serverIng.name.toLowerCase())
-                        )
-                    );
-
-                    return {
-                        ...serverIng,
-                        displayName: serverIng.name,
-                        isRich: true,
-                        count: productsContaining.length,
-                        productIds: productsContaining.map(p => p.id),
-                        productNames: productsContaining.map(p => p.productName)
-                    };
-                });
-
-                // Sort results
-                const sortedData = aggregated.sort((a, b) => b.count - a.count);
-
-                // --- IMPORTANT: Update the Cache so we don't fetch next time ---
-                cacheRef.current = { hash: currentHash, data: sortedData };
-
-                setAllIngredients(sortedData);
-
-            } catch (error) {
-                console.error("Ingredients enrichment failed:", error);
-                // Fallback: Aggregate locally without rich data
-                const fallbackMap = new Map();
+                const uniqueNames = new Set();
                 products.forEach(p => {
                     p.analysisData?.detected_ingredients?.forEach(i => {
-                        const key = i.name;
-                        if (!fallbackMap.has(key)) {
-                            fallbackMap.set(key, {
-                                id: key, name: key, displayName: key,
-                                isRich: false, count: 0, productIds: [], productNames: []
-                            });
-                        }
-                        const entry = fallbackMap.get(key);
-                        entry.count++;
-                        if (!entry.productIds.includes(p.id)) entry.productIds.push(p.id);
+                        if (i.name) uniqueNames.add(i.name);
                     });
                 });
-                setAllIngredients(Array.from(fallbackMap.values()).sort((a, b) => b.count - a.count));
-            } finally {
-                setLoading(false);
-            }
-        };
+                const ingredientsList = Array.from(uniqueNames);
 
-        // Debounce fetch slightly
-        const timeout = setTimeout(fetchIngredientsData, 500);
-        return () => clearTimeout(timeout);
-    }, [products, userProfile, cacheRef]); // ✅ Added cacheRef to dependencies
+                try {
+                    const response = await fetch(`${PROFILE_API_URL}/evaluate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ingredients_list: ingredientsList,
+                            product_type: 'other',
+                            user_profile: userProfile?.settings || {},
+                            selected_claims:[]
+                        })
+                    });
 
-    // These useMemo hooks must always run
+                    const data = await response.json();
+
+                    if (!response.ok) throw new Error("Server fetch failed");
+
+                    const serverData = data.detected_ingredients ||[];
+
+                    const aggregated = serverData.map(serverIng => {
+                        const productsContaining = products.filter(p =>
+                            p.analysisData?.detected_ingredients?.some(localIng =>
+                                (serverIng.id && localIng.id === serverIng.id) ||
+                                (localIng.name && localIng.name.toLowerCase() === serverIng.name.toLowerCase())
+                            )
+                        );
+
+                        return {
+                            ...serverIng,
+                            displayName: serverIng.name,
+                            isRich: true,
+                            count: productsContaining.length,
+                            productIds: productsContaining.map(p => p.id),
+                            productNames: productsContaining.map(p => p.productName)
+                        };
+                    });
+
+                    const sortedData = aggregated.sort((a, b) => b.count - a.count);
+                    cacheRef.current = { hash: currentHash, data: sortedData };
+                    setAllIngredients(sortedData);
+
+                } catch (error) {
+                    console.error("Ingredients enrichment failed:", error);
+                    const fallbackMap = new Map();
+                    products.forEach(p => {
+                        p.analysisData?.detected_ingredients?.forEach(i => {
+                            const key = i.name;
+                            if (!fallbackMap.has(key)) {
+                                fallbackMap.set(key, {
+                                    id: key, name: key, displayName: key,
+                                    isRich: false, count: 0, productIds: [], productNames:[]
+                                });
+                            }
+                            const entry = fallbackMap.get(key);
+                            entry.count++;
+                            if (!entry.productIds.includes(p.id)) entry.productIds.push(p.id);
+                        });
+                    });
+                    setAllIngredients(Array.from(fallbackMap.values()).sort((a, b) => b.count - a.count));
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchIngredientsData();
+        });
+
+        return () => task.cancel();
+    }, [products, userProfile, cacheRef]); 
+
     const filteredList = useMemo(() =>
         allIngredients.filter(ing =>
             (ing.displayName || ing.name).toLowerCase().includes(search.toLowerCase())
@@ -1092,9 +1042,6 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
         [allIngredients, search]);
 
     const visibleData = filteredList.slice(0, renderLimit);
-
-    // ✅ NO conditional returns before this point
-    // All hooks above this line are called in the same order every time
 
     return (
         <View style={{ flex: 1 }}>
@@ -1144,11 +1091,9 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     );
 };
 
-// --- 3. DETAILED MODAL COMPONENT ---
 const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaining }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    // ✅ FIX: Call hook before any early returns
     const language = useCurrentLanguage(); 
     const animController = useRef(new Animated.Value(0)).current;
     const hasData = ingredient && visible;
@@ -1160,7 +1105,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                 damping: 15, stiffness: 100, mass: 0.8, useNativeDriver: true,
             }).start();
         }
-    }, [visible]);
+    },[visible]);
 
     const animateOut = () => {
         Animated.timing(animController, {
@@ -1189,10 +1134,9 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
     if (!hasData) return null;
 
-    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange: [0, 0.6] });
+    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange:[0, 0.6] });
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
 
-    // Safety Color Logic
     let safetyColor = C.success;
     if (ingredient.warnings?.some(w => w.level === 'risk')) safetyColor = C.danger;
     else if (ingredient.warnings?.some(w => w.level === 'caution')) safetyColor = C.warning;
@@ -1205,7 +1149,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
             <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
                 <View style={styles.sheetContent}>
-                    {/* Header */}
                     <View {...panResponder.panHandlers} style={[styles.ingModalHeader, { borderTopLeftRadius: 24, borderTopRightRadius: 24 }]}>
                         <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
@@ -1231,7 +1174,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 50 }} bounces={false}>
-                        {/* Benefits */}
                         {ingredient.benefits && Object.keys(ingredient.benefits).length > 0 && (
                             <View style={styles.ingSection}>
                                 <Text style={styles.ingSectionTitle}>{t('ing_main_benefits', language)}</Text>
@@ -1245,7 +1187,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             </View>
                         )}
 
-                        {/* Warnings */}
                         {ingredient.warnings && ingredient.warnings.length > 0 && (
                             <View style={styles.ingSection}>
                                 <Text style={styles.ingSectionTitle}>{t('ing_safety_warnings', language)}</Text>
@@ -1258,7 +1199,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             </View>
                         )}
 
-                        {/* Synergies & Conflicts */}
                         {(ingredient.synergy || ingredient.negativeSynergy) && (
                             <View style={styles.ingSection}>
                                 <Text style={styles.ingSectionTitle}>{t('ing_interactions', language)}</Text>
@@ -1287,7 +1227,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                             </View>
                         )}
 
-                        {/* Products */}
                         <View style={styles.ingSection}>
                             <Text style={styles.ingSectionTitle}>{t('ing_in_your_shelf', language)}</Text>
                             {productsContaining.map(p => (
@@ -1307,7 +1246,6 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 const MigrationSection = ({ products }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    // ✅ FIX: Get language once at component scope
     const language = useCurrentLanguage(); 
     const [syntheticIngredients] = useState(['Paraben', 'Sulfate', 'Silicon', 'Fragrance', 'Alcohol', 'Mineral Oil']);
     const flagged = products.filter(p =>
@@ -1353,7 +1291,6 @@ const MigrationSection = ({ products }) => {
                             </View>
                         </View>
                         <View style={[styles.badBadge, styles.criticalBadge]}>
-                            {/* ✅ FIX: Use the resolved 'language' variable here */}
                             <Text style={[styles.badText, { color: '#000' }]}>{t('ing_synthetic', language)}</Text>
                         </View>
                     </View>
@@ -1433,7 +1370,7 @@ const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
 };
 
 const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
-    const currentSelected = Array.isArray(selectedValues) ? selectedValues : [];
+    const currentSelected = Array.isArray(selectedValues) ? selectedValues :[];
     const language = useCurrentLanguage();
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -1454,8 +1391,6 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
     );
 };
 
-
-// --- 3. SETTINGS SECTION (With Debounce to Save Reads/Writes) ---
 const SettingsSection = ({ profile, onLogout }) => {
     const { user } = useAppContext();
     const language = useCurrentLanguage();
@@ -1463,11 +1398,10 @@ const SettingsSection = ({ profile, onLogout }) => {
     const styles = useMemo(() => createStyles(C), [C]);
     const [openAccordion, setOpenAccordion] = useState(null);
 
-    // Local form state
     const [form, setForm] = useState(() => ({
         goals: [],
-        conditions: [],
-        allergies: [],
+        conditions:[],
+        allergies:[],
         skinType: null,
         scalpType: null,
         language: 'ar',
@@ -1475,19 +1409,16 @@ const SettingsSection = ({ profile, onLogout }) => {
     }));
 
     const [isSaving, setIsSaving] = useState(false);
-
-    // REF FOR DEBOUNCE TIMER
     const saveTimeoutRef = useRef(null);
 
-    // Sync state with prop if profile updates from elsewhere
     useEffect(() => {
         if (profile?.settings) {
             setForm(prev => ({
                 ...prev,
                 ...profile.settings,
                 goals: profile.settings.goals || [],
-                conditions: profile.settings.conditions || [],
-                allergies: profile.settings.allergies || [],
+                conditions: profile.settings.conditions ||[],
+                allergies: profile.settings.allergies ||[],
                 skinType: profile.settings.skinType || null,
                 scalpType: profile.settings.scalpType || null,
                 language: profile.settings.language || 'ar',
@@ -1495,50 +1426,37 @@ const SettingsSection = ({ profile, onLogout }) => {
         }
     }, [profile]);
 
-    // Cleanup timer if component unmounts to prevent memory leaks
     useEffect(() => {
         return () => {
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, []);
+    },[]);
 
     const handleToggleAccordion = (id) => {
         Haptics.selectionAsync();
         setOpenAccordion(currentId => (currentId === id ? null : id));
     };
 
-    // --- THE DEBOUNCED UPDATE FUNCTION ---
     const updateSetting = (key, value) => {
         if (!user?.uid) {
             Alert.alert(t('settings_user_not_found_title', language), t('settings_user_not_found_message', language));
             return;
         }
 
-        // 1. Optimistic Update (Update UI immediately so it feels fast)
         const newForm = { ...form, [key]: value };
         setForm(newForm);
-
-        // 2. Visual Feedback that we are "working" on it
         setIsSaving(true);
 
-        // 3. Clear the previous timer (Cancel the previous write request)
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
 
-        // 4. Start a new timer
         saveTimeoutRef.current = setTimeout(async () => {
             try {
-                // 5. Actual Write to Firebase (Only runs if 1 second passes with no clicks)
-                await updateDoc(doc(db, 'profiles', user.uid), {
-                    [`settings.${key}`]: value
+                await updateDoc(doc(db, 'profiles', user.uid), {[`settings.${key}`]: value
                 });
-
-                // Optional: Subtle success haptic when save actually commits
-                // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
-
             } catch (e) {
                 console.error("Error updating settings:", e);
                 Alert.alert(t('settings_save_error_title', language), t('settings_save_error_message', language));
@@ -1546,20 +1464,18 @@ const SettingsSection = ({ profile, onLogout }) => {
                 setIsSaving(false);
                 saveTimeoutRef.current = null;
             }
-        }, 1000); // 1000ms = 1 Second Delay
+        }, 1000); 
     };
 
     const handleMultiSelectToggle = (field, itemId) => {
-        const currentSelection = form[field] || [];
+        const currentSelection = form[field] ||[];
         const newSelection = currentSelection.includes(itemId)
             ? currentSelection.filter(id => id !== itemId)
             : [...currentSelection, itemId];
         updateSetting(field, newSelection);
     };
 
-    // --- NEW: Privacy Options Handler (With Expo Go Check) ---
     const handlePrivacyOptions = async () => {
-        // If AdsConsent is undefined (mocked at top of file) or missing method
         if (!AdsConsent || !AdsConsent.showPrivacyOptionsForm) {
             AlertService.show({
                 title: t('settings_dev_mode_title', language),
@@ -1583,7 +1499,6 @@ const SettingsSection = ({ profile, onLogout }) => {
 
     return (
         <View style={{ paddingBottom: 150 }}>
-            {/* Saving Indicator */}
             <View style={{ height: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 5 }}>
                 {isSaving && (
                     <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1593,7 +1508,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                 )}
             </View>
 
-            {/* Traits */}
             <StaggeredItem index={0}>
                 <Accordion
                     title={t('settings_theme_title', language)}
@@ -1644,7 +1558,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            {/* Goals - Added Title */}
             <StaggeredItem index={1}>
                 <Accordion
                     title={t('settings_goals_title', language)}
@@ -1661,7 +1574,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            {/* Conditions - Added Title */}
             <StaggeredItem index={2}>
                 <Accordion
                     title={t('settings_conditions_title', language)}
@@ -1678,7 +1590,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            {/* Allergies - Added Title */}
             <StaggeredItem index={3}>
                 <Accordion
                     title={t('settings_allergies_title', language)}
@@ -1695,7 +1606,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            {/* Account */}
             <StaggeredItem index={4}>
                 <Accordion
                     title={t('settings_account_title', language)}
@@ -1703,7 +1613,6 @@ const SettingsSection = ({ profile, onLogout }) => {
                     isOpen={openAccordion === 'account'}
                     onPress={() => handleToggleAccordion('account')}
                 >
-                    {/* PRIVACY REVOCATION BUTTON */}
                     <PressableScale
                         onPress={handlePrivacyOptions}
                         style={[styles.logoutBtn, { backgroundColor: C.background, borderColor: C.border, marginBottom: 10 }]}
@@ -1723,7 +1632,6 @@ const SettingsSection = ({ profile, onLogout }) => {
 };
 
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
-    // ✅ FIX: Added missing Theme & Style Hooks at the top before the early return
     const { colors: C } = useTheme(); 
     const styles = useMemo(() => createStyles(C), [C]); 
     const animController = useRef(new Animated.Value(0)).current;
@@ -1736,25 +1644,21 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
         Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
     };
 
-    if (!insight) return null; // THIS EARLY RETURN WAS CRASHING IT IF HOOKS WERE BELOW IT
+    if (!insight) return null; 
 
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const translateY = animController.interpolate({ inputRange:[0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange: [0, 0.6] });
 
-    // Helper Colors
     const getSeverityColor = (s) => (s === 'critical' ? C.danger : s === 'warning' ? C.warning : C.success);
     const mainColor = getSeverityColor(insight.severity);
 
-    // --- RENDERER: RICH GOAL DASHBOARD ---
     const renderGoalDashboard = (data) => {
-        // 1. SAFETY CHECKS (Prevents Crash)
-        const foundHeroes = data?.foundHeroes || [];
+        const foundHeroes = data?.foundHeroes ||[];
         const missingHeroes = data?.missingHeroes ||[];
         const relatedProducts = insight.related_products ||[];
 
         return (
             <View>
-                {/* 1. Large Score Circle */}
                 <View style={{ alignItems: 'center', marginBottom: 25 }}>
                     <ChartRing
                         percentage={data.score || 0}
@@ -1765,7 +1669,6 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     <Text style={{ fontFamily: 'Tajawal-Bold', color: C.textSecondary, marginTop: 10 }}>مؤشر التطابق</Text>
                 </View>
 
-                {/* 2. Sunscreen Alert (If Penalty) */}
                 {data.sunscreenPenalty && (
                     <View style={[styles.alertBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: C.danger }]}>
                         <FontAwesome5 name="sun" size={18} color={C.danger} />
@@ -1776,7 +1679,6 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     </View>
                 )}
 
-                {/* 3. Hero Ingredients Found (Green) */}
                 <View style={styles.ingSection}>
                     <Text style={styles.ingSectionTitle}>✅ مكونات نشطة لديكِ</Text>
                     <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
@@ -1792,7 +1694,6 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     </View>
                 </View>
 
-                {/* 4. Missing Suggestions (Yellow/Red) */}
                 {(data.score || 0) < 100 && (
                     <View style={styles.ingSection}>
                         <Text style={styles.ingSectionTitle}>🧪 مقترحات لرفع النتيجة</Text>
@@ -1811,7 +1712,6 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     </View>
                 )}
 
-                {/* 5. Contributing Products List */}
                 {relatedProducts.length > 0 && (
                     <View style={styles.ingSection}>
                         <Text style={styles.ingSectionTitle}>المنتجات المساهمة</Text>
@@ -1839,19 +1739,12 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
 
                     <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
-                        {/* CONDITIONAL RENDERING LOGIC */}
-
-                        {/* A. WEATHER DASHBOARD */}
                         {(insight.customData?.type === 'weather_dashboard' || insight.customData?.type === 'weather_advice') ? (
                             <WeatherDetailedSheet insight={insight} />
                         ) :
-
-                            /* B. GOAL DASHBOARD */
                             (insight.type === 'goal_analysis' && insight.customData) ? (
                                 renderGoalDashboard(insight.customData)
                             ) : (
-
-                                /* C. STANDARD INSIGHT (Fallback) */
                                 <>
                                     <View style={styles.modalHeader}>
                                         <View style={[styles.modalIconContainer, { backgroundColor: mainColor + '20' }]}>
@@ -1890,18 +1783,13 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     );
 };
 
-// --- OPTIMIZED COMPONENT: ANIMATED SCORE RING (Fixed Latency) ---
-// --- OPTIMIZED COMPONENT: ANIMATED SCORE RING (Fixed Text Orientation) ---
 const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth = 4 }) => {
     const { colors: C } = useTheme();
-    // 1. Calculate the ACTUAL radius of the SVG path
     const innerRadius = radius - strokeWidth / 2;
-
-    // 2. Calculate circumference
     const circumference = 2 * Math.PI * innerRadius;
 
     const [displayOffset, setDisplayOffset] = useState(circumference);
-    const [displayScore, setDisplayScore] = useState(0);
+    const[displayScore, setDisplayScore] = useState(0);
 
     const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -1933,7 +1821,6 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
 
     return (
         <View style={{ width: radius * 2, height: radius * 2, alignItems: 'center', justifyContent: 'center' }}>
-            {/* The SVG is rotated -90deg so the bar starts at the top */}
             <Svg width={radius * 2} height={radius * 2} style={{ transform: [{ rotate: '-90deg' }] }}>
                 <Circle
                     cx={radius} cy={radius}
@@ -1955,18 +1842,12 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
                 />
             </Svg>
 
-            {/* 
-               FIX: Removed 'transform: [{ rotate: "90deg" }]'.
-               The text sits in the parent View (which is not rotated), 
-               so it will naturally be upright.
-            */}
             <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
                 <Text style={{
                     fontFamily: 'Tajawal-ExtraBold',
                     fontSize: 13,
                     color: color,
                     textAlign: 'center',
-                    // Optional: slight adjustment if font baseline looks off
                     paddingTop: 2
                 }}>
                     {displayScore}
@@ -1990,8 +1871,7 @@ export default function ProfileScreen() {
     const styles = useMemo(() => createStyles(C), [C]);
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [debugSpf, setDebugSpf] = useState(true); // State for the debug toggle
-
+    const[debugSpf, setDebugSpf] = useState(true);
 
     // ========================================================================
     // --- 2. CONSTANTS & UI CONFIG ---
@@ -2001,7 +1881,7 @@ export default function ProfileScreen() {
     const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
     const scrollDistance = headerMaxHeight - headerMinHeight;
 
-    const TABS = [
+    const TABS =[
         { id: 'shelf', label: t('profile_tab_shelf', language), icon: 'list' },
         { id: 'routine', label: t('profile_tab_routine', language), icon: 'calendar-check' },
         { id: 'analysis', label: t('profile_tab_analysis', language), icon: 'chart-pie' },
@@ -2009,31 +1889,27 @@ export default function ProfileScreen() {
         { id: 'ingredients', label: t('profile_tab_ingredients', language), icon: 'flask' },
         { id: 'settings', label: t('tab_my_settings', language), icon: 'cog' },
         { id: 'reminders', label: t('profile_header_reminders', language), icon: 'clock' },
-
     ];
 
     // ========================================================================
     // --- 3. STATE MANAGEMENT ---
     // ========================================================================
-    // UI State
     const [activeTab, setActiveTab] = useState('shelf');
     const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
-    const [addStepHandler, setAddStepHandler] = useState(null);
+    const[addStepHandler, setAddStepHandler] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
     const [cameraSheetVisible, setCameraSheetVisible] = useState(false);
-    // Permissions
-    const [locationPermission, setLocationPermission] = useState('undetermined');
-    const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
+    
+    const[locationPermission, setLocationPermission] = useState('undetermined');
+    const[isPermissionModalVisible, setPermissionModalVisible] = useState(false);
 
-    // API State: Profile (Fast)
     const [analysisData, setAnalysisData] = useState(null);
     const [isAnalyzingProfile, setIsAnalyzingProfile] = useState(false);
 
-    // API State: Weather (Slow/Async)
-    const [weatherData, setWeatherData] = useState(null);
+    const[weatherData, setWeatherData] = useState(null);
     const [isAnalyzingWeather, setIsAnalyzingWeather] = useState(false);
-    const [weatherErrorType, setWeatherErrorType] = useState(null); // 'permission' | 'service' | null
+    const [weatherErrorType, setWeatherErrorType] = useState(null);
 
     // ========================================================================
     // --- 4. REFS & ANIMATIONS ---
@@ -2042,21 +1918,18 @@ export default function ProfileScreen() {
     const contentOpacity = useRef(new Animated.Value(1)).current;
     const contentTranslate = useRef(new Animated.Value(0)).current;
 
-    // Caches
     const analysisCache = useRef({ hash: '', data: null });
-    const ingredientsCache = useRef({ hash: '', data: [] });
+    const ingredientsCache = useRef({ hash: '', data:[] });
 
-    // App Lifecycle
     const appState = useRef(AppState.currentState);
 
-    // Background Particles
     const particles = useMemo(() => [...Array(15)].map((_, i) => ({
         id: i,
         size: Math.random() * 5 + 3,
         startX: Math.random() * width,
         duration: 8000 + Math.random() * 7000,
         delay: Math.random() * 5000
-    })), []);
+    })),[]);
 
     // ========================================================================
     // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
@@ -2064,10 +1937,8 @@ export default function ProfileScreen() {
     const runProfileAnalysis = useCallback(async (forceRefresh = false) => {
         if (!savedProducts || savedProducts.length === 0) return;
 
-        // 1. Cache Check
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
 
-        // CHANGE: Only use cache if NOT forcing a refresh
         if (!forceRefresh && analysisCache.current.hash === currentHash && analysisCache.current.data) {
             setAnalysisData(analysisCache.current.data);
             return;
@@ -2076,7 +1947,6 @@ export default function ProfileScreen() {
         setIsAnalyzingProfile(true);
 
         try {
-            // 2. Fetch Core Analysis
             const response = await fetch(`${PROFILE_API_URL}/analyze-profile.js`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2091,7 +1961,6 @@ export default function ProfileScreen() {
 
             if (response.ok) {
                 setAnalysisData(data);
-                // Update Cache
                 analysisCache.current = { hash: currentHash, data: data };
             }
         } catch (e) {
@@ -2099,7 +1968,7 @@ export default function ProfileScreen() {
         } finally {
             setIsAnalyzingProfile(false);
         }
-    }, [savedProducts, userProfile]);
+    },[savedProducts, userProfile]);
 
     // ========================================================================
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
@@ -2111,7 +1980,6 @@ export default function ProfileScreen() {
         setWeatherErrorType(null);
 
         try {
-            // A. Check Permissions
             let { status } = await Location.getForegroundPermissionsAsync();
             if (status === 'undetermined') {
                 const req = await Location.requestForegroundPermissionsAsync();
@@ -2126,10 +1994,8 @@ export default function ProfileScreen() {
                 return;
             }
 
-            // B. Get GPS Coordinates
             let loc = await Location.getCurrentPositionAsync({});
 
-            // C. Get City Name (Free Reverse Geocoding)
             let cityName = t('location_my_position', language);
             try {
                 const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=ar`;
@@ -2140,13 +2006,12 @@ export default function ProfileScreen() {
                 console.log('City fetch warning:', e.message);
             }
 
-            // D. Fetch Weather Analysis
             const response = await fetch(`${PROFILE_API_URL}/analyze-weather`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     products: savedProducts,
-                    settings: userProfile?.settings || {}, // Passing the full settings object
+                    settings: userProfile?.settings || {},
                     location: {
                         lat: loc.coords.latitude,
                         lon: loc.coords.longitude,
@@ -2169,34 +2034,31 @@ export default function ProfileScreen() {
         } finally {
             setIsAnalyzingWeather(false);
         }
-    }, [savedProducts, userProfile]);
+    },[savedProducts, userProfile]);
 
     useEffect(() => {
         const backAction = () => {
             if (activeTab !== 'shelf') {
                 setActiveTab('shelf');
-                return true; // Prevent default behavior (exit)
+                return true; 
             }
             return false;
         };
         const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
         return () => backHandler.remove();
     }, [activeTab]);
+
     // ========================================================================
     // --- 7. ORCHESTRATOR & LIFECYCLE ---
     // ========================================================================
 
-    // Master Runner: Triggers both streams
     const runFullAnalysis = useCallback((isPullToRefresh = false) => {
         if (isPullToRefresh) {
             setRefreshing(true);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Nice touch feedback
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
         }
 
-        // Pass 'true' to force a fresh fetch
         const profilePromise = runProfileAnalysis(isPullToRefresh);
-
-        // Always re-run weather on refresh
         runWeatherAnalysis();
 
         profilePromise.finally(() => {
@@ -2205,19 +2067,26 @@ export default function ProfileScreen() {
 
     }, [runProfileAnalysis, runWeatherAnalysis]);
 
-    // Initial Load & App Resume Listener
     useEffect(() => {
-        runFullAnalysis();
+        // OPTIMIZATION: Defer initial heavy fetch until navigation is fully completed
+        const task = InteractionManager.runAfterInteractions(() => {
+            runFullAnalysis();
+        });
 
         const subscription = AppState.addEventListener('change', nextAppState => {
             if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-                // Refresh weather when user comes back
-                runWeatherAnalysis();
+                // OPTIMIZATION: Defer weather refresh on app resume
+                InteractionManager.runAfterInteractions(() => {
+                    runWeatherAnalysis();
+                });
             }
             appState.current = nextAppState;
         });
 
-        return () => subscription.remove();
+        return () => {
+            task.cancel();
+            subscription.remove();
+        };
     }, [runFullAnalysis, runWeatherAnalysis]);
 
 
@@ -2255,8 +2124,7 @@ export default function ProfileScreen() {
         }
     };
 
-    // Animation Interpolations
-    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
+    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange:[headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
     const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
     const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
     const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
@@ -2268,10 +2136,8 @@ export default function ProfileScreen() {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-            {/* Background Particles */}
             {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-            {/* --- PARALLAX HEADER --- */}
             <Animated.View style={[styles.header, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[C.background, C.background + 'F2', C.background + '00']}
@@ -2279,7 +2145,6 @@ export default function ProfileScreen() {
                     start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
                 />
 
-                {/* Expanded State */}
                 <Animated.View style={[
                     styles.headerContentExpanded,
                     { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }
@@ -2296,7 +2161,6 @@ export default function ProfileScreen() {
                     <View style={styles.avatar}><Text style={{ fontSize: 28 }}>🧖‍♀️</Text></View>
                 </Animated.View>
 
-                {/* Collapsed State */}
                 <Animated.View style={[
                     styles.headerContentCollapsed,
                     { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }
@@ -2322,7 +2186,6 @@ export default function ProfileScreen() {
                 </Animated.View>
             </Animated.View>
 
-            {/* --- SCROLL CONTENT --- */}
             <Animated.ScrollView
                 contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }}
                 scrollEventThrottle={16}
@@ -2333,7 +2196,7 @@ export default function ProfileScreen() {
                         refreshing={refreshing}
                         onRefresh={() => runFullAnalysis(true)}
                         tintColor={C.accentGreen}
-                        colors={[C.accentGreen]} // For Android
+                        colors={[C.accentGreen]} 
                     />
                 }
             >
@@ -2360,17 +2223,12 @@ export default function ProfileScreen() {
 
                     {activeTab === 'analysis' && (
                         <AnalysisSection
-                            // Core Profile Data
                             loadingProfile={isAnalyzingProfile}
                             analysisData={analysisData}
-
-                            // Independent Weather Data
                             loadingWeather={isAnalyzingWeather}
                             weatherResults={weatherData}
                             weatherErrorType={weatherErrorType}
                             onRetryWeather={runWeatherAnalysis}
-
-                            // Shared
                             savedProducts={savedProducts}
                             dismissedInsightIds={dismissedInsightIds}
                             handleDismissPraise={handleDismissPraise}
@@ -2407,19 +2265,16 @@ export default function ProfileScreen() {
                 </Animated.View>
             </Animated.ScrollView>
 
-            {/* --- FLOATING CONTROLS --- */}
             <NatureDock
                 activeTab={activeTab}
-                onTabChange={switchTab} // Your existing switchTab function works perfectly here
-                navigation={router}     // Pass the expo-router instance
+                onTabChange={switchTab} 
+                navigation={router}     
             />
             <AddStepModal
                 isVisible={isAddStepModalVisible}
                 onClose={() => setAddStepModalVisible(false)}
                 onAdd={(stepName) => { if (addStepHandler) addStepHandler(stepName); }}
             />
-
-            {activeTab === 'shelf'}
 
             <LocationPermissionModal
                 visible={isPermissionModalVisible}
@@ -2430,9 +2285,6 @@ export default function ProfileScreen() {
 }
 
 const getStylesContent = (C) => ({
-    // ========================================================================
-    // --- 1. GLOBAL & CONTAINER ---
-    // ========================================================================
     container: {
         flex: 1,
         backgroundColor: C.background
@@ -2442,10 +2294,6 @@ const getStylesContent = (C) => ({
         backgroundColor: C.border,
         marginVertical: 12
     },
-
-    // ========================================================================
-    // --- 2. HEADER (PARALLAX) ---
-    // ========================================================================
     header: {
         position: 'absolute',
         top: 0,
@@ -2473,15 +2321,11 @@ const getStylesContent = (C) => ({
         bottom: 0,
         left: 0,
         right: 0,
-        // Remove 'justifyContent: center' and 'alignItems: center'
-        // We handle layout inside the container now
         paddingHorizontal: 20,
-        paddingBottom: 10, // Adjust based on your header height
+        paddingBottom: 10,
     },
-
-    // NEW STYLES
     collapsedContainer: {
-        flexDirection: 'row', // Note: Row direction, we will manage RTL manually or via flex
+        flexDirection: 'row', 
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
@@ -2537,11 +2381,6 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         marginTop: 2,
     },
-    collapsedTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 18,
-        color: C.textPrimary,
-    },
     avatar: {
         width: 55,
         height: 55,
@@ -2552,10 +2391,6 @@ const getStylesContent = (C) => ({
         borderWidth: 2,
         borderColor: C.accentGreen
     },
-
-    // ========================================================================
-    // --- 3. BASE UI & GENERAL COMPONENTS ---
-    // ========================================================================
     cardBase: {
         backgroundColor: C.card,
         borderRadius: 20,
@@ -2564,7 +2399,6 @@ const getStylesContent = (C) => ({
         padding: 20,
         marginBottom: 15,
     },
-
     iconBoxSm: {
         width: 32,
         height: 32,
@@ -2573,10 +2407,6 @@ const getStylesContent = (C) => ({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
-    // ========================================================================
-    // --- 6. SECTION: SHELF & PRODUCTS ---
-    // ========================================================================
     statsContainer: {
         flexDirection: 'row-reverse',
         justifyContent: 'space-around',
@@ -2602,13 +2432,12 @@ const getStylesContent = (C) => ({
         backgroundColor: C.border,
         alignSelf: 'center'
     },
-
     productListItemWrapper: {
         backgroundColor: C.card,
         borderRadius: 20,
     },
     productListItem: {
-        flexDirection: 'row', // Use standard row, we manage children order
+        flexDirection: 'row', 
         alignItems: 'center',
         padding: 12,
         backgroundColor: C.card,
@@ -2624,7 +2453,7 @@ const getStylesContent = (C) => ({
     listItemContent: {
         flex: 1,
         paddingHorizontal: 12,
-        alignItems: 'flex-end', // Text to the right for Arabic
+        alignItems: 'flex-end', 
     },
     listItemName: {
         fontFamily: 'Tajawal-Bold',
@@ -2666,18 +2495,11 @@ const getStylesContent = (C) => ({
         fontSize: 12,
         textAlign: 'right',
     },
-    listItemScoreContainer: {
-        width: 56,
-        height: 56,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     listItemScoreText: {
         position: 'absolute',
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 16,
     },
-
     deleteActionContainer: {
         position: 'absolute',
         right: 0,
@@ -2689,8 +2511,6 @@ const getStylesContent = (C) => ({
         justifyContent: 'center',
         alignItems: 'center',
     },
-
-    // --- Product Details Bottom Sheet ---
     sheetContent: {
         flex: 1,
         backgroundColor: C.card,
@@ -2741,30 +2561,31 @@ const getStylesContent = (C) => ({
         color: C.textPrimary,
         textAlign: 'right',
         marginBottom: 10,
+        paddingRight: 5,
     },
     alertBox: {
-        flexDirection: 'row-reverse',
+        flexDirection: 'row-reverse', 
         alignItems: 'center',
-        gap: 10,
-        padding: 12,
-        borderRadius: 12,
+        padding: 15,
+        borderRadius: 16,
         borderWidth: 1,
+        gap: 12,
         marginBottom: 8,
     },
     alertBoxText: {
         flex: 1,
-        fontFamily: 'Tajawal-Regular',
+        fontFamily: 'Tajawal-Bold',
         fontSize: 13,
-        color: C.textPrimary,
-        textAlign: 'right',
-        lineHeight: 18,
+        textAlign: 'right', 
+        lineHeight: 20,
     },
     ingredientChip: {
-        backgroundColor: C.background,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 10,
-        marginHorizontal: 5,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
         marginBottom: 10,
     },
     ingredientChipText: {
@@ -2779,11 +2600,10 @@ const getStylesContent = (C) => ({
         justifyContent: 'center',
         marginTop: 10,
         width: '100%',
-
     },
     editIconBtn: {
         padding: 8,
-        backgroundColor: C.accentGreen + '1A', // 10% opacity
+        backgroundColor: C.accentGreen + '1A', 
         borderRadius: 8,
         marginLeft: -12
     },
@@ -2805,7 +2625,7 @@ const getStylesContent = (C) => ({
         borderRadius: 12,
         paddingVertical: 10,
         paddingHorizontal: 15,
-        textAlign: 'center', // Center text while editing
+        textAlign: 'center', 
     },
     editActionsRow: {
         flexDirection: 'row-reverse',
@@ -2818,12 +2638,8 @@ const getStylesContent = (C) => ({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'transparent', // Default no border
+        borderColor: 'transparent', 
     },
-
-    // ========================================================================
-    // --- 7. SECTION: ANALYSIS & INSIGHTS ---
-    // ========================================================================
     focusInsightCard: {
         borderRadius: 24,
         padding: 25,
@@ -2987,12 +2803,6 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         lineHeight: 16,
     },
-
-   
-    // ========================================================================
-    // --- 9. SECTION: INGREDIENTS ---
-    // ========================================================================
-
     searchBar: {
         flexDirection: 'row-reverse',
         backgroundColor: C.card,
@@ -3013,8 +2823,6 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         paddingVertical: 10,
     },
-
-    // --- LIST CARD STYLES ---
     ingCard: {
         backgroundColor: C.card,
         borderRadius: 16,
@@ -3074,20 +2882,18 @@ const getStylesContent = (C) => ({
         marginTop: 6,
     },
     ingCategoryTag: {
-        backgroundColor: C.accentGreen + '1A', // 10% opacity
+        backgroundColor: C.accentGreen + '1A', 
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: C.accentGreen + '33', // 20% opacity
+        borderColor: C.accentGreen + '33', 
     },
     ingTagLabel: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 10,
         color: C.accentGreen,
     },
-
-    // --- MODAL STYLES ---
     ingModalHeader: {
         backgroundColor: C.card,
         borderBottomWidth: 1,
@@ -3142,7 +2948,6 @@ const getStylesContent = (C) => ({
         fontSize: 11,
         color: C.textSecondary,
     },
-
     ingSection: {
         marginBottom: 30,
     },
@@ -3156,8 +2961,6 @@ const getStylesContent = (C) => ({
         borderRightColor: C.accentGreen,
         paddingRight: 10,
     },
-
-    // Benefits
     benefitRow: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -3190,8 +2993,6 @@ const getStylesContent = (C) => ({
         fontSize: 12,
         color: C.textPrimary,
     },
-
-    // Warnings
     warningBox: {
         flexDirection: 'row-reverse',
         padding: 12,
@@ -3217,7 +3018,6 @@ const getStylesContent = (C) => ({
         fontSize: 13,
         lineHeight: 20,
     },
-
     interactionHeader: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
@@ -3249,7 +3049,6 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         opacity: 0.7,
     },
-
     productChip: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -3288,10 +3087,6 @@ const getStylesContent = (C) => ({
         fontSize: 14,
         color: C.textPrimary,
     },
-
-    // ========================================================================
-    // --- 10. SECTION: MIGRATION ---
-    // ========================================================================
     migName: {
         fontFamily: 'Tajawal-Bold',
         color: C.textPrimary,
@@ -3328,7 +3123,7 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         fontSize: 13,
         marginTop: 8,
-        backgroundColor: C.accentGreen + '1A', // 10% opacity
+        backgroundColor: C.accentGreen + '1A', 
         padding: 10,
         borderRadius: 10
     },
@@ -3347,10 +3142,6 @@ const getStylesContent = (C) => ({
         color: C.gold,
         flex: 1,
     },
-
-    // ========================================================================
-    // --- 11. SECTION: SETTINGS & ACCORDION ---
-    // ========================================================================
     accordionHeader: {
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
@@ -3425,10 +3216,6 @@ const getStylesContent = (C) => ({
         color: C.danger,
         fontSize: 16
     },
-    // ========================================================================
-    // --- 13. UNIFIED BOTTOM SHEET & MODAL STYLES ---
-    // ========================================================================
-
     backdrop: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: '#000',
@@ -3439,23 +3226,9 @@ const getStylesContent = (C) => ({
         bottom: 0,
         left: 0,
         right: 0,
-        height: height * 0.85, // Occupies 85% of the screen
+        height: height * 0.85, 
         zIndex: 100,
         justifyContent: 'flex-end',
-    },
-    sheetContent: {
-        flex: 1,
-        backgroundColor: C.card,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        overflow: 'hidden',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 25,
     },
     sheetHandleBar: {
         alignItems: 'center',
@@ -3479,84 +3252,6 @@ const getStylesContent = (C) => ({
         marginTop: 10,
         paddingHorizontal: 20,
     },
-    sheetSection: {
-        marginBottom: 20,
-    },
-    sheetSectionTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 15,
-        color: C.textSecondary,
-        textAlign: 'right', // RTL
-        marginBottom: 10,
-        paddingRight: 5,
-    },
-
-    // --- Alert Box (Dynamic Colored Cards) ---
-    alertBox: {
-        flexDirection: 'row-reverse', // RTL
-        alignItems: 'center',
-        padding: 15,
-        borderRadius: 16,
-        borderWidth: 1,
-        gap: 12,
-    },
-    alertBoxText: {
-        flex: 1,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 13,
-        textAlign: 'right', // RTL
-        lineHeight: 20,
-    },
-
-    // --- Pillars (Safety & Efficacy) ---
-    sheetPillarsContainer: {
-        flexDirection: 'row-reverse', // RTL
-        justifyContent: 'space-between',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    sheetPillar: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 8,
-    },
-    sheetDividerVertical: {
-        width: 1,
-        height: '80%',
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignSelf: 'center',
-    },
-    sheetPillarLabel: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
-        color: C.textSecondary,
-    },
-    sheetPillarValue: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 24,
-        color: C.textPrimary,
-    },
-
-    // --- Ingredient Chips ---
-    ingredientChip: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    ingredientChipText: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 13,
-        color: C.textPrimary,
-    },
-
-    // --- Close Button ---
     closeButton: {
         backgroundColor: C.card,
         paddingVertical: 15,
@@ -3564,7 +3259,7 @@ const getStylesContent = (C) => ({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.15)',
-        marginBottom: 20, // Bottom margin for safety
+        marginBottom: 20, 
     },
     closeButtonText: {
         fontFamily: 'Tajawal-Bold',
@@ -3597,13 +3292,11 @@ const getStylesContent = (C) => ({
     promptButtonTextPrimary: {
         color: C.textOnAccent,
         fontFamily: 'Tajawal-Bold',
-
     },
     promptButtonTextSecondary: {
         color: C.textSecondary,
         fontFamily: 'Tajawal-Bold',
     },
-
     modalContent: {
         width: '90%',
         maxHeight: height * 0.6,
@@ -3713,8 +3406,6 @@ const getStylesContent = (C) => ({
         marginTop: 2,
         marginLeft: 10
     },
-
-    // --- CUSTOM ALERT MODAL STYLES ---
     customAlertOverlay: {
         flex: 1,
         justifyContent: 'center',
@@ -3774,8 +3465,6 @@ const getStylesContent = (C) => ({
         marginBottom: 25,
         paddingHorizontal: 10,
     },
-
-    // Steps
     customAlertSteps: {
         width: '100%',
         alignItems: 'flex-end',
@@ -3797,7 +3486,6 @@ const getStylesContent = (C) => ({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-
     stepText: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 13,
@@ -3814,8 +3502,6 @@ const getStylesContent = (C) => ({
         marginRight: 11.5,
         marginVertical: 4,
     },
-
-    // Buttons
     customAlertActions: {
         flexDirection: 'row-reverse',
         gap: 12,
@@ -3933,8 +3619,6 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Bold',
         fontSize: 10,
     },
-
-    // weather caard styles
     weatherCardContainer: {
         width: 150,
         height: 150,
@@ -4006,10 +3690,6 @@ const getStylesContent = (C) => ({
         backgroundColor: 'rgba(255,255,255,0.4)',
         marginHorizontal: 6,
     },
-    // ========================================================================
-    // --- MISSING STYLES ( GENERIC MODALS, INSIGHTS) ---
-    // ========================================================================
-    // --- Generic Modal Styles (Used in AddStep, InsightDetails, etc.) ---
     modalTitle: {
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 20,
@@ -4021,7 +3701,7 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Regular',
         fontSize: 14,
         color: C.textSecondary,
-        textAlign: 'right', // RTL
+        textAlign: 'right', 
         lineHeight: 24,
         marginBottom: 20,
     },
@@ -4040,13 +3720,11 @@ const getStylesContent = (C) => ({
     },
     centeredModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(0,0,0,0.6)', 
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1000,
+        zIndex: 2000,
     },
-
-    // --- Insight Details Specifics ---
     relatedProductsTitle: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 14,
@@ -4055,7 +3733,6 @@ const getStylesContent = (C) => ({
         marginBottom: 10,
         marginTop: 10,
     },
-    // --- Enhanced Input Styles ---
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -4070,35 +3747,25 @@ const getStylesContent = (C) => ({
         borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 15,
-        paddingRight: 45, // Space for icon
+        paddingRight: 45, 
         color: C.textPrimary,
         fontSize: 16,
-        textAlign: 'right', // RTL
+        textAlign: 'right', 
     },
     inputIcon: {
         position: 'absolute',
         right: 15,
         zIndex: 1,
     },
-
-    // --- Enhanced Step Modal Specifics ---
     reorderItem: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        backgroundColor: C.background, // Darker bg for items
+        backgroundColor: C.background, 
         borderRadius: 14,
         padding: 14,
         marginBottom: 10,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.03)',
-    },
-    // --- New Selection Floating Card ---
-    centeredModalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)', // Darker backdrop
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 2000,
     },
     selectionCard: {
         width: '85%',
@@ -4150,16 +3817,16 @@ const getStylesContent = (C) => ({
     },
     selectionItem: {
         width: '100%',
-        flexDirection: 'row-reverse', // <--- CRITICAL: Forces elements side-by-side
-        alignItems: 'center',         // Vertically centers them
+        flexDirection: 'row-reverse', 
+        alignItems: 'center',         
         justifyContent: 'space-between',
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.05)',
-        backgroundColor: 'rgba(255,255,255,0.02)', // Very subtle highlight
+        backgroundColor: 'rgba(255,255,255,0.02)', 
         borderRadius: 12,
-        marginBottom: 8, // Spacing between rows
+        marginBottom: 8, 
     },
     selectionIconBox: {
         width: 40,
@@ -4171,17 +3838,14 @@ const getStylesContent = (C) => ({
         borderWidth: 1,
         borderColor: C.accentGreen + '40',
     },
-
     selectionItemText: {
-        flex: 1, // Takes all available space
+        flex: 1, 
         fontFamily: 'Tajawal-Bold',
         fontSize: 14,
         color: C.textPrimary,
-        textAlign: 'right', // Aligns text to the icon
-        marginHorizontal: 15, // Gap between icon and text
+        textAlign: 'right', 
+        marginHorizontal: 15, 
     },
-
-    // 3. The Plus Button (Left)
     selectionActionBtn: {
         width: 32,
         height: 32,
@@ -4191,17 +3855,15 @@ const getStylesContent = (C) => ({
         justifyContent: 'center',
     },
     selectionCardWrapper: {
-        backgroundColor: 'rgba(255,255,255,0.02)', // Subtle dark background
+        backgroundColor: 'rgba(255,255,255,0.02)', 
         borderRadius: 12,
         marginBottom: 8,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden', // Keeps the inner view inside corners
+        overflow: 'hidden', 
     },
-
-    // 2. The Inner Layout (Forces items side-by-side)
     selectionRow: {
-        flexDirection: 'row-reverse', // <--- THIS FIXES THE STACKING
+        flexDirection: 'row-reverse', 
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 12,
@@ -4239,7 +3901,7 @@ const getStylesContent = (C) => ({
     },
     scoreBadgeText: {
         fontFamily: 'Tajawal-ExtraBold',
-        color: '#1A2D27', // Dark text on the colored badge
+        color: '#1A2D27', 
         fontSize: 14
     },
     emptyStateCard: {
@@ -4250,7 +3912,7 @@ const getStylesContent = (C) => ({
         backgroundColor: C.card,
         borderWidth: 1,
         borderColor: C.accentGreen + '33',
-        overflow: 'hidden', // Ensures inner gradient respects radius
+        overflow: 'hidden', 
     },
     emptyStateIconContainer: {
         width: 80,
@@ -4288,7 +3950,7 @@ const getStylesContent = (C) => ({
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: 'rgba(251, 191, 36, 0.1)', // Gold tint
+        backgroundColor: 'rgba(251, 191, 36, 0.1)', 
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
@@ -4300,7 +3962,6 @@ const getStylesContent = (C) => ({
         fontSize: 12,
         color: C.gold,
     },
-    // --- New Action Buttons inside Sheet ---
     sheetActionsRow: {
         flexDirection: 'row-reverse',
         gap: 10,
@@ -4315,7 +3976,7 @@ const getStylesContent = (C) => ({
         paddingVertical: 12,
         borderRadius: 14,
         borderWidth: 1,
-        width: '100%', // Take full width of flex container
+        width: '100%', 
     },
     sheetDeleteBtn: {
         flexDirection: 'row-reverse',

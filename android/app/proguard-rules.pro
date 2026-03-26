@@ -264,3 +264,11 @@
 # OkHttp/Okio (Network fetchers used by Coil/Expo)
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
+# Expo Updates Database persistence (Crucial for SDK 54)
+-keep class androidx.sqlite.db.** { *; }
+-keep class androidx.room.** { *; }
+-dontwarn androidx.room.**
+
+# Keep internal Expo Updates state machine
+-keep class expo.modules.updates.statemachine.** { *; }

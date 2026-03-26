@@ -1,4 +1,4 @@
-// CatalogScreen.js - Updated version with intro and "don't show again" functionality
+// CatalogScreen.js - Updated version with intro, gamification, and lazy loading (pagination)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,17 +19,16 @@ import RewardsBanner from '../../src/components/catalog/RewardsBanner';
 import BountyModal from '../../src/components/catalog/BountyModal';
 import FilterModal from '../../src/components/catalog/FilterModal';
 import AddProductModal from '../../src/components/catalog/AddProductModal';
-import CatalogIntro from '../../src/components/catalog/CatalogIntro'; // Import the intro component
+import CatalogIntro from '../../src/components/catalog/CatalogIntro'; 
 
 import { submitBounty, submitNewProduct } from '../../src/services/bountyService'; 
 import { AlertService } from '../../src/services/alertService';
 import { CatalogService } from '../../src/services/catalogService';
 
-import { getPointsForField } from '../../src/utils/gamificationEngine';
-
-// Storage keys
+// Storage keys & Pagination
 const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
 const DEV_MODE_KEY = '@dev_mode_enabled'; // For testing
+const ITEMS_PER_PAGE = 8; // Lazy loading batch size
 
 const getPriceValue = (price) => {
     if (!price) return null;
@@ -46,31 +45,34 @@ export default function CatalogScreen() {
   const language = useCurrentLanguage();
   const rtl = useRTL();
   const isEn = language === 'en'; 
-  const styles = useMemo(() => createStyles(C, rtl, isEn), [C, rtl, isEn]);
+  const styles = useMemo(() => createStyles(C, rtl, isEn),[C, rtl, isEn]);
   
+  // App States
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const[products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]);
   
+  // Filter States
   const [search, setSearch] = useState('');
-  const[activeCat, setActiveCat] = useState('all');
-  
-  const[isFilterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeCat, setActiveCat] = useState('all');
+  const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({ bountiesOnly: false, brand: 'all', sort: 'default' });
   
+  // Interaction States
   const[selectedProduct, setSelectedProduct] = useState(null);
   const [bountyState, setBountyState] = useState({ visible: false, product: null, field: '' });
-  
   const[isAddProductVisible, setAddProductVisible] = useState(false);
+  const [userPoints, setUserPoints] = useState(userProfile?.points || 0);
   
-  const[userPoints, setUserPoints] = useState(userProfile?.points || 0);
-  
-  // Intro state
+  // Intro & Dev Mode States
   const [showIntro, setShowIntro] = useState(false);
   const [checkingIntro, setCheckingIntro] = useState(true);
-  const [devMode, setDevMode] = useState(false);
+  const[devMode, setDevMode] = useState(false);
 
-  // Check if intro should be shown
+  // Lazy Loading / Pagination State
+  const[visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+  // 1. Check if intro should be shown
   useEffect(() => {
     const checkIntroStatus = async () => {
       try {
@@ -103,14 +105,16 @@ export default function CatalogScreen() {
     };
     
     checkIntroStatus();
-  }, []);
+  },[]);
 
+  // 2. Sync user points from global context
   useEffect(() => {
       if (userProfile?.points !== undefined) {
           setUserPoints(userProfile.points);
       }
   }, [userProfile?.points]);
 
+  // 3. Load catalog data once intro check is clear
   useEffect(() => { 
     if (!showIntro && !checkingIntro) {
       loadData(); 
@@ -149,11 +153,8 @@ export default function CatalogScreen() {
   // Handle intro finish - save preference and close
   const handleIntroFinish = async () => {
     try {
-      // Save that user has seen intro
       await AsyncStorage.setItem(CATALOG_INTRO_SEEN_KEY, 'true');
       setShowIntro(false);
-      
-      // Load data after intro closes
       loadData();
     } catch (error) {
       console.error('Error saving intro preference:', error);
@@ -162,14 +163,13 @@ export default function CatalogScreen() {
     }
   };
   
-  // Dev toggle function (can be triggered via gesture or hidden button)
+  // Dev toggle function (can be triggered via long press on title)
   const toggleDevMode = async () => {
     try {
       const newDevMode = !devMode;
       await AsyncStorage.setItem(DEV_MODE_KEY, newDevMode.toString());
       setDevMode(newDevMode);
       
-      // Fixed: Use AlertService.show or AlertService.success instead of AlertService.info
       AlertService.success(
         'Dev Mode',
         `Dev mode ${newDevMode ? 'enabled' : 'disabled'}. ${newDevMode ? 'Intro will show on next refresh.' : ''}`
@@ -187,16 +187,17 @@ export default function CatalogScreen() {
       }
     } catch (error) {
       console.error('Error toggling dev mode:', error);
-      // Fixed: Use AlertService.error instead of AlertService.info
       AlertService.error('Error', 'Failed to toggle dev mode');
     }
   };
 
+  // Memoize available brands for the filter modal
   const availableBrands = useMemo(() => {
       const brands = new Set(products.map(p => p.brand).filter(Boolean));
-      return ['all', ...Array.from(brands).sort()];
+      return['all', ...Array.from(brands).sort()];
   }, [products]);
 
+  // Apply all searches and filters to the full dataset
   const filteredData = useMemo(() => {
     let result = products.filter(p => {
       const matchSearch = (p.name || "").toLowerCase().includes(search.toLowerCase()) || 
@@ -215,14 +216,30 @@ export default function CatalogScreen() {
     }
 
     return result;
-  },[search, activeCat, products, advancedFilters]);
+  }, [search, activeCat, products, advancedFilters]);
+
+  // Reset pagination when filters or search change
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [search, activeCat, advancedFilters, products]);
+
+  // Lazy loaded subset of filtered data
+  const visibleData = useMemo(() => {
+    return filteredData.slice(0, visibleCount);
+  }, [filteredData, visibleCount]);
+
+  // Load more trigger
+  const handleLoadMore = () => {
+    if (visibleCount < filteredData.length) {
+      setVisibleCount(prev => prev + ITEMS_PER_PAGE);
+    }
+  };
 
   const handleContribute = useCallback((product, field) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setBountyState({ visible: true, product, field });
   },[]);
 
-  // ✅ UPDATED: Submit bounty WITHOUT showing points alert
   const handleBountySubmit = async (product, field, value) => {
     try {
       const result = await submitBounty(product, field, value);
@@ -230,13 +247,11 @@ export default function CatalogScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setBountyState({ visible: false, product: null, field: '' });
       
-      // ✅ Show pending confirmation instead of points alert
       AlertService.success(
           t('contribution_submitted_title', language), 
           t('contribution_pending_review_message', language)
       );
       
-      // ✅ Return result so modal knows it's pending
       return result;
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -249,7 +264,6 @@ export default function CatalogScreen() {
     }
   };
 
-  // ✅ UPDATED: Submit new product WITHOUT showing points alert
   const handleNewProductSubmit = async (productData) => {
     try {
         const result = await submitNewProduct(productData);
@@ -257,7 +271,6 @@ export default function CatalogScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setAddProductVisible(false);
 
-        // ✅ Show pending confirmation instead of points alert
         AlertService.success(
             t('contribution_submitted_title', language),
             t('contribution_pending_review_message', language)
@@ -277,7 +290,8 @@ export default function CatalogScreen() {
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
-  // Show loading while checking intro status
+  // ---------------- UI RENDERS ----------------
+
   if (checkingIntro) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
@@ -286,7 +300,6 @@ export default function CatalogScreen() {
     );
   }
 
-  // Show intro modal
   if (showIntro) {
     return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
   }
@@ -301,7 +314,7 @@ export default function CatalogScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      {/* Hidden dev mode toggle button (long press on title to toggle) */}
+      {/* Hidden dev mode toggle area (top left/right corner) */}
       <TouchableOpacity 
         style={styles.devModeToggle}
         onLongPress={toggleDevMode}
@@ -344,17 +357,33 @@ export default function CatalogScreen() {
       </View>
 
       <FlatList 
-        data={filteredData} 
+        data={visibleData} 
         keyExtractor={item => item.id.toString()} 
         showsVerticalScrollIndicator={false}
-        renderItem={({ item, index }) => <ProductCard item={item} index={index} onPress={setSelectedProduct} onPressBounty={handleContribute} />}
+        renderItem={({ item, index }) => (
+            <ProductCard 
+                item={item} 
+                index={index % ITEMS_PER_PAGE} // Reset animation delay per batch loaded
+                onPress={setSelectedProduct} 
+                onPressBounty={handleContribute} 
+            />
+        )}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={syncing} onRefresh={() => loadData(true)} tintColor={C.gold} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5} // Trigger lazy load when scrolled 50% down the visible list
         ListEmptyComponent={
             <View style={styles.emptyContainer}>
                 <FontAwesome5 name="search-minus" size={40} color={C.textDim} style={{marginBottom: 15}}/>
                 <Text style={styles.emptyText}>{t('catalog_empty_title', language)}</Text>
             </View>
+        }
+        ListFooterComponent={
+            visibleCount < filteredData.length ? (
+                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={C.accentGreen} />
+                </View>
+            ) : null
         }
       />
 
@@ -379,15 +408,11 @@ export default function CatalogScreen() {
         </LinearGradient>
       </TouchableOpacity>
 
+      {/* Overlays / Modals */}
       <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={() => setSelectedProduct(null)} onContribute={handleContribute} />
       <BountyModal visible={bountyState.visible} product={bountyState.product} field={bountyState.field} onClose={() => setBountyState({ ...bountyState, visible: false })} onSubmit={handleBountySubmit} />
       <FilterModal visible={isFilterModalVisible} onClose={() => setFilterModalVisible(false)} onApply={setAdvancedFilters} currentFilters={advancedFilters} availableBrands={availableBrands} />
-      
-      <AddProductModal 
-          visible={isAddProductVisible} 
-          onClose={() => setAddProductVisible(false)} 
-          onSubmit={handleNewProductSubmit} 
-      />
+      <AddProductModal visible={isAddProductVisible} onClose={() => setAddProductVisible(false)} onSubmit={handleNewProductSubmit} />
 
     </View>
   );
@@ -427,7 +452,6 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     elevation: 8 
   },
   
-  // Hidden dev mode toggle area
   devModeToggle: {
     position: 'absolute',
     top: 0,

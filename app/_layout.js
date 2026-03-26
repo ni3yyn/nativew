@@ -83,35 +83,30 @@ const useDailyPresence = (user) => {
 // ============================================================================
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
-const useSilentUpdates = () => {
+export const useSilentUpdates = () => {
+  // We use the hook to listen to what the NATIVE side is doing
+  const { isUpdatePending } = Updates.useUpdates();
+
   useEffect(() => {
-    let isUpdatePending = false; // متغير لتتبع ما إذا كان هناك تحديث جاهز
+    // If the native 'ALWAYS' check found an update and finished downloading it...
+    if (isUpdatePending) {
+      console.log("✅ OTA Update is pending and ready in SQLite.");
 
-    const checkAndDownload = async () => {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        
-        if (update.isAvailable) {
-          await Updates.fetchUpdateAsync();
-          isUpdatePending = true; // التحديث نزل وصار جاهزا
-          console.log("✅ تم تحميل التحديث الصامت بنجاح. ينتظر إعادة التشغيل.");
+      // We wait for the user to put the app in the background before reloading
+      const subscription = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'background') {
+          console.log("🔄 App is in background. Applying update now...");
+          Updates.reloadAsync();
         }
-      } catch (e) {
-        console.log("⚠️ فشل التحقق من التحديثات (قد يكون لا يوجد اتصال):", e);
-      }
-    };
+      });
 
-    checkAndDownload();
-
-    // نراقب حالة التطبيق: إذا قام المستخدم بتصغير التطبيق (أرسله للخلفية) وهناك تحديث جاهز، نعيد التشغيل
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'background' && isUpdatePending) {
-        Updates.reloadAsync();
-      }
-    });
-
-    return () => subscription.remove();
-  }, []); 
+      return () => subscription.remove();
+    }
+  }, [isUpdatePending]);
+  
+  // Notice: We don't call checkForUpdateAsync() anymore!
+  // Because your Manifest is set to ALWAYS, the native code 
+  // does the check for you automatically on every boot.
 };
 
 // ============================================================================

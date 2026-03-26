@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 // Context & Data
 import { useTheme } from '../../context/ThemeContext';
