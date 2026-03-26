@@ -87,26 +87,46 @@ export const useSilentUpdates = () => {
   // We use the hook to listen to what the NATIVE side is doing
   const { isUpdatePending } = Updates.useUpdates();
 
+  const logUpdateState = () => {
+    console.log('🧾 OTA state', {
+      channel: Updates.channel,
+      runtimeVersion: Updates.runtimeVersion,
+      updateId: Updates.updateId,
+      isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+      createdAt: Updates.createdAt,
+    });
+  };
+
+  useEffect(() => {
+    // Run an explicit check as a fallback, then apply immediately if available.
+    // This avoids waiting for a background event to trigger reload.
+    const syncUpdate = async () => {
+      try {
+        logUpdateState();
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          console.log('⬇️ OTA available. Downloading now...');
+          const fetched = await Updates.fetchUpdateAsync();
+          if (fetched.isNew) {
+            console.log('🔄 OTA downloaded. Reloading app to apply new JS...');
+            await Updates.reloadAsync();
+          }
+        }
+      } catch (e) {
+        console.log('OTA check failed:', e);
+      }
+    };
+
+    syncUpdate();
+  }, []);
+
   useEffect(() => {
     // If the native 'ALWAYS' check found an update and finished downloading it...
     if (isUpdatePending) {
-      console.log("✅ OTA Update is pending and ready in SQLite.");
-
-      // We wait for the user to put the app in the background before reloading
-      const subscription = AppState.addEventListener('change', (nextAppState) => {
-        if (nextAppState === 'background') {
-          console.log("🔄 App is in background. Applying update now...");
-          Updates.reloadAsync();
-        }
-      });
-
-      return () => subscription.remove();
+      console.log('✅ OTA Update is pending and ready. Reloading now.');
+      Updates.reloadAsync();
     }
   }, [isUpdatePending]);
-  
-  // Notice: We don't call checkForUpdateAsync() anymore!
-  // Because your Manifest is set to ALWAYS, the native code 
-  // does the check for you automatically on every boot.
 };
 
 // ============================================================================
