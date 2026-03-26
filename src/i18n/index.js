@@ -538,7 +538,7 @@ export const translations = {
     status_unknown: 'غير معروف',
     sheet_detected_ingredients: 'المكونات المكتشفة',
     sheet_close: 'إغلاق',
-    stat_total_products: 'عدد المنتجات',
+    stat_total_products: 'إجمالي المنتجات',
     stat_protection_products: 'منتجات وقاية',
     stat_effective_products: 'منتجات فعالة',
     search_ingredients_placeholder: 'بحث في المكونات...',
