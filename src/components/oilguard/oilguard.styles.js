@@ -1119,7 +1119,6 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 25,
-    height: 220, // ample space for the big ring
   },
   absoluteCenter: {
     position: 'absolute',
@@ -1148,9 +1147,9 @@ export const createStyles = (COLORS) => StyleSheet.create({
   statsGrid: {
     flexDirection: 'row-reverse',
     gap: 12,
-    marginBottom: 15,
-    marginTop: 5, // Space from verdict
-    paddingHorizontal: 5,
+    marginBottom: 0,
+    marginTop: 0, // Space from verdict
+    paddingHorizontal: 0,
   },
 
   // The Glass Capsule
@@ -1214,13 +1213,10 @@ export const createStyles = (COLORS) => StyleSheet.create({
 
   // Personal Match Reason Box (Sub-dashboard)
   matchContainer: {
-    marginTop: 5,
+    marginTop: 12,
     backgroundColor: COLORS.textPrimary + '11', // Very subtle glass background
     borderRadius: 16,
     paddingVertical: 5,
-    marginHorizontal: 5,
-    width: '100%',
-    alignSelf: 'center',
   },
 
   // Single Header

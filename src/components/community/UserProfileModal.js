@@ -191,7 +191,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                 setProfile(finalProfile);
                 setPublicShelf(finalShelf);
                 if (currentUser?.settings && finalProfile.settings) {
-                    setMatchInfo(calculateBioMatch(currentUser.settings, finalProfile.settings));
+                    setMatchInfo(calculateBioMatch(currentUser.settings, finalProfile.settings, language));
                 }
             } catch (e) { 
                 console.error("Profile Fetch Error", e); 
@@ -226,7 +226,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                 setProfile(freshProfileObj);
 
                 if (currentUser?.settings) {
-                    setMatchInfo(calculateBioMatch(currentUser.settings, freshSettings));
+                    setMatchInfo(calculateBioMatch(currentUser.settings, freshSettings, language));
                 }
 
                 const q = query(collection(db, 'profiles', uid, 'savedProducts'), orderBy('createdAt', 'desc'), limit(5));

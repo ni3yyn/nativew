@@ -1,5 +1,6 @@
 import { COLORS } from '../constants/theme';
 import { t } from '../i18n';
+import { commonConditions } from '../data/allergiesandconditions';
 
 export const calculateBioMatch = (currentUserSettings, authorSettings, language = 'ar') => {
     // 1. Safety Check
@@ -7,60 +8,126 @@ export const calculateBioMatch = (currentUserSettings, authorSettings, language 
         return { score: 0, label: t('match_unknown', language), color: COLORS.textSecondary, matches: [] };
     }
 
-    let score = 0;
     let matches = [];
+    let skinScore = 0;
+    let hairScore = 0;
 
-    // --- A. EXACT MATCHES (50% Total) ---
-    
-    // 1. Skin Type (25%)
-    if (currentUserSettings.skinType && authorSettings.skinType && 
-        currentUserSettings.skinType === authorSettings.skinType) {
-        score += 25;
-        matches.push(t('match_skin', language));
-    }
+    const hasSkinMatch = currentUserSettings.skinType && authorSettings.skinType;
+    const hasHairMatch = currentUserSettings.scalpType && authorSettings.scalpType;
 
-    // 2. Scalp Type (25%)
-    if (currentUserSettings.scalpType && authorSettings.scalpType && 
-        currentUserSettings.scalpType === authorSettings.scalpType) {
-        score += 25;
-        matches.push(t('match_hair', language));
-    }
+    // --- A. SKINCARE EQUATION (50% Skin Type, 25% Conditions, 25% Goals) ---
+    if (hasSkinMatch) {
+        // 1. Skin Type (50%)
+        if (currentUserSettings.skinType === authorSettings.skinType) {
+            skinScore += 50;
+            matches.push(t('match_skin', language));
+        }
 
-    // --- B. OVERLAP MATCHES (50% Total) ---
+        // 2. Skincare Conditions (25%)
+        const userSkinConds = (currentUserSettings.conditions || []).filter(c => {
+            const cond = commonConditions.find(x => x.id === c);
+            return !cond || cond.category === 'skin_concern' || cond.category === 'health';
+        });
+        const authorSkinConds = (authorSettings.conditions || []).filter(c => {
+            const cond = commonConditions.find(x => x.id === c);
+            return !cond || cond.category === 'skin_concern' || cond.category === 'health';
+        });
 
-    // 3. Conditions (25%)
-    const userConds = currentUserSettings.conditions || [];
-    const authorConds = authorSettings.conditions || [];
-    
-    if (userConds.length === 0 && authorConds.length === 0) {
-        // Both have healthy skin -> Match
-        score += 25;
-    } else if (userConds.length > 0 && authorConds.length > 0) {
-        // Calculate intersection
-        const shared = userConds.filter(c => authorConds.includes(c));
-        const overlap = shared.length / Math.max(userConds.length, 1);
-        if (overlap > 0) {
-            score += Math.round(overlap * 25);
-            matches.push(t('match_conditions', language));
+        if (userSkinConds.length === 0 && authorSkinConds.length === 0) {
+            skinScore += 25;
+        } else if (userSkinConds.length > 0 && authorSkinConds.length > 0) {
+            const shared = userSkinConds.filter(c => authorSkinConds.includes(c));
+            const overlap = shared.length / Math.max(userSkinConds.length, 1);
+            if (overlap > 0) {
+                skinScore += Math.round(overlap * 25);
+                if (!matches.includes(t('match_conditions', language))) {
+                    matches.push(t('match_conditions', language));
+                }
+            }
+        }
+
+        // 3. Skincare Goals (25%)
+        const skinGoalsList = ['acne', 'anti_aging', 'brightening', 'hydration', 'texture_pores'];
+        const userSkinGoals = (currentUserSettings.goals || []).filter(g => skinGoalsList.includes(g));
+        const authorSkinGoals = (authorSettings.goals || []).filter(g => skinGoalsList.includes(g));
+
+        if (userSkinGoals.length === 0 && authorSkinGoals.length === 0) {
+            skinScore += 25;
+        } else if (userSkinGoals.length > 0 && authorSkinGoals.length > 0) {
+            const shared = userSkinGoals.filter(g => authorSkinGoals.includes(g));
+            const overlap = shared.length / Math.max(userSkinGoals.length, 1);
+            if (overlap > 0) {
+                skinScore += Math.round(overlap * 25);
+                if (!matches.includes(t('match_goals', language))) {
+                    matches.push(t('match_goals', language));
+                }
+            }
         }
     }
 
-    // 4. Goals (25%)
-    const userGoals = currentUserSettings.goals || [];
-    const authorGoals = authorSettings.goals || [];
+    // --- B. HAIRCARE EQUATION (50% Scalp Type, 25% Conditions, 25% Goals) ---
+    if (hasHairMatch) {
+        // 1. Scalp Type (50%)
+        if (currentUserSettings.scalpType === authorSettings.scalpType) {
+            hairScore += 50;
+            matches.push(t('match_hair', language));
+        }
 
-    if (userGoals.length === 0 && authorGoals.length === 0) {
-        score += 25;
-    } else if (userGoals.length > 0 && authorGoals.length > 0) {
-        const shared = userGoals.filter(g => authorGoals.includes(g));
-        const overlap = shared.length / Math.max(userGoals.length, 1);
-        if (overlap > 0) {
-            score += Math.round(overlap * 25);
-            matches.push(t('match_goals', language));
+        // 2. Haircare Conditions (25%)
+        const userHairConds = (currentUserSettings.conditions || []).filter(c => {
+            const cond = commonConditions.find(x => x.id === c);
+            return !cond || cond.category === 'scalp_concern' || cond.category === 'health';
+        });
+        const authorHairConds = (authorSettings.conditions || []).filter(c => {
+            const cond = commonConditions.find(x => x.id === c);
+            return !cond || cond.category === 'scalp_concern' || cond.category === 'health';
+        });
+
+        if (userHairConds.length === 0 && authorHairConds.length === 0) {
+            hairScore += 25;
+        } else if (userHairConds.length > 0 && authorHairConds.length > 0) {
+            const shared = userHairConds.filter(c => authorHairConds.includes(c));
+            const overlap = shared.length / Math.max(userHairConds.length, 1);
+            if (overlap > 0) {
+                hairScore += Math.round(overlap * 25);
+                if (!matches.includes(t('match_conditions', language))) {
+                    matches.push(t('match_conditions', language));
+                }
+            }
+        }
+
+        // 3. Haircare Goals (25%)
+        const hairGoalsList = ['hair_growth', 'hydration'];
+        const userHairGoals = (currentUserSettings.goals || []).filter(g => hairGoalsList.includes(g));
+        const authorHairGoals = (authorSettings.goals || []).filter(g => hairGoalsList.includes(g));
+
+        if (userHairGoals.length === 0 && authorHairGoals.length === 0) {
+            hairScore += 25;
+        } else if (userHairGoals.length > 0 && authorHairGoals.length > 0) {
+            const shared = userHairGoals.filter(g => authorHairGoals.includes(g));
+            const overlap = shared.length / Math.max(userHairGoals.length, 1);
+            if (overlap > 0) {
+                hairScore += Math.round(overlap * 25);
+                if (!matches.includes(t('match_goals', language))) {
+                    matches.push(t('match_goals', language));
+                }
+            }
         }
     }
 
-    // --- C. RESULT FORMATTING ---
+    // --- C. COMBINE SCORES ---
+    let score = 0;
+    if (hasSkinMatch && hasHairMatch) {
+        score = Math.round((skinScore + hairScore) / 2);
+    } else if (hasSkinMatch) {
+        score = skinScore;
+    } else if (hasHairMatch) {
+        score = hairScore;
+    } else {
+        score = 0;
+    }
+
+    // --- D. RESULT FORMATTING ---
     let label = '';
     let color = COLORS.textSecondary;
 

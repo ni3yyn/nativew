@@ -1039,7 +1039,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
     const filteredList = useMemo(() =>
         allIngredients.filter(ing =>
-            (ing.displayName || ing.name).toLowerCase().includes(search.toLowerCase())
+            (ing.displayName || ing.name || '').toLowerCase().includes(search.toLowerCase())
         ),
         [allIngredients, search]);
 
@@ -1252,7 +1252,7 @@ const MigrationSection = ({ products }) => {
     const [syntheticIngredients] = useState(['Paraben', 'Sulfate', 'Silicon', 'Fragrance', 'Alcohol', 'Mineral Oil']);
     const flagged = products.filter(p =>
         p.analysisData?.detected_ingredients?.some(i =>
-            syntheticIngredients.some(bad => i.name.includes(bad))
+            syntheticIngredients.some(bad => i.name && i.name.includes(bad))
         )
     );
 
@@ -1268,7 +1268,7 @@ const MigrationSection = ({ products }) => {
 
     const renderMigrationItem = ({ item, index }) => {
         const detectedSynthetics = syntheticIngredients.filter(bad =>
-            item.analysisData?.detected_ingredients?.some(i => i.name.includes(bad))
+            item.analysisData?.detected_ingredients?.some(i => i.name && i.name.includes(bad))
         );
 
         return (

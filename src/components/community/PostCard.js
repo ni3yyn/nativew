@@ -636,10 +636,10 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
     const isLiked = post.likes && post.likes.includes(currentUser?.uid);
     const matchData = useMemo(() => {
         if (currentUser?.settings && post.authorSettings) {
-            return calculateBioMatch(currentUser.settings, post.authorSettings);
+            return calculateBioMatch(currentUser.settings, post.authorSettings, language);
         }
         return null;
-    }, [currentUser?.settings, post.authorSettings]);
+    }, [currentUser?.settings, post.authorSettings, language]);
 
     const getTypeConfig = () => {
         switch (post.type) {

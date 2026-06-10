@@ -202,7 +202,14 @@ const PremiumShareButton = ({
 
     return (
         <>
-            <Pressable onPress={() => setModalVisible(true)} style={[styles.trig, customStyle]}>
+            <Pressable 
+                onPress={() => setModalVisible(true)} 
+                style={({ pressed }) => [
+                    styles.trig, 
+                    customStyle,
+                    pressed && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }
+                ]}
+            >
                 <FontAwesome5 name="share-alt" color={textColor} size={iconSize} /><Text style={[styles.trigText, { color: textColor }]}>{t('share_button_label', language)}</Text>
             </Pressable>
 

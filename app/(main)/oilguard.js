@@ -3,7 +3,7 @@ import {
     View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback, InteractionManager,
     ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
     Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-    RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
+    RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules, AppState
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
@@ -1200,9 +1200,34 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
 
     const rotateAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
-        Animated.loop(
-            Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
-        ).start();
+        let anim = null;
+        
+        const startSpin = () => {
+            rotateAnim.setValue(0);
+            anim = Animated.loop(
+                Animated.timing(rotateAnim, { 
+                    toValue: 1, 
+                    duration: 20000, 
+                    easing: Easing.linear, 
+                    useNativeDriver: true 
+                })
+            );
+            anim.start();
+        };
+
+        startSpin();
+
+        // Handle AppState changes (e.g. app goes background and returns)
+        const subscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'active') {
+                startSpin();
+            }
+        });
+
+        return () => {
+            if (anim) anim.stop();
+            subscription.remove();
+        };
     }, []);
 
     const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
@@ -1381,9 +1406,10 @@ const MatchBreakdown = ({ reasons = [] }) => {
                     // Handle both object format {type, text} and simple string format
                     const type = typeof item === 'object' ? item.type : 'info';
                     const text = typeof item === 'object' ? item.text : item;
+                    const customIcon = typeof item === 'object' ? item.icon : null;
 
                     const config = getConfig(type);
-                    const iconName = getIcon(text, type);
+                    const iconName = customIcon || getIcon(text, type);
 
                     return (
                         <View key={`match-${i}`} style={[styles.matchRow, { alignItems: 'flex-start' }]}>
@@ -2230,7 +2256,7 @@ export default function OilGuardEngine() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
-            console.error("Text Parse Error:", error); a
+            console.error("Text Parse Error:", error);
             Alert.alert(t('oilguard_error_title', language), t('oilguard_alert_parse_error_message', language));
             setIsGeminiLoading(false);
             setLoading(false);
@@ -2654,6 +2680,18 @@ export default function OilGuardEngine() {
         // 2. Safe Data Extraction (Defensive Programming)
         // We default to empty objects/arrays to prevent "undefined" errors
         const personalMatch = finalAnalysis.personalMatch || { status: 'unknown', reasons: [] };
+
+        const reasonsList = [...(personalMatch.reasons || [])];
+        if (productType === 'sunscreen' && finalAnalysis.sunscreen_analysis && finalAnalysis.sunscreen_analysis.in_vivo_note) {
+            const isDanger = finalAnalysis.sunscreen_analysis.film_former_multiplier < 0.75;
+            reasonsList.push({
+                type: isDanger ? 'danger' : 'good',
+                icon: 'info-circle',
+                text: isRTL
+                    ? `كفاءة ثبات واقي الشمس: ${finalAnalysis.sunscreen_analysis.in_vivo_note}`
+                    : `Sunscreen Adherence: ${finalAnalysis.sunscreen_analysis.in_vivo_note}`
+            });
+        }
         const safety = finalAnalysis.safety || { score: 0 };
         const efficacy = finalAnalysis.efficacy || { score: 0 };
         const marketingResults = finalAnalysis.marketing_results || [];
@@ -2690,11 +2728,6 @@ export default function OilGuardEngine() {
 
                         {/* A. CONTENT SECTION */}
                         <View style={styles.dashboardGlass}>
-
-                            {/* Header */}
-                            <View style={styles.dashHeader}>
-
-                            </View>
 
                             {/* Gauge */}
                             <View style={styles.gaugeSection}>
@@ -2761,7 +2794,7 @@ export default function OilGuardEngine() {
 
                             {/* Match Reasons (Safe Access) */}
                             <MatchBreakdown
-                                reasons={personalMatch.reasons}
+                                reasons={reasonsList}
                                 overallStatus={personalMatch.status}
                             />
                         </View>
@@ -2818,6 +2851,7 @@ export default function OilGuardEngine() {
                         </Text>
                     </View>
                 )}
+
                 {/* --- 2. MARKETING CLAIMS --- */}
                 {marketingResults.length > 0 && (
                     <StaggeredItem index={1}>
@@ -2943,7 +2977,7 @@ export default function OilGuardEngine() {
                             {step === 0 && <View style={styles.headerBlur} />}
 
                             {step > 0 && (
-                                <TouchableOpacity onPress={() => changeStep(step - 1)} style={styles.backBtn}>
+                                <TouchableOpacity onPress={() => changeStep(step === 4 ? 2 : step - 1)} style={styles.backBtn}>
                                     <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
                                 </TouchableOpacity>
                             )}
