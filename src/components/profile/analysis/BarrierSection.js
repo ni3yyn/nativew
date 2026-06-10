@@ -123,6 +123,7 @@ const ClinicalProductRow = ({ name, ingredients, type }) => {
 };
 
 // --- 4. MAIN MODAL ---
+// --- 4. MAIN MODAL ---
 export const BarrierDetailsModal = ({ visible, onClose, data }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
@@ -140,12 +141,32 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
 
     if (!visible || !data) return null;
 
-    const offenders = data.clinicalReport?.offenders || [];
-    const defenders = data.clinicalReport?.defenders || [];
-    const contraindications = data.contraindications || [];
+    // --- ROBUST DATA MAPPING (Supports both v1 and TEWL v2 payloads) ---
+    const load = data.stressScore !== undefined ? data.stressScore : (data.stats?.load || 0);
+    const repair = data.repairScore !== undefined ? data.repairScore : (data.stats?.repair || 0);
 
-    const load = data.stats?.load || 0;
-    const repair = data.stats?.repair || 0;
+    let offenders = [];
+    let defenders = [];
+
+    if (data.stressors) {
+        // v2: Group flat ingredient lists by Product Name
+        const groupByProduct = (items) => {
+            const map = {};
+            items.forEach(item => {
+                if (!map[item.product]) map[item.product] = [];
+                map[item.product].push(item.name);
+            });
+            return Object.entries(map).map(([name, ingredients]) => ({ name, actives: ingredients, builders: ingredients }));
+        };
+        offenders = groupByProduct(data.stressors);
+        defenders = groupByProduct(data.repairers);
+    } else {
+        // v1 Fallback
+        offenders = data.clinicalReport?.offenders || [];
+        defenders = data.clinicalReport?.defenders || [];
+    }
+
+    const contraindications = data.contraindications || [];
 
     return (
         <Modal transparent visible={visible} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -160,21 +181,56 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
                             <View style={[styles.iconBadge, { backgroundColor: data.color + '20' }]}>
                                 <FontAwesome5 name="shield-alt" size={24} color={data.color} />
                             </View>
-                            <Text style={styles.headerTitle}>{t('barrier_medical_report', language)}</Text>
-                            <Text style={[styles.headerSubtitle, { color: data.color }]}>{data.status} ({data.score}%)</Text>
+                            <Text style={styles.headerTitle}>{isRTL ? 'حالة حاجز البشرة' : 'Barrier Health'}</Text>
+                            {/* Uses the friendly Arabic label from the backend instead of "intact" */}
+                            <Text style={[styles.headerSubtitle, { color: data.color, textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }]}>
+                                {data.statusLabel || data.desc || data.status}
+                            </Text>
                         </View>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.content}>
 
-                        {/* 1. Friendly Explanation (New) */}
+                        {/* 1. Friendly Explanation */}
                         <View style={styles.friendlyBox}>
                             <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                                <FontAwesome5 name="lightbulb" size={14} color={COLORS.accentGreen} />
-                                <Text style={styles.friendlyTitle}>{t('barrier_how_it_works', language)}</Text>
+                                <FontAwesome5 name="info-circle" size={14} color={COLORS.accentGreen} />
+                                <Text style={styles.friendlyTitle}>{isRTL ? 'ماذا يعني هذا؟' : 'What does this mean?'}</Text>
                             </View>
-                            <Text style={styles.friendlyText}>{t('barrier_how_it_works_body', language)}</Text>
+                            <Text style={styles.friendlyText}>
+                                {isRTL 
+                                    ? 'نحن نقوم بحساب توازن روتينك بين الإجهاد (المقشرات والمنظفات) وبين الترميم (المرطبات والزيوت). إذا كان الإجهاد عالياً، ستفقد بشرتك الماء وتصاب بالجفاف.' 
+                                    : 'We calculate the balance between stress (exfoliants) and repair (moisturizers). If stress is too high, your skin will lose water and dry out.'}
+                            </Text>
                         </View>
+
+                        {/* 2. Clinical Metrics (Stealth Science) */}
+                        {data.predictedTEWL !== undefined && (
+                            <View style={styles.clinicalMetricsRow}>
+                                <View style={[styles.metricBox, { backgroundColor: COLORS.card, borderColor: COLORS.border, borderWidth: 1 }]}>
+                                    <Text style={[styles.metricBoxTitle, { color: COLORS.textSecondary }]}>
+                                        {isRTL ? 'معدل جفاف البشرة' : 'Moisture Loss'}
+                                    </Text>
+                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 9, color: COLORS.textDim, marginBottom: 6 }}>
+                                        {isRTL ? '(سرعة تبخر الماء)' : '(Evaporation speed)'}
+                                    </Text>
+                                    <Text style={[styles.metricBoxValue, { color: COLORS.textPrimary }]}>
+                                        {data.predictedTEWL} <Text style={[styles.metricBoxUnit, { color: COLORS.textDim }]}>{data.unit}</Text>
+                                    </Text>
+                                </View>
+                                <View style={[styles.metricBox, { backgroundColor: COLORS.card, borderColor: COLORS.border, borderWidth: 1 }]}>
+                                    <Text style={[styles.metricBoxTitle, { color: COLORS.textSecondary }]}>
+                                        {isRTL ? 'وقت التعافي' : 'Recovery Time'}
+                                    </Text>
+                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 9, color: COLORS.textDim, marginBottom: 6 }}>
+                                        {isRTL ? '(لإعادة بناء الحاجز)' : '(To rebuild barrier)'}
+                                    </Text>
+                                    <Text style={[styles.metricBoxValue, { color: COLORS.textPrimary }]}>
+                                        ~{data.recoveryTimeHours} <Text style={[styles.metricBoxUnit, { color: COLORS.textDim }]}>{isRTL ? 'ساعة' : 'hrs'}</Text>
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
 
                         {/* 2. Tug of War */}
                         <View style={styles.chartSection}>
@@ -268,10 +324,10 @@ export const BarrierCard = ({ barrier, onPress }) => {
 
                     <View style={styles.footer}>
                         <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
-                            {(barrier.stats?.load || 0) > 0
+                            {(barrier.stressScore ?? barrier.stats?.load ?? 0) > 0
                                 ? interpolate(t('barrier_chemical_load', language), {
-                                    load: (barrier.stats?.load || 0).toFixed(1),
-                                    repair: (barrier.stats?.repair || 0).toFixed(1)
+                                    load: (barrier.stressScore ?? barrier.stats?.load ?? 0).toFixed(1),
+                                    repair: (barrier.repairScore ?? barrier.stats?.repair ?? 0).toFixed(1)
                                 })
                                 : t('barrier_no_chemical_stress', language)}
                         </Text>
@@ -358,5 +414,12 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
     emptyText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textDim, textAlign: 'center', fontStyle: 'italic', marginTop: 10 },
 
     dismissBtn: { marginTop: 30, backgroundColor: COLORS.card, padding: 15, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-    dismissText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary }
+    dismissText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary },
+
+    // NEW CLINICAL METRICS
+    clinicalMetricsRow: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: 10, marginBottom: 25 },
+    metricBox: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    metricBoxTitle: { fontFamily: 'Tajawal-Bold', fontSize: 11, marginBottom: 4 },
+    metricBoxValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
+    metricBoxUnit: { fontFamily: 'Tajawal-Regular', fontSize: 10 }
 });

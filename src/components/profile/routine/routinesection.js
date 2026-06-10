@@ -327,6 +327,27 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
             </View>
 
             <View style={styles.stepBody}>
+                
+                {/* --- NEW: WAIT TIME ALERT (pH Compatibility) --- */}
+                {step.waitTime && (
+                    <View style={styles.waitTimeBox}>
+                        <View style={styles.alertIconWrapperWarning}>
+                            <Feather name="clock" size={12} color={C.warning} />
+                        </View>
+                        <Text style={styles.waitTimeText}>{step.waitTime}</Text>
+                    </View>
+                )}
+
+                {/* --- NEW: BIOLOGICAL NOTE (Circadian Rhythm) --- */}
+                {step.routineNote && (
+                    <View style={styles.routineNoteBox}>
+                        <View style={styles.alertIconWrapperInfo}>
+                            <Feather name="info" size={12} color={C.accentGreen} />
+                        </View>
+                        <Text style={styles.routineNoteText}>{step.routineNote}</Text>
+                    </View>
+                )}
+
                 {isStepFilled ? (
                     <ScrollView
                         horizontal
@@ -915,6 +936,14 @@ const getStylesContent = (C) => ({
     fabInner: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
     fabText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary },
     fabDivider: { width: 1, height: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', alignSelf: 'center' },
+
+    // --- NEW ALERTS STYLES ---
+    waitTimeBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', backgroundColor: C.warning + '15', padding: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: C.warning + '30' },
+    waitTimeText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 11, color: C.textPrimary, textAlign: 'right', marginRight: 8, lineHeight: 18 },
+    routineNoteBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', backgroundColor: C.accentGreen + '10', padding: 10, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: C.accentGreen + '20' },
+    routineNoteText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary, textAlign: 'right', marginRight: 8, lineHeight: 18 },
+    alertIconWrapperWarning: { width: 22, height: 22, borderRadius: 6, backgroundColor: C.warning + '25', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+    alertIconWrapperInfo: { width: 22, height: 22, borderRadius: 6, backgroundColor: C.accentGreen + '25', alignItems: 'center', justifyContent: 'center', marginTop: 2 }
 });
 
 const createStyles = (c) => StyleSheet.create(getStylesContent(c));

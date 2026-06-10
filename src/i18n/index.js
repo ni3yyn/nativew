@@ -517,6 +517,7 @@ export const translations = {
     oilguard_match_danger: 'غير مناسب',
     oilguard_match_unknown: 'تم التحليل',
     oilguard_verdict_profile_note: 'هذه النتيجة حسب بروفايلك، قد تتغير عند شخص آخر.',
+    brand_name: 'وثيق',
     oilguard_stat_safety: 'الأمان',
     oilguard_stat_efficacy: 'الفعالية',
     oilguard_verified_loading: 'جاري البحث عن بديل في قاعدة البيانات...',
@@ -857,7 +858,7 @@ export const translations = {
     confidence_low: 'منخفضة',
     confidence_very_low: 'منخفضة جدا',
     confidence_none: 'معدومة',
-    
+
     efficacy_label: 'الفعالية',
     safety_label: 'الأمان',
     product_fallback_label: 'منتج',
@@ -1049,7 +1050,7 @@ export const translations = {
     oilguard_smart_order: 'ترتيب ذكي',
     oilguard_add_step: 'إضافة خطوة',
     oilguard_wathiq_label: 'وثيق',
-    
+
     // ------------- OilGuard Engine / Templates -------------
     oilguard_ineffective_ratio: '(نسبة غير فعالة)',
     oilguard_safety: 'أمان',
@@ -1063,7 +1064,7 @@ export const translations = {
     // Core & Settings 
     settings_price_label: 'السعر',
     settings_quantity_label: 'الكمية',
-    
+
     // Actions
     action_close: 'إغلاق',
     action_add: 'إضافة',
@@ -1083,7 +1084,7 @@ export const translations = {
     sheet_special_notes: 'ملاحظات خاصة لكِ',
     profile_default_name: 'غالية',
     common_product: 'منتج',
-    
+
     // Common & Routine Modals
     catalog_no_results: 'لا توجد نتائج',
     catalog_points: 'نقطة',
@@ -1105,15 +1106,15 @@ export const translations = {
     bounty_save_reward: 'حفظ وربح +50 ✨',
     common_product: 'منتج',
     bounty_invalid_value_title: 'قيمة غير صالحة',
-bounty_invalid_price_msg: 'يرجى إدخال سعر صحيح أكبر من الصفر.',
-bounty_missing_data_title: 'بيانات ناقصة',
-bounty_short_ingredients_msg: 'قائمة المكونات تبدو قصيرة جدا، يرجى التأكد من كتابة القائمة الكاملة.',
-bounty_clear_all: 'مسح الكل',
-bounty_chars_count: 'حرفا',
-catalog_bounty_success_title: 'عمل رائع! ✨',
-catalog_bounty_success_msg: 'حصلتِ على {{points}} نقطة وثيق. ستتم مراجعة البيانات وتحديث الكتالوج قريبا.',
-catalog_login_required: 'يجب تسجيل الدخول أولا لجمع النقاط والمساهمة.',
-    
+    bounty_invalid_price_msg: 'يرجى إدخال سعر صحيح أكبر من الصفر.',
+    bounty_missing_data_title: 'بيانات ناقصة',
+    bounty_short_ingredients_msg: 'قائمة المكونات تبدو قصيرة جدا، يرجى التأكد من كتابة القائمة الكاملة.',
+    bounty_clear_all: 'مسح الكل',
+    bounty_chars_count: 'حرفا',
+    catalog_bounty_success_title: 'عمل رائع! ✨',
+    catalog_bounty_success_msg: 'حصلتِ على {{points}} نقطة وثيق. ستتم مراجعة البيانات وتحديث الكتالوج قريبا.',
+    catalog_login_required: 'يجب تسجيل الدخول أولا لجمع النقاط والمساهمة.',
+
     // ------------- Community Module -------------
     community_comment_modal_title: 'التعليقات',
     community_comment_delete_reply: 'حذف الرد',
@@ -2326,7 +2327,7 @@ catalog_login_required: 'يجب تسجيل الدخول أولا لجمع الن
     confidence_low: 'Low',
     confidence_very_low: 'Very low',
     confidence_none: 'None',
-    
+
     profile_default_name: 'Ghalia',
     profile_header_shelf: 'Product Shelf',
     profile_header_routine: 'Care Routine',
@@ -2335,36 +2336,36 @@ catalog_login_required: 'يجب تسجيل الدخول أولا لجمع الن
     profile_header_ingredients: 'Ingredients Encyclopedia',
     profile_header_settings: 'Settings',
     profile_header_reminders: 'My Custom Reminders',
-    
+
     health_opt_acne: 'Acne',
     health_opt_sensitive: 'Sensitive Skin',
     health_opt_rosacea: 'Rosacea',
     health_opt_eczema: 'Eczema',
     health_opt_pregnancy: 'Pregnancy/Nursing',
-    
+
     hair_type_straight: 'Straight',
     hair_type_wavy: 'Wavy',
     hair_type_curly: 'Curly',
     hair_type_coily: 'Coily',
-    
+
     skin_type_oily: 'Oily',
     skin_type_dry: 'Dry',
     skin_type_combo: 'Combination',
     skin_type_normal: 'Normal',
     skin_type_sensitive: 'Sensitive',
-    
+
     goal_brightening: 'Brightening & Glow',
     goal_acne: 'Anti-Acne',
     goal_anti_aging: 'Anti-Aging',
     goal_hydration: 'Deep Hydration',
     goal_texture: 'Texture & Pores',
-    
+
     ing_filter_all: 'All',
     ing_filter_exfoliants: 'Exfoliants',
     ing_filter_hydrators: 'Hydrators',
     ing_filter_antioxidants: 'Antioxidants',
     ing_filter_oils: 'Oils',
-    
+
     delete_product_title: 'Delete Product',
     delete_product_confirm: 'Are you sure you want to delete this product from your shelf?',
     status_error: 'Error',
@@ -2408,6 +2409,7 @@ catalog_login_required: 'يجب تسجيل الدخول أولا لجمع الن
     oilguard_smart_order: 'Smart Order',
     oilguard_add_step: 'Add Step',
     oilguard_wathiq_label: 'Wathiq',
+    brand_name: 'Wathiq',
 
     // ------------- OilGuard Engine / Templates -------------
     oilguard_ineffective_ratio: '(Ineffective ratio)',
@@ -2422,14 +2424,14 @@ catalog_login_required: 'يجب تسجيل الدخول أولا لجمع الن
     // Core & Settings 
     settings_price_label: 'Price',
     settings_quantity_label: 'Quantity',
-    
+
     // Actions
     action_close: 'Close',
     action_add: 'Add',
     action_finish: 'Finish',
     action_got_it: 'Got it',
     common_next: 'Next',
-    
+
     // Common & Routine Modals
     catalog_no_results: 'No results found',
     catalog_points: 'Points',
@@ -2450,17 +2452,17 @@ catalog_login_required: 'يجب تسجيل الدخول أولا لجمع الن
     bounty_contribution_subtitle: 'Your contribution helps thousands find the right product.',
     bounty_save_reward: 'Save & Earn +50 ✨',
     bounty_invalid_value_title: 'Invalid Value',
-bounty_invalid_price_msg: 'Please enter a valid price greater than zero.',
-bounty_missing_data_title: 'Missing Data',
-bounty_short_ingredients_msg: 'The ingredients list seems too short. Please make sure to write the full list.',
-bounty_clear_all: 'Clear All',
-bounty_chars_count: 'chars',
-catalog_bounty_success_title: 'Great job! ✨',
-catalog_bounty_success_msg: 'You earned {{points}} Wathiq points. The data will be reviewed and updated soon.',
-catalog_login_required: 'You must log in first to collect points and contribute.',
+    bounty_invalid_price_msg: 'Please enter a valid price greater than zero.',
+    bounty_missing_data_title: 'Missing Data',
+    bounty_short_ingredients_msg: 'The ingredients list seems too short. Please make sure to write the full list.',
+    bounty_clear_all: 'Clear All',
+    bounty_chars_count: 'chars',
+    catalog_bounty_success_title: 'Great job! ✨',
+    catalog_bounty_success_msg: 'You earned {{points}} Wathiq points. The data will be reviewed and updated soon.',
+    catalog_login_required: 'You must log in first to collect points and contribute.',
 
 
-    
+
     // Hardcoded Tags Mapping
     'بشرة دهنية': 'Oily Skin',
     'بشرة جافة': 'Dry Skin',
@@ -2472,7 +2474,7 @@ catalog_login_required: 'You must log in first to collect points and contribute.
     'شعر متضرر': 'Damaged Hair',
     'شعر مصبوغ': 'Color Treated Hair',
     'فروة حساسة': 'Sensitive Scalp',
-    
+
     common_product: 'Product',
     // ------------- Community Module -------------
     community_comment_modal_title: 'Comments',
@@ -2549,7 +2551,7 @@ catalog_login_required: 'You must log in first to collect points and contribute.
     routine_auto_build_success: 'Routine built successfully',
     common_server_error: 'A server error occurred',
 
-   // Community Categories
+    // Community Categories
     community_cat_review: 'Real Reviews',
     community_cat_journey: 'Skin Journey',
     community_cat_qa: 'Q&A',

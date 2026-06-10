@@ -64,6 +64,8 @@ export const RoutineLogViewer = ({ logs }) => {
 
     const errorCount = logs.filter(l => l.type === 'error').length;
     const warningCount = logs.filter(l => l.type === 'warning').length;
+    // --- NEW: Count smart AI adjustments ---
+    const smartCount = logs.filter(l => l.type === 'info' || l.type === 'success').length;
 
     return (
         <View style={styles.container}>
@@ -76,6 +78,12 @@ export const RoutineLogViewer = ({ logs }) => {
                 </View>
 
                 <View style={styles.headerRight}>
+                    {/* --- NEW: Smart Adjustments Badge --- */}
+                    {smartCount > 0 && (
+                        <View style={[styles.badge, { backgroundColor: COLORS.accentGreen + '33', borderColor: COLORS.accentGreen + '66' }]}>
+                            <Text style={[styles.badgeText, { color: COLORS.accentGreen }]}>{smartCount} {isRTL ? 'تعديل ذكي' : 'Smart Tweak'}</Text>
+                        </View>
+                    )}
                     {errorCount > 0 && (
                         <View style={[styles.badge, { backgroundColor: COLORS.danger + '33', borderColor: COLORS.danger + '66' }]}>
                             <Text style={[styles.badgeText, { color: COLORS.danger }]}>{errorCount} {t('routine_log_exclusion', language)}</Text>

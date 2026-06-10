@@ -6,7 +6,7 @@ import {
     RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image as RNImage, } from 'react-native';
 import Svg, { Circle, Path, Defs, ClipPath, Rect, Mask, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useRouter, useIsFocused, useLocalSearchParams } from 'expo-router';
-import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc, arrayUnion } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -81,9 +81,9 @@ if (isAdMobLinked) {
     try {
         const adMob = require('react-native-google-mobile-ads');
         useInterstitialAd = adMob.useInterstitialAd;
-        
+
         // Initialize the SDK immediately (Prevents "Not Initialized" errors)
-        adMob.default().initialize(); 
+        adMob.default().initialize();
     } catch (e) {
         console.warn("Failed to load Google Mobile Ads:", e);
         setupMockAds();
@@ -96,7 +96,7 @@ function setupMockAds() {
     // 🛠 SMART MOCK (For Expo Go or Web)
     // This pretends to load an ad so you can test the UI flow
     console.log(`⚠️ ${Platform.OS === 'web' ? 'Web' : 'Expo Go'} detected. Using Smart Mock for Ads.`);
-    
+
     // We create a fake hook that uses React State to simulate loading
     useInterstitialAd = () => {
         const [isLoaded, setIsLoaded] = useState(false);
@@ -149,7 +149,8 @@ const Spore = ({ size, startX, duration, delay }) => {
     const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 100, -100] });
     const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
 
-    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.accentGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);};
+    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.accentGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);
+};
 
 const ContentCard = ({ children, style, delay = 0 }) => {
     const { colors } = useTheme();
@@ -244,7 +245,7 @@ const ConfidenceRing = ({ confidence }) => {
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-            <Circle cx={size / 2} cy={size / 2} r={r} stroke={COLORS.textPrimary + '1A'} strokeWidth={strokeWidth} fill="none" />                <Animated.View style={StyleSheet.absoluteFill}>
+                <Circle cx={size / 2} cy={size / 2} r={r} stroke={COLORS.textPrimary + '1A'} strokeWidth={strokeWidth} fill="none" />                <Animated.View style={StyleSheet.absoluteFill}>
                     <Svg width={size} height={size}>
                         <AnimatedCircle
                             cx={size / 2}
@@ -327,7 +328,11 @@ const MarketingClaimsSection = ({ results }) => {
             const data = {
                 name: isObj ? item.name : item,
                 benefit: isObj ? item.benefit : null,
-                isTrace: isObj ? item.isTrace : false
+                isTrace: isObj ? item.isTrace : false,
+                // --- NEW: Quantitative Data ---
+                pct: isObj ? item.estimatedPct : null,
+                badge: isObj ? item.dosageBadge : null,
+                display: isObj ? item.concentrationDisplay : null
             };
             if (data.isTrace) weakEvidence.push(data);
             else strongEvidence.push(data);
@@ -387,7 +392,14 @@ const MarketingClaimsSection = ({ results }) => {
                                 {/* === END OF CORRECTION === */}
                                 <View style={styles.chipContainer}>
                                     {strongEvidence.map((ing, i) => (
-                                        <View key={i} style={styles.chipPrimary}><Text style={styles.chipTextPrimary}>{ing.name}{ing.benefit && <Text style={styles.chipBenefit}> • {ing.benefit}</Text>}</Text></View>
+                                        <View key={i} style={styles.chipPrimary}>
+                                            <Text style={styles.chipTextPrimary}>
+                                                {ing.name}
+                                                {/* --- NEW: Show % and Badge --- */}
+                                                {ing.display && <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: COLORS.accentGreen }}>  {ing.display} {ing.badge}</Text>}
+                                                {ing.benefit && <Text style={styles.chipBenefit}> • {ing.benefit}</Text>}
+                                            </Text>
+                                        </View>
                                     ))}
                                 </View>
                             </View>
@@ -403,7 +415,14 @@ const MarketingClaimsSection = ({ results }) => {
                                 {/* === END OF CORRECTION === */}
                                 <View style={styles.chipContainer}>
                                     {weakEvidence.map((ing, i) => (
-                                        <View key={i} style={styles.chipTrace}><Text style={styles.chipTextTrace}>{ing.name}{ing.benefit && <Text style={styles.chipBenefitTrace}> • {ing.benefit}</Text>}</Text></View>
+                                        <View key={i} style={styles.chipTrace}>
+                                            <Text style={styles.chipTextTrace}>
+                                                {ing.name}
+                                                {/* --- NEW: Show % and Badge for Trace Evidence --- */}
+                                                {ing.display && <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: COLORS.warning }}>  {ing.display} {ing.badge}</Text>}
+                                                {ing.benefit && <Text style={styles.chipBenefitTrace}> • {ing.benefit}</Text>}
+                                            </Text>
+                                        </View>
                                     ))}
                                 </View>
                             </View>
@@ -664,7 +683,7 @@ const AnimatedCheckbox = ({ isSelected }) => {
         <View style={styles.checkboxBase}>
             <Animated.View style={[styles.checkboxFill, { transform: [{ scale }] }]} />
             <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-            <FontAwesome5 name="check" size={14} color={COLORS.textOnAccent} />
+                <FontAwesome5 name="check" size={14} color={COLORS.textOnAccent} />
             </Animated.View>
         </View>
     );
@@ -698,7 +717,7 @@ const Wave = ({ isFilling }) => {
     return (
         <Animated.View style={{ width: '200%', height: 40, transform: [{ translateX }] }}>
             <Svg height="40" width={width * 1.6} style={{ width: '100%' }}>
-               <Circle cx="50%" cy="50%" r="50%" fill={COLORS.accentGlow} />
+                <Circle cx="50%" cy="50%" r="50%" fill={COLORS.accentGlow} />
             </Svg>
         </Animated.View>
     );
@@ -1229,7 +1248,7 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
                 </Text>
             </View>
         </View>
-    
+
     );
 };
 
@@ -1527,7 +1546,7 @@ export default function OilGuardEngine() {
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams(); // <-- 1. جلب البيانات المرسلة
     const autoStartSignature = useRef(null); // <-- لمنع تكرار العملية
-    const isAutoStart = params?.autoStart === 'true'; 
+    const isAutoStart = params?.autoStart === 'true';
 
 
     const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
@@ -1537,7 +1556,7 @@ export default function OilGuardEngine() {
     const [isGeminiLoading, setIsGeminiLoading] = useState(false);
     const [ocrText, setOcrText] = useState('');
     const [manualIngredients, setManualIngredients] = useState('');
-    const[preProcessedIngredients, setPreProcessedIngredients] = useState(() => {
+    const [preProcessedIngredients, setPreProcessedIngredients] = useState(() => {
         if (isAutoStart && params?.ingredients) {
             return params.ingredients.split(',').map(i => i.trim()).filter(Boolean).map((name, index) => ({
                 id: `temp-${index}`,
@@ -1546,17 +1565,17 @@ export default function OilGuardEngine() {
                 chemicalType: ''
             }));
         }
-        return[];
+        return [];
     });
-    const[productType, setProductType] = useState(params?.category || 'other');    const [selectedClaims, setSelectedClaims] = useState(() => {
+    const [productType, setProductType] = useState(params?.category || 'other'); const [selectedClaims, setSelectedClaims] = useState(() => {
         if (isAutoStart && params?.marketingClaims) {
             try {
                 return JSON.parse(params.marketingClaims);
             } catch (e) {
-                return[];
+                return [];
             }
         }
-        return[];
+        return [];
     });
     const [finalAnalysis, setFinalAnalysis] = useState(null);
     const [showManualTypeGrid, setShowManualTypeGrid] = useState(false);
@@ -1584,7 +1603,7 @@ export default function OilGuardEngine() {
     const [recError, setRecError] = useState(false); // New state to track if search found nothing
     const [selectedRec, setSelectedRec] = useState(null);
     const [isDetailVisible, setDetailVisible] = useState(false);
-    
+
     const SCREEN_HEIGHT = Dimensions.get('window').height;
 
     const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -1872,7 +1891,7 @@ export default function OilGuardEngine() {
         // 1. UI: Immediate Feedback
         setLoading(true);
         setIsGeminiLoading(true);
-        changeStep(3); 
+        changeStep(3);
 
         // 2. AD STRATEGY: Check the REF, not the state
         // This fixes the "Not ready yet" bug
@@ -1998,11 +2017,11 @@ export default function OilGuardEngine() {
 
             setIsGeminiLoading(false);
             setLoading(false);
-            
+
             // Move to next step (Review Ingredients)
             // If the ad is still open, this happens in the background. 
             // When the user closes the ad, they will land directly on Step 1.
-            changeStep(1); 
+            changeStep(1);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
@@ -2049,8 +2068,7 @@ export default function OilGuardEngine() {
                     // --- NEW LOGIC: Check for and report unknown ingredients ---
                     if (data.recommendation.unknown_ingredients && data.recommendation.unknown_ingredients.length > 0) {
                         console.log(`[DB Rec] Found ${data.recommendation.unknown_ingredients.length} unknown ingredients. Reporting...`);
-                        // This re-uses your existing function to send data to Firestore
-                        await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients);
+                        await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients, 'database'); // <-- ADDED 'database'
                     }
                     // --- END OF NEW LOGIC ---
                 }
@@ -2071,37 +2089,43 @@ export default function OilGuardEngine() {
         }
     }, [step, finalAnalysis]);
 
-    const reportUndiscoveredIngredients = async (missingList) => {
+    const reportUndiscoveredIngredients = async (missingList, source = 'scanner') => {
         try {
-            // Validation
             if (!missingList || missingList.length === 0) return;
 
-            console.log(`📝 Server identified ${missingList.length} unknown ingredients. Uploading...`);
+            console.log(`📝 Identified ${missingList.length} unknown ingredients from [${source}]. Uploading...`);
 
             const batch = writeBatch(db);
             let batchCount = 0;
 
             missingList.forEach(rawName => {
-                // Clean up the ID
                 const cleanName = rawName.trim();
                 const docId = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 if (docId.length > 2) {
                     const ref = doc(db, "missing_ingredients", docId);
+
+                    // Explicitly determine which counter to increment
+                    const isScanner = source === 'scanner';
+
                     batch.set(ref, {
                         originalName: cleanName,
                         normalizedId: docId,
-                        count: increment(1),
+                        totalCount: increment(1),
+                        scanner_count: isScanner ? increment(1) : increment(0),
+                        database_count: !isScanner ? increment(1) : increment(0),
+                        last_source: source, // Explicitly writes "scanner" or "database"
                         lastReported: Timestamp.now(),
                         status: 'pending'
                     }, { merge: true });
+
                     batchCount++;
                 }
             });
 
             if (batchCount > 0) {
                 await batch.commit();
-                console.log("🚀 Uploaded missing ingredients to WathiqAdmin.");
+                console.log(`🚀 Uploaded missing ingredients to Firebase from ${source}.`);
             }
 
         } catch (error) {
@@ -2149,7 +2173,7 @@ export default function OilGuardEngine() {
                 // --- NEW LOGIC: Use Server Response Directly ---
                 // The server has already calculated exactly which ingredients failed to match.
                 if (fullAnalysisData.unknown_ingredients && fullAnalysisData.unknown_ingredients.length > 0) {
-                    reportUndiscoveredIngredients(fullAnalysisData.unknown_ingredients);
+                    reportUndiscoveredIngredients(fullAnalysisData.unknown_ingredients, 'scanner'); // <-- ADDED 'scanner'
                 }
 
                 changeStep(4);
@@ -2206,7 +2230,7 @@ export default function OilGuardEngine() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         } catch (error) {
-            console.error("Text Parse Error:", error);a
+            console.error("Text Parse Error:", error); a
             Alert.alert(t('oilguard_error_title', language), t('oilguard_alert_parse_error_message', language));
             setIsGeminiLoading(false);
             setLoading(false);
@@ -2219,22 +2243,22 @@ export default function OilGuardEngine() {
             AlertService.error(t('oilguard_alert_enter_ingredients_title', language), t('oilguard_alert_enter_product_name', language));
             return;
         }
-    
+
         // Optional: Force image
         if (!frontImageUri) {
             AlertService.error(t('oilguard_alert_enter_ingredients_title', language), t('oilguard_alert_add_product_image', language));
             return;
         }
-    
+
         setIsSaving(true);
-    
+
         try {
             // 1. Upload Front Image
             let productImageUrl = null;
             if (frontImageUri) {
                 productImageUrl = await uploadImageToCloudinary(frontImageUri);
             }
-    
+
             // تجهيز كائن المنتج الجديد
             const newProduct = {
                 userId: user.uid,
@@ -2245,10 +2269,10 @@ export default function OilGuardEngine() {
                 analysisData: finalAnalysis,
                 createdAt: Timestamp.now()
             };
-    
+
             // 2. Save to Firebase
             await addDoc(collection(db, 'profiles', user.uid, 'savedProducts'), newProduct);
-    
+
             // ==============================================================
             // 3. ✨ تحديث الإشعارات الذكية فورا بعد حفظ المنتج ✨
             // ندمج المنتجات القديمة مع المنتج الجديد لكي تحصل دالة الإشعارات على أحدث قائمة
@@ -2257,24 +2281,24 @@ export default function OilGuardEngine() {
                 const updatedProductsForNotifs = [...(savedProducts || []), newProduct];
                 const userName = userProfile?.settings?.name || t('brand_wathiq_user', language);
                 const userSettings = userProfile?.settings || {};
-                
+
                 await scheduleAuthenticNotifications(userName, updatedProductsForNotifs, userSettings);
                 console.log("✅ تم تحديث جدول الإشعارات الذكية بالمنتج الجديد!");
             } catch (notifError) {
                 console.log("⚠️ فشل في تحديث الإشعارات بعد الحفظ، لكن المنتج تم حفظه:", notifError);
             }
             // ==============================================================
-    
+
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setIsSaving(false);
             setSaveModalVisible(false);
-    
+
             AlertService.success(
                 t('oilguard_saved_title', language),
                 t('oilguard_saved_message', language),
                 () => router.replace('/profile')
             );
-    
+
         } catch (error) {
             console.error(error);
             AlertService.error(t('oilguard_error_title', language), t('oilguard_save_failed', language));
@@ -2484,22 +2508,22 @@ export default function OilGuardEngine() {
                     <View style={styles.headerBackdrop} />
 
                     <Animated.View style={[styles.expandedHeader, { opacity: expandedHeaderOpacity }]}>
-    {isAutoStart ? (
-        <>
-            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.accentGreen, textAlign: 'right', marginBottom: 6 }}>
-                جاري تحليل:
-            </Text>
-            <Text style={[styles.heroTitle, { fontSize: 20 }]} numberOfLines={2} ellipsizeMode='tail'>
-                {productName}
-            </Text>
-        </>
-    ) : (
-        <>
-            <Text style={styles.heroTitle}>{t('oilguard_claims_header', language)}</Text>
-            <Text style={styles.heroSub}>{t('comp_claims_subtitle', language)}</Text>
-        </>
-    )}
-</Animated.View>
+                        {isAutoStart ? (
+                            <>
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.accentGreen, textAlign: 'right', marginBottom: 6 }}>
+                                    جاري تحليل:
+                                </Text>
+                                <Text style={[styles.heroTitle, { fontSize: 20 }]} numberOfLines={2} ellipsizeMode='tail'>
+                                    {productName}
+                                </Text>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.heroTitle}>{t('oilguard_claims_header', language)}</Text>
+                                <Text style={styles.heroSub}>{t('comp_claims_subtitle', language)}</Text>
+                            </>
+                        )}
+                    </Animated.View>
 
                     <Animated.View style={[styles.collapsedHeader, { opacity: collapsedHeaderOpacity }]}>
                         <SafeAreaView>
@@ -2626,6 +2650,9 @@ export default function OilGuardEngine() {
         // 1. Basic check
         if (!finalAnalysis) return null;
 
+        // --- NEW: Define isRTL to fix the ReferenceError ---
+        const isRTL = I18nManager.isRTL || language === 'ar';
+
         // 2. Safe Data Extraction (Defensive Programming)
         // We default to empty objects/arrays to prevent "undefined" errors
         const personalMatch = finalAnalysis.personalMatch || { status: 'unknown', reasons: [] };
@@ -2633,6 +2660,7 @@ export default function OilGuardEngine() {
         const efficacy = finalAnalysis.efficacy || { score: 0 };
         const marketingResults = finalAnalysis.marketing_results || [];
         const detectedIngredients = finalAnalysis.detected_ingredients || [];
+        const unknownIngredients = finalAnalysis.unknown_ingredients || []; // Safely extract unknowns
 
         // 3. Match Status Logic with Fallback
         const matchConfig = {
@@ -2742,14 +2770,14 @@ export default function OilGuardEngine() {
 
                         {/* B. ACTION ROW */}
                         <ActionRow
-    onSave={openSaveModal}
-    onReset={resetFlow}
-    analysis={finalAnalysis}
-    productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label}
-    // Pass these new props so the Share Button knows what to show
-    productName={productName} 
-    frontImageUri={frontImageUri} 
-/>
+                            onSave={openSaveModal}
+                            onReset={resetFlow}
+                            analysis={finalAnalysis}
+                            productTypeLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label}
+                            // Pass these new props so the Share Button knows what to show
+                            productName={productName}
+                            frontImageUri={frontImageUri}
+                        />
 
                     </View>
                 </StaggeredItem>
@@ -2802,10 +2830,43 @@ export default function OilGuardEngine() {
                 {/* --- 3. INGREDIENTS CAROUSEL --- */}
                 {detectedIngredients.length > 0 && (
                     <StaggeredItem index={2}>
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 15, paddingHorizontal: 5 }}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 10, paddingHorizontal: 5 }}>
                             <Text style={styles.resultsSectionTitle}>{`${t('sheet_detected_ingredients', language)} (${detectedIngredients.length})`}</Text>
+
+                            {/* Show User the Unrecognized Count Pill */}
+                            {unknownIngredients.length > 0 && (
+                                <View style={{ backgroundColor: COLORS.warning + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginRight: 10 }}>
+                                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.warning }}>
+                                        + {unknownIngredients.length} غير مدرج
+                                    </Text>
+                                </View>
+                            )}
+
                             <View style={{ backgroundColor: COLORS.textPrimary + '1A', height: 1, flex: 1, marginRight: 15 }} />
                         </View>
+
+                        {/* --- NEW: Reassuring Note for Missing Ingredients --- */}
+                        {unknownIngredients.length > 0 && (
+                            <View style={{
+                                flexDirection: isRTL ? 'row-reverse' : 'row',
+                                backgroundColor: COLORS.warning + '0D',
+                                borderWidth: 1,
+                                borderColor: COLORS.warning + '33',
+                                padding: 12,
+                                borderRadius: 12,
+                                marginHorizontal: 5,
+                                marginBottom: 15,
+                                alignItems: 'center',
+                                gap: 10
+                            }}>
+                                <FontAwesome5 name="info-circle" size={16} color={COLORS.warning} />
+                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', flex: 1, lineHeight: 18 }}>
+                                    {isRTL
+                                        ? `لاحظنا وجود ${unknownIngredients.length} مكونات غير موجودة في قاعدة بياناتنا. لا تقلقي، سنقوم بمراجعتها وإضافتها قريباً. شكراً لمساهمتكِ معنا!`
+                                        : `We noticed ${unknownIngredients.length} extra ingredients. Don't worry, our team will review and add them soon. Thank you for contributing!`}
+                                </Text>
+                            </View>
+                        )}
 
                         <Pagination data={detectedIngredients} scrollX={scrollX} />
 
