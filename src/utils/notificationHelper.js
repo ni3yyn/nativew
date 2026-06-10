@@ -30,36 +30,36 @@ const getPrimaryGoal = (settings) => {
   return settings.goals[Math.floor(Math.random() * settings.goals.length)]; 
 };
 
-import { t } from '../i18n';
+import { t, interpolate } from '../i18n';
 
 const MESSAGES = {
   morning: {
     empty: (name, lang) => [
-      t('msg_morning_empty', { name, lng: lang }),
+      interpolate(t('msg_morning_empty', lang), { name }),
     ],
     winter: (name, lang) => [
-      t('msg_morning_winter', { name, lng: lang }),
+      interpolate(t('msg_morning_winter', lang), { name }),
     ],
     summer: (name, lang) => [
-      t('msg_morning_summer', { name, lng: lang }),
+      interpolate(t('msg_morning_summer', lang), { name }),
     ],
-    acne: (name, lang) => [t('msg_morning_acne', { name, lng: lang })],
-    brightening: (name, lang) => [t('msg_morning_brightening', { name, lng: lang })],
-    anti_aging: (name, lang) => [t('msg_morning_anti_aging', { name, lng: lang })],
-    friday: (name, lang) => [t('msg_morning_friday', { name, lng: lang })],
-    weekend: (name, lang) => [t('msg_morning_weekend', { name, lng: lang })],
-    product: (name, pName, lang) => [t('msg_morning_product', { name, pName, lng: lang })]
+    acne: (name, lang) => [interpolate(t('msg_morning_acne', lang), { name })],
+    brightening: (name, lang) => [interpolate(t('msg_morning_brightening', lang), { name })],
+    anti_aging: (name, lang) => [interpolate(t('msg_morning_anti_aging', lang), { name })],
+    friday: (name, lang) => [interpolate(t('msg_morning_friday', lang), { name })],
+    weekend: (name, lang) => [interpolate(t('msg_morning_weekend', lang), { name })],
+    product: (name, pName, lang) => [interpolate(t('msg_morning_product', lang), { name, pName })]
   },
   evening: {
     empty: (name, lang) => [
-      t('msg_evening_empty', { name, lng: lang }),
+      interpolate(t('msg_evening_empty', lang), { name }),
     ],
-    winter: (name, lang) => [t('msg_evening_winter', { name, lng: lang })],
-    summer: (name, lang) => [t('msg_evening_summer', { name, lng: lang })],
-    acne: (name, lang) => [t('msg_evening_acne', { name, lng: lang })],
-    anti_aging: (name, lang) => [t('msg_evening_anti_aging', { name, lng: lang })],
-    thursdayNight: (name, lang) => [t('msg_evening_thursday', { name, lng: lang })],
-    product: (name, pName, lang) => [t('msg_evening_product', { name, pName, lng: lang })]
+    winter: (name, lang) => [interpolate(t('msg_evening_winter', lang), { name })],
+    summer: (name, lang) => [interpolate(t('msg_evening_summer', lang), { name })],
+    acne: (name, lang) => [interpolate(t('msg_evening_acne', lang), { name })],
+    anti_aging: (name, lang) => [interpolate(t('msg_evening_anti_aging', lang), { name })],
+    thursdayNight: (name, lang) => [interpolate(t('msg_evening_thursday', lang), { name })],
+    product: (name, pName, lang) => [interpolate(t('msg_evening_product', lang), { name, pName })]
   }
 };
 
@@ -79,7 +79,7 @@ const generateSmartMessage = (type, date, name, savedProducts, settings, lang) =
 
   if (savedProducts && savedProducts.length > 0 && roll < 0.35) {
     const p = savedProducts[Math.floor(Math.random() * savedProducts.length)];
-    const pName = p.productName ? p.productName.split(' ').slice(0, 2).join(' ') : t('notif_product_fallback', { lng: lang });
+    const pName = p.productName ? p.productName.split(' ').slice(0, 2).join(' ') : t('notif_product_fallback', lang);
     const msgList = MESSAGES[type].product(name, pName, lang);
     return msgList[Math.floor(Math.random() * msgList.length)];
   }
@@ -156,7 +156,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
   }
 
   const lang = settings?.language || 'ar';
-  const firstName = userName?.split(' ')[0] || t('brand_wathiq_user', { lng: lang });
+  const firstName = userName?.split(' ')[0] || t('brand_wathiq_user', lang);
   const today = new Date();
 
   for (let i = 0; i < 7; i++) {
@@ -175,7 +175,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
         const msg = generateSmartMessage('morning', targetDate, firstName, savedProducts, settings, lang);
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: isWeekend ? t('notif_morning_title_weekend', { lng: lang }) : t('notif_morning_title_standard', { lng: lang }),
+            title: isWeekend ? t('notif_morning_title_weekend', lang) : t('notif_morning_title_standard', lang),
             body: msg,
             data: { screen: 'routine', period: 'am', type: 'smart' },
             sound: true,
@@ -195,7 +195,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
         const msg = generateSmartMessage('evening', targetDate, firstName, savedProducts, settings, lang);
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: t('notif_evening_title', { lng: lang }),
+            title: t('notif_evening_title', lang),
             body: msg,
             data: { screen: 'routine', period: 'pm', type: 'smart' },
             sound: true,
