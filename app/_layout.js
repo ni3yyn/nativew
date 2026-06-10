@@ -142,7 +142,7 @@ const useAppOpenAd = () => {
       const adMob = require('react-native-google-mobile-ads');
       const { AppOpenAd, AdEventType } = adMob;
       const adUnitId = 'ca-app-pub-6010052879824695/8213348420';
-      
+
       const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: true,
       });
@@ -161,7 +161,7 @@ const useAppOpenAd = () => {
       // 2. When closed, SILENTLY load the next ad so it's ready for later
       const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
         console.log('App Open Ad Closed - Preloading next');
-        appOpenAd.load(); 
+        appOpenAd.load();
         // Notice we do NOT show it here.
       });
 
@@ -367,14 +367,14 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const [showOptionalUpdate, setShowOptionalUpdate] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showAppIntro, setShowAppIntro] = useState(false);
-  
+
   // ➤ THE LOCK: Prevents infinite scheduling loops
   const notificationScheduleLock = useRef(false);
 
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.6.0';
+  const APP_VERSION = '1.7.0';
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
@@ -503,7 +503,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     if (loading || !user || !userProfile || !userProfile.onboardingComplete) {
       return () => subscription.remove();
     }
-    
+
     if (notificationScheduleLock.current) {
       return () => subscription.remove();
     }
@@ -513,7 +513,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     const timer = setTimeout(async () => {
       // Check lock one more time just in case of race condition
       if (notificationScheduleLock.current) return;
-      
+
       // 🔒 LOCK IMMEDIATELY: Prevents any re-renders from triggering this again
       notificationScheduleLock.current = true;
 
@@ -557,7 +557,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
             await scheduleAuthenticNotifications(name, products, settings);
             console.log(`📅 [Layout] Notifications Locked & Scheduled! Products: ${products.length}`);
             console.log("Current Update Channel: ", Updates.channel);
-console.log("Current Runtime Version: ", Updates.runtimeVersion);
+            console.log("Current Runtime Version: ", Updates.runtimeVersion);
           }
         }
       } catch (e) {
@@ -598,9 +598,9 @@ console.log("Current Runtime Version: ", Updates.runtimeVersion);
   const isForceUpdate = compareVersions(appConfig.minSupportedVersion, APP_VERSION) === 1;
   if (isForceUpdate) {
     return (
-      <ForceUpdateScreen 
-        url={appConfig.latestVersionUrl} 
-        message={appConfig.android?.critical_message} 
+      <ForceUpdateScreen
+        url={appConfig.latestVersionUrl}
+        message={appConfig.android?.critical_message}
         language={language}
       />
     );

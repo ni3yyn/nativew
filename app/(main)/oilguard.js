@@ -2345,8 +2345,7 @@ export default function OilGuardEngine() {
                     onPress: async () => {
                         const result = await ImagePicker.launchImageLibraryAsync({
                             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                            allowsEditing: false,
-                            aspect: [4, 3],
+                            allowsEditing: true,
                             quality: 1,
                         });
                         if (!result.canceled) {
@@ -2362,8 +2361,7 @@ export default function OilGuardEngine() {
                         // Request permission implicitly handled by Expo, but good to check
                         const result = await ImagePicker.launchCameraAsync({
                             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                            allowsEditing: true,
-                            aspect: [4, 3],
+                            allowsEditing: false,
                             quality: 1,
                         });
                         if (!result.canceled) {
@@ -2847,25 +2845,37 @@ export default function OilGuardEngine() {
 
                         {/* --- NEW: Reassuring Note for Missing Ingredients --- */}
                         {unknownIngredients.length > 0 && (
-                            <View style={{
-                                flexDirection: isRTL ? 'row-reverse' : 'row',
-                                backgroundColor: COLORS.warning + '0D',
-                                borderWidth: 1,
-                                borderColor: COLORS.warning + '33',
-                                padding: 12,
-                                borderRadius: 12,
-                                marginHorizontal: 5,
-                                marginBottom: 15,
-                                alignItems: 'center',
-                                gap: 10
-                            }}>
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    AlertService.show({
+                                        title: isRTL ? 'المكونات قيد المراجعة' : 'Pending Ingredients',
+                                        // Joins the array with a comma and space so it looks clean
+                                        message: unknownIngredients.join(' ، '),
+                                        type: 'info',
+                                        buttons: [{ text: t('action_close', language) || 'إغلاق', style: 'primary' }]
+                                    });
+                                }}
+                                style={{
+                                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                                    backgroundColor: COLORS.warning + '0D',
+                                    borderWidth: 1,
+                                    borderColor: COLORS.warning + '33',
+                                    padding: 12,
+                                    borderRadius: 12,
+                                    marginHorizontal: 5,
+                                    marginBottom: 15,
+                                    alignItems: 'center',
+                                    gap: 10
+                                }}
+                            >
                                 <FontAwesome5 name="info-circle" size={16} color={COLORS.warning} />
                                 <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', flex: 1, lineHeight: 18 }}>
                                     {isRTL
-                                        ? `لاحظنا وجود ${unknownIngredients.length} مكونات غير موجودة في قاعدة بياناتنا. لا تقلقي، سنقوم بمراجعتها وإضافتها قريباً. شكراً لمساهمتكِ معنا!`
-                                        : `We noticed ${unknownIngredients.length} extra ingredients. Don't worry, our team will review and add them soon. Thank you for contributing!`}
+                                        ? `لاحظنا وجود ${unknownIngredients.length} مكونات غير معروفة لقاعدة بياناتنا. سنقوم بإضافتها قريباً. شكراً لمساهمتكِ! (اضغطي لرؤيتها)`
+                                        : `We noticed ${unknownIngredients.length} extra ingredients. Our team will add them soon. (Tap to view)`}
                                 </Text>
-                            </View>
+                            </TouchableOpacity>
                         )}
 
                         <Pagination data={detectedIngredients} scrollX={scrollX} />

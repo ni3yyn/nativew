@@ -5,7 +5,7 @@ import {
   getReactNativePersistence, 
   browserLocalPersistence // 2. Import Browser Persistence
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
@@ -45,7 +45,9 @@ if (Platform.OS === 'web') {
 export { auth };
 
 // --- 4. INITIALIZE OTHER SERVICES ---
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
