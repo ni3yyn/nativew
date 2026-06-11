@@ -441,6 +441,8 @@ export const translations = {
     insight_protection_alert_body: 'تم خصم نقاط كبيرة لعدم وجود واقي شمس. هذا الهدف مستحيل التحقق بدونه.',
     insight_products_supporting_goal: 'منتجات تخدم هذا الهدف',
     insight_close: 'إغلاق',
+    insight_scientific_explanations: 'التفسير والتحليل العلمي',
+    insight_scientific_explanations_en: 'Scientific Explanations',
     oilguard_ingredients_scan: 'فحص المكونات',
     oilguard_typewriter_1: 'ابحث عن كلمة Ingredients...',
     oilguard_typewriter_2: 'يستحسن تصوير المكونات بالإنجليزية لدقة أفضل',
@@ -1251,6 +1253,12 @@ export const translations = {
     "contribution_submitted_title": "تم إرسال مساهمتك!",
     "contribution_pending_review_message": "ستتم مراجعة طلبك ومنح النقاط بعد الموافقة",
     bounty_enter_details: "اكتبي التفاصيل",
+    rescan_all: 'إعادة فحص المنتج',
+    rescanning: 'جاري الفحص...',
+    rescan_success_title: 'نجاح',
+    rescan_success_msg: 'تمت إعادة فحص المنتج بنجاح',
+    rescan_failed_title: 'خطأ',
+    rescan_failed_msg: 'حدث خطأ أثناء إعادة الفحص',
 
   },
   en: {
@@ -2622,6 +2630,12 @@ export const translations = {
     "contribution_submitted_title": "Contribution Submitted!",
     "contribution_pending_review_message": "Your contribution will be reviewed and points awarded after approval",
     bounty_enter_details: "Enter Details",
+    rescan_all: 'Rescan Product',
+    rescanning: 'Rescanning...',
+    rescan_success_title: 'Success',
+    rescan_success_msg: 'Product successfully rescanned',
+    rescan_failed_title: 'Error',
+    rescan_failed_msg: 'Failed to rescan product',
   },
 };
 

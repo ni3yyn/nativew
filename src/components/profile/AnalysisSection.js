@@ -6,9 +6,9 @@ import { useTheme } from '../../context/ThemeContext';
 // Sub-Component Imports
 import { AnalysisHero, AnalysisCarousel } from './analysis/InsightCards';
 import { BarrierCard, BarrierDetailsModal } from './analysis/BarrierSection';
-import { OverviewDashboard } from './analysis/OverviewDashboard';
 import { InsightDetailsModal } from './analysis/InsightDetailsModal';
 import { AnalysisEmptyState } from '../../components/profile/EmptyStates';
+import { CircadianAndSynergyCard, CircadianAndSynergyDetailsModal } from './analysis/CircadianAndSynergy';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
@@ -28,6 +28,8 @@ export const AnalysisSection = ({
     const language = useCurrentLanguage();
     const [selectedInsight, setSelectedInsight] = useState(null);
     const [showBarrierDetails, setShowBarrierDetails] = useState(false);
+    const [showCircadianDetails, setShowCircadianDetails] = useState(false);
+
 
     const handleSelectInsight = useCallback((insight) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -164,13 +166,18 @@ export const AnalysisSection = ({
                     />
                 )}
 
-                {/* 3. BARRIER & DASHBOARD */}
+                {/* 3. BARRIER */}
                 <BarrierCard
                     barrier={barrierData}
                     onPress={() => setShowBarrierDetails(true)}
                 />
 
-                <OverviewDashboard analysisData={analysisData} />
+                {/* 4. CIRCADIAN & SYNERGY */}
+                <CircadianAndSynergyCard
+                    circadian={analysisData.circadianAlignment}
+                    synergy={analysisData.crossProductSynergy}
+                    onPress={() => setShowCircadianDetails(true)}
+                />
 
             </View>
 
@@ -187,6 +194,13 @@ export const AnalysisSection = ({
                 visible={showBarrierDetails}
                 onClose={() => setShowBarrierDetails(false)}
                 data={barrierData}
+            />
+
+            <CircadianAndSynergyDetailsModal
+                visible={showCircadianDetails}
+                onClose={() => setShowCircadianDetails(false)}
+                circadian={analysisData.circadianAlignment}
+                synergy={analysisData.crossProductSynergy}
             />
         </View>
     );

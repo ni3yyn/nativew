@@ -68,6 +68,9 @@ export default function CommunityScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [sortBy, setSortBy] = useState('recent');
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const loadingMoreRef = useRef(false);
     const ADMIN_UID = "Nlek1lx0lqUKD5zgWqUdcqacleX2";
     const isAdmin = user?.uid === ADMIN_UID;
 
@@ -201,16 +204,30 @@ export default function CommunityScreen() {
     }, [user]); // 🟢 FIX: Added [user] dependency to prevent null crash and ensure auth context
 
     // --- MAIN FETCH FUNCTION (SUPABASE) ---
-    const loadNewPosts = async (isInitialFetch = false, customSortMode = null, isBackground = false) => {
+    const loadNewPosts = async (isInitialFetch = false, customSortMode = null, isBackground = false, isLoadMore = false) => {
         // 🟢 FIX: Safeguard against null user during initial boot
         if (!user) return;
 
         const mode = customSortMode || sortBy;
-        if (!isInitialFetch && !isBackground) setLoading(true);
+        const PAGE_SIZE = 15;
+        const offset = isLoadMore ? (selectedCategory ? allPosts.filter(p => p.type === selectedCategory.id).length : allPosts.length) : 0;
+
+        if (isLoadMore) {
+            if (loadingMoreRef.current || !hasMore) return;
+            loadingMoreRef.current = true;
+            setLoadingMore(true);
+        } else {
+            if (!isInitialFetch && !isBackground) setLoading(true);
+            setHasMore(true); // Reset hasMore when reloading/refreshing
+        }
 
         try {
             // 1. Fetch Posts
             let query = supabase.from('posts').select('*');
+
+            if (selectedCategory) {
+                query = query.eq('type', selectedCategory.id);
+            }
 
             if (mode === 'popular') {
                 query = query.order('likes_count', { ascending: false }).order('created_at', { ascending: false });
@@ -218,21 +235,28 @@ export default function CommunityScreen() {
                 query = query.order('created_at', { ascending: false });
             }
 
-            const { data: postsData, error: postsError } = await query.limit(20);
+            const { data: postsData, error: postsError } = await query.range(offset, offset + PAGE_SIZE - 1);
             if (postsError) throw postsError;
 
-            // 2. Fetch "My Likes"
-            const postIds = postsData.map(p => p.id);
-            const { data: myLikesData } = await supabase
-                .from('likes')
-                .select('post_id')
-                .eq('firebase_user_id', user.uid)
-                .in('post_id', postIds);
+            if (!postsData || postsData.length < PAGE_SIZE) {
+                setHasMore(false);
+            }
 
-            const myLikedPostIds = new Set(myLikesData?.map(l => l.post_id));
+            let myLikedPostIds = new Set();
+            if (postsData && postsData.length > 0) {
+                // 2. Fetch "My Likes"
+                const postIds = postsData.map(p => p.id);
+                const { data: myLikesData } = await supabase
+                    .from('likes')
+                    .select('post_id')
+                    .eq('firebase_user_id', user.uid)
+                    .in('post_id', postIds);
+
+                myLikedPostIds = new Set(myLikesData?.map(l => l.post_id));
+            }
 
             // 3. Normalize & Merge
-            const normalizedPosts = postsData.map(post => {
+            const normalizedPosts = (postsData || []).map(post => {
                 const safeProduct = post.product_snapshot;
 
                 const isLikedByMe = myLikedPostIds.has(post.id);
@@ -264,20 +288,40 @@ export default function CommunityScreen() {
                 };
             });
 
-            setAllPosts(normalizedPosts);
-            setNewPostsCount(0);
+            if (isLoadMore) {
+                setAllPosts(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const newPosts = normalizedPosts.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...newPosts];
+                });
+            } else {
+                if (selectedCategory) {
+                    setAllPosts(prev => {
+                        const otherPosts = prev.filter(p => p.type !== selectedCategory.id);
+                        return [...normalizedPosts, ...otherPosts];
+                    });
+                } else {
+                    setAllPosts(normalizedPosts);
+                }
+                setNewPostsCount(0);
 
-            if (mode === 'recent') {
-                await setPostsCache(normalizedPosts);
+                if (mode === 'recent' && !selectedCategory) {
+                    await setPostsCache(normalizedPosts);
+                }
             }
 
         } catch (error) {
             console.error("Feed Error:", error);
             if (!isBackground) AlertService.error(t('community_error_title', language), t('community_load_posts_error', language));
         } finally {
-            if (!isBackground) {
-                setLoading(false);
-                setRefreshing(false);
+            if (isLoadMore) {
+                loadingMoreRef.current = false;
+                setLoadingMore(false);
+            } else {
+                if (!isBackground) {
+                    setLoading(false);
+                    setRefreshing(false);
+                }
             }
         }
     };
@@ -312,6 +356,7 @@ export default function CommunityScreen() {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setSelectedCategory(cat);
         setViewMode('feed');
+        setHasMore(true);
     };
 
     // --- FILTERING ---
@@ -513,6 +558,15 @@ export default function CommunityScreen() {
                             onProfilePress={(userId, authorSettings) => setViewingUserProfile({ id: userId, data: authorSettings })}
                         />
                     )}
+                    onEndReached={() => {
+                        loadNewPosts(false, null, false, true);
+                    }}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 20 }} />
+                        ) : null
+                    }
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />

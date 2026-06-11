@@ -27,6 +27,36 @@ const MECHANISM_CONFIG = {
     'general': { label: 'Supportive effect', icon: 'star-four-points-outline', desc: 'Improves overall skin health' }
 };
 
+const getExplanationType = (text) => {
+    if (!text) return 'info';
+    if (
+        text.includes('يجب نقله') ||
+        text.includes('يعمل ضد') ||
+        text.includes('ثغرة') ||
+        text.includes('لا يوجد') ||
+        text.includes('تركيزه منخفض') ||
+        text.includes('تعديلات بسيطة') ||
+        text.includes('بدون واقي') ||
+        text.includes('يفقد') ||
+        text.includes('تفكك') ||
+        text.includes('مكشوفة') ||
+        text.includes('يفتقد لآلية')
+    ) {
+        return 'warning';
+    }
+    if (
+        text.includes('متوافق') ||
+        text.includes('تغطية كاملة') ||
+        text.includes('دمج ممتاز') ||
+        text.includes('بتركيز فعال') ||
+        text.includes('مثبت بشكل جيد') ||
+        text.includes('ثابتة ضوئياً')
+    ) {
+        return 'success';
+    }
+    return 'info';
+};
+
 export const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const { colors } = useTheme(); // Get colors from theme
     const language = useCurrentLanguage();
@@ -235,7 +265,38 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 {/* 3. Goal DNA Breakdown (New) */}
                 <GoalBreakdown foundHeroes={foundHeroes} missingHeroes={missingHeroes} />
 
-                {/* 4. Products Contributing */}
+                {/* 3.5 Bayesian Explanations */}
+                {data.whyExplanations && data.whyExplanations.length > 0 && (
+                    <View style={{ marginTop: 20 }}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                            <MaterialCommunityIcons name="flask-outline" size={18} color={colors.textPrimary} />
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary, textAlign: 'right', marginBottom: 0 }]}>
+                                {language === 'ar' ? t('insight_scientific_explanations', language) : t('insight_scientific_explanations_en', language)}
+                            </Text>
+                        </View>
+                        <View style={{ backgroundColor: colors.background, padding: 16, borderRadius: 16, gap: 12, marginTop: 8 }}>
+                            {data.whyExplanations.map((exp, idx) => {
+                                const type = getExplanationType(exp);
+                                const iconName = type === 'success' ? 'check-circle' : (type === 'warning' ? 'alert-circle' : 'information');
+                                const iconColor = type === 'success' ? colors.success : (type === 'warning' ? colors.warning : colors.info || colors.accentGreen);
+                                return (
+                                    <View key={idx} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8 }}>
+                                        <MaterialCommunityIcons 
+                                            name={iconName} 
+                                            size={16} 
+                                            color={iconColor} 
+                                            style={{ marginTop: 2 }} 
+                                        />
+                                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 15, color: colors.textPrimary, textAlign: 'right', lineHeight: 24, flex: 1 }}>
+                                            {exp}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
+                )}
+
                 {insight.related_products?.length > 0 && (
                     <View style={styles.sectionContainer}>
                         <View style={[styles.divider, { backgroundColor: colors.border }]} />

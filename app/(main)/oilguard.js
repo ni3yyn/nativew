@@ -1568,7 +1568,7 @@ export default function OilGuardEngine() {
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
     const router = useRouter();
-    const { user, userProfile } = useAppContext();
+    const { user, userProfile, savedProducts } = useAppContext();
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams(); // <-- 1. جلب البيانات المرسلة
     const autoStartSignature = useRef(null); // <-- لمنع تكرار العملية
@@ -3142,6 +3142,7 @@ export default function OilGuardEngine() {
                 visible={isBreakdownModalVisible}
                 onClose={() => setBreakdownModalVisible(false)}
                 data={finalAnalysis?.scoreBreakdown}
+                analysis={finalAnalysis}
             />
 
             <VerifiedDetailModal

@@ -31,7 +31,7 @@ import {
 } from '../../src/data/allergiesandconditions';
 import { PRODUCT_TYPES } from '../../src/constants/productData';
 import { AlertService } from '../../src/services/alertService';
-import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge'; 
+import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge';
 import {
     ShelfEmptyState,
     AnalysisEmptyState,
@@ -95,7 +95,7 @@ const getHeaderTitle = (key, language) => {
     return titles[key] || { title: t('profile_title_fallback', language), icon: 'user' };
 };
 
-const HEALTH_OPTS =[
+const HEALTH_OPTS = [
     { id: 'acne_prone', label: t('health_opt_acne', 'ar') },
     { id: 'sensitive_skin', label: t('health_opt_sensitive', 'ar') },
     { id: 'rosacea_prone', label: t('health_opt_rosacea', 'ar') },
@@ -103,13 +103,13 @@ const HEALTH_OPTS =[
     { id: 'pregnancy', label: t('health_opt_pregnancy', 'ar') }
 ];
 
-const BASIC_HAIR_TYPES =[
+const BASIC_HAIR_TYPES = [
     { id: 'straight', label: t('hair_type_straight', 'ar'), icon: 'stream' },
     { id: 'wavy', label: t('hair_type_wavy', 'ar'), icon: 'water' },
     { id: 'curly', label: t('hair_type_curly', 'ar'), icon: 'holly-berry' },
     { id: 'coily', label: t('hair_type_coily', 'ar'), icon: 'dna' }
 ];
-const BASIC_SKIN_TYPES =[
+const BASIC_SKIN_TYPES = [
     { id: 'oily', label: t('skin_type_oily', 'ar'), icon: 'blurType' },
     { id: 'dry', label: t('skin_type_dry', 'ar'), icon: 'leaf' },
     { id: 'combo', label: t('skin_type_combo', 'ar'), icon: 'adjust' },
@@ -117,7 +117,7 @@ const BASIC_SKIN_TYPES =[
     { id: 'sensitive', label: t('skin_type_sensitive', 'ar'), icon: 'heartbeat' }
 ];
 
-const GOALS_LIST =[
+const GOALS_LIST = [
     { id: 'brightening', label: t('goal_brightening', 'ar'), icon: 'sun' },
     { id: 'acne', label: t('goal_acne', 'ar'), icon: 'shield-alt' },
     { id: 'anti_aging', label: t('goal_anti_aging', 'ar'), icon: 'hourglass-half' },
@@ -125,7 +125,7 @@ const GOALS_LIST =[
     { id: 'texture_pores', label: t('goal_texture', 'ar'), icon: 'th-large' },
 ];
 
-const INGREDIENT_FILTERS =[
+const INGREDIENT_FILTERS = [
     { id: 'all', label: t('ing_filter_all', 'ar'), icon: 'layer-group' },
     { id: 'exfoliants', label: t('ing_filter_exfoliants', 'ar'), icon: 'magic' },
     { id: 'hydrators', label: t('ing_filter_hydrators', 'ar'), icon: 'blurType' },
@@ -146,7 +146,7 @@ const Spore = ({ size, startX, duration, delay }) => {
 
     useEffect(() => {
         let timeout;
-        
+
         const floatLoop = Animated.loop(
             Animated.timing(animY, {
                 toValue: 1,
@@ -220,11 +220,11 @@ const Spore = ({ size, startX, duration, delay }) => {
             driftLoop.stop();
             opacityPulse.stop();
         };
-    },[]);
+    }, []);
 
     const translateY = animY.interpolate({
         inputRange: [0, 1],
-        outputRange:[height + 100, -100]
+        outputRange: [height + 100, -100]
     });
 
     const translateX = animX.interpolate({
@@ -233,18 +233,18 @@ const Spore = ({ size, startX, duration, delay }) => {
     });
 
     return (
-        <Animated.View 
-        pointerEvents="none"
-        style={{
-            position: 'absolute',
-            zIndex: 0,
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: C.accentGlow,
-            transform: [{ translateY }, { translateX }, { scale }],
-            opacity,
-        }} />
+        <Animated.View
+            pointerEvents="none"
+            style={{
+                position: 'absolute',
+                zIndex: 0,
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                backgroundColor: C.accentGlow,
+                transform: [{ translateY }, { translateX }, { scale }],
+                opacity,
+            }} />
     );
 };
 
@@ -281,7 +281,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
     const finalColor = color || C.primary;
     const animatedValue = useRef(new Animated.Value(0)).current;
     const circumference = 2 * Math.PI * radius;
-    const[displayPercentage, setDisplayPercentage] = useState(0);
+    const [displayPercentage, setDisplayPercentage] = useState(0);
     const rotation = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -317,7 +317,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
 
     return (
         <View style={{ width: radius * 2, height: radius * 2, alignItems: 'center', justifyContent: 'center' }}>
-            <Svg width={radius * 2} height={radius * 2} style={{ transform:[{ rotate: '-90deg' }] }}>
+            <Svg width={radius * 2} height={radius * 2} style={{ transform: [{ rotate: '-90deg' }] }}>
                 <Circle cx={radius} cy={radius} r={radius - strokeWidth / 2} stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} fill="none" />
                 <Circle
                     cx={radius} cy={radius} r={radius - strokeWidth / 2}
@@ -336,7 +336,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
                 opacity: 0.1,
                 transform: [{
                     scale: rotation.interpolate({
-                        inputRange:[0, 0.5, 1],
+                        inputRange: [0, 0.5, 1],
                         outputRange: [1, 1.1, 1]
                     })
                 }]
@@ -352,7 +352,7 @@ const ChartRing = ({ percentage, radius = 45, strokeWidth = 8, color }) => {
 };
 
 const Accordion = ({ title, icon, children, isOpen, onPress }) => {
-    const[contentHeight, setContentHeight] = useState(0);
+    const [contentHeight, setContentHeight] = useState(0);
     const heightAnim = useRef(new Animated.Value(0)).current;
     const rotateAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
     const { colors: C } = useTheme();
@@ -369,7 +369,7 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
                 friction: 9, tension: 60, useNativeDriver: false,
             })
         ]).start();
-    },[isOpen, contentHeight]);
+    }, [isOpen, contentHeight]);
 
     const onLayout = (event) => {
         const { height } = event.nativeEvent.layout;
@@ -380,7 +380,7 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
 
     const rotateChevron = rotateAnim.interpolate({
         inputRange: [0, 1],
-        outputRange:['0deg', '-180deg'],
+        outputRange: ['0deg', '-180deg'],
     });
 
     return (
@@ -425,7 +425,7 @@ const SkeletonProductCard = ({ index }) => {
         return () => animation.stop();
     }, []);
 
-    const translateX = shimmerAnim.interpolate({ inputRange:[0, 1], outputRange: [-width, width] });
+    const translateX = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-width, width] });
     const ShimmeringView = ({ style }) => (
         <View style={[style, { overflow: 'hidden', backgroundColor: C.border }]}>
             <Animated.View style={{ ...StyleSheet.absoluteFillObject, transform: [{ translateX }] }}>
@@ -449,7 +449,7 @@ const SkeletonProductCard = ({ index }) => {
 const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); 
+    const language = useCurrentLanguage();
     const translateX = useRef(new Animated.Value(0)).current;
 
     const panResponder = useRef(
@@ -513,10 +513,11 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
     const animController = useRef(new Animated.Value(0)).current;
 
     const [isEditing, setIsEditing] = useState(false);
-    const[editedName, setEditedName] = useState('');
+    const [editedName, setEditedName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-    const { user, savedProducts, setSavedProducts } = useAppContext();
-    
+    const [isRescanning, setIsRescanning] = useState(false);
+    const { user, userProfile, savedProducts, setSavedProducts } = useAppContext();
+
     useEffect(() => {
         if (isVisible && product) {
             setEditedName(product.productName);
@@ -536,7 +537,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                 useNativeDriver: true,
             }).start();
         }
-    },[isVisible, product, animController]);
+    }, [isVisible, product, animController]);
 
     const handleClose = () => {
         Keyboard.dismiss();
@@ -558,18 +559,59 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         try {
             const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
             await updateDoc(productRef, { productName: editedName.trim() });
-            
-            const updatedList = savedProducts.map(p => 
+
+            const updatedList = savedProducts.map(p =>
                 p.id === product.id ? { ...p, productName: editedName.trim() } : p
             );
             setSavedProducts(updatedList);
-            
+
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setIsEditing(false);
         } catch (error) {
             AlertService.error(t('status_error', language), t('error_update_name', language));
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleRescanProduct = async () => {
+        setIsRescanning(true);
+        try {
+            const rawIngredients = product.analysisData.raw_ingredients_list ||
+                [...(product.analysisData.detected_ingredients || []).map(ing => typeof ing === 'object' && ing !== null ? ing.name : ing), ...(product.analysisData.unknown_ingredients || [])];
+
+            const response = await fetch(`${PROFILE_API_URL}/evaluate.js`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ingredients_list: rawIngredients,
+                    product_type: product.productType || product.analysisData.product_type || 'other',
+                    selected_claims: product.marketingClaims || [],
+                    user_profile: userProfile?.settings || {}
+                })
+            });
+
+            if (response.ok) {
+                const newAnalysisData = await response.json();
+                const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
+                await updateDoc(productRef, { analysisData: newAnalysisData });
+
+                const updatedList = savedProducts.map(p =>
+                    p.id === product.id ? { ...p, analysisData: newAnalysisData } : p
+                );
+                setSavedProducts(updatedList);
+
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                AlertService.success(t('rescan_success_title', language) || "Success", t('rescan_success_msg', language) || `Product successfully rescanned`);
+                onClose();
+            } else {
+                throw new Error("Failed to evaluate");
+            }
+        } catch (err) {
+            console.error("Rescan Error:", err);
+            AlertService.error(t('rescan_failed_title', language) || "Error", t('rescan_failed_msg', language) || "Failed to rescan product.");
+        } finally {
+            setIsRescanning(false);
         }
     };
 
@@ -583,8 +625,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                     duration: 200,
                     useNativeDriver: true,
                 }).start(() => {
-                    onClose(); 
-                    setTimeout(() => onDelete(product.id), 300); 
+                    onClose();
+                    setTimeout(() => onDelete(product.id), 300);
                 });
             }
         );
@@ -604,8 +646,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         }
     };
 
-    const translateY = animController.interpolate({ inputRange:[0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange:[0, 0.6] });
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     if (!product || !isVisible) return null;
 
@@ -614,14 +656,14 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         oilGuardScore = 0,
         finalVerdict = t('status_unknown', language),
         product_type = 'other',
-        detected_ingredients =[],
-        user_specific_alerts =[],
+        detected_ingredients = [],
+        user_specific_alerts = [],
         safety = { score: 0 },
         efficacy = { score: 0 }
     } = product?.analysisData || {};
 
     const scoreColor = oilGuardScore >= 80 ? C.success : oilGuardScore >= 65 ? C.warning : C.danger;
-    
+
     const typeObj = PRODUCT_TYPES.find(tObj => tObj.id === product_type);
     const typeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
@@ -698,8 +740,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                                 />
                             </View>
 
-                            <TouchableOpacity 
-                                onPress={handleDeletePress} 
+                            <TouchableOpacity
+                                onPress={handleDeletePress}
                                 style={[styles.sheetDeleteBtn, { backgroundColor: C.danger + '15', borderColor: C.danger + '40' }]}
                             >
                                 <FontAwesome5 name="trash-alt" size={16} color={C.danger} />
@@ -756,18 +798,36 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                         )}
 
                         <View style={styles.sheetSection}>
-                            <Text style={styles.sheetSectionTitle}>{t('sheet_detected_ingredients', language)} ({detected_ingredients.length})</Text>
+                            <Text style={styles.sheetSectionTitle}>{t('sheet_detected_ingredients', language)} ({detected_ingredients.length + (product.analysisData?.unknown_ingredients?.length || 0)})</Text>
                             <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
                                 {detected_ingredients.map((ing, i) => {
                                     const ingName = (typeof ing === 'object' && ing !== null) ? ing.name : ing;
                                     return (
-                                        <View key={i} style={styles.ingredientChip}>
+                                        <View key={`det-${i}`} style={styles.ingredientChip}>
                                             <Text style={styles.ingredientChipText}>{ingName}</Text>
                                         </View>
                                     );
                                 })}
+                                {product.analysisData?.unknown_ingredients && product.analysisData.unknown_ingredients.map((ing, i) => (
+                                    <View key={`unk-${i}`} style={[styles.ingredientChip, { backgroundColor: C.surface, borderColor: C.border, borderStyle: 'dashed', borderWidth: 1 }]}>
+                                        <Text style={[styles.ingredientChipText, { color: C.textDim }]}>{ing}</Text>
+                                    </View>
+                                ))}
                             </View>
                         </View>
+
+                        {product.analysisData?.unknown_ingredients?.length > 0 && (
+                            <TouchableOpacity
+                                style={{ marginTop: 15, backgroundColor: C.accentGreen, padding: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 }}
+                                onPress={handleRescanProduct}
+                                disabled={isRescanning}
+                            >
+                                {isRescanning ? <ActivityIndicator color={C.textOnAccent} size="small" /> : <FontAwesome5 name="sync" size={16} color={C.textOnAccent} />}
+                                <Text style={{ color: C.textOnAccent, fontFamily: 'Tajawal-Bold', fontSize: 14 }}>
+                                    {isRescanning ? (t('rescanning', language) || "Rescanning...") : (t('rescan_all', language) || "Rescan Product")}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
                         <Pressable onPress={handleClose} style={[styles.closeButton, { marginTop: 20 }]}>
                             <Text style={styles.closeButtonText}>{t('sheet_close', language)}</Text>
@@ -787,7 +847,7 @@ const GlobalInput = (props) => {
 
     return (
         <TextInput
-            {...props} 
+            {...props}
             placeholderTextColor={props.placeholderTextColor || C.textDim}
             style={[
                 props.style,
@@ -797,12 +857,13 @@ const GlobalInput = (props) => {
     );
 };
 
-const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
+const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProfile }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); 
+    const language = useCurrentLanguage();
     const [refreshing, setRefreshing] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const { user, setSavedProducts } = useAppContext();
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -828,7 +889,7 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router }) => {
 
     return (
         <View style={{ flex: 1 }}>
-            <ContentCard delay={100} style={{ padding: 15, marginBottom: 20 }}>
+            <ContentCard delay={100} style={{ padding: 15, marginBottom: 8, marginTop: -12 }}>
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
                         <Text style={styles.statLabel}>{t('stat_total_products', language)}</Text>
@@ -934,12 +995,12 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
 const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); 
-    
+    const language = useCurrentLanguage();
+
     const [search, setSearch] = useState('');
     const [renderLimit, setRenderLimit] = useState(15);
     const [allIngredients, setAllIngredients] = useState([]);
-    const[loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState(null);
 
     useEffect(() => {
@@ -976,7 +1037,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
                             ingredients_list: ingredientsList,
                             product_type: 'other',
                             user_profile: userProfile?.settings || {},
-                            selected_claims:[]
+                            selected_claims: []
                         })
                     });
 
@@ -984,7 +1045,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
                     if (!response.ok) throw new Error("Server fetch failed");
 
-                    const serverData = data.detected_ingredients ||[];
+                    const serverData = data.detected_ingredients || [];
 
                     const aggregated = serverData.map(serverIng => {
                         const productsContaining = products.filter(p =>
@@ -1017,7 +1078,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
                             if (!fallbackMap.has(key)) {
                                 fallbackMap.set(key, {
                                     id: key, name: key, displayName: key,
-                                    isRich: false, count: 0, productIds: [], productNames:[]
+                                    isRich: false, count: 0, productIds: [], productNames: []
                                 });
                             }
                             const entry = fallbackMap.get(key);
@@ -1035,7 +1096,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
         });
 
         return () => task.cancel();
-    }, [products, userProfile, cacheRef]); 
+    }, [products, userProfile, cacheRef]);
 
     const filteredList = useMemo(() =>
         allIngredients.filter(ing =>
@@ -1096,7 +1157,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaining }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); 
+    const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
     const hasData = ingredient && visible;
 
@@ -1107,7 +1168,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
                 damping: 15, stiffness: 100, mass: 0.8, useNativeDriver: true,
             }).start();
         }
-    },[visible]);
+    }, [visible]);
 
     const animateOut = () => {
         Animated.timing(animController, {
@@ -1136,7 +1197,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
     if (!hasData) return null;
 
-    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange:[0, 0.6] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
 
     let safetyColor = C.success;
@@ -1248,7 +1309,7 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 const MigrationSection = ({ products }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage(); 
+    const language = useCurrentLanguage();
     const [syntheticIngredients] = useState(['Paraben', 'Sulfate', 'Silicon', 'Fragrance', 'Alcohol', 'Mineral Oil']);
     const flagged = products.filter(p =>
         p.analysisData?.detected_ingredients?.some(i =>
@@ -1264,7 +1325,7 @@ const MigrationSection = ({ products }) => {
             duration: 800,
             useNativeDriver: true,
         }).start();
-    },[]);
+    }, []);
 
     const renderMigrationItem = ({ item, index }) => {
         const detectedSynthetics = syntheticIngredients.filter(bad =>
@@ -1372,7 +1433,7 @@ const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
 };
 
 const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
-    const currentSelected = Array.isArray(selectedValues) ? selectedValues :[];
+    const currentSelected = Array.isArray(selectedValues) ? selectedValues : [];
     const language = useCurrentLanguage();
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -1402,8 +1463,8 @@ const SettingsSection = ({ profile, onLogout }) => {
 
     const [form, setForm] = useState(() => ({
         goals: [],
-        conditions:[],
-        allergies:[],
+        conditions: [],
+        allergies: [],
         skinType: null,
         scalpType: null,
         language: 'ar',
@@ -1419,8 +1480,8 @@ const SettingsSection = ({ profile, onLogout }) => {
                 ...prev,
                 ...profile.settings,
                 goals: profile.settings.goals || [],
-                conditions: profile.settings.conditions ||[],
-                allergies: profile.settings.allergies ||[],
+                conditions: profile.settings.conditions || [],
+                allergies: profile.settings.allergies || [],
                 skinType: profile.settings.skinType || null,
                 scalpType: profile.settings.scalpType || null,
                 language: profile.settings.language || 'ar',
@@ -1434,7 +1495,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 clearTimeout(saveTimeoutRef.current);
             }
         };
-    },[]);
+    }, []);
 
     const handleToggleAccordion = (id) => {
         Haptics.selectionAsync();
@@ -1457,7 +1518,8 @@ const SettingsSection = ({ profile, onLogout }) => {
 
         saveTimeoutRef.current = setTimeout(async () => {
             try {
-                await updateDoc(doc(db, 'profiles', user.uid), {[`settings.${key}`]: value
+                await updateDoc(doc(db, 'profiles', user.uid), {
+                    [`settings.${key}`]: value
                 });
             } catch (e) {
                 console.error("Error updating settings:", e);
@@ -1466,11 +1528,11 @@ const SettingsSection = ({ profile, onLogout }) => {
                 setIsSaving(false);
                 saveTimeoutRef.current = null;
             }
-        }, 1000); 
+        }, 1000);
     };
 
     const handleMultiSelectToggle = (field, itemId) => {
-        const currentSelection = form[field] ||[];
+        const currentSelection = form[field] || [];
         const newSelection = currentSelection.includes(itemId)
             ? currentSelection.filter(id => id !== itemId)
             : [...currentSelection, itemId];
@@ -1634,30 +1696,30 @@ const SettingsSection = ({ profile, onLogout }) => {
 };
 
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
-    const { colors: C } = useTheme(); 
-    const styles = useMemo(() => createStyles(C), [C]); 
+    const { colors: C } = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
     const animController = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
-    },[visible]);
+    }, [visible]);
 
     const handleClose = () => {
         Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(({ finished }) => { if (finished) onClose(); });
     };
 
-    if (!insight) return null; 
+    if (!insight) return null;
 
-    const translateY = animController.interpolate({ inputRange:[0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange:[0, 1], outputRange: [0, 0.6] });
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     const getSeverityColor = (s) => (s === 'critical' ? C.danger : s === 'warning' ? C.warning : C.success);
     const mainColor = getSeverityColor(insight.severity);
 
     const renderGoalDashboard = (data) => {
-        const foundHeroes = data?.foundHeroes ||[];
-        const missingHeroes = data?.missingHeroes ||[];
-        const relatedProducts = insight.related_products ||[];
+        const foundHeroes = data?.foundHeroes || [];
+        const missingHeroes = data?.missingHeroes || [];
+        const relatedProducts = insight.related_products || [];
 
         return (
             <View>
@@ -1727,7 +1789,7 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                 )}
             </View>
         );
-    }; 
+    };
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -1791,7 +1853,7 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
     const circumference = 2 * Math.PI * innerRadius;
 
     const [displayOffset, setDisplayOffset] = useState(circumference);
-    const[displayScore, setDisplayScore] = useState(0);
+    const [displayScore, setDisplayScore] = useState(0);
 
     const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -1873,7 +1935,7 @@ export default function ProfileScreen() {
     const styles = useMemo(() => createStyles(C), [C]);
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const[debugSpf, setDebugSpf] = useState(true);
+    const [debugSpf, setDebugSpf] = useState(true);
 
     // ========================================================================
     // --- 2. CONSTANTS & UI CONFIG ---
@@ -1883,7 +1945,7 @@ export default function ProfileScreen() {
     const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
     const scrollDistance = headerMaxHeight - headerMinHeight;
 
-    const TABS =[
+    const TABS = [
         { id: 'shelf', label: t('profile_tab_shelf', language), icon: 'list' },
         { id: 'routine', label: t('profile_tab_routine', language), icon: 'calendar-check' },
         { id: 'analysis', label: t('profile_tab_analysis', language), icon: 'chart-pie' },
@@ -1898,18 +1960,18 @@ export default function ProfileScreen() {
     // ========================================================================
     const [activeTab, setActiveTab] = useState('shelf');
     const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
-    const[addStepHandler, setAddStepHandler] = useState(null);
+    const [addStepHandler, setAddStepHandler] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     const [dismissedInsightIds, setDismissedInsightIds] = useState([]);
     const [cameraSheetVisible, setCameraSheetVisible] = useState(false);
-    
-    const[locationPermission, setLocationPermission] = useState('undetermined');
-    const[isPermissionModalVisible, setPermissionModalVisible] = useState(false);
+
+    const [locationPermission, setLocationPermission] = useState('undetermined');
+    const [isPermissionModalVisible, setPermissionModalVisible] = useState(false);
 
     const [analysisData, setAnalysisData] = useState(null);
     const [isAnalyzingProfile, setIsAnalyzingProfile] = useState(false);
 
-    const[weatherData, setWeatherData] = useState(null);
+    const [weatherData, setWeatherData] = useState(null);
     const [isAnalyzingWeather, setIsAnalyzingWeather] = useState(false);
     const [weatherErrorType, setWeatherErrorType] = useState(null);
 
@@ -1921,7 +1983,7 @@ export default function ProfileScreen() {
     const contentTranslate = useRef(new Animated.Value(0)).current;
 
     const analysisCache = useRef({ hash: '', data: null });
-    const ingredientsCache = useRef({ hash: '', data:[] });
+    const ingredientsCache = useRef({ hash: '', data: [] });
 
     const appState = useRef(AppState.currentState);
 
@@ -1931,7 +1993,7 @@ export default function ProfileScreen() {
         startX: Math.random() * width,
         duration: 8000 + Math.random() * 7000,
         delay: Math.random() * 5000
-    })),[]);
+    })), []);
 
     // ========================================================================
     // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
@@ -1970,7 +2032,7 @@ export default function ProfileScreen() {
         } finally {
             setIsAnalyzingProfile(false);
         }
-    },[savedProducts, userProfile]);
+    }, [savedProducts, userProfile]);
 
     // ========================================================================
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
@@ -2036,13 +2098,13 @@ export default function ProfileScreen() {
         } finally {
             setIsAnalyzingWeather(false);
         }
-    },[savedProducts, userProfile]);
+    }, [savedProducts, userProfile]);
 
     useEffect(() => {
         const backAction = () => {
             if (activeTab !== 'shelf') {
                 setActiveTab('shelf');
-                return true; 
+                return true;
             }
             return false;
         };
@@ -2057,7 +2119,7 @@ export default function ProfileScreen() {
     const runFullAnalysis = useCallback((isPullToRefresh = false) => {
         if (isPullToRefresh) {
             setRefreshing(true);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
         const profilePromise = runProfileAnalysis(isPullToRefresh);
@@ -2126,7 +2188,7 @@ export default function ProfileScreen() {
         }
     };
 
-    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange:[headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
+    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
     const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
     const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
     const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
@@ -2200,7 +2262,7 @@ export default function ProfileScreen() {
                         refreshing={refreshing}
                         onRefresh={() => runFullAnalysis(true)}
                         tintColor={C.accentGreen}
-                        colors={[C.accentGreen]} 
+                        colors={[C.accentGreen]}
                     />
                 }
             >
@@ -2213,6 +2275,7 @@ export default function ProfileScreen() {
                             onDelete={handleDelete}
                             onRefresh={() => runFullAnalysis(true)}
                             router={router}
+                            userProfile={userProfile}
                         />
                     )}
                     {activeTab === 'reminders' && <RemindersScreen />}
@@ -2271,8 +2334,8 @@ export default function ProfileScreen() {
 
             <NatureDock
                 activeTab={activeTab}
-                onTabChange={switchTab} 
-                navigation={router}     
+                onTabChange={switchTab}
+                navigation={router}
             />
             <AddStepModal
                 isVisible={isAddStepModalVisible}
@@ -2329,7 +2392,7 @@ const getStylesContent = (C) => ({
         paddingBottom: 10,
     },
     collapsedContainer: {
-        flexDirection: 'row', 
+        flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
@@ -2441,7 +2504,7 @@ const getStylesContent = (C) => ({
         borderRadius: 20,
     },
     productListItem: {
-        flexDirection: 'row', 
+        flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
         backgroundColor: C.card,
@@ -2457,7 +2520,7 @@ const getStylesContent = (C) => ({
     listItemContent: {
         flex: 1,
         paddingHorizontal: 12,
-        alignItems: 'flex-end', 
+        alignItems: 'flex-end',
     },
     listItemName: {
         fontFamily: 'Tajawal-Bold',
@@ -2568,7 +2631,7 @@ const getStylesContent = (C) => ({
         paddingRight: 5,
     },
     alertBox: {
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row-reverse',
         alignItems: 'center',
         padding: 15,
         borderRadius: 16,
@@ -2580,7 +2643,7 @@ const getStylesContent = (C) => ({
         flex: 1,
         fontFamily: 'Tajawal-Bold',
         fontSize: 13,
-        textAlign: 'right', 
+        textAlign: 'right',
         lineHeight: 20,
     },
     ingredientChip: {
@@ -2607,7 +2670,7 @@ const getStylesContent = (C) => ({
     },
     editIconBtn: {
         padding: 8,
-        backgroundColor: C.accentGreen + '1A', 
+        backgroundColor: C.accentGreen + '1A',
         borderRadius: 8,
         marginLeft: -12
     },
@@ -2629,7 +2692,7 @@ const getStylesContent = (C) => ({
         borderRadius: 12,
         paddingVertical: 10,
         paddingHorizontal: 15,
-        textAlign: 'center', 
+        textAlign: 'center',
     },
     editActionsRow: {
         flexDirection: 'row-reverse',
@@ -2642,7 +2705,7 @@ const getStylesContent = (C) => ({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'transparent', 
+        borderColor: 'transparent',
     },
     focusInsightCard: {
         borderRadius: 24,
@@ -2886,12 +2949,12 @@ const getStylesContent = (C) => ({
         marginTop: 6,
     },
     ingCategoryTag: {
-        backgroundColor: C.accentGreen + '1A', 
+        backgroundColor: C.accentGreen + '1A',
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: C.accentGreen + '33', 
+        borderColor: C.accentGreen + '33',
     },
     ingTagLabel: {
         fontFamily: 'Tajawal-Bold',
@@ -3127,7 +3190,7 @@ const getStylesContent = (C) => ({
         textAlign: 'right',
         fontSize: 13,
         marginTop: 8,
-        backgroundColor: C.accentGreen + '1A', 
+        backgroundColor: C.accentGreen + '1A',
         padding: 10,
         borderRadius: 10
     },
@@ -3230,7 +3293,7 @@ const getStylesContent = (C) => ({
         bottom: 0,
         left: 0,
         right: 0,
-        height: height * 0.85, 
+        height: height * 0.85,
         zIndex: 100,
         justifyContent: 'flex-end',
     },
@@ -3263,7 +3326,7 @@ const getStylesContent = (C) => ({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.15)',
-        marginBottom: 20, 
+        marginBottom: 20,
     },
     closeButtonText: {
         fontFamily: 'Tajawal-Bold',
@@ -3705,7 +3768,7 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Regular',
         fontSize: 14,
         color: C.textSecondary,
-        textAlign: 'right', 
+        textAlign: 'right',
         lineHeight: 24,
         marginBottom: 20,
     },
@@ -3724,7 +3787,7 @@ const getStylesContent = (C) => ({
     },
     centeredModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)', 
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 2000,
@@ -3751,10 +3814,10 @@ const getStylesContent = (C) => ({
         borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 15,
-        paddingRight: 45, 
+        paddingRight: 45,
         color: C.textPrimary,
         fontSize: 16,
-        textAlign: 'right', 
+        textAlign: 'right',
     },
     inputIcon: {
         position: 'absolute',
@@ -3764,7 +3827,7 @@ const getStylesContent = (C) => ({
     reorderItem: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        backgroundColor: C.background, 
+        backgroundColor: C.background,
         borderRadius: 14,
         padding: 14,
         marginBottom: 10,
@@ -3821,16 +3884,16 @@ const getStylesContent = (C) => ({
     },
     selectionItem: {
         width: '100%',
-        flexDirection: 'row-reverse', 
-        alignItems: 'center',         
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.05)',
-        backgroundColor: 'rgba(255,255,255,0.02)', 
+        backgroundColor: 'rgba(255,255,255,0.02)',
         borderRadius: 12,
-        marginBottom: 8, 
+        marginBottom: 8,
     },
     selectionIconBox: {
         width: 40,
@@ -3843,12 +3906,12 @@ const getStylesContent = (C) => ({
         borderColor: C.accentGreen + '40',
     },
     selectionItemText: {
-        flex: 1, 
+        flex: 1,
         fontFamily: 'Tajawal-Bold',
         fontSize: 14,
         color: C.textPrimary,
-        textAlign: 'right', 
-        marginHorizontal: 15, 
+        textAlign: 'right',
+        marginHorizontal: 15,
     },
     selectionActionBtn: {
         width: 32,
@@ -3859,15 +3922,15 @@ const getStylesContent = (C) => ({
         justifyContent: 'center',
     },
     selectionCardWrapper: {
-        backgroundColor: 'rgba(255,255,255,0.02)', 
+        backgroundColor: 'rgba(255,255,255,0.02)',
         borderRadius: 12,
         marginBottom: 8,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden', 
+        overflow: 'hidden',
     },
     selectionRow: {
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row-reverse',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 12,
@@ -3905,7 +3968,7 @@ const getStylesContent = (C) => ({
     },
     scoreBadgeText: {
         fontFamily: 'Tajawal-ExtraBold',
-        color: '#1A2D27', 
+        color: '#1A2D27',
         fontSize: 14
     },
     emptyStateCard: {
@@ -3916,7 +3979,7 @@ const getStylesContent = (C) => ({
         backgroundColor: C.card,
         borderWidth: 1,
         borderColor: C.accentGreen + '33',
-        overflow: 'hidden', 
+        overflow: 'hidden',
     },
     emptyStateIconContainer: {
         width: 80,
@@ -3954,7 +4017,7 @@ const getStylesContent = (C) => ({
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: 'rgba(251, 191, 36, 0.1)', 
+        backgroundColor: 'rgba(251, 191, 36, 0.1)',
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 20,
@@ -3980,7 +4043,7 @@ const getStylesContent = (C) => ({
         paddingVertical: 12,
         borderRadius: 14,
         borderWidth: 1,
-        width: '100%', 
+        width: '100%',
     },
     sheetDeleteBtn: {
         flexDirection: 'row-reverse',

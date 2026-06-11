@@ -84,8 +84,36 @@ const useDailyPresence = (user) => {
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
 export const useSilentUpdates = () => {
-  // We use the hook to listen to what the NATIVE side is doing
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // Avoid running OTA update checks in development/Expo Go
+    return;
+  }
+
   const { isUpdatePending } = Updates.useUpdates();
+  const isUpdatePendingRef = useRef(false);
+
+  useEffect(() => {
+    isUpdatePendingRef.current = isUpdatePending;
+    if (isUpdatePending) {
+      console.log('✅ OTA Update is pending and ready.');
+      if (AppState.currentState === 'background') {
+        console.log('🔄 App is in background. Reloading silently now.');
+        Updates.reloadAsync();
+      }
+    }
+  }, [isUpdatePending]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'background' && isUpdatePendingRef.current) {
+        console.log('🔄 App went to background. Reloading silently to apply OTA...');
+        Updates.reloadAsync();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, []);
 
   const logUpdateState = () => {
     console.log('🧾 OTA state', {
@@ -98,35 +126,23 @@ export const useSilentUpdates = () => {
   };
 
   useEffect(() => {
-    // Run an explicit check as a fallback, then apply immediately if available.
-    // This avoids waiting for a background event to trigger reload.
     const syncUpdate = async () => {
       try {
         logUpdateState();
         const result = await Updates.checkForUpdateAsync();
         if (result.isAvailable) {
           console.log('⬇️ OTA available. Downloading now...');
-          const fetched = await Updates.fetchUpdateAsync();
-          if (fetched.isNew) {
-            console.log('🔄 OTA downloaded. Reloading app to apply new JS...');
-            await Updates.reloadAsync();
-          }
+          await Updates.fetchUpdateAsync();
+          // We don't call reloadAsync() here.
+          // The isUpdatePending state will trigger and reload the app when it goes to the background.
         }
       } catch (e) {
-        console.log('OTA check failed:', e);
+        console.log('OTA check failed:', e.message || e);
       }
     };
 
     syncUpdate();
   }, []);
-
-  useEffect(() => {
-    // If the native 'ALWAYS' check found an update and finished downloading it...
-    if (isUpdatePending) {
-      console.log('✅ OTA Update is pending and ready. Reloading now.');
-      Updates.reloadAsync();
-    }
-  }, [isUpdatePending]);
 };
 
 // ============================================================================
