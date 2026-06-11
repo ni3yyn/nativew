@@ -60,6 +60,7 @@ const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
 const { width, height } = Dimensions.get('window');
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 let AdsConsent;
 try {
@@ -1852,10 +1853,8 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
     const innerRadius = radius - strokeWidth / 2;
     const circumference = 2 * Math.PI * innerRadius;
 
-    const [displayOffset, setDisplayOffset] = useState(circumference);
-    const [displayScore, setDisplayScore] = useState(0);
-
     const animatedValue = useRef(new Animated.Value(0)).current;
+    const textRef = useRef(null);
 
     useEffect(() => {
         animatedValue.setValue(0);
@@ -1864,15 +1863,15 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
             toValue: score,
             duration: 1200,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: false
+            useNativeDriver: false // SVG strokeDashoffset cannot be animated natively in standard RN
         });
 
         const listenerId = animatedValue.addListener(({ value }) => {
-            const maxVal = Math.min(Math.max(value, 0), 100);
-            const offset = circumference - (maxVal / 100) * circumference;
-
-            setDisplayOffset(offset);
-            setDisplayScore(Math.round(value));
+            if (textRef.current) {
+                textRef.current.setNativeProps({
+                    text: `${Math.round(value)}`
+                });
+            }
         });
 
         animation.start();
@@ -1882,6 +1881,11 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
             animation.stop();
         };
     }, [score, circumference]);
+
+    const strokeDashoffset = animatedValue.interpolate({
+        inputRange: [0, 100],
+        outputRange: [circumference, 0]
+    });
 
     return (
         <View style={{ width: radius * 2, height: radius * 2, alignItems: 'center', justifyContent: 'center' }}>
@@ -1894,28 +1898,32 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
                     fill="none"
                     strokeOpacity={0.3}
                 />
-                <Circle
+                <AnimatedCircle
                     cx={radius} cy={radius}
                     r={innerRadius}
                     stroke={color}
                     strokeWidth={strokeWidth}
                     fill="none"
                     strokeDasharray={`${circumference} ${circumference}`}
-                    strokeDashoffset={displayOffset}
+                    strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                 />
             </Svg>
 
             <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{
-                    fontFamily: 'Tajawal-ExtraBold',
-                    fontSize: 13,
-                    color: color,
-                    textAlign: 'center',
-                    paddingTop: 2
-                }}>
-                    {displayScore}
-                </Text>
+                <AnimatedTextInput
+                    ref={textRef}
+                    underlineColorAndroid="transparent"
+                    editable={false}
+                    value="0"
+                    style={{
+                        fontFamily: 'Tajawal-ExtraBold',
+                        fontSize: 13,
+                        color: color,
+                        textAlign: 'center',
+                        padding: 0,
+                    }}
+                />
             </View>
         </View>
     );

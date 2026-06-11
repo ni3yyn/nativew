@@ -390,7 +390,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.7.0';
+  const APP_VERSION = '1.8.0';
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();

@@ -129,6 +129,53 @@ function setupMockAds() {
 // ============================================================================
 //                       ANIMATION & UI COMPONENTS
 // ============================================================================
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+
+// ============================================================================
+//                       1. CUSTOM ANIMATED COMPONENTS
+// ============================================================================
+
+const ContentGlow = ({ size = 160 }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const animScale = useRef(new Animated.Value(0.9)).current;
+    const animOpacity = useRef(new Animated.Value(0.2)).current;
+    const animX = useRef(new Animated.Value(0)).current;
+    const animY = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.parallel([
+                Animated.sequence([
+                    Animated.timing(animScale, { toValue: 1.15, duration: 3000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(animScale, { toValue: 0.9, duration: 3000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+                ]),
+                Animated.sequence([
+                    Animated.timing(animOpacity, { toValue: 0.45, duration: 3000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(animOpacity, { toValue: 0.2, duration: 3000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+                ]),
+                Animated.sequence([
+                    Animated.timing(animX, { toValue: 1, duration: 4500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(animX, { toValue: -1, duration: 4500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+                ]),
+                Animated.sequence([
+                    Animated.timing(animY, { toValue: -1, duration: 4500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(animY, { toValue: 1, duration: 4500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+                ])
+            ])
+        ).start();
+    }, []);
+
+    const scale = animScale;
+    const opacity = animOpacity;
+    const translateY = animY.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
+    const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] });
+
+    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.accentGlow, transform: [{ translateY }, { translateX }, { scale }], opacity }} />);
+};
+
 const Spore = ({ size, startX, duration, delay }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
@@ -172,35 +219,64 @@ const StaggeredItem = ({ index, children, style }) => {
     return (<Animated.View style={[{ opacity: anim, transform: [{ translateY }] }, style]}>{children}</Animated.View>);
 };
 
-const ScoreRing = ({ score = 0, size = 160 }) => {
+const ScoreRing = React.memo(({ score = 0, size = 160 }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const animatedValue = useRef(new Animated.Value(0)).current;
+    const textRef = useRef(null);
     const r = (size / 2) - 10;
     const circ = 2 * Math.PI * r;
-    const [displayScore, setDisplayScore] = useState(0);
 
     useEffect(() => {
-        const listener = animatedValue.addListener(({ value }) => setDisplayScore(Math.round(value)));
-        Animated.timing(animatedValue, { toValue: score, duration: 1500, easing: Easing.out(Easing.exp), useNativeDriver: false }).start();
+        Animated.timing(animatedValue, { 
+            toValue: score, 
+            duration: 1500, 
+            easing: Easing.out(Easing.exp), 
+            useNativeDriver: false 
+        }).start();
+
+        const listener = animatedValue.addListener(({ value }) => {
+            if (textRef.current) {
+                textRef.current.setNativeProps({
+                    text: `${Math.round(value)}%`
+                });
+            }
+        });
+
         return () => animatedValue.removeListener(listener);
     }, [score]);
 
-    const strokeDashoffset = circ - ((displayScore / 100) * circ);
+    const strokeDashoffset = animatedValue.interpolate({
+        inputRange: [0, 100],
+        outputRange: [circ, 0],
+    });
+
     const ringColor = score >= 80 ? COLORS.success : score >= 65 ? COLORS.warning : COLORS.danger;
 
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
                 <Circle cx={size / 2} cy={size / 2} r={r} stroke={COLORS.textPrimary + '14'} strokeWidth="14" fill="none" />
-                <Circle cx={size / 2} cy={size / 2} r={r} stroke={ringColor} strokeWidth="14" fill="none" strokeDasharray={circ} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
+                <AnimatedCircle cx={size / 2} cy={size / 2} r={r} stroke={ringColor} strokeWidth="14" fill="none" strokeDasharray={circ} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
             </Svg>
             <View style={{ position: 'absolute', alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: size * 0.25, color: ringColor }}>{displayScore}%</Text>
+                <AnimatedTextInput
+                    ref={textRef}
+                    underlineColorAndroid="transparent"
+                    editable={false}
+                    value="0%"
+                    style={{
+                        fontFamily: 'Tajawal-ExtraBold',
+                        fontSize: size * 0.23,
+                        color: ringColor,
+                        textAlign: 'center',
+                        padding: 0,
+                    }}
+                />
             </View>
         </View>
     );
-};
+});
 
 const ConfidenceRing = ({ confidence }) => {
     const { colors } = useTheme();
@@ -264,7 +340,6 @@ const ConfidenceRing = ({ confidence }) => {
         </View>
     );
 };
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // --- IN FILE: oilguard.js ---
 
@@ -607,53 +682,51 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
     });
 
     return (
-        <StaggeredItem index={index}>
-            <Animated.View style={{ transform: [{ scale }], opacity }}>
-                <View intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
-                    <View style={styles.ingHeader}>
-                        <Text style={styles.ingName}>{ingredient.name}</Text>
-                        <View style={styles.ingTagsContainer}>
-                            {ingredient.functionalCategory && (
-                                <View style={[styles.ingTag, styles.ingFuncTag]}>
-                                    <Text style={styles.ingTagText}>{ingredient.functionalCategory}</Text>
-                                </View>
-                            )}
-                            {ingredient.chemicalType && (
-                                <View style={[styles.ingTag, styles.ingChemTag]}>
-                                    <Text style={styles.ingTagText}>{ingredient.chemicalType}</Text>
-                                </View>
-                            )}
-                        </View>
+        <Animated.View style={{ transform: [{ scale }], opacity }}>
+            <View intensity={30} tint="extraLight" style={styles.ingCardBase} renderToHardwareTextureAndroid>
+                <View style={styles.ingHeader}>
+                    <Text style={styles.ingName}>{ingredient.name}</Text>
+                    <View style={styles.ingTagsContainer}>
+                        {ingredient.functionalCategory && (
+                            <View style={[styles.ingTag, styles.ingFuncTag]}>
+                                <Text style={styles.ingTagText}>{ingredient.functionalCategory}</Text>
+                            </View>
+                        )}
+                        {ingredient.chemicalType && (
+                            <View style={[styles.ingTag, styles.ingChemTag]}>
+                                <Text style={styles.ingTagText}>{ingredient.chemicalType}</Text>
+                            </View>
+                        )}
                     </View>
-
-                    {benefits.length > 0 && (
-                        <View style={styles.ingBenefitsContainer}>
-                            {benefits.map(benefit => (
-                                <View key={benefit} style={styles.ingBenefitChip}>
-                                    <Text style={styles.ingBenefitText}>{benefit}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    {ingredient.warnings && ingredient.warnings.length > 0 && (
-                        <>
-                            <View style={styles.ingDivider} />
-                            {ingredient.warnings.map((warning, idx) => {
-                                const style = getWarningStyle(warning.level);
-                                return (
-                                    <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
-                                        <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
-                                        {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
-                                        <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
-                                    </View>
-                                );
-                            })}
-                        </>
-                    )}
                 </View>
-            </Animated.View>
-        </StaggeredItem>
+
+                {benefits.length > 0 && (
+                    <View style={styles.ingBenefitsContainer}>
+                        {benefits.map(benefit => (
+                            <View key={benefit} style={styles.ingBenefitChip}>
+                                <Text style={styles.ingBenefitText}>{benefit}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {ingredient.warnings && ingredient.warnings.length > 0 && (
+                    <>
+                        <View style={styles.ingDivider} />
+                        {ingredient.warnings.map((warning, idx) => {
+                            const style = getWarningStyle(warning.level);
+                            return (
+                                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
+                                    <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
+                                    {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
+                                    <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
+                                </View>
+                            );
+                        })}
+                    </>
+                )}
+            </View>
+        </Animated.View>
     );
 };
 
@@ -1161,12 +1234,12 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
 });
 
 // --- COMPLEX GAUGE COMPONENT (Replaces simple ScoreRing) ---
-const ComplexDashboardGauge = ({ score, size = 220 }) => {
+const ComplexDashboardGauge = React.memo(({ score, size = 220 }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const animatedScore = useRef(new Animated.Value(0)).current;
-    const [displayScore, setDisplayScore] = useState(0);
+    const textRef = useRef(null);
 
     const center = size / 2;
     const radius = size * 0.38; // Radius of main ring
@@ -1179,16 +1252,24 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
         return COLORS.danger;
     };
 
-    const activeColor = getColor(displayScore);
+    const activeColor = getColor(score);
 
     useEffect(() => {
-        const listener = animatedScore.addListener(({ value }) => setDisplayScore(Math.round(value)));
         Animated.timing(animatedScore, {
             toValue: score,
             duration: 2000,
             easing: Easing.bezier(0.25, 1, 0.5, 1),
-            useNativeDriver: false
+            useNativeDriver: false // SVG strokeDashoffset cannot be animated natively in standard RN
         }).start();
+
+        const listener = animatedScore.addListener(({ value }) => {
+            if (textRef.current) {
+                textRef.current.setNativeProps({
+                    text: `${Math.round(value)}`
+                });
+            }
+        });
+
         return () => animatedScore.removeListener(listener);
     }, [score]);
 
@@ -1231,7 +1312,6 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
     }, []);
 
     const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-    const spinReverse = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
 
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -1265,9 +1345,19 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
 
             {/* 4. Center Number */}
             <View style={styles.absoluteCenter}>
-                <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 52, color: COLORS.textPrimary }}>
-                    {displayScore}
-                </Text>
+                <AnimatedTextInput
+                    ref={textRef}
+                    underlineColorAndroid="transparent"
+                    editable={false}
+                    value="0"
+                    style={{
+                        fontFamily: 'Tajawal-ExtraBold',
+                        fontSize: 52,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                        padding: 0,
+                    }}
+                />
                 <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: activeColor, letterSpacing: 2 }}>
                     {t('brand_name')}
                 </Text>
@@ -1275,25 +1365,27 @@ const ComplexDashboardGauge = ({ score, size = 220 }) => {
         </View>
 
     );
-};
+});
 
 // --- STAT BAR COMPONENT ---
-const StatBar = ({ label, score, color, icon }) => {
+const StatBar = React.memo(({ label, score, color, icon }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-    const widthAnim = useRef(new Animated.Value(0)).current;
+    const [barWidth, setBarWidth] = useState(0);
+    const transX = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.timing(widthAnim, {
-            toValue: score,
-            duration: 1500,
-            delay: 500,
-            useNativeDriver: false
-        }).start();
-    }, [score]);
-
-    const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+        if (barWidth > 0) {
+            const targetX = -barWidth + (score / 100) * barWidth;
+            Animated.timing(transX, {
+                toValue: targetX,
+                duration: 1500,
+                delay: 500,
+                useNativeDriver: true // GPU-accelerated translation
+            }).start();
+        }
+    }, [score, barWidth]);
 
     return (
         <View style={styles.statBox}>
@@ -1304,30 +1396,42 @@ const StatBar = ({ label, score, color, icon }) => {
                     <FontAwesome5 name={icon} size={10} color={COLORS.textDim} />
                 </View>
             </View>
-            <View style={styles.progressBarBg}>
-                <Animated.View style={[styles.progressBarFill, { width: widthPercent, backgroundColor: color }]} />
+            <View 
+                style={[styles.progressBarBg, { overflow: 'hidden' }]}
+                onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+            >
+                <Animated.View style={[
+                    styles.progressBarFill, 
+                    { 
+                        width: '100%', 
+                        backgroundColor: color,
+                        transform: [{ translateX: transX }] 
+                    }
+                ]} />
             </View>
         </View>
     );
-};
+});
 
-const GlassPillar = ({ label, score, color, icon }) => {
+const GlassPillar = React.memo(({ label, score, color, icon }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-    const widthAnim = useRef(new Animated.Value(0)).current;
+    const [barWidth, setBarWidth] = useState(0);
+    const transX = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.timing(widthAnim, {
-            toValue: score,
-            duration: 1200,
-            delay: 300,
-            easing: Easing.out(Easing.cubic), // Smooth deceleration
-            useNativeDriver: false
-        }).start();
-    }, [score]);
-
-    const widthPercent = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+        if (barWidth > 0) {
+            const targetX = -barWidth + (score / 100) * barWidth;
+            Animated.timing(transX, {
+                toValue: targetX,
+                duration: 1200,
+                delay: 300,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true // GPU-accelerated translation
+            }).start();
+        }
+    }, [score, barWidth]);
 
     return (
         <View style={styles.pillarContainer}>
@@ -1346,13 +1450,17 @@ const GlassPillar = ({ label, score, color, icon }) => {
             </View>
 
             {/* Progress Bar */}
-            <View style={styles.pillarTrack}>
+            <View 
+                style={[styles.pillarTrack, { overflow: 'hidden' }]}
+                onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+            >
                 <Animated.View
                     style={[
                         styles.pillarFill,
                         {
-                            width: widthPercent,
+                            width: '100%',
                             backgroundColor: color,
+                            transform: [{ translateX: transX }],
                             // Dynamic shadow color for glow effect
                             shadowColor: color
                         }
@@ -1361,7 +1469,7 @@ const GlassPillar = ({ label, score, color, icon }) => {
             </View>
         </View>
     );
-};
+});
 
 // --- NEW SPLIT MATCH COMPONENT ---
 const MatchBreakdown = ({ reasons = [] }) => {
@@ -2920,7 +3028,7 @@ export default function OilGuardEngine() {
                                 renderItem={({ item, index }) => (
                                     <IngredientDetailCard ingredient={item} index={index} scrollX={scrollX} />
                                 )}
-                                keyExtractor={item => item.id || `ing-${index}`} // Safe Key
+                                keyExtractor={(item, idx) => item.id || `ing-${idx}`} // Safe Key
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
                                 snapToInterval={ITEM_WIDTH}
