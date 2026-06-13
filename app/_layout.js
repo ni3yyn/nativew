@@ -83,37 +83,19 @@ const useDailyPresence = (user) => {
 // ============================================================================
 // 1. HELPER: SILENT UPDATE HOOK (For JS/Design/Ad changes)
 // ============================================================================
+
+// Shared ref so the ad hook can signal "don't reload right now"
+const adIsVisibleRef = { current: false };
+
 export const useSilentUpdates = () => {
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    // Avoid running OTA update checks in development/Expo Go
     return;
   }
 
   const { isUpdatePending } = Updates.useUpdates();
   const isUpdatePendingRef = useRef(false);
-
-  useEffect(() => {
-    isUpdatePendingRef.current = isUpdatePending;
-    if (isUpdatePending) {
-      console.log('✅ OTA Update is pending and ready.');
-      if (AppState.currentState === 'background') {
-        console.log('🔄 App is in background. Reloading silently now.');
-        Updates.reloadAsync();
-      }
-    }
-  }, [isUpdatePending]);
-
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState) => {
-      if (nextAppState === 'background' && isUpdatePendingRef.current) {
-        console.log('🔄 App went to background. Reloading silently to apply OTA...');
-        Updates.reloadAsync();
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription.remove();
-  }, []);
+  const reloadTimeoutRef = useRef(null);
+  const hasReloadedRef = useRef(false);
 
   const logUpdateState = () => {
     console.log('🧾 OTA state', {
@@ -125,6 +107,52 @@ export const useSilentUpdates = () => {
     });
   };
 
+  const safeReload = () => {
+    if (hasReloadedRef.current) return;
+    if (adIsVisibleRef.current) {
+      console.log('⏸️ OTA reload skipped — ad overlay is visible.');
+      return;
+    }
+    hasReloadedRef.current = true;
+    console.log('🔄 Applying OTA update now...');
+    Updates.reloadAsync();
+  };
+
+  useEffect(() => {
+    isUpdatePendingRef.current = isUpdatePending;
+    if (isUpdatePending) {
+      console.log('✅ OTA Update is pending and ready.');
+    }
+  }, [isUpdatePending]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      // Clear any pending debounce on state change
+      if (reloadTimeoutRef.current) {
+        clearTimeout(reloadTimeoutRef.current);
+        reloadTimeoutRef.current = null;
+      }
+
+      if (nextAppState === 'background' && isUpdatePendingRef.current) {
+        // Debounce: wait 1.5s to confirm it's a real background (not an ad overlay flicker)
+        reloadTimeoutRef.current = setTimeout(() => {
+          if (AppState.currentState === 'background') {
+            console.log('🔄 App confirmed in background for 1.5s. Reloading for OTA...');
+            safeReload();
+          } else {
+            console.log('⏸️ OTA reload cancelled — app returned to foreground (was ad overlay).');
+          }
+        }, 1500);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+      if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const syncUpdate = async () => {
       try {
@@ -133,8 +161,9 @@ export const useSilentUpdates = () => {
         if (result.isAvailable) {
           console.log('⬇️ OTA available. Downloading now...');
           await Updates.fetchUpdateAsync();
-          // We don't call reloadAsync() here.
-          // The isUpdatePending state will trigger and reload the app when it goes to the background.
+          console.log('✅ OTA downloaded. Will apply on next genuine background transition.');
+        } else {
+          console.log('👍 App is up to date. No OTA available.');
         }
       } catch (e) {
         console.log('OTA check failed:', e.message || e);
@@ -169,6 +198,7 @@ const useAppOpenAd = () => {
       const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
         console.log('App Open Ad Loaded');
         if (isFirstLaunch) {
+          adIsVisibleRef.current = true;
           appOpenAd.show();
           isFirstLaunch = false;
         }
@@ -177,12 +207,14 @@ const useAppOpenAd = () => {
       // 2. When closed, SILENTLY load the next ad so it's ready for later
       const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
         console.log('App Open Ad Closed - Preloading next');
+        adIsVisibleRef.current = false;
         appOpenAd.load();
         // Notice we do NOT show it here.
       });
 
       const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
         console.log('App Open Ad Error:', error);
+        adIsVisibleRef.current = false;
       });
 
       // 3. Initial Load
@@ -193,12 +225,14 @@ const useAppOpenAd = () => {
         if (nextAppState === 'active') {
           try {
             if (appOpenAd.loaded) {
+              adIsVisibleRef.current = true;
               appOpenAd.show();
             } else {
               appOpenAd.load();
             }
           } catch (error) {
             console.log("Error showing App Open Ad on resume", error);
+            adIsVisibleRef.current = false;
           }
         }
       });
@@ -391,6 +425,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   // ➤ CURRENT VERSION (Must match app.json)
   const APP_VERSION = '1.8.0';
+
+  // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
+  console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
@@ -625,6 +662,11 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   return (
     <View style={{ flex: 1, backgroundColor: '#1A2D27' }}>
       <StatusBar style="light" translucent={true} />
+
+      {/* 🔴 TEMPORARY OTA TEST BANNER — REMOVE AFTER TESTING */}
+      <View style={{ backgroundColor: '#fbbf24', paddingTop: 50, paddingBottom: 10, alignItems: 'center', zIndex: 9999 }}>
+        <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 16 }}>🟢 OTA v2 APPLIED — {new Date().toLocaleDateString()}</Text>
+      </View>
 
       <AppIntro visible={showAppIntro} onClose={() => setShowAppIntro(false)} />
 
