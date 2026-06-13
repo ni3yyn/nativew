@@ -50,12 +50,12 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress }) => {
                         <View style={styles.titleRow}>
                             <FontAwesome5 name="magic" size={15} color={C.accentGreen} />
                             <Text style={[styles.cardTitle, { color: C.textPrimary }]}>
-                                {isRTL ? 'الكيمياء الحيوية والانسجام' : 'Biochemistry & Alignment'}
+                                {isRTL ? 'تفاعلات الروتين' : 'Biochemistry & Alignment'}
                             </Text>
                         </View>
                         <View style={{ backgroundColor: C.accentGreen + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                             <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: C.accentGreen }}>
-                                {isRTL ? 'تحليل الساعة والتركيب' : 'Timing & Synergy'}
+                                {isRTL ? 'التوقيت' : 'Timing & Synergy'}
                             </Text>
                         </View>
                     </View>
@@ -78,7 +78,7 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress }) => {
                                             {circadianScore >= 90 ? (isRTL ? 'مثالي' : 'Perfect') : (circadianScore >= 70 ? (isRTL ? 'جيد' : 'Good') : (isRTL ? 'يحتاج تعديل' : 'Alert'))}
                                         </Text>
                                         <Text style={styles.metricDesc} numberOfLines={2}>
-                                            {circadian.misplacements?.length > 0 
+                                            {circadian.misplacements?.length > 0
                                                 ? (isRTL ? `وجدنا ${circadian.misplacements.length} مكونات في غير وقتها` : `${circadian.misplacements.length} items mismatched`)
                                                 : (isRTL ? 'كل المكونات في وقتها المثالي!' : 'Timing is fully optimized')}
                                         </Text>
@@ -115,8 +115,8 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress }) => {
                                             {netSynergy >= 15 ? (isRTL ? 'انسجام ممتاز' : 'Elite Synergy') : (netSynergy >= 0 ? (isRTL ? 'متناسق' : 'Synergized') : (isRTL ? 'تعارض كيميائي' : 'Conflict'))}
                                         </Text>
                                         <Text style={styles.metricDesc} numberOfLines={2}>
-                                            {isRTL 
-                                                ? `تفاعلات: +${synergy.positive?.length || 0} إيجابي ، -${synergy.negative?.length || 0} سلبي` 
+                                            {isRTL
+                                                ? `تفاعلات: +${synergy.positive?.length || 0} إيجابي ، -${synergy.negative?.length || 0} سلبي`
                                                 : `Interactions: +${synergy.positive?.length || 0} pos, -${synergy.negative?.length || 0} neg`}
                                         </Text>
                                     </View>
@@ -220,7 +220,7 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
     const styles = useMemo(() => createStyles(C, isRTL), [C, isRTL]);
     const slideAnim = useRef(new Animated.Value(height)).current;
     const [activeTab, setActiveTab] = useState('circadian'); // 'circadian' | 'synergy'
-    
+
     const netSynergy = synergy?.netScore ?? 0;
     const synergyColor = netSynergy >= 10 ? C.success : (netSynergy >= 0 ? C.accentGreen : C.warning);
 
@@ -243,14 +243,14 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
             <View style={styles.backdrop}>
                 <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
                 <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-                    
+
                     {/* Sheet Handle */}
                     <View style={styles.dragHandleContainer}>
                         <View style={styles.dragHandle} />
                     </View>
 
                     <View style={styles.tabsRow}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.tabButton, activeTab === 'circadian' && styles.tabActiveButton]}
                             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('circadian'); }}
                             activeOpacity={0.7}
@@ -261,7 +261,7 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
                             </Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.tabButton, activeTab === 'synergy' && styles.tabActiveButton]}
                             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('synergy'); }}
                             activeOpacity={0.7}
@@ -274,7 +274,7 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
                     </View>
 
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        
+
                         {/* ==================== TAB 1: CIRCADIAN BIOLOGY ==================== */}
                         {activeTab === 'circadian' && (
                             <View style={{ gap: 20 }}>
@@ -320,11 +320,11 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
                                                 const iconColor = type === 'success' ? C.success : (type === 'warning' ? C.warning : C.accentGreen);
                                                 return (
                                                     <View key={idx} style={styles.explanationBulletRow}>
-                                                        <MaterialCommunityIcons 
-                                                            name={iconName} 
-                                                            size={16} 
-                                                            color={iconColor} 
-                                                            style={isRTL ? { marginLeft: 8, marginTop: 2 } : { marginRight: 8, marginTop: 2 }} 
+                                                        <MaterialCommunityIcons
+                                                            name={iconName}
+                                                            size={16}
+                                                            color={iconColor}
+                                                            style={isRTL ? { marginLeft: 8, marginTop: 2 } : { marginRight: 8, marginTop: 2 }}
                                                         />
                                                         <Text style={[styles.explanationText, { color: C.textPrimary }]}>{exp}</Text>
                                                     </View>
@@ -357,8 +357,8 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
                                                         </Text>
                                                     </View>
                                                     <Text style={styles.alertDetailText}>
-                                                        {isRTL 
-                                                            ? `موجود في الروتين [${item.currentTime === 'AM' ? 'الصباحي' : 'المسائي'}] ، بينما وقته المثالي هو [${item.optimalTime === 'AM' ? 'الصباحي' : 'المسائي'}].` 
+                                                        {isRTL
+                                                            ? `موجود في الروتين [${item.currentTime === 'AM' ? 'الصباحي' : 'المسائي'}] ، بينما وقته المثالي هو [${item.optimalTime === 'AM' ? 'الصباحي' : 'المسائي'}].`
                                                             : `Placed in [${item.currentTime}], optimal timing is [${item.optimalTime}].`}
                                                     </Text>
                                                     {item.whyAr && (
@@ -376,7 +376,7 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
                                 <View style={styles.infoBox}>
                                     <Text style={styles.infoTitle}>{isRTL ? 'لماذا نهتم بالوقت؟' : 'Why timing matters?'}</Text>
                                     <Text style={styles.infoText}>
-                                        {isRTL 
+                                        {isRTL
                                             ? 'تختلف وظائف بشرتك بين النهار والليل؛ ففي النهار تركز البشرة على الحماية والدفاع ضد الأشعة والملوثات (لذا نستخدم مضادات الأكسدة مثل فيتامين سي). أما في الليل، فتنشط عمليات الإصلاح الخلوي والتجديد (لذا يفضل استخدام المقشرات والريتينول في الليل لتجنب حساسية الشمس ومزامنة عملية الإصلاح).'
                                             : 'Your skin functions shift between day and night. Morning is for defense against UV and pollution (ideal for Vitamin C/antioxidants). Evening is for cellular repair and renewal (ideal for exfoliants and retinol to prevent sun damage and synchronize with growth hormones).'}
                                     </Text>
@@ -500,26 +500,26 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     sheet: { backgroundColor: C.card, height: height * 0.82, borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
     dragHandleContainer: { alignItems: 'center', paddingVertical: 12, width: '100%' },
     dragHandle: { width: 45, height: 4, backgroundColor: C.border, borderRadius: 10 },
-    tabsRow: { 
-        flexDirection: isRTL ? 'row-reverse' : 'row', 
+    tabsRow: {
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         backgroundColor: C.inputBg || 'rgba(0,0,0,0.2)',
-        marginHorizontal: 20, 
+        marginHorizontal: 20,
         marginVertical: 15,
-        borderRadius: 16, 
+        borderRadius: 16,
         padding: 5,
         borderWidth: 1,
         borderColor: C.border + '20'
     },
-    tabButton: { 
-        flex: 1, 
-        flexDirection: isRTL ? 'row-reverse' : 'row', 
-        paddingVertical: 12, 
-        alignItems: 'center', 
-        justifyContent: 'center', 
+    tabButton: {
+        flex: 1,
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
         borderRadius: 12,
         gap: 8
     },
-    tabActiveButton: { 
+    tabActiveButton: {
         backgroundColor: C.card,
         borderWidth: 1,
         borderColor: C.border,

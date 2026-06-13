@@ -663,10 +663,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     <View style={{ flex: 1, backgroundColor: '#1A2D27' }}>
       <StatusBar style="light" translucent={true} />
 
-      {/* 🔴 TEMPORARY OTA TEST BANNER — REMOVE AFTER TESTING */}
-      <View style={{ backgroundColor: '#fbbf24', paddingTop: 50, paddingBottom: 10, alignItems: 'center', zIndex: 9999 }}>
-        <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 16 }}>🟢 OTA v2 APPLIED — {new Date().toLocaleDateString()}</Text>
-      </View>
 
       <AppIntro visible={showAppIntro} onClose={() => setShowAppIntro(false)} />
 
