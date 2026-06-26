@@ -424,7 +424,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.8.0';
+  const APP_VERSION = '1.8.1';
 
   // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
   console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');
