@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
     View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet,
-    Dimensions, Linking, Animated, Easing, Pressable, Image
+    Dimensions, Linking, Animated, Easing, Pressable, Image, Platform
 } from 'react-native';
 import { FontAwesome5, MaterialIcons, Ionicons, MaterialCommunityIcons as CommunityIcons } from '@expo/vector-icons';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
@@ -141,6 +141,31 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
 
     const language = useCurrentLanguage();
 
+    // Animations - matching CatalogDetailModal pattern
+    const animState = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) {
+            Animated.spring(animState, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [visible]);
+
+    const handleClose = () => {
+        Animated.timing(animState, {
+            toValue: 0,
+            duration: 300,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+        }).start(() => {
+            onClose();
+        });
+    };
+
     if (!item) return null;
 
     const toggleIngredients = () => {
@@ -172,11 +197,27 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
     const validClaims = mResults.filter(r => r.status.includes('✅') || r.status.includes('🌿') || r.status.includes('معتبرة')).length;
     const marketingScore = mResults.length > 0 ? Math.round((validClaims / mResults.length) * 100) : 100;
 
+    const overlayOpacity = animState.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+    const modalTranslateY = animState.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+
     return (
-        <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-            <View style={s.modalOverlay}>
-                <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
-                <View style={s.sheet}>
+        <Modal 
+            visible={visible} 
+            transparent 
+            animationType="none" 
+            onRequestClose={handleClose}
+            statusBarTranslucent
+        >
+            <Animated.View style={[s.modalOverlay, { opacity: overlayOpacity }]}>
+                <Pressable onPress={handleClose} style={StyleSheet.absoluteFill} />
+                <Animated.View 
+                    style={[
+                        s.sheet, 
+                        { 
+                            transform: [{ translateY: modalTranslateY }] 
+                        }
+                    ]}
+                >
                     <View style={s.dragHandle} />
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
@@ -315,8 +356,8 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                             <FontAwesome5 name="shopping-bag" size={16} color={COLORS.background} />
                         </TouchableOpacity>
                     </View>
-                </View>
-            </View>
+                </Animated.View>
+            </Animated.View>
 
             <FullImageViewer visible={isViewerVisible} imageUrl={item.image} onClose={() => setIsViewerVisible(false)} />
         </Modal>
@@ -324,9 +365,9 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
 };
 
 const createStyles = (COLORS) => StyleSheet.create({
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
-    sheet: { backgroundColor: COLORS.background, height: height * 0.9, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderWidth: 1, borderColor: COLORS.border },
-    dragHandle: { width: 45, height: 5, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', borderRadius: 10, marginVertical: 18 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(5, 10, 15, 0.85)', justifyContent: 'flex-end' },
+    sheet: { backgroundColor: COLORS.background, height: height * 0.93, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+    dragHandle: { width: 55, height: 6, backgroundColor: COLORS.textDim + '30', alignSelf: 'center', borderRadius: 10, marginVertical: 18 },
     scrollContent: { paddingHorizontal: 22 },
 
     // Header UI

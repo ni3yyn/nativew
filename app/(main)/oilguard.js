@@ -345,7 +345,7 @@ const ConfidenceRing = ({ confidence }) => {
 
 // --- IN FILE: oilguard.js ---
 
-const MarketingClaimsSection = ({ results }) => {
+const MarketingClaimsSection = ({ results, style }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -518,7 +518,7 @@ const MarketingClaimsSection = ({ results }) => {
     const scoreColor = score >= 70 ? COLORS.success : (score >= 40 ? COLORS.warning : COLORS.danger);
 
     return (
-        <View style={styles.claimsContainer}>
+        <View style={[styles.claimsContainer, style]}>
             <View style={styles.claimsHeader}>
                 <View>
                     <Text style={styles.claimsTitle}>{t('comp_claims_title', useCurrentLanguage())}</Text>
@@ -1315,12 +1315,17 @@ const ComplexDashboardGauge = React.memo(({ score, size = 220 }) => {
 
     return (
         <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-            {/* 1. Outer Tech Ring (Spinning Slow) */}
-            <Animated.View style={{ position: 'absolute', transform: [{ rotate: spin }] }}>
-                <Svg width={size} height={size}>
-                    <Circle cx={center} cy={center} r={size * 0.48} stroke={COLORS.accentGreen + '66'} strokeWidth="1" strokeDasharray="5, 10" fill="none" />
-                </Svg>
-            </Animated.View>
+            {/* 1. Outer Tech Ring (Spinning Slow) - Optimized to native View to avoid SVG rasterization overhead */}
+            <Animated.View style={{
+                position: 'absolute',
+                width: size * 0.96,
+                height: size * 0.96,
+                borderRadius: (size * 0.96) / 2,
+                borderWidth: 1,
+                borderColor: COLORS.accentGreen + '66',
+                borderStyle: 'dashed',
+                transform: [{ rotate: spin }]
+            }} />
 
             {/* 3. Main Gauge Track */}
             <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
@@ -1476,6 +1481,7 @@ const MatchBreakdown = ({ reasons = [] }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
 
     if (!reasons || reasons.length === 0) return null;
 
@@ -1507,7 +1513,7 @@ const MatchBreakdown = ({ reasons = [] }) => {
                 <View style={styles.matchHeaderIcon}>
                     <FontAwesome5 name="user-cog" size={12} color={COLORS.textPrimary} />
                 </View>
-                <Text style={styles.matchHeaderTitle}>{t('oilguard_personal_analysis', useCurrentLanguage())}</Text>
+                <Text style={styles.matchHeaderTitle}>{t('oilguard_personal_analysis', language)}</Text>
             </View>
             <View style={styles.matchBody}>
                 {reasons.map((item, i) => {
@@ -1685,22 +1691,12 @@ export default function OilGuardEngine() {
 
     const [hasShownIntroAd, setHasShownIntroAd] = useState(false);
 
-    const [step, setStep] = useState(isAutoStart ? 2 : 0); // بناء عليه نحدد الخطوة
-    const [loading, setLoading] = useState(false);
-    const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+    const [step, setStep] = useState(isAutoStart ? 3 : 0); // Start at loading (step 3) for catalog AI parse
+    const [loading, setLoading] = useState(isAutoStart);
+    const [isGeminiLoading, setIsGeminiLoading] = useState(isAutoStart);
     const [ocrText, setOcrText] = useState('');
     const [manualIngredients, setManualIngredients] = useState('');
-    const [preProcessedIngredients, setPreProcessedIngredients] = useState(() => {
-        if (isAutoStart && params?.ingredients) {
-            return params.ingredients.split(',').map(i => i.trim()).filter(Boolean).map((name, index) => ({
-                id: `temp-${index}`,
-                name: name,
-                functionalCategory: 'تم الجلب من الكتالوج',
-                chemicalType: ''
-            }));
-        }
-        return [];
-    });
+    const [preProcessedIngredients, setPreProcessedIngredients] = useState([]);
     const [productType, setProductType] = useState(params?.category || 'other'); const [selectedClaims, setSelectedClaims] = useState(() => {
         if (isAutoStart && params?.marketingClaims) {
             try {
@@ -1737,6 +1733,7 @@ export default function OilGuardEngine() {
     const [recError, setRecError] = useState(false); // New state to track if search found nothing
     const [selectedRec, setSelectedRec] = useState(null);
     const [isDetailVisible, setDetailVisible] = useState(false);
+    const [hasFetchedRec, setHasFetchedRec] = useState(false);
 
     const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -1758,7 +1755,7 @@ export default function OilGuardEngine() {
     const loadingTextOpacityAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(0)).current;
 
-    const particles = useMemo(() => [...Array(15)].map((_, i) => ({ id: i, size: Math.random() * 5 + 3, startX: Math.random() * width, duration: 8000 + Math.random() * 7000, delay: Math.random() * 5000 })), []);
+    const particles = useMemo(() => [...Array(6)].map((_, i) => ({ id: i, size: Math.random() * 5 + 3, startX: Math.random() * width, duration: 8000 + Math.random() * 7000, delay: Math.random() * 5000 })), []);
 
     const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
     const fuse = useMemo(() => new Fuse(claimsForType, {
@@ -1891,6 +1888,59 @@ export default function OilGuardEngine() {
         console.log("🔄 Initial Ad Request...");
         load();
     }, []);
+
+    // 2b. Automatically parse catalog ingredients via AI on mount if isAutoStart is true
+    useEffect(() => {
+        if (isAutoStart && params?.ingredients) {
+            const parseCatalogIngredientsWithAI = async () => {
+                try {
+                    console.log("🤖 [OilGuard] Parsing catalog ingredients with AI:", params.ingredients);
+                    const response = await fetch(VERCEL_PARSE_TEXT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: params.ingredients }),
+                    });
+                    
+                    if (!response.ok) throw new Error("AI parsing request failed");
+                    const responseData = await response.json();
+                    console.log("✅ [OilGuard] AI Parse result for catalog:", JSON.stringify(responseData, null, 2));
+                    
+                    const jsonResponse = responseData.result;
+                    const rawList = jsonResponse.ingredients_list || [];
+                    const { ingredients } = await extractIngredientsFromAIText(rawList, language);
+                    
+                    setOcrText(rawList.join('\n'));
+                    setPreProcessedIngredients(ingredients);
+                    
+                    if (jsonResponse.detected_type) {
+                        setProductType(jsonResponse.detected_type);
+                    }
+                    
+                    // Stop loading and transition to step 2 (Claims Selection)
+                    setIsGeminiLoading(false);
+                    setLoading(false);
+                    changeStep(2);
+                } catch (error) {
+                    console.warn("⚠️ [OilGuard] AI parse failed for catalog. Falling back to direct matching:", error);
+                    // Fallback: Parse ingredients using direct split
+                    const fallbackList = params.ingredients.split(',').map(i => i.trim()).filter(Boolean);
+                    const simpleIngredients = fallbackList.map((name, index) => ({
+                        id: `temp-${index}`,
+                        name: name,
+                        functionalCategory: 'تم الجلب من الكتالوج',
+                        chemicalType: ''
+                    }));
+                    setPreProcessedIngredients(simpleIngredients);
+                    
+                    setIsGeminiLoading(false);
+                    setLoading(false);
+                    changeStep(2);
+                }
+            };
+            
+            parseCatalogIngredientsWithAI();
+        }
+    }, [isAutoStart, params?.ingredients, changeStep]);
 
     // 3. Reload Ad after it closes
     useEffect(() => {
@@ -2175,10 +2225,14 @@ export default function OilGuardEngine() {
 
     const fetchVerifiedRecommendation = async (analysis) => {
         // 1. Don't search if the product is already excellent (88+)
-        if (analysis.oilGuardScore >= 88 && analysis.personalMatch?.status === 'good') return;
+        if (analysis.oilGuardScore >= 88 && analysis.personalMatch?.status === 'good') {
+            setHasFetchedRec(true);
+            return;
+        }
 
         setIsVerifiedLoading(true);
         setVerifiedRec(null);
+        setHasFetchedRec(false);
 
         try {
             const response = await fetch("https://oilguard-backend.vercel.app/api/db-recommend.js", {
@@ -2212,14 +2266,23 @@ export default function OilGuardEngine() {
             console.warn("Recs failed:", e.message);
         } finally {
             setIsVerifiedLoading(false);
+            setHasFetchedRec(true);
         }
     };
 
-    // Update UseEffect to ensure it fires
+    // Update UseEffect to ensure it fires - DEFERRED TO PREVENT TRANSITION LAG
     useEffect(() => {
         if (step === 4 && finalAnalysis) {
-            console.log("✅ [DEBUG] Step 4 reached. Triggering fetch...");
-            fetchVerifiedRecommendation(finalAnalysis);
+            console.log("✅ [DEBUG] Step 4 reached. Deferring fetch to avoid transition lag...");
+            setVerifiedRec(null);
+            setIsVerifiedLoading(false);
+            setHasFetchedRec(false);
+
+            const timer = setTimeout(() => {
+                fetchVerifiedRecommendation(finalAnalysis);
+            }, 600); // 600ms delay lets the entry animation (300ms) complete fully first
+
+            return () => clearTimeout(timer);
         }
     }, [step, finalAnalysis]);
 
@@ -2454,6 +2517,9 @@ export default function OilGuardEngine() {
         setManualIngredients('');
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setFrontImageUri(null);
+        setVerifiedRec(null);
+        setIsVerifiedLoading(false);
+        setHasFetchedRec(false);
     };
 
     // CREATE NEW resetFlow that triggers the Ad
@@ -2816,11 +2882,11 @@ export default function OilGuardEngine() {
         }[personalMatch.status] || { color: COLORS.primary, icon: 'check', text: t('oilguard_match_unknown', language), glow: COLORS.primaryGlow };
 
         return (
-            <View style={{ width: '100%', gap: 0 }}>
+            <View style={{ width: '100%', gap: 20 }}>
 
                 {/* --- 1. THE HERO DASHBOARD + ACTIONS FOOTER --- */}
                 <StaggeredItem index={0}>
-                    <View style={[styles.dashboardContainer, { borderColor: matchConfig.color }]}>
+                    <View style={[styles.dashboardContainer, { borderColor: matchConfig.color, marginBottom: 0 }]}>
 
                         {/* Background */}
                         <LinearGradient
@@ -2934,7 +3000,6 @@ export default function OilGuardEngine() {
                 )}
 
                 {/* 2. SUCCESS STATE (Single Card) */}
-                {/* FIX: Removed .length check. Just check if 'verifiedRec' exists */}
                 {!isVerifiedLoading && verifiedRec && (
                     <StaggeredItem index={1}>
                         <VerifiedChoiceCard
@@ -2944,15 +3009,14 @@ export default function OilGuardEngine() {
                                 setSelectedRec(item);
                                 setDetailVisible(true);
                             }}
-                            onSuggestAnother={handleSuggestAnother} // <--- Pass the new handler
+                            onSuggestAnother={handleSuggestAnother}
                             loading={isVerifiedLoading}
                         />
                     </StaggeredItem>
                 )}
 
                 {/* 3. NO RESULTS STATE (Optional) */}
-                {/* FIX: Check explicitly if loading finished and verifiedRec is still null */}
-                {!isVerifiedLoading && !verifiedRec && step === 4 && (
+                {!isVerifiedLoading && !verifiedRec && hasFetchedRec && step === 4 && (
                     <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
                         <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
                             {t('oilguard_verified_none', language)}
@@ -2963,14 +3027,14 @@ export default function OilGuardEngine() {
                 {/* --- 2. MARKETING CLAIMS --- */}
                 {marketingResults.length > 0 && (
                     <StaggeredItem index={1}>
-                        <MarketingClaimsSection results={marketingResults} />
+                        <MarketingClaimsSection results={marketingResults} style={{ marginBottom: 0 }} />
                     </StaggeredItem>
                 )}
 
                 {/* --- 3. INGREDIENTS CAROUSEL --- */}
                 {detectedIngredients.length > 0 && (
                     <StaggeredItem index={2}>
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 10, paddingHorizontal: 5 }}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 0, marginBottom: 10, paddingHorizontal: 5 }}>
                             <Text style={styles.resultsSectionTitle}>{`${t('sheet_detected_ingredients', language)} (${detectedIngredients.length})`}</Text>
 
                             {/* Show User the Unrecognized Count Pill */}
@@ -3022,7 +3086,7 @@ export default function OilGuardEngine() {
 
                         <Pagination data={detectedIngredients} scrollX={scrollX} />
 
-                        <View style={{ marginHorizontal: -20 }}>
+                        <View style={{ marginHorizontal: -8 }}>
                             <Animated.FlatList
                                 data={detectedIngredients}
                                 renderItem={({ item, index }) => (
@@ -3142,7 +3206,8 @@ export default function OilGuardEngine() {
                                 ref={scrollRef}
                                 contentContainerStyle={[
                                     styles.scrollContent,
-                                    { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) }
+                                    { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) },
+                                    step === 4 && { paddingHorizontal: 8 }
                                 ]}
                                 keyboardShouldPersistTaps="handled"
                                 showsVerticalScrollIndicator={false}

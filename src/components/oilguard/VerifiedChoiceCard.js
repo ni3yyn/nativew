@@ -13,6 +13,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const s = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
 
     if (!item) return null;
 
@@ -31,7 +32,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                 <View style={s.topBar}>
                     <View style={s.matchBadge}>
                         <Ionicons name="sparkles" size={12} color={COLORS.background} />
-                        <Text style={s.matchBadgeText}>{t('oilguard_suggested_alternative', useCurrentLanguage())}</Text>
+                        <Text style={s.matchBadgeText}>{t('oilguard_suggested_alternative', language)}</Text>
                     </View>
                     <Text style={s.brandLabel}>{item.brand}</Text>
                 </View>
@@ -55,14 +56,14 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                         <View style={s.dataRow}>
                             <View style={s.scoreBox}>
                                 <Text style={s.scoreText}>{item.real_score}%</Text>
-                                <Text style={s.scoreLabel}>{t('oilguard_brand_score', useCurrentLanguage())}</Text>
+                                <Text style={s.scoreLabel}>{t('oilguard_brand_score', language)}</Text>
                             </View>
 
                             <View style={s.divider} />
 
                             <View style={s.improvementBadge}>
                                 <FontAwesome5 name="arrow-up" size={10} color={COLORS.success} />
-                                <Text style={s.improvementText}>{t('oilguard_improvement', useCurrentLanguage())}{improvement}%</Text>
+                                <Text style={s.improvementText}>{t('oilguard_improvement', language)}{improvement}%</Text>
                             </View>
                         </View>
                     </View>
@@ -81,7 +82,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
                                 style={loading ? s.rotating : null}
                             />
                         </View>
-                        <Text style={s.shuffleText}>{t('oilguard_another_alternative', useCurrentLanguage())}</Text>
+                        <Text style={s.shuffleText}>{t('oilguard_another_alternative', language)}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -102,7 +103,7 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
 const createStyles = (COLORS) => StyleSheet.create({
     container: {
         width: '100%',
-        marginVertical: 10,
+        marginVertical: 0,
     },
     cardFrame: {
         backgroundColor: COLORS.textPrimary + '05', // WAS 'rgba(255, 255, 255, 0.02)'

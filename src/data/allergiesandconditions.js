@@ -64,6 +64,12 @@ export const commonConditions = [
         name: { ar: 'الوردية', en: 'Rosacea' },
         description: { ar: 'احمرار دائم.', en: 'Persistent redness.' }
     },
+    {
+        id: 'eczema',
+        category: 'skin_concern',
+        name: { ar: 'الأكزيما', en: 'Eczema' },
+        description: { ar: 'التهاب وجفاف الجلد.', en: 'Skin inflammation and dryness.' }
+    },
 
     // Scalp Concerns
     {
