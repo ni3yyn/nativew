@@ -3,7 +3,7 @@ import {
     View, Text, TouchableOpacity, Dimensions, Image, TouchableWithoutFeedback, InteractionManager,
     ScrollView, Animated, ImageBackground, Platform, ActivityIndicator, Keyboard, KeyboardAvoidingView,
     Alert, UIManager, LayoutAnimation, StatusBar, TextInput, Modal, Pressable, I18nManager,
-    RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules, AppState
+    RefreshControl, Easing, FlatList, PanResponder, Vibration, StyleSheet, NativeModules, AppState, Linking
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
@@ -1735,6 +1735,10 @@ export default function OilGuardEngine() {
     const [selectedRec, setSelectedRec] = useState(null);
     const [isDetailVisible, setDetailVisible] = useState(false);
     const [hasFetchedRec, setHasFetchedRec] = useState(false);
+    // Ranked list state — holds up to MAX_RANKED alternatives from the backend
+    const [recList, setRecList] = useState([]);
+    const [recIndex, setRecIndex] = useState(0);
+    const [recFallback, setRecFallback] = useState(null); // contextual fallback payload
 
     const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -2233,6 +2237,9 @@ export default function OilGuardEngine() {
 
         setIsVerifiedLoading(true);
         setVerifiedRec(null);
+        setRecList([]);
+        setRecIndex(0);
+        setRecFallback(null);
         setHasFetchedRec(false);
 
         try {
@@ -2249,18 +2256,28 @@ export default function OilGuardEngine() {
 
             const data = await response.json();
 
-            if (data.recommendation) {
-                // 2. Only show if it improves the score by at least 5 points
-                if (data.recommendation.real_score > (analysis.oilGuardScore + 5)) {
-                    setVerifiedRec(data.recommendation);
+            // Backend now returns { recommendations: [...], fallback: {...}|null }
+            const rawList = data.recommendations || [];
 
-                    // --- NEW LOGIC: Check for and report unknown ingredients ---
-                    if (data.recommendation.unknown_ingredients && data.recommendation.unknown_ingredients.length > 0) {
-                        console.log(`[DB Rec] Found ${data.recommendation.unknown_ingredients.length} unknown ingredients. Reporting...`);
-                        await reportUndiscoveredIngredients(data.recommendation.unknown_ingredients, 'database'); // <-- ADDED 'database'
-                    }
-                    // --- END OF NEW LOGIC ---
+            // Quality gate: only show products that improve on the current score by > 5 pts
+            const filtered = rawList.filter(
+                rec => rec.real_score > (analysis.oilGuardScore + 5)
+            );
+
+            if (filtered.length > 0) {
+                setRecList(filtered);
+                setRecIndex(0);
+                setVerifiedRec(filtered[0]);
+
+                // Report unknown ingredients from the top pick
+                const topPick = filtered[0];
+                if (topPick.unknown_ingredients && topPick.unknown_ingredients.length > 0) {
+                    console.log(`[DB Rec] Found ${topPick.unknown_ingredients.length} unknown ingredients. Reporting...`);
+                    await reportUndiscoveredIngredients(topPick.unknown_ingredients, 'database');
                 }
+            } else {
+                // No qualifying product — store fallback payload for the UI
+                setRecFallback(data.fallback || null);
             }
         } catch (e) {
             // Silently fail in production or log to analytics
@@ -2519,6 +2536,9 @@ export default function OilGuardEngine() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setFrontImageUri(null);
         setVerifiedRec(null);
+        setRecList([]);
+        setRecIndex(0);
+        setRecFallback(null);
         setIsVerifiedLoading(false);
         setHasFetchedRec(false);
     };
@@ -2836,10 +2856,28 @@ export default function OilGuardEngine() {
         );
     };
 
+    const goToRank = (index) => {
+        if (index < 0 || index >= recList.length) return;
+        setRecIndex(index);
+        setVerifiedRec(recList[index]);
+    };
+
     const handleSuggestAnother = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        // Re-run the recommendation fetch
-        fetchVerifiedRecommendation(finalAnalysis);
+        if (recList.length > 1) {
+            goToRank((recIndex + 1) % recList.length);
+        } else {
+            fetchVerifiedRecommendation(finalAnalysis);
+        }
+    };
+
+    const handleSuggestPrev = () => {
+        if (recList.length > 1) {
+            goToRank((recIndex - 1 + recList.length) % recList.length);
+        }
+    };
+
+    const handleRankSelect = (index) => {
+        goToRank(index);
     };
 
 
@@ -3000,29 +3038,105 @@ export default function OilGuardEngine() {
                     </View>
                 )}
 
-                {/* 2. SUCCESS STATE (Single Card) */}
+                {/* 2. SUCCESS STATE (Ranked Card with position) */}
                 {!isVerifiedLoading && verifiedRec && (
                     <StaggeredItem index={1}>
                         <VerifiedChoiceCard
                             item={verifiedRec}
                             currentScore={finalAnalysis.oilGuardScore}
+                            rankIndex={recIndex}
+                            totalCount={recList.length}
                             onPress={(item) => {
                                 setSelectedRec(item);
                                 setDetailVisible(true);
                             }}
                             onSuggestAnother={handleSuggestAnother}
+                            onSuggestPrev={handleSuggestPrev}
+                            onRankSelect={handleRankSelect}
                             loading={isVerifiedLoading}
                         />
                     </StaggeredItem>
                 )}
 
-                {/* 3. NO RESULTS STATE (Optional) */}
+                {/* 3. NO RESULTS STATE — rich fallback card */}
                 {!isVerifiedLoading && !verifiedRec && hasFetchedRec && step === 4 && (
-                    <View style={{ padding: 20, alignItems: 'center', opacity: 0.6 }}>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textDim, fontSize: 12 }}>
-                            {t('oilguard_verified_none', language)}
-                        </Text>
-                    </View>
+                    <StaggeredItem index={1}>
+                        <View style={{
+                            marginTop: 4,
+                            padding: 20,
+                            borderRadius: 24,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            backgroundColor: COLORS.textPrimary + '04',
+                            alignItems: 'center',
+                            gap: 10,
+                        }}>
+                            {/* Icon */}
+                            <View style={{
+                                width: 44, height: 44, borderRadius: 22,
+                                backgroundColor: COLORS.textDim + '15',
+                                justifyContent: 'center', alignItems: 'center',
+                                marginBottom: 4,
+                            }}>
+                                <FontAwesome5 name="search" size={18} color={COLORS.textDim} />
+                            </View>
+                            {/* Title */}
+                            <Text style={{
+                                fontFamily: 'Tajawal-ExtraBold',
+                                fontSize: 15,
+                                color: COLORS.textPrimary,
+                                textAlign: 'center',
+                                alignSelf: 'stretch',
+                            }}>
+                                {recFallback?.title || t('oilguard_verified_none', language)}
+                            </Text>
+                            {/* Tip */}
+                            {recFallback?.tip && (
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Regular',
+                                    fontSize: 12,
+                                    color: COLORS.textDim,
+                                    textAlign: 'center',
+                                    lineHeight: 18,
+                                    alignSelf: 'stretch',
+                                }}>
+                                    {recFallback.tip}
+                                </Text>
+                            )}
+
+                            {/* Manual search CTA */}
+                            <TouchableOpacity
+                                onPress={() => Linking.openURL(
+                                    `https://www.google.com/search?q=${encodeURIComponent(
+                                        (PRODUCT_TYPES.find(pt => pt.id === productType)?.label || productType)
+                                        + ' سعر الجزائر'
+                                    )}`
+                                )}
+                                style={{
+                                    marginTop: 4,
+                                    flexDirection: 'row-reverse',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    backgroundColor: COLORS.accentGreen + '15',
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 10,
+                                    borderRadius: 14,
+                                    borderWidth: 1,
+                                    borderColor: COLORS.accentGreen + '30',
+                                    alignSelf: 'center',
+                                }}
+                            >
+                                <FontAwesome5 name="external-link-alt" size={12} color={COLORS.accentGreen} />
+                                <Text style={{
+                                    fontFamily: 'Tajawal-Bold',
+                                    fontSize: 13,
+                                    color: COLORS.accentGreen,
+                                }}>
+                                    {t('oilguard_search_manually', language) || 'Search Manually'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </StaggeredItem>
                 )}
 
                 {/* --- 2. MARKETING CLAIMS --- */}

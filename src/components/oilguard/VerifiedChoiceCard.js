@@ -1,101 +1,207 @@
 // src/components/oilguard/VerifiedChoiceCard.js
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
-import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Pressable,
+    StyleSheet,
+    Image,
+    Animated,
+    I18nManager
+} from 'react-native';
+import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
-const { width } = Dimensions.get('window');
+const AUTO_SWIPE_MS = 5000;
+const AUTO_PAUSE_MS = 10000;
 
-export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnother, loading }) => {
+export const VerifiedChoiceCard = ({
+    item,
+    currentScore,
+    rankIndex = 0,
+    totalCount = 1,
+    onPress,
+    onSuggestAnother,
+    onSuggestPrev,
+    onRankSelect,
+    loading,
+}) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const s = useMemo(() => createStyles(COLORS), [COLORS]);
     const language = useCurrentLanguage();
+    const isRTL = I18nManager.isRTL || language === 'ar';
+
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const pausedUntilRef = useRef(0);
+    const rankKeyRef = useRef('');
+    const onSuggestAnotherRef = useRef(onSuggestAnother);
+
+    useEffect(() => { onSuggestAnotherRef.current = onSuggestAnother; }, [onSuggestAnother]);
+
+    const hasMore = totalCount > 1;
+
+    const pauseAutoSwipe = useCallback(() => {
+        pausedUntilRef.current = Date.now() + AUTO_PAUSE_MS;
+    }, []);
+
+    useEffect(() => {
+        const key = `${rankIndex}-${item?.name || ''}`;
+        if (key !== rankKeyRef.current) {
+            rankKeyRef.current = key;
+            fadeAnim.setValue(0.3);
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 250,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [rankIndex, item?.name, fadeAnim]);
+
+    useEffect(() => {
+        if (!hasMore || loading) return undefined;
+        const timer = setInterval(() => {
+            if (Date.now() < pausedUntilRef.current) return;
+            onSuggestAnotherRef.current?.();
+        }, AUTO_SWIPE_MS);
+        return () => clearInterval(timer);
+    }, [hasMore, loading, totalCount]);
+
+    const goNext = useCallback(() => {
+        pauseAutoSwipe();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onSuggestAnother?.();
+    }, [onSuggestAnother, pauseAutoSwipe]);
+
+    const goPrev = useCallback(() => {
+        pauseAutoSwipe();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onSuggestPrev?.();
+    }, [onSuggestPrev, pauseAutoSwipe]);
+
+    const jumpTo = useCallback((index) => {
+        pauseAutoSwipe();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onRankSelect?.(index);
+    }, [onRankSelect, pauseAutoSwipe]);
+
+    const handleOpenDetails = useCallback(() => {
+        pauseAutoSwipe();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress?.(item);
+    }, [item, onPress, pauseAutoSwipe]);
 
     if (!item) return null;
 
-    // Calculate the jump in quality
-    const scoreDiff = item.real_score - currentScore;
-    const improvement = scoreDiff > 0 ? scoreDiff : 5; // Fallback if data is similar
+    const improvement = Math.max(item.real_score - currentScore, 5);
+    const isLowConfidence = item.confidence === 'low';
+    const isTopPick = rankIndex === 0 && !isLowConfidence;
+
+    const badgeText = isLowConfidence
+        ? (t('oilguard_partial_match', language) || 'Partial Match')
+        : isTopPick
+            ? (t('oilguard_best_match', language) || 'Best Match')
+            : `#${rankIndex + 1} ${t('oilguard_of', language) || 'of'} ${totalCount}`;
+
+    const themeAccentColor = isLowConfidence ? COLORS.warning : COLORS.accentGreen;
+    const wrapperBorderColor = COLORS.textPrimary + '1F';
 
     return (
         <View style={s.container}>
-            <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => onPress(item)}
-                style={s.cardFrame}
-            >
-                {/* 1. TOP HUD BAR */}
-                <View style={s.topBar}>
-                    <View style={s.matchBadge}>
-                        <Ionicons name="sparkles" size={12} color={COLORS.background} />
-                        <Text style={s.matchBadgeText}>{t('oilguard_suggested_alternative', language)}</Text>
+            <View style={[s.card, { borderColor: wrapperBorderColor }, isLowConfidence && s.cardLow]}>
+
+                {/* Header Row */}
+                <View style={[s.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    <View style={[s.badge, { borderColor: themeAccentColor + '4D', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <View style={[s.pulseDot, { backgroundColor: themeAccentColor }]} />
+                        <Text style={[s.badgeText, { color: themeAccentColor }]}>
+                            {badgeText}
+                        </Text>
                     </View>
-                    <Text style={s.brandLabel}>{item.brand}</Text>
+                    {hasMore && (
+                        <Text style={s.altCount}>
+                            {totalCount} {t('oilguard_alternatives_short', language)}
+                        </Text>
+                    )}
                 </View>
 
-                {/* 2. MAIN CONTENT AREA */}
-                <View style={s.mainContent}>
+                {/* Tappable Product Row */}
+                <Pressable
+                    onPress={handleOpenDetails}
+                    style={({ pressed }) => [s.body, pressed && s.bodyPressed]}
+                    android_ripple={{ color: COLORS.accentGreen + '1A' }}
+                >
+                    <Animated.View style={[s.bodyInner, { opacity: fadeAnim, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        {/* Elegant Product Image Display Stage */}
+                        <View style={[s.imageWrap, { borderColor: COLORS.textPrimary + '0D' }]}>
+                            {item.image ? (
+                                <Image source={{ uri: item.image }} style={s.image} resizeMode="contain" />
+                            ) : (
+                                <FontAwesome5 name="box" size={18} color={COLORS.textDim} />
+                            )}
+                        </View>
 
-                    {/* Image Section */}
-                    <View style={s.imageContainer}>
-                        {item.image ? (
-                            <Image source={{ uri: item.image }} style={s.productImg} resizeMode="contain" />
-                        ) : (
-                            <FontAwesome5 name="box" size={20} color={COLORS.accentGreen} />
-                        )}
-                    </View>
+                        {/* Product Meta Info */}
+                        <View style={[s.info, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                            <Text numberOfLines={1} style={[s.brand, { color: themeAccentColor }]}>
+                                {item.brand}
+                            </Text>
+                            <Text numberOfLines={2} style={[s.name, { textAlign: isRTL ? 'right' : 'left' }]}>
+                                {item.name}
+                            </Text>
 
-                    {/* Info Section */}
-                    <View style={s.infoColumn}>
-                        <Text numberOfLines={1} style={s.productName}>{item.name}</Text>
-
-                        <View style={s.dataRow}>
-                            <View style={s.scoreBox}>
-                                <Text style={s.scoreText}>{item.real_score}%</Text>
-                                <Text style={s.scoreLabel}>{t('oilguard_brand_score', language)}</Text>
-                            </View>
-
-                            <View style={s.divider} />
-
-                            <View style={s.improvementBadge}>
-                                <FontAwesome5 name="arrow-up" size={10} color={COLORS.success} />
-                                <Text style={s.improvementText}>{t('oilguard_improvement', language)}{improvement}%</Text>
+                            <View style={[s.scoreRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Text style={s.score}>{item.real_score}%</Text>
+                                
+                                <View style={[s.deltaPill, { backgroundColor: isLowConfidence ? `${COLORS.warning}1A` : `${COLORS.success}1A` }]}>
+                                    <Feather 
+                                        name="trending-up" 
+                                        size={11} 
+                                        color={isLowConfidence ? COLORS.warning : COLORS.success} 
+                                        style={{ marginRight: 2 }}
+                                    />
+                                    <Text style={[s.deltaText, { color: isLowConfidence ? COLORS.warning : COLORS.success }]}>
+                                        +{improvement}%
+                                    </Text>
+                                </View>
                             </View>
                         </View>
-                    </View>
 
-                    {/* Action Pillar */}
-                    <TouchableOpacity
-                        style={s.shuffleAction}
-                        onPress={onSuggestAnother}
-                        disabled={loading}
-                    >
-                        <View style={s.shuffleCircle}>
-                            <MaterialCommunityIcons
-                                name={loading ? "loading" : "shuffle-variant"}
-                                size={22}
-                                color={COLORS.accentGreen}
-                                style={loading ? s.rotating : null}
-                            />
+                        <Feather
+                            name={isRTL ? "chevron-left" : "chevron-right"}
+                            size={18}
+                            color={COLORS.textDim}
+                            style={s.chevron}
+                        />
+                    </Animated.View>
+                </Pressable>
+
+                {/* Navigation Pager */}
+                {hasMore && (
+                    <View style={[s.pager, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <TouchableOpacity onPress={isRTL ? goPrev : goNext} style={s.pagerBtn} disabled={loading}>
+                            <Feather name={isRTL ? "chevron-right" : "chevron-left"} size={16} color={COLORS.textDim} />
+                        </TouchableOpacity>
+
+                        <View style={[s.dots, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            {Array.from({ length: totalCount }).map((_, i) => (
+                                <TouchableOpacity key={i} onPress={() => jumpTo(i)} hitSlop={6}>
+                                    <View style={[s.dot, i === rankIndex && [s.dotOn, { backgroundColor: themeAccentColor }]]} />
+                                </TouchableOpacity>
+                            ))}
                         </View>
-                        <Text style={s.shuffleText}>{t('oilguard_another_alternative', language)}</Text>
-                    </TouchableOpacity>
-                </View>
 
-                {/* 3. BOTTOM HUD ELEMENT (Micro Progress) */}
-                <View style={s.microProgressContainer}>
-                    <View style={[s.microProgressFill, { width: `${item.real_score}%` }]} />
-                    <View style={s.microProgressGlow} />
-                </View>
-
-                {/* Aesthetic Corners */}
-                <View style={[s.hudCorner, s.tl]} />
-                <View style={[s.hudCorner, s.br]} />
-            </TouchableOpacity>
+                        <TouchableOpacity onPress={isRTL ? goNext : goPrev} style={s.pagerBtn} disabled={loading}>
+                            <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={16} color={COLORS.textDim} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
         </View>
     );
 };
@@ -103,167 +209,146 @@ export const VerifiedChoiceCard = ({ item, currentScore, onPress, onSuggestAnoth
 const createStyles = (COLORS) => StyleSheet.create({
     container: {
         width: '100%',
-        marginVertical: 0,
+        paddingHorizontal: 0,
     },
-    cardFrame: {
-        backgroundColor: COLORS.textPrimary + '05', // WAS 'rgba(255, 255, 255, 0.02)'
-        borderRadius: 28, 
+    card: {
+        backgroundColor: COLORS.textPrimary + '05',
+        borderRadius: 24,
+        padding: 18,
+        gap: 16,
         borderWidth: 1,
-        borderColor: COLORS.border,
-        padding: 16,
-        overflow: 'hidden',
+        position: 'relative',
     },
-    topBar: {
-        flexDirection: 'row-reverse',
+    cardLow: {
+        backgroundColor: COLORS.warning + '03',
+    },
+    header: {
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15,
     },
-    brandLabel: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 12,
-        color: COLORS.accentGreen,
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-    },
-    matchBadge: {
-        flexDirection: 'row-reverse',
+    badge: {
         alignItems: 'center',
-        backgroundColor: COLORS.accentGreen,
+        gap: 6,
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 10,
-        gap: 5,
+        borderRadius: 30,
+        backgroundColor: COLORS.textPrimary + '08',
+        borderWidth: 1,
     },
-    matchBadgeText: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 10,
-        color: COLORS.background, 
+    pulseDot: {
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
     },
-    mainContent: {
-        flexDirection: 'row-reverse',
+    badgeText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+        letterSpacing: 0.2,
+    },
+    altCount: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+        color: COLORS.textDim + 'BF',
+    },
+    body: {
+        borderRadius: 16,
+    },
+    bodyPressed: {
+        opacity: 0.85,
+    },
+    bodyInner: {
         alignItems: 'center',
-        gap: 15,
+        gap: 16,
     },
-    imageContainer: {
-        width: 70,
-        height: 70,
-        backgroundColor: '#FFF', // Keep this white for product image backgrounds
+    imageWrap: {
+        width: 72,
+        height: 72,
         borderRadius: 18,
+        backgroundColor: '#FCFDFF',
         padding: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 5,
+        borderWidth: 1,
         shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
     },
-    productImg: {
+    image: {
         width: '100%',
         height: '100%',
     },
-    infoColumn: {
+    info: {
         flex: 1,
-        alignItems: 'flex-end',
+        gap: 1,
     },
-    productName: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 17,
-        color: COLORS.textPrimary,
-        marginBottom: 8,
-    },
-    dataRow: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 12,
-    },
-    scoreBox: {
-        alignItems: 'center',
-    },
-    scoreText: {
+    brand: {
         fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 20,
-        color: COLORS.textPrimary, // <---- FIX: WAS '#FFF'
-        lineHeight: 22,
+        fontSize: 10,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        marginBottom: 2,
     },
-    scoreLabel: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 9,
-        color: COLORS.textDim,
+    name: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        color: COLORS.textPrimary,
+        lineHeight: 20,
     },
-    divider: {
-        width: 1,
-        height: 20,
-        backgroundColor: COLORS.textPrimary + '1A', // WAS 'rgba(255,255,255,0.1)'
-    },
-    improvementBadge: {
-        flexDirection: 'row-reverse',
+    scoreRow: {
         alignItems: 'center',
-        gap: 4,
-        backgroundColor: COLORS.success + '1A',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        gap: 10,
+        marginTop: 6,
     },
-    improvementText: {
+    score: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 22,
+        color: COLORS.textPrimary,
+        lineHeight: 24,
+    },
+    deltaPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    deltaText: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 11,
-        color: COLORS.success,
     },
-    shuffleAction: {
+    chevron: {
+        opacity: 0.4,
+        marginHorizontal: 2,
+    },
+    pager: {
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.textPrimary + '0A',
+    },
+    pagerBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.textPrimary + '05',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingLeft: 5,
-        borderLeftWidth: 1,
-        borderLeftColor: COLORS.textPrimary + '0D', // WAS 'rgba(255,255,255,0.05)'
-        paddingLeft: 12,
     },
-    shuffleCircle: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: COLORS.accentGreen + '1A',
-        justifyContent: 'center',
+    dots: {
         alignItems: 'center',
-        marginBottom: 4,
-        borderWidth: 1,
-        borderColor: COLORS.accentGreen + '33',
+        gap: 8,
     },
-    shuffleText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 9,
-        color: COLORS.textDim,
+    dot: {
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
+        backgroundColor: COLORS.textPrimary + '1C',
     },
-    microProgressContainer: {
-        height: 3,
-        width: '100%',
-        backgroundColor: COLORS.textPrimary + '08', // WAS 'rgba(255,255,255,0.03)'
-        marginTop: 20,
-        borderRadius: 2,
-        position: 'relative',
+    dotOn: {
+        width: 14,
+        borderRadius: 3,
     },
-    microProgressFill: {
-        height: '100%',
-        backgroundColor: COLORS.accentGreen,
-        borderRadius: 2,
-    },
-    microProgressGlow: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        shadowColor: COLORS.accentGreen,
-        shadowOpacity: 0.5,
-        shadowRadius: 5,
-    },
-    hudCorner: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        borderColor: COLORS.border,
-        opacity: 0.5,
-    },
-    tl: { top: 0, left: 0, borderTopWidth: 2, borderLeftWidth: 2, borderTopLeftRadius: 28 },
-    br: { bottom: 0, right: 0, borderBottomWidth: 2, borderRightWidth: 2, borderBottomRightRadius: 28 },
 });

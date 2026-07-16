@@ -244,6 +244,17 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
                             </View>
                         </View>
 
+                        {/* 1b. CONFIDENCE BANNER (low-confidence only) */}
+                        {item.confidence === 'low' && (
+                            <View style={s.confidenceBanner}>
+                                <Ionicons name="warning-outline" size={14} color="#FFB84C" />
+                                <Text style={s.confidenceBannerText}>
+                                    {t('oilguard_partial_match_note', language)
+                                        || 'Partial match — fewer key ingredients align with your profile. Review details before purchasing.'}
+                                </Text>
+                            </View>
+                        )}
+
                         {/* 2. SCIENTIFIC STATS GRID */}
                         <View style={s.statsGrid}>
                             <View style={s.statGlassCard}>
@@ -369,6 +380,28 @@ const createStyles = (COLORS) => StyleSheet.create({
     sheet: { backgroundColor: COLORS.background, height: height * 0.93, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
     dragHandle: { width: 55, height: 6, backgroundColor: COLORS.textDim + '30', alignSelf: 'center', borderRadius: 10, marginVertical: 18 },
     scrollContent: { paddingHorizontal: 22 },
+
+    // Confidence Banner
+    confidenceBanner: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: '#FFB84C' + '15',
+        borderWidth: 1,
+        borderColor: '#FFB84C' + '40',
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 20,
+    },
+    confidenceBannerText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        color: '#FFB84C',
+        flex: 1,
+        textAlign: 'right',
+        lineHeight: 18,
+    },
 
     // Header UI
     heroCard: { flexDirection: 'row-reverse', alignItems: 'center', gap: 20, marginBottom: 30 },
