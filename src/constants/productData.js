@@ -63,3 +63,43 @@ export const getClaimsByProductType = (productType) => {
 
     return claimsByProduct[productType] || claimsByProduct.other;
 };
+
+export const COUNTRIES = [
+    { id: 'Algeria', label: 'Algeria' },
+    { id: 'Australia', label: 'Australia' },
+    { id: 'Bahrain', label: 'Bahrain' },
+    { id: 'Belgium', label: 'Belgium' },
+    { id: 'Brazil', label: 'Brazil' },
+    { id: 'Canada', label: 'Canada' },
+    { id: 'China', label: 'China' },
+    { id: 'Egypt', label: 'Egypt' },
+    { id: 'France', label: 'France' },
+    { id: 'Germany', label: 'Germany' },
+    { id: 'Greece', label: 'Greece' },
+    { id: 'India', label: 'India' },
+    { id: 'Iraq', label: 'Iraq' },
+    { id: 'Italy', label: 'Italy' },
+    { id: 'Japan', label: 'Japan' },
+    { id: 'Jordan', label: 'Jordan' },
+    { id: 'Korea', label: 'Korea' },
+    { id: 'Kuwait', label: 'Kuwait' },
+    { id: 'Lebanon', label: 'Lebanon' },
+    { id: 'Libya', label: 'Libya' },
+    { id: 'Morocco', label: 'Morocco' },
+    { id: 'Netherlands', label: 'Netherlands' },
+    { id: 'Oman', label: 'Oman' },
+    { id: 'Palestine', label: 'Palestine' },
+    { id: 'Poland', label: 'Poland' },
+    { id: 'Qatar', label: 'Qatar' },
+    { id: 'Saudi Arabia', label: 'Saudi Arabia' },
+    { id: 'Spain', label: 'Spain' },
+    { id: 'Sweden', label: 'Sweden' },
+    { id: 'Switzerland', label: 'Switzerland' },
+    { id: 'Syria', label: 'Syria' },
+    { id: 'Tunisia', label: 'Tunisia' },
+    { id: 'Turkey', label: 'Turkey' },
+    { id: 'UAE', label: 'UAE' },
+    { id: 'UK', label: 'UK' },
+    { id: 'USA', label: 'USA' },
+    { id: 'Other', label: 'Other' }
+];

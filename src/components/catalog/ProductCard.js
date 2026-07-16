@@ -26,7 +26,7 @@ const formatPrice = (price) => {
     return price;
 };
 
-export default function ProductCard({ item, index, onPress, onPressBounty }) {
+export default function ProductCard({ item, index, onPress, onPressBounty, isCompareMode = false, isSelected = false }) {
     const { colors: C } = useTheme();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(20)).current;
@@ -67,7 +67,8 @@ export default function ProductCard({ item, index, onPress, onPressBounty }) {
                 styles.cardContainer,
                 {
                     backgroundColor: C.card,
-                    borderColor: C.border,
+                    borderColor: isSelected ? C.accentGreen : C.border,
+                    borderWidth: isSelected ? 2 : 1,
                     opacity: fadeAnim,
                     transform: [{ translateY }],
                 },
@@ -84,6 +85,17 @@ export default function ProductCard({ item, index, onPress, onPressBounty }) {
                         style={styles.cardImage}
                         resizeMode="contain"
                     />
+                    {isCompareMode && (
+                        <View style={[
+                            styles.compareCheckbox,
+                            {
+                                borderColor: isSelected ? C.accentGreen : C.textDim,
+                                backgroundColor: isSelected ? C.accentGreen : 'transparent'
+                            }
+                        ]}>
+                            {isSelected && <Feather name="check" size={10} color="#FFF" />}
+                        </View>
+                    )}
                     <View style={[styles.categoryBadge, { backgroundColor: C.background }]}>
                         <FontAwesome5
                             name={item.category?.icon || 'box'}
@@ -267,4 +279,16 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     pendingText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
+    compareCheckbox: {
+        position: 'absolute',
+        top: 5,
+        left: 5,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+    },
 });

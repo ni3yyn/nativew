@@ -508,14 +508,19 @@ const MarketingClaimsSection = ({ results, style }) => {
         );
     };
 
-    const total = sortedResults.length;
-    const validCount = sortedResults.filter(r => {
-        const s = r.status.toString();
-        return s.includes('✅') || s.includes('🌿');
-    }).length;
+    const getStatusWeight = (status) => {
+        const s = String(status || '').toLowerCase();
+        if (!s) return 0.5;
 
-    const score = total > 0 ? Math.round((validCount / total) * 100) : 0;
-    const scoreColor = score >= 70 ? COLORS.success : (score >= 40 ? COLORS.warning : COLORS.danger);
+        const positiveMarkers = ['✅', '🌿', 'proven', 'verified', 'supported', 'true', 'safe', 'effective', 'good', 'acceptable', 'traditional', 'credible', 'natural', 'beneficial'];
+        const negativeMarkers = ['❌', '🚫', 'misleading', 'false', 'unsupported', 'unproven', 'not proven', 'unsafe', 'bad', 'avoid', 'danger', 'toxic', 'harmful'];
+        const neutralMarkers = ['⚠️', 'angel', 'تركيز', 'mixed', 'neutral', 'unclear', 'unknown', 'uncertain', 'partial'];
+
+        if (positiveMarkers.some(marker => s.includes(marker))) return 1;
+        if (negativeMarkers.some(marker => s.includes(marker))) return 0;
+        if (neutralMarkers.some(marker => s.includes(marker))) return 0.5;
+        return 0.5;
+    };
 
     return (
         <View style={[styles.claimsContainer, style]}>
@@ -523,10 +528,6 @@ const MarketingClaimsSection = ({ results, style }) => {
                 <View>
                     <Text style={styles.claimsTitle}>{t('comp_claims_title', useCurrentLanguage())}</Text>
                     <Text style={styles.claimsSubtitle}>{t('comp_claims_sub', useCurrentLanguage())}</Text>
-                </View>
-                <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
-                    <Text style={[styles.honestyScore, { color: scoreColor }]}>{score}%</Text>
-                    <Text style={[styles.honestyLabel, { color: scoreColor }]}>{t('comp_claims_credibility', useCurrentLanguage())}</Text>
                 </View>
             </View>
 

@@ -19,7 +19,7 @@ import {
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
-import { getClaimsByProductType } from '../../constants/productData';
+import { getClaimsByProductType, COUNTRIES } from '../../constants/productData';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
@@ -258,6 +258,60 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                     </View>
                 );
 
+            case 'country':
+                return (
+                    <View style={styles.tagGridContainer}>
+                        <Text style={[styles.subLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                            {t('select_country', language)}:
+                        </Text>
+                        <ScrollView
+                            contentContainerStyle={[styles.tagScroll, { flexDirection: rtl.flexDirection }]}
+                            showsVerticalScrollIndicator={true}
+                            nestedScrollEnabled={true}
+                            style={{ maxHeight: 220 }}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {COUNTRIES.map((item, i) => {
+                                const isSelected = textValue === item.id;
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        onPress={() => setTextValue(item.id)}
+                                        style={[
+                                            styles.tagChip,
+                                            {
+                                                backgroundColor: isSelected ? C.accentGreen : C.card,
+                                                borderColor: isSelected ? C.accentGreen : C.border,
+                                                flexDirection: rtl.flexDirection,
+                                            },
+                                        ]}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.tagText,
+                                                {
+                                                    color: isSelected ? '#FFF' : C.textSecondary,
+                                                },
+                                            ]}
+                                        >
+                                            {item.label}
+                                        </Text>
+                                        {isSelected && (
+                                            <Ionicons
+                                                name="checkmark-circle"
+                                                size={14}
+                                                color="#FFF"
+                                                style={{ marginStart: 4 }}
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                );
+
             case 'marketingClaims':
             case 'targetTypes':
                 return (
@@ -341,6 +395,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
             ingredients: t('bounty_title_ingredients', language),
             marketingClaims: t('bounty_title_claims', language),
             targetTypes: t('bounty_title_targets', language),
+            country: t('bounty_title_country', language),
         };
         return titles[field] || t('bounty_title_default', language);
     };

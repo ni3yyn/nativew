@@ -1,18 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5, Feather } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../../context/ThemeContext';
 import { getUserLevelData } from '../../utils/gamificationEngine';
-import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 
 export default function RewardsBanner({ currentPoints, onPress }) {
     const { colors: C } = useTheme();
     const rtl = useRTL();
-    const language = useCurrentLanguage();
     
     // Automatically calculate current tier, next tier, and progress
     const levelData = getUserLevelData(currentPoints || 0);
@@ -58,76 +56,48 @@ export default function RewardsBanner({ currentPoints, onPress }) {
                 onPressIn={handlePressIn} 
                 onPressOut={handlePressOut} 
                 onPress={handlePress}
-                style={[styles.rewardBanner, { borderColor: currentLevel.color + '40' }]}
+                style={[styles.rewardBanner, { borderColor: currentLevel.color + '35' }]}
             >
                 <LinearGradient 
-                    colors={[C.card, currentLevel.color + '15']} 
+                    colors={[C.card, currentLevel.color + '08']} 
                     style={styles.rewardGradient} 
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 >
-                    {/* Background Watermark (Creates the Premium VIP Card look) */}
-                    <FontAwesome5 
-                        name={currentLevel.icon} 
-                        size={120} 
-                        color={currentLevel.color} 
-                        style={[styles.watermark, rtl.isRTL ? { left: -20 } : { right: -20 }]} 
-                    />
-
                     <View style={styles.contentZIndex}>
-                        {/* Top Row: Level & Points */}
-                        <View style={[styles.rewardHeader, { flexDirection: rtl.flexDirection }]}>
-                            {/* Level Badge */}
-                            <View style={[styles.levelBadge, { backgroundColor: currentLevel.color + '20', borderWidth: 1, borderColor: currentLevel.color + '40', flexDirection: rtl.flexDirection }]}>
-                                <FontAwesome5 name={currentLevel.icon} size={14} color={currentLevel.color} />
-                                <Text style={[styles.levelText, { color: currentLevel.color }]}>{currentLevel.name}</Text>
-                            </View>
-                            
-                            {/* Points Display */}
-                            <View style={{ alignItems: rtl.isRTL ? 'flex-end' : 'flex-start' }}>
-                                <Text style={[styles.pointsLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                    الرصيد الحالي
-                                </Text>
-                                <View style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6 }}>
-                                    <Text style={[styles.pointsText, { color: C.textPrimary }]}>
-                                        {currentPoints || 0}
-                                    </Text>
-                                    <FontAwesome5 name="star" size={16} color={C.gold} solid />
+                        <View style={[styles.topRow, { flexDirection: rtl.flexDirection }]}>
+                            <View style={styles.levelSection}>
+                                <View style={styles.levelTextBlock}>
+                                    <Text style={[styles.labelText, { color: C.textDim, textAlign: rtl.textAlign }]}>المستوى</Text>
+                                    <Text style={[styles.levelName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>{currentLevel.name}</Text>
                                 </View>
                             </View>
-                        </View>
-                        
-                        {/* Middle: Progress Bar */}
-                        <View style={styles.progressSection}>
-                            <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}>
-                                <Animated.View 
-                                    style={[
-                                        styles.progressBarFill, 
-                                        { 
-                                            width: progressWidth, 
-                                            backgroundColor: currentLevel.color 
-                                        }
-                                    ]} 
-                                />
+
+                            <View style={[styles.pointsPill, { backgroundColor: currentLevel.color + '12' }]}> 
+                                <Text style={[styles.pointsValue, { color: C.textPrimary }]}>{currentPoints || 0}</Text>
+                                <FontAwesome5 name="star" size={11} color={C.gold} solid />
                             </View>
                         </View>
 
-                        {/* Bottom: Goal / Next Level */}
-                        <View style={[styles.footerRow, { flexDirection: rtl.flexDirection }]}>
-                            {currentLevel.id !== nextLevel.id ? (
-                                <>
-                                    <Feather name="target" size={12} color={C.textDim} />
-                                    <Text style={[styles.nextLevelHint, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                        باقي <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: C.textPrimary }}>{pointsToNextLevel}</Text> نقطة للترقية إلى "{nextLevel.name}"
+                        <View style={styles.progressWrap}>
+                            <View style={styles.progressMeta}>
+                                {currentLevel.id !== nextLevel.id ? (
+                                    <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
+                                        تبقى <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: C.textPrimary }}>{pointsToNextLevel}</Text> نقطة
                                     </Text>
-                                </>
-                            ) : (
-                                <>
-                                    <FontAwesome5 name="crown" size={12} color={C.gold} />
-                                    <Text style={[styles.nextLevelHint, { color: C.gold, textAlign: rtl.textAlign }]}>
-                                        لقد وصلت إلى أعلى مستوى! أنت أسطورة.
-                                    </Text>
-                                </>
-                            )}
+                                ) : (
+                                    <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>أعلى مستوى</Text>
+                                )}
+                                <Text style={[styles.progressPercent, { color: currentLevel.color }]}>{Math.round(progressPercent)}%</Text>
+                            </View>
+
+                            <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}> 
+                                <Animated.View
+                                    style={[
+                                        styles.progressBarFill,
+                                        { width: progressWidth, backgroundColor: currentLevel.color }
+                                    ]}
+                                />
+                            </View>
                         </View>
                     </View>
                 </LinearGradient>
@@ -139,79 +109,89 @@ export default function RewardsBanner({ currentPoints, onPress }) {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        marginBottom: 15,
+        marginBottom: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
-    rewardBanner: { 
-        borderRadius: 24, 
-        borderWidth: 1, 
-        overflow: 'hidden', 
+    rewardBanner: {
+        borderRadius: 12,
+        borderWidth: 1,
+        overflow: 'hidden',
     },
-    rewardGradient: { 
-        padding: 20,
-        minHeight: 140,
-        justifyContent: 'space-between'
-    },
-    watermark: {
-        position: 'absolute',
-        top: -10,
-        opacity: 0.05,
-        transform: [{ rotate: '-15deg' }],
-        zIndex: 0,
+    rewardGradient: {
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        minHeight: 90,
+        justifyContent: 'center'
     },
     contentZIndex: {
         zIndex: 2,
     },
-    rewardHeader: { 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start', 
-        marginBottom: 18 
-    },
-    levelBadge: { 
-        alignItems: 'center', 
-        gap: 6, 
-        paddingHorizontal: 12, 
-        paddingVertical: 6, 
-        borderRadius: 14 
-    },
-    levelText: { 
-        fontFamily: 'Tajawal-ExtraBold', 
-        fontSize: 12 
-    },
-    pointsLabel: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 11,
-        marginBottom: -2,
-    },
-    pointsText: { 
-        fontFamily: 'Tajawal-ExtraBold', 
-        fontSize: 28,
-        letterSpacing: -0.5,
-    },
-    progressSection: {
-        marginBottom: 12,
-    },
-    progressBarBg: { 
-        height: 8, 
-        borderRadius: 4, 
-        overflow: 'hidden', 
-        width: '100%' 
-    },
-    progressBarFill: { 
-        height: '100%', 
-        borderRadius: 4,
-    },
-    footerRow: {
+    topRow: {
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'space-between',
+        marginBottom: 8,
     },
-    nextLevelHint: { 
-        fontFamily: 'Tajawal-Regular', 
+    levelSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    levelTextBlock: {
+        flex: 1,
+    },
+    labelText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 9,
+        marginBottom: 1,
+    },
+    levelName: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 12,
+    },
+    pointsPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        borderRadius: 999,
+    },
+    pointsValue: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 14,
+        letterSpacing: -0.3,
+    },
+    progressWrap: {
+        gap: 5,
+    },
+    progressMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    progressLabel: {
+        fontFamily: 'Tajawal-Regular',
         fontSize: 11,
-        opacity: 0.9,
+        flex: 1,
+    },
+    progressPercent: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 12,
+        marginStart: 6,
+    },
+    progressBarBg: {
+        height: 6,
+        borderRadius: 999,
+        overflow: 'hidden',
+        width: '100%'
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 999,
     }
 });

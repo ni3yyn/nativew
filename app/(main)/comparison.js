@@ -11,6 +11,7 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Fuse from 'fuse.js'; // Ensure this is installed: npm install fuse.js
 
 import { useAppContext } from '../../src/context/AppContext';
@@ -120,7 +121,7 @@ const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
     );
 };
 
-const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
+const MarketingClaimsSection = ({ leftClaims, rightClaims, leftProduct, rightProduct, language }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const globalStyles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -129,6 +130,20 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
     const [activeSide, setActiveSide] = useState('A');
     const rawData = activeSide === 'A' ? leftClaims : rightClaims;
     const fadeAnim = useRef(new Animated.Value(1)).current;
+
+    const getStatusWeight = (status) => {
+        const s = String(status || '').toLowerCase();
+        if (!s) return 0.5;
+
+        const positiveMarkers = ['✅', '🌿', 'proven', 'verified', 'supported', 'true', 'safe', 'effective', 'good', 'acceptable', 'traditional', 'credible', 'natural', 'beneficial'];
+        const negativeMarkers = ['❌', '🚫', 'misleading', 'false', 'unsupported', 'unproven', 'not proven', 'unsafe', 'bad', 'avoid', 'danger', 'toxic', 'harmful'];
+        const neutralMarkers = ['⚠️', 'angel', 'تركيز', 'mixed', 'neutral', 'unclear', 'unknown', 'uncertain', 'partial'];
+
+        if (positiveMarkers.some(marker => s.includes(marker))) return 1;
+        if (negativeMarkers.some(marker => s.includes(marker))) return 0;
+        if (neutralMarkers.some(marker => s.includes(marker))) return 0.5;
+        return 0.5;
+    };
 
     // Helper: Clean Status Text
     const cleanStatusText = (text) => {
@@ -141,29 +156,14 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
         if (!rawData) return [];
         return [...rawData].sort((a, b) => {
             const getScore = (item) => {
-                const s = item.status ? item.status.toString() : '';
-                if (s.includes('✅')) return 4;
-                if (s.includes('🌿')) return 3;
-                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2;
+                const weight = getStatusWeight(item.status);
+                if (weight >= 1) return 4;
+                if (weight >= 0.5) return 2;
                 return 1;
             };
             return getScore(b) - getScore(a);
         });
     }, [rawData]);
-
-    // Calculate Honesty Score for the active side
-    const honestyScore = useMemo(() => {
-        if (!sortedData || sortedData.length === 0) return 0;
-        const total = sortedData.length;
-        const validCount = sortedData.filter(r => {
-            const s = r.status ? r.status.toString() : '';
-            return s.includes('✅') || s.includes('🌿');
-        }).length;
-        return Math.round((validCount / total) * 100);
-    }, [sortedData]);
-
-    // Color for the score badge
-    const scoreColor = honestyScore >= 70 ? COLORS.success : (honestyScore >= 40 ? COLORS.warning : COLORS.danger);
 
     const switchSide = (side) => {
         if (side === activeSide) return;
@@ -205,11 +205,22 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
         };
 
         const getStatusConfig = (s) => {
-            if (!s) return { color: COLORS.textSecondary, icon: 'question-circle', bg: 'rgba(255,255,255,0.05)' };
-            if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫')) return { color: COLORS.danger, icon: 'times-circle', bg: 'rgba(239, 68, 68, 0.1)' };
-            if (s.includes('⚠️') || s.includes('Angel') || s.includes('تركيز')) return { color: COLORS.warning, icon: 'exclamation-triangle', bg: 'rgba(245, 158, 11, 0.1)' };
-            if (s.includes('🌿')) return { color: COLORS.success, icon: 'leaf', bg: 'rgba(107, 203, 119, 0.1)' };
-            return { color: COLORS.info, icon: 'check-circle', bg: 'rgba(59, 130, 246, 0.1)' };
+            const statusText = s ? String(s) : '';
+            const normalized = statusText.toLowerCase();
+
+            if (!statusText.trim()) {
+                return { color: COLORS.warning, icon: 'exclamation-circle', bg: COLORS.warning + '1A' };
+            }
+            if (normalized.includes('❌') || normalized.includes('تسويقي') || normalized.includes('🚫') || normalized.includes('لا توجد') || normalized.includes('no evidence') || normalized.includes('no data')) {
+                return { color: COLORS.danger, icon: 'times-circle', bg: COLORS.danger + '1A' };
+            }
+            if (normalized.includes('⚠️') || normalized.includes('angel') || normalized.includes('تركيز')) {
+                return { color: COLORS.warning, icon: 'exclamation-triangle', bg: COLORS.warning + '1A' };
+            }
+            if (normalized.includes('🌿') || normalized.includes('تقليديا')) {
+                return { color: COLORS.success, icon: 'leaf', bg: COLORS.success + '1A' };
+            }
+            return { color: COLORS.info, icon: 'check-circle', bg: COLORS.info + '1A' };
         };
 
         const config = getStatusConfig(item.status);
@@ -295,20 +306,19 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims, language }) => {
                         <Text style={globalStyles.claimsTitle}>{t('comp_claims_title', language)}</Text>
                         <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary, textAlign: 'right' }}>{t('comp_claims_sub', language)}</Text>
                     </View>
-
-                    <View style={[styles.honestyBadge, { borderColor: scoreColor }]}>
-                        <Text style={[styles.honestyScore, { color: scoreColor }]}>{honestyScore}%</Text>
-                        <Text style={[styles.honestyLabel, { color: scoreColor }]}>{t('comp_claims_credibility', language)}</Text>
-                    </View>
                 </View>
 
                 {/* Switcher */}
                 <View style={styles.segmentTrack}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('A')} style={[styles.segmentBtn, activeSide === 'A' && { backgroundColor: PROD_COLORS.A }]}>
-                        <Text style={[styles.segmentText, activeSide === 'A' && { color: '#FFF' }]}>{t('comp_slot_a', language)}</Text>
+                        <Text style={[styles.segmentText, activeSide === 'A' && { color: '#FFF' }]} numberOfLines={1}>
+                            {leftProduct?.catalogProduct ? leftProduct.catalogProduct.brand : (leftProduct?.brand || t('comp_slot_a', language))}
+                        </Text>
                     </TouchableOpacity>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => switchSide('B')} style={[styles.segmentBtn, activeSide === 'B' && { backgroundColor: PROD_COLORS.B }]}>
-                        <Text style={[styles.segmentText, activeSide === 'B' && { color: '#FFF' }]}>{t('comp_slot_b', language)}</Text>
+                        <Text style={[styles.segmentText, activeSide === 'B' && { color: '#FFF' }]} numberOfLines={1}>
+                            {rightProduct?.catalogProduct ? rightProduct.catalogProduct.brand : (rightProduct?.brand || t('comp_slot_b', language))}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -376,11 +386,47 @@ export default function ComparisonPage() {
     const [particles] = useState([...Array(12)].map((_, i) => ({ id: i, size: Math.random() * 5 + 3, startX: Math.random() * width, duration: 8000 + Math.random() * 7000, delay: Math.random() * 5000 })));
     const [searchQuery, setSearchQuery] = useState('');
 
+    const params = useLocalSearchParams();
+    const router = useRouter();
+
     // Product Data
-    const [left, setLeft] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
-    const [right, setRight] = useState({ sourceData: null, ingredientsList: [], analysisData: null });
+    const [left, setLeft] = useState({ sourceData: null, ingredientsList: [], analysisData: null, catalogProduct: null });
+    const [right, setRight] = useState({ sourceData: null, ingredientsList: [], analysisData: null, catalogProduct: null });
     const [productType, setProductType] = useState('other');
     const [claims, setClaims] = useState([]);
+
+    useEffect(() => {
+        if (params.leftProduct && params.rightProduct) {
+            try {
+                const prodA = JSON.parse(params.leftProduct);
+                const prodB = JSON.parse(params.rightProduct);
+                
+                if (prodA && prodB) {
+                    const getInciList = (p) => {
+                        if (!p.ingredients) return [];
+                        return p.ingredients.split(',').map(item => item.trim()).filter(item => item.length > 0);
+                    };
+                    
+                    setLeft({
+                        sourceData: prodA.image || null,
+                        ingredientsList: getInciList(prodA),
+                        analysisData: null,
+                        catalogProduct: prodA
+                    });
+                    setRight({
+                        sourceData: prodB.image || null,
+                        ingredientsList: getInciList(prodB),
+                        analysisData: null,
+                        catalogProduct: prodB
+                    });
+                    setProductType(prodA.category?.id || prodB.category?.id || 'other');
+                    setStep(2); // Go to category confirmation step
+                }
+            } catch (error) {
+                console.error("Failed to parse local search params in comparison:", error);
+            }
+        }
+    }, [params.leftProduct, params.rightProduct]);
 
     // Animations & Refs
     const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -464,11 +510,22 @@ export default function ComparisonPage() {
     };
 
     const handleOCR = async () => {
+        const hasCatalogOnlySelection = Boolean(left.catalogProduct && right.catalogProduct);
+
+        if (hasCatalogOnlySelection) {
+            setProductType(left.catalogProduct?.category?.id || right.catalogProduct?.category?.id || 'other');
+            setLeft(p => ({ ...p, ingredientsList: p.ingredientsList || [] }));
+            setRight(p => ({ ...p, ingredientsList: p.ingredientsList || [] }));
+            changeStep(2);
+            return;
+        }
+
         setLoadingText(scanMode === 'accurate' ? t('comp_loading_accurate', language) : t('comp_loading_fast', language));
         changeStep(1);
 
         setTimeout(async () => {
             const processImage = async (uri) => {
+                if (!uri) return { list: [], type: 'other' };
                 const manipResult = await ImageManipulator.manipulateAsync(
                     uri,
                     [{ resize: { width: 1024 } }],
@@ -500,10 +557,20 @@ export default function ComparisonPage() {
                 return { list: data.ingredients_list, type: data.detected_type };
             };
 
+            const resolveProduct = async (productState) => {
+                if (productState.catalogProduct) {
+                    return {
+                        list: productState.ingredientsList || [],
+                        type: productState.catalogProduct.category?.id || 'other'
+                    };
+                }
+                return await processImage(productState.sourceData);
+            };
+
             try {
                 const [r1, r2] = await Promise.all([
-                    processImage(left.sourceData),
-                    processImage(right.sourceData)
+                    resolveProduct(left),
+                    resolveProduct(right)
                 ]);
 
                 setLeft(p => ({ ...p, ingredientsList: r1.list }));
@@ -554,12 +621,48 @@ export default function ComparisonPage() {
     };
 
     const resetAll = () => {
-        setLeft({ sourceData: null, ingredientsList: [], analysisData: null });
-        setRight({ sourceData: null, ingredientsList: [], analysisData: null });
+        setLeft({ sourceData: null, ingredientsList: [], analysisData: null, catalogProduct: null });
+        setRight({ sourceData: null, ingredientsList: [], analysisData: null, catalogProduct: null });
         setProductType('other');
         setClaims([]);
         setSearchQuery('');
         changeStep(0);
+    };
+
+    const handleSlotPress = async (slotKey, slotSetter, slotData) => {
+        if (slotData?.sourceData || slotData?.catalogProduct) return;
+
+        Alert.alert(
+            t('comp_slot_action_title', language),
+            t('comp_slot_action_message', language),
+            [
+                {
+                    text: t('comp_slot_option_catalog', language),
+                    onPress: () => router.push({
+                        pathname: '/CatalogScreen',
+                        params: {
+                            compareSlot: slotKey === 0 ? 'left' : 'right',
+                            leftProduct: left.catalogProduct ? JSON.stringify(left.catalogProduct) : (left.sourceData ? JSON.stringify({ image: left.sourceData }) : ''),
+                            rightProduct: right.catalogProduct ? JSON.stringify(right.catalogProduct) : (right.sourceData ? JSON.stringify({ image: right.sourceData }) : '')
+                        }
+                    })
+                },
+                {
+                    text: t('comp_slot_option_scan', language),
+                    onPress: async () => {
+                        const r = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            quality: 0.8
+                        });
+
+                        if (!r.canceled && r.assets && r.assets.length > 0) {
+                            slotSetter(prev => ({ ...prev, sourceData: r.assets[0].uri }));
+                        }
+                    }
+                },
+                { text: t('common_cancel', language), style: 'cancel' }
+            ]
+        );
     };
 
     // --- RENDER CONTENT ---
@@ -567,30 +670,35 @@ export default function ComparisonPage() {
         <View style={globalStyles.inputStepContainer}>
             <View style={globalStyles.heroVisualContainer}>
                 <View style={styles.arenaSlotsRow}>
-                    {[{ d: left, s: setLeft, c: PROD_COLORS.A, l: t('comp_slot_a_label', language) }, { d: right, s: setRight, c: PROD_COLORS.B, l: t('comp_slot_b_label', language) }].map((slot, i) => (
-                        <TouchableOpacity activeOpacity={0.7} key={i} style={[styles.slotCard, slot.d.sourceData && { borderColor: slot.c, borderWidth: 2 }]}
-                            onPress={async () => { if (slot.d.sourceData) return; const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 }); if (!r.canceled && r.assets && r.assets.length > 0) slot.s(p => ({ ...p, sourceData: r.assets[0].uri })); }}>
+                    {[{ d: left, s: setLeft, c: PROD_COLORS.A, l: t('comp_slot_a_label', language) }, { d: right, s: setRight, c: PROD_COLORS.B, l: t('comp_slot_b_label', language) }].map((slot, i) => {
+                        const hasSelection = Boolean(slot.d.catalogProduct || slot.d.sourceData);
+                        const displayImage = slot.d.catalogProduct?.image || slot.d.sourceData;
 
-                            {slot.d.sourceData ? (
-                                <>
-                                    <Image source={{ uri: slot.d.sourceData }} style={styles.slotImage} resizeMode="cover" />
-                                    <View style={[styles.slotBadge, { backgroundColor: slot.c }]}>
-                                        <Text style={styles.slotBadgeText}>{slot.l}</Text>
-                                    </View>
-                                    <TouchableOpacity style={styles.removeBtn} onPress={() => slot.s(p => ({ ...p, sourceData: null }))}>
-                                        <FontAwesome5 name="times" color="#FFF" size={10} />
-                                    </TouchableOpacity>
-                                </>
-                            ) : (
-                                <View style={styles.slotPlaceholder}>
+                        return (
+                            <TouchableOpacity activeOpacity={0.7} key={i} style={[styles.slotCard, hasSelection && { borderColor: slot.c, borderWidth: 2 }]}
+                                onPress={() => handleSlotPress(i, slot.s, slot.d)}>
+
+                                {hasSelection ? (
+                                    <>
+                                        <Image source={{ uri: displayImage }} style={styles.slotImage} resizeMode="cover" />
+                                        <View style={[styles.slotBadge, { backgroundColor: slot.c }]}>
+                                            <Text style={styles.slotBadgeText}>{slot.l}</Text>
+                                        </View>
+                                        <TouchableOpacity style={styles.removeBtn} onPress={() => slot.s(p => ({ ...p, sourceData: null, catalogProduct: null, ingredientsList: [], analysisData: null }))}>
+                                            <FontAwesome5 name="times" color="#FFF" size={10} />
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <View style={styles.slotPlaceholder}>
                                     <View style={styles.dashedIconCircle}>
                                         <FontAwesome5 name="plus" size={20} color={COLORS.textSecondary} />
                                     </View>
-                                    <Text style={styles.slotLabel}>{t('comp_slot_label', language)} {slot.l}</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    ))}
+                                        <Text style={styles.slotLabel}>{t('comp_slot_label', language)} {slot.l}</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })}
                     <View style={styles.vsBadge}>
                         <Text style={styles.vsText}>{t('comp_vs', language)}</Text>
                     </View>
@@ -861,13 +969,13 @@ export default function ComparisonPage() {
         const winnerColor = winner === 'left' ? PROD_COLORS.A : (winner === 'right' ? PROD_COLORS.B : COLORS.gold);
 
         return (
-            <ScrollView contentContainerStyle={[globalStyles.scrollContent, { paddingTop: 0 }]} showsVerticalScrollIndicator={false} removeClippedSubviews={true}>
+            <ScrollView contentContainerStyle={[globalStyles.scrollContent, { paddingTop: 0, paddingHorizontal: 12 }]} showsVerticalScrollIndicator={false} removeClippedSubviews={true}>
 
                 <StaggeredItem index={0}>
-                    <View style={[globalStyles.dashboardContainer, { borderColor: winnerColor, marginTop: 20 }]}>
+                    <View style={[globalStyles.dashboardContainer, { borderColor: winnerColor, marginTop: 20, width: '100%', maxWidth: 900, alignSelf: 'center' }]}>
                         <LinearGradient colors={['rgba(255,255,255,0.05)', 'transparent']} style={StyleSheet.absoluteFill} />
 
-                        <View style={globalStyles.dashboardGlass}>
+                        <View style={[globalStyles.dashboardGlass, { paddingHorizontal: 18 }]}>
                             <View style={[globalStyles.dashHeader, { justifyContent: 'center', marginBottom: 25 }]}>
                                 <View style={{ alignItems: 'center' }}>
                                     <Text style={[globalStyles.verdictBig, { color: winnerColor, fontSize: 24 }]}>
@@ -903,7 +1011,7 @@ export default function ComparisonPage() {
                                 </View>
                             </View>
 
-                            <View style={[globalStyles.statsGrid, { marginTop: 25, flexDirection: 'column', gap: 15 }]}>
+                            <View style={[globalStyles.statsGrid, { marginTop: 25, flexDirection: 'column', gap: 15, width: '100%' }]}>
                                 <MetricDuelRow
                                     label={t('oilguard_stat_safety', language)} icon="shield-alt"
                                     scoreA={left.analysisData.safety?.score || 0}
@@ -916,7 +1024,7 @@ export default function ComparisonPage() {
                                 />
                             </View>
 
-                            <View style={[globalStyles.matchContainer, { marginTop: 15 }]}>
+                            <View style={[globalStyles.matchContainer, { marginTop: 15, width: '100%' }]}>
                                 <View style={globalStyles.matchHeader}>
                                     <View style={globalStyles.matchHeaderIcon}><FontAwesome5 name="user-alt" size={12} color={COLORS.textPrimary} /></View>
                                     <Text style={globalStyles.matchHeaderTitle}>{t('comp_personal_report_title', language)}</Text>
@@ -956,8 +1064,9 @@ export default function ComparisonPage() {
                     <MarketingClaimsSection
                         leftClaims={left.analysisData.marketing_results}
                         rightClaims={right.analysisData.marketing_results}
-                        language={language}  // Add this line
-
+                        leftProduct={left}
+                        rightProduct={right}
+                        language={language}
                     />
                 </StaggeredItem>
 

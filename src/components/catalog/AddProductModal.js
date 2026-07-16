@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
-    ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Dimensions,
+    ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions,
     Animated, Pressable, Easing, Image
 } from 'react-native';
 import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 // Context & Data
 import { useTheme } from '../../context/ThemeContext';
-import { PRODUCT_TYPES, getClaimsByProductType } from '../../constants/productData';
+import { PRODUCT_TYPES, getClaimsByProductType, COUNTRIES } from '../../constants/productData';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
@@ -21,13 +21,6 @@ import { AlertService } from '../../services/alertService';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // --- DATA CONSTANTS ---
-const COUNTRIES = [
-    { id: 'Algeria', label: 'Algeria' }, { id: 'Egypt', label: 'Egypt' }, { id: 'France', label: 'France' },
-    { id: 'Germany', label: 'Germany' }, { id: 'Italy', label: 'Italy' }, { id: 'Turkey', label: 'Turkey' },
-    { id: 'Spain', label: 'Spain' }, { id: 'USA', label: 'USA' }, { id: 'Korea', label: 'Korea' },
-    { id: 'Japan', label: 'Japan' }, { id: 'UK', label: 'UK' }, { id: 'Tunisia', label: 'Tunisia' },
-    { id: 'Morocco', label: 'Morocco' }, { id: 'UAE', label: 'UAE' }, { id: 'Other', label: 'Other' }
-];
 
 const TARGET_TYPES = [
     { id: 'oily_skin', label: 'بشرة دهنية' },
@@ -42,28 +35,6 @@ const TARGET_TYPES = [
     { id: 'colored_hair', label: 'شعر مصبوغ' },
 ];
 
-// --- Staggered Animation Component ---
-const StaggeredView = ({ children, index }) => {
-    const anim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.spring(anim, {
-            toValue: 1,
-            friction: 7,
-            tension: 50,
-            delay: 100 + index * 50,
-            useNativeDriver: true,
-        }).start();
-    }, [index]);
-
-    const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
-    return (
-        <Animated.View style={{ opacity: anim, transform: [{ translateY }] }}>
-            {children}
-        </Animated.View>
-    );
-};
-
 // --- Custom Premium Dropdown Component ---
 const CustomDropdown = ({ icon, title, subtitle, items, selectedItems, onSelect, multiSelect, placeholder, C, rtl }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -77,7 +48,9 @@ const CustomDropdown = ({ icon, title, subtitle, items, selectedItems, onSelect,
                 duration: 250,
                 easing: Easing.inOut(Easing.ease),
                 useNativeDriver: false,
-            }).start(() => setIsOpen(false));
+            }).start(() => {
+                setIsOpen(false);
+            });
         } else {
             setIsOpen(true);
             setTimeout(() => {
@@ -504,252 +477,236 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 contentContainerStyle={styles.scrollContainer}
                                 keyboardShouldPersistTaps="handled"
                             >
-                                <StaggeredView index={0}>
-                                    <View style={styles.introHeader}>
-                                        <Text style={[styles.mainTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                            {t('add_new_product', language)}
+                                <View style={styles.introHeader}>
+                                    <Text style={[styles.mainTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                        {t('add_new_product', language)}
+                                    </Text>
+                                    <Text style={[styles.mainSub, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                        {t('help_build_catalog', language)} 🇩🇿
+                                    </Text>
+                                </View>
+
+                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                        <MaterialCommunityIcons name="pencil-outline" size={18} color={C.accentGreen} />
+                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                            {t('basic_info', language)}
                                         </Text>
-                                        <Text style={[styles.mainSub, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                            {t('help_build_catalog', language)} 🇩🇿
+                                    </View>
+                                    <TextInput
+                                        style={[styles.input, { color: C.textPrimary, borderBottomColor: C.border, textAlign: rtl.textAlign }]}
+                                        placeholder={t('brand_placeholder', language)}
+                                        placeholderTextColor={C.textDim}
+                                        value={brand}
+                                        onChangeText={setBrand}
+                                    />
+                                    <TextInput
+                                        style={[styles.input, { color: C.textPrimary, borderBottomColor: 'transparent', textAlign: rtl.textAlign }]}
+                                        placeholder={t('product_name_placeholder', language)}
+                                        placeholderTextColor={C.textDim}
+                                        value={name}
+                                        onChangeText={setName}
+                                    />
+                                </View>
+
+                                <View style={styles.sectionMargin}>
+                                    <CustomDropdown
+                                        icon="earth"
+                                        title={t('manufacturing_country', language)}
+                                        items={COUNTRIES}
+                                        selectedItems={country}
+                                        multiSelect={false}
+                                        onSelect={(item) => setCountry(item.id)}
+                                        placeholder={t('select_country', language)}
+                                        C={C}
+                                        rtl={rtl}
+                                    />
+                                    <View style={{ height: 15 }} />
+                                    <CustomDropdown
+                                        icon="layers-outline"
+                                        title={t('product_category', language)}
+                                        items={formattedCategories}
+                                        selectedItems={selectedCatId}
+                                        multiSelect={false}
+                                        onSelect={handleCategorySelect}
+                                        placeholder={t('select_category', language)}
+                                        C={C}
+                                        rtl={rtl}
+                                    />
+                                </View>
+
+                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                        <MaterialCommunityIcons name="flask-outline" size={18} color={C.gold} />
+                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                            {t('specifications', language)}
                                         </Text>
                                     </View>
-                                </StaggeredView>
-
-                                <StaggeredView index={1}>
-                                    <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                        <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                            <MaterialCommunityIcons name="pencil-outline" size={18} color={C.accentGreen} />
-                                            <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                                {t('basic_info', language)}
+                                    <View style={[styles.inputRow, { flexDirection: rtl.flexDirection }]}>
+                                        <View style={styles.flex1}>
+                                            <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                {t('price_dzd', language)}
                                             </Text>
-                                        </View>
-                                        <TextInput
-                                            style={[styles.input, { color: C.textPrimary, borderBottomColor: C.border, textAlign: rtl.textAlign }]}
-                                            placeholder={t('brand_placeholder', language)}
-                                            placeholderTextColor={C.textDim}
-                                            value={brand}
-                                            onChangeText={setBrand}
-                                        />
-                                        <TextInput
-                                            style={[styles.input, { color: C.textPrimary, borderBottomColor: 'transparent', textAlign: rtl.textAlign }]}
-                                            placeholder={t('product_name_placeholder', language)}
-                                            placeholderTextColor={C.textDim}
-                                            value={name}
-                                            onChangeText={setName}
-                                        />
-                                    </View>
-                                </StaggeredView>
-
-                                <StaggeredView index={2}>
-                                    <View style={styles.sectionMargin}>
-                                        <CustomDropdown
-                                            icon="earth"
-                                            title={t('manufacturing_country', language)}
-                                            items={COUNTRIES}
-                                            selectedItems={country}
-                                            multiSelect={false}
-                                            onSelect={(item) => setCountry(item.id)}
-                                            placeholder={t('select_country', language)}
-                                            C={C}
-                                            rtl={rtl}
-                                        />
-                                        <View style={{ height: 15 }} />
-                                        <CustomDropdown
-                                            icon="layers-outline"
-                                            title={t('product_category', language)}
-                                            items={formattedCategories}
-                                            selectedItems={selectedCatId}
-                                            multiSelect={false}
-                                            onSelect={handleCategorySelect}
-                                            placeholder={t('select_category', language)}
-                                            C={C}
-                                            rtl={rtl}
-                                        />
-                                    </View>
-                                </StaggeredView>
-
-                                <StaggeredView index={3}>
-                                    <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                        <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                            <MaterialCommunityIcons name="flask-outline" size={18} color={C.gold} />
-                                            <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                                {t('specifications', language)}
-                                            </Text>
-                                        </View>
-                                        <View style={[styles.inputRow, { flexDirection: rtl.flexDirection }]}>
-                                            <View style={styles.flex1}>
-                                                <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                                    {t('price_dzd', language)}
-                                                </Text>
-                                                <TextInput
-                                                    style={[styles.rowInput, { color: C.textPrimary, textAlign: 'center' }]}
-                                                    placeholder="00"
-                                                    placeholderTextColor={C.textDim}
-                                                    keyboardType="numeric"
-                                                    value={priceMin}
-                                                    onChangeText={setPriceMin}
-                                                />
-                                            </View>
-                                            <View style={[styles.dividerVertical, { backgroundColor: C.border }]} />
-                                            <View style={styles.flex2}>
-                                                <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                                    {t('quantity_size', language)}
-                                                </Text>
-                                                <View style={[styles.quantityRow, { flexDirection: rtl.flexDirection }]}>
-                                                    <TextInput
-                                                        style={[styles.quantityInput, { color: C.textPrimary, textAlign: 'center' }]}
-                                                        placeholder="200"
-                                                        placeholderTextColor={C.textDim}
-                                                        keyboardType="numeric"
-                                                        value={qtyValue}
-                                                        onChangeText={setQtyValue}
-                                                    />
-                                                    <View style={[styles.unitButtons, { flexDirection: rtl.flexDirection }]}>
-                                                        {['ml', 'g', 'L'].map(u => (
-                                                            <TouchableOpacity
-                                                                key={u}
-                                                                onPress={() => setQtyUnit(u)}
-                                                                style={[
-                                                                    styles.unitBtn,
-                                                                    {
-                                                                        backgroundColor: qtyUnit === u ? C.accentGreen : 'transparent',
-                                                                        borderColor: C.border
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                <Text style={{
-                                                                    fontSize: 11,
-                                                                    color: qtyUnit === u ? '#FFF' : C.textDim,
-                                                                    fontWeight: 'bold'
-                                                                }}>
-                                                                    {u}
-                                                                </Text>
-                                                            </TouchableOpacity>
-                                                        ))}
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    </View>
-                                </StaggeredView>
-
-                                <StaggeredView index={4}>
-                                    <View style={styles.sectionMargin}>
-                                        <CustomDropdown
-                                            icon="account-star-outline"
-                                            title={t('target_audience', language)}
-                                            subtitle={t('skin_hair_type', language)}
-                                            items={TARGET_TYPES}
-                                            selectedItems={selectedTargets}
-                                            multiSelect={true}
-                                            onSelect={(item) => handleMultiSelect(item, selectedTargets, setSelectedTargets)}
-                                            placeholder={t('select_target', language)}
-                                            C={C}
-                                            rtl={rtl}
-                                        />
-                                    </View>
-                                </StaggeredView>
-
-                                {selectedCatId && formattedClaims.length > 0 && (
-                                    <StaggeredView index={5}>
-                                        <View style={styles.sectionMargin}>
-                                            <CustomDropdown
-                                                icon="check-decagram-outline"
-                                                title={t('product_claims', language)}
-                                                subtitle={t('benefits_claims', language)}
-                                                items={formattedClaims}
-                                                selectedItems={selectedClaims}
-                                                multiSelect={true}
-                                                onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
-                                                placeholder={t('select_claims', language)}
-                                                C={C}
-                                                rtl={rtl}
+                                            <TextInput
+                                                style={[styles.rowInput, { color: C.textPrimary, textAlign: 'center' }]}
+                                                placeholder="00"
+                                                placeholderTextColor={C.textDim}
+                                                keyboardType="numeric"
+                                                value={priceMin}
+                                                onChangeText={setPriceMin}
                                             />
                                         </View>
-                                    </StaggeredView>
-                                )}
+                                        <View style={[styles.dividerVertical, { backgroundColor: C.border }]} />
+                                        <View style={styles.flex2}>
+                                            <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                {t('quantity_size', language)}
+                                            </Text>
+                                            <View style={[styles.quantityRow, { flexDirection: rtl.flexDirection }]}>
+                                                <TextInput
+                                                    style={[styles.quantityInput, { color: C.textPrimary, textAlign: 'center' }]}
+                                                    placeholder="200"
+                                                    placeholderTextColor={C.textDim}
+                                                    keyboardType="numeric"
+                                                    value={qtyValue}
+                                                    onChangeText={setQtyValue}
+                                                />
+                                                <View style={[styles.unitButtons, { flexDirection: rtl.flexDirection }]}>
+                                                    {['ml', 'g', 'L'].map(u => (
+                                                        <TouchableOpacity
+                                                            key={u}
+                                                            onPress={() => setQtyUnit(u)}
+                                                            style={[
+                                                                styles.unitBtn,
+                                                                {
+                                                                    backgroundColor: qtyUnit === u ? C.accentGreen : 'transparent',
+                                                                    borderColor: C.border
+                                                                }
+                                                            ]}
+                                                        >
+                                                            <Text style={{
+                                                                fontSize: 11,
+                                                                color: qtyUnit === u ? '#FFF' : C.textDim,
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                {u}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
 
-                                <StaggeredView index={6}>
-                                    <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                        <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                            <MaterialCommunityIcons name="text-box-search-outline" size={18} color="#8b5cf6" />
-                                            <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                                {t('ingredients_list', language)}
-                                            </Text>
-                                        </View>
-                                        <View style={[styles.tipBox, { flexDirection: rtl.flexDirection }]}>
-                                            <MaterialCommunityIcons name="lightbulb-outline" size={16} color={C.accentGreen} />
-                                            <Text style={[styles.tipText, { color: C.textDim, textAlign: rtl.textAlign, flex: 1 }]}>
-                                                {t('ai_ingredient_tip', language)}
-                                            </Text>
-                                        </View>
-                                        <TextInput
-                                            style={[styles.textArea, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
-                                            placeholder={t('ingredients_placeholder', language)}
-                                            placeholderTextColor={C.textDim}
-                                            multiline
-                                            numberOfLines={4}
-                                            value={ingredients}
-                                            onChangeText={setIngredients}
+                                <View style={styles.sectionMargin}>
+                                    <CustomDropdown
+                                        icon="account-star-outline"
+                                        title={t('target_audience', language)}
+                                        subtitle={t('skin_hair_type', language)}
+                                        items={TARGET_TYPES}
+                                        selectedItems={selectedTargets}
+                                        multiSelect={true}
+                                        onSelect={(item) => handleMultiSelect(item, selectedTargets, setSelectedTargets)}
+                                        placeholder={t('select_target', language)}
+                                        C={C}
+                                        rtl={rtl}
+                                    />
+                                </View>
+
+                                {selectedCatId && formattedClaims.length > 0 && (
+                                    <View style={styles.sectionMargin}>
+                                        <CustomDropdown
+                                            icon="check-decagram-outline"
+                                            title={t('product_claims', language)}
+                                            subtitle={t('benefits_claims', language)}
+                                            items={formattedClaims}
+                                            selectedItems={selectedClaims}
+                                            multiSelect={true}
+                                            onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
+                                            placeholder={t('select_claims', language)}
+                                            C={C}
+                                            rtl={rtl}
                                         />
                                     </View>
-                                </StaggeredView>
+                                )}
 
-                                <StaggeredView index={7}>
-                                    <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                        <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                            <MaterialCommunityIcons name="image" size={18} color={C.accentGreen} />
-                                            <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                                {t('product_image', language)}
-                                            </Text>
-                                        </View>
-                                        
-                                        <TouchableOpacity
-                                            onPress={showImageOptions}
-                                            disabled={uploadingImage}
-                                            style={[
-                                                styles.imageUploadArea,
-                                                { borderColor: C.border, backgroundColor: C.background }
-                                            ]}
-                                        >
-                                            {uploadingImage ? (
-                                                <View style={styles.uploadingContainer}>
-                                                    <ActivityIndicator size="large" color={C.accentGreen} />
-                                                    <Text style={[styles.uploadingText, { color: C.textDim }]}>
-                                                        {t('uploading_image', language)}
-                                                    </Text>
-                                                </View>
-                                            ) : selectedImage ? (
-                                                <View style={styles.selectedImageContainer}>
-                                                    <Image 
-                                                        source={{ uri: selectedImage }} 
-                                                        style={styles.selectedImage}
-                                                        resizeMode="cover"
-                                                    />
-                                                    <TouchableOpacity
-                                                        style={styles.removeImageBtn}
-                                                        onPress={() => {
-                                                            setSelectedImage(null);
-                                                            setImageUrl('');
-                                                        }}
-                                                    >
-                                                        <Feather name="x" size={20} color="#FFF" />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            ) : (
-                                                <View style={styles.uploadPlaceholder}>
-                                                    <Feather name="camera" size={40} color={C.textDim} />
-                                                    <Text style={[styles.uploadPlaceholderText, { color: C.textDim }]}>
-                                                        {t('tap_to_select_image', language)}
-                                                    </Text>
-                                                    <Text style={[styles.uploadHint, { color: C.textDim }]}>
-                                                        {t('image_format_hint', language)}
-                                                    </Text>
-                                                </View>
-                                            )}
-                                        </TouchableOpacity>
+                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                        <MaterialCommunityIcons name="text-box-search-outline" size={18} color="#8b5cf6" />
+                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                            {t('ingredients_list', language)}
+                                        </Text>
                                     </View>
-                                </StaggeredView>
+                                    <View style={[styles.tipBox, { flexDirection: rtl.flexDirection }]}>
+                                        <MaterialCommunityIcons name="lightbulb-outline" size={16} color={C.accentGreen} />
+                                        <Text style={[styles.tipText, { color: C.textDim, textAlign: rtl.textAlign, flex: 1 }]}>
+                                            {t('ai_ingredient_tip', language)}
+                                        </Text>
+                                    </View>
+                                    <TextInput
+                                        style={[styles.textArea, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                        placeholder={t('ingredients_placeholder', language)}
+                                        placeholderTextColor={C.textDim}
+                                        multiline
+                                        numberOfLines={4}
+                                        value={ingredients}
+                                        onChangeText={setIngredients}
+                                    />
+                                </View>
+
+                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                        <MaterialCommunityIcons name="image" size={18} color={C.accentGreen} />
+                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                            {t('product_image', language)}
+                                        </Text>
+                                    </View>
+                                    
+                                    <TouchableOpacity
+                                        onPress={showImageOptions}
+                                        disabled={uploadingImage}
+                                        style={[
+                                            styles.imageUploadArea,
+                                            { borderColor: C.border, backgroundColor: C.background }
+                                        ]}
+                                    >
+                                        {uploadingImage ? (
+                                            <View style={styles.uploadingContainer}>
+                                                <ActivityIndicator size="large" color={C.accentGreen} />
+                                                <Text style={[styles.uploadingText, { color: C.textDim }]}>
+                                                    {t('uploading_image', language)}
+                                                </Text>
+                                            </View>
+                                        ) : selectedImage ? (
+                                            <View style={styles.selectedImageContainer}>
+                                                <Image 
+                                                    source={{ uri: selectedImage }} 
+                                                    style={styles.selectedImage}
+                                                    resizeMode="cover"
+                                                />
+                                                <TouchableOpacity
+                                                    style={styles.removeImageBtn}
+                                                    onPress={() => {
+                                                        setSelectedImage(null);
+                                                        setImageUrl('');
+                                                    }}
+                                                >
+                                                    <Feather name="x" size={20} color="#FFF" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ) : (
+                                            <View style={styles.uploadPlaceholder}>
+                                                <Feather name="camera" size={40} color={C.textDim} />
+                                                <Text style={[styles.uploadPlaceholderText, { color: C.textDim }]}>
+                                                    {t('tap_to_select_image', language)}
+                                                </Text>
+                                                <Text style={[styles.uploadHint, { color: C.textDim }]}>
+                                                    {t('image_format_hint', language)}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
 
                                 <View style={{ height: 100 }} />
                             </ScrollView>
