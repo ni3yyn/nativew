@@ -1591,6 +1591,28 @@ const SettingsSection = ({ profile, onLogout }) => {
                         onSelect={changeTheme}
                     />
                 </Accordion>
+            </StaggeredItem>
+
+            <StaggeredItem index={1}>
+                <Accordion
+                    title={t('settings_language_title', language)}
+                    icon="language"
+                    isOpen={openAccordion === 'language'}
+                    onPress={() => handleToggleAccordion('language')}
+                >
+                    <SingleSelectGroup
+                        title={t('settings_language_pick', language)}
+                        options={[
+                            { id: 'ar', label: 'العربية', icon: 'language' },
+                            { id: 'en', label: 'English', icon: 'language' }
+                        ]}
+                        selectedValue={form.language || 'ar'}
+                        onSelect={(value) => updateSetting('language', value)}
+                    />
+                </Accordion>
+            </StaggeredItem>
+
+            <StaggeredItem index={2}>
                 <Accordion
                     title={t('settings_traits_title', language)}
                     icon="id-card"
@@ -1610,20 +1632,10 @@ const SettingsSection = ({ profile, onLogout }) => {
                         selectedValue={form.scalpType}
                         onSelect={(value) => updateSetting('scalpType', value)}
                     />
-                    <View style={styles.divider} />
-                    <SingleSelectGroup
-                        title="لغة التطبيق"
-                        options={[
-                            { id: 'ar', label: 'العربية', icon: 'language' },
-                            { id: 'en', label: 'English', icon: 'language' }
-                        ]}
-                        selectedValue={form.language || 'ar'}
-                        onSelect={(value) => updateSetting('language', value)}
-                    />
                 </Accordion>
             </StaggeredItem>
 
-            <StaggeredItem index={1}>
+            <StaggeredItem index={3}>
                 <Accordion
                     title={t('settings_goals_title', language)}
                     icon="crosshairs"
@@ -1639,7 +1651,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            <StaggeredItem index={2}>
+            <StaggeredItem index={4}>
                 <Accordion
                     title={t('settings_conditions_title', language)}
                     icon="heartbeat"
@@ -1655,7 +1667,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            <StaggeredItem index={3}>
+            <StaggeredItem index={5}>
                 <Accordion
                     title={t('settings_allergies_title', language)}
                     icon="allergies"
@@ -1671,7 +1683,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                 </Accordion>
             </StaggeredItem>
 
-            <StaggeredItem index={4}>
+            <StaggeredItem index={6}>
                 <Accordion
                     title={t('settings_account_title', language)}
                     icon="user-cog"

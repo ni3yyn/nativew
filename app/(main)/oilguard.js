@@ -341,7 +341,228 @@ const ConfidenceRing = ({ confidence }) => {
     );
 };
 
-// --- IN FILE: oilguard.js ---
+// Inside ClaimRow in oilguard.js
+// ============================================================================
+// FIXED ClaimRow COMPONENT (PROMOTES POTENT MICRO-ACTIVES TO ESSENTIAL)
+// ============================================================================
+
+const ClaimRow = ({ result, index, isLast }) => {
+    const { colors } = useTheme();
+    const COLORS = colors || DEFAULT_COLORS;
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
+    const isRTL = I18nManager.isRTL || language === 'ar';
+
+    const [expanded, setExpanded] = useState(false);
+    const [contentHeight, setContentHeight] = useState(0);
+    const animController = useRef(new Animated.Value(0)).current;
+
+    const cleanStatusText = (text) => (text ? text.toString().replace(/[✅🌿⚖️❌🚫⚠️]/g, '').trim() : '');
+
+    const getStatusConfig = (statusRaw, confidence) => {
+        const s = statusRaw ? statusRaw.toString() : '';
+        
+        if (s.includes('مبالغة') || s.includes('تناقض') || s.includes('لا توجد') || s.includes('فارغ') || s.includes('وهمي')) {
+            return { color: COLORS.danger, icon: 'times-circle' };
+        }
+        if (s.includes('محقق')) {
+            return { color: COLORS.success, icon: 'check-circle' };
+        }
+        if (s.includes('جزئي') || s.includes('Angel') || s.includes('تركيز') || s.includes('منخفض') || s.includes('دون الفعال')) {
+            return { color: COLORS.warning, icon: 'exclamation-circle' };
+        }
+        if (confidence === 'منخفضة' || confidence === 'معدومة') {
+            return { color: COLORS.danger, icon: 'times-circle' };
+        }
+        if (confidence === 'متوسطة') {
+            return { color: COLORS.warning, icon: 'exclamation-circle' };
+        }
+        return { color: COLORS.success, icon: 'check-circle' };
+    };
+
+    const config = getStatusConfig(result?.status, result?.confidence);
+    const cleanStatus = cleanStatusText(result?.status);
+
+    // Only flag overall claim as low concentration if verdict is explicitly Angel Dusting / Underdosed
+    const isLowConcentrationClaim = cleanStatus.includes('Angel') || 
+                                    cleanStatus.includes('دون الفعال') || 
+                                    (cleanStatus.includes('تركيز') && cleanStatus.includes('منخفض'));
+
+    const rawEvidence = [...(result?.proven || []), ...(result?.traditionallyProven || [])];
+    const strongEvidence = [];
+    const weakEvidence = [];
+
+    // Deduplicate and classify evidence
+    const seenIds = new Set();
+
+    rawEvidence.forEach(item => {
+        const isObj = typeof item === 'object' && item !== null;
+        const id = isObj ? item.id : item;
+        
+        if (seenIds.has(id)) return;
+        seenIds.add(id);
+
+        const name = isObj ? (item.name || 'مكون غير معروف') : item;
+        const display = isObj ? (item.concentrationDisplay || (item.estimatedPct ? `~${item.estimatedPct}%` : null)) : null;
+        const benefit = isObj ? item.benefit : null;
+        const isTrace = isObj ? (item.isTrace ?? false) : false;
+
+        // Check if ingredient has a potent micro-active badge like "(فعال)"
+        const isPotentActive = isObj && (
+            item.isPotentMicro || 
+            (display && (display.includes('فعال') || display.includes('كافٍ'))) ||
+            item.dosageBadge === 'potent'
+        );
+
+        const data = { name, display, benefit, isTrace, isPotentActive };
+
+        // If it is a potent active (like Allantoin or Bisabolol), promote it to Strong Evidence
+        if (isPotentActive || (!isTrace && !isLowConcentrationClaim)) {
+            strongEvidence.push(data);
+        } else {
+            weakEvidence.push(data);
+        }
+    });
+
+    const toggle = () => {
+        const targetValue = expanded ? 0 : 1;
+        setExpanded(!expanded);
+        Animated.timing(animController, {
+            toValue: targetValue,
+            duration: 300,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false
+        }).start();
+    };
+
+    const rotateArrow = animController.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+    const heightInterpolate = animController.interpolate({ inputRange: [0, 1], outputRange: [0, contentHeight], extrapolate: 'clamp' });
+
+    const hasDetailedReasons = Array.isArray(result?.reasons) && result.reasons.length > 0;
+
+    return (
+        <View style={[styles.claimRowWrapper, !isLast && styles.claimRowBorder]}>
+            <TouchableOpacity onPress={toggle} activeOpacity={0.7}>
+                <View style={[styles.claimRowMain, { backgroundColor: 'transparent' }]}>
+                    <View style={styles.claimIconCol}>
+                        <FontAwesome5 name={config.icon} size={18} color={config.color} />
+                    </View>
+                    <View style={styles.claimTextCol}>
+                        <Text style={[styles.claimTextTitle, { color: COLORS.textPrimary, fontSize: 15 }]}>
+                            {result?.claim || ''}
+                        </Text>
+                        <Text style={[styles.claimTextStatus, { color: config.color, fontSize: 13 }]}>
+                            {cleanStatus}
+                        </Text>
+                    </View>
+                    <View style={styles.claimArrowCol}>
+                        <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
+                            <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
+                        </Animated.View>
+                    </View>
+                </View>
+            </TouchableOpacity>
+
+            <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
+                <View
+                    style={[styles.claimDetails, { position: 'absolute', width: '100%', paddingBottom: 16 }]}
+                    onLayout={(e) => {
+                        const h = e.nativeEvent.layout.height;
+                        if (h > 0 && h !== contentHeight) setContentHeight(h);
+                    }}
+                >
+                    {/* Fallback Explanation */}
+                    {!hasDetailedReasons && result?.explanation && (
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, lineHeight: 24, textAlign: isRTL ? 'right' : 'left' }}>
+                            {result.explanation}
+                        </Text>
+                    )}
+
+                    {/* Detailed Reasons List */}
+                    {hasDetailedReasons && (
+                        <View style={{ marginTop: 8, gap: 8 }}>
+                            {result.reasons.map((r, i) => {
+                                let rConfig = { color: COLORS.success, icon: 'check-circle' };
+                                if (r?.type === 'risk' || r?.type === 'negative') rConfig = { color: COLORS.danger, icon: 'times-circle' };
+                                if (r?.type === 'caveat') rConfig = { color: COLORS.warning, icon: 'exclamation-triangle' };
+
+                                return (
+                                    <View key={`reason-${i}`} style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'flex-start', gap: 8 }}>
+                                        <FontAwesome5 name={rConfig.icon} size={13} color={rConfig.color} style={{ marginTop: 5 }} />
+                                        <Text style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, lineHeight: 22, textAlign: isRTL ? 'right' : 'left', flex: 1 }}>
+                                            {r?.text || ''}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+
+                    {/* Actionable User Advice */}
+                    {Array.isArray(result?.userAdvice) && result.userAdvice.length > 0 && (
+                        <View style={{ marginTop: 12 }}>
+                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 6, gap: 8 }}>
+                                <FontAwesome5 name="lightbulb" size={14} color={COLORS.info} />
+                                <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.info, fontSize: 14 }}>
+                                    {isRTL ? 'ماذا أفعل؟ (نصيحة الاستخدام)' : 'What to do?'}
+                                </Text>
+                            </View>
+                            {result.userAdvice.map((advice, i) => (
+                                <Text key={`advice-${i}`} style={{ fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 14, lineHeight: 22, textAlign: isRTL ? 'right' : 'left' }}>
+                                    • {advice}
+                                </Text>
+                            ))}
+                        </View>
+                    )}
+
+                    {/* SECTION 1: ESSENTIAL / PROVEN / POTENT ACTIVES */}
+                    {strongEvidence.length > 0 && (
+                        <View style={{ marginTop: 16 }}>
+                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                <FontAwesome5 name="check-double" size={14} color={COLORS.success} />
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.success }}>
+                                    {t('comp_essential_actives', language) || 'مكونات فعالة أساسية:'}
+                                </Text>
+                            </View>
+                            <View style={{ gap: 8 }}>
+                                {strongEvidence.map((ing, i) => (
+                                    <Text key={`strong-${i}`} style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', lineHeight: 24 }}>
+                                        <Text style={{ color: COLORS.success }}>• </Text>
+                                        <Text style={{ color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' }}>{ing.name}</Text>
+                                        {ing.display && <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen }}> ({ing.display})</Text>}
+                                        {ing.benefit && <Text style={{ color: COLORS.textDim }}> — {ing.benefit}</Text>}
+                                    </Text>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* SECTION 2: SECONDARY / TRULY UNDERDOSED ACTIVES */}
+                    {weakEvidence.length > 0 && (
+                        <View style={{ marginTop: 16 }}>
+                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                <FontAwesome5 name="exclamation-triangle" size={14} color={COLORS.warning} />
+                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.warning }}>
+                                    {t('comp_secondary_traces', language) || 'تراكيز ثانوية / منخفضة:'}
+                                </Text>
+                            </View>
+                            <View style={{ gap: 8 }}>
+                                {weakEvidence.map((ing, i) => (
+                                    <Text key={`weak-${i}`} style={{ fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', lineHeight: 24 }}>
+                                        <Text style={{ color: COLORS.warning }}>• </Text>
+                                        <Text style={{ color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' }}>{ing.name}</Text>
+                                        {ing.display && <Text style={{ fontFamily: 'Tajawal-Bold', color: COLORS.warning }}> ({ing.display})</Text>}
+                                        {ing.benefit && <Text style={{ color: COLORS.textDim }}> — {ing.benefit}</Text>}
+                                    </Text>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+                </View>
+            </Animated.View>
+        </View>
+    );
+};
 
 // --- IN FILE: oilguard.js ---
 
@@ -349,194 +570,46 @@ const MarketingClaimsSection = ({ results, style }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-
-    // Helper to Clean Emojis from Backend Text
-    const cleanStatusText = (text) => {
-        if (!text) return '';
-        return text.replace(/[✅🌿⚖️❌🚫⚠️]/g, '').trim();
-    };
+    const language = useCurrentLanguage();
 
     const sortedResults = useMemo(() => {
+        if (!Array.isArray(results)) return [];
+
         return [...results].sort((a, b) => {
             const getScore = (item) => {
-                const s = item.status ? item.status.toString() : '';
-                if (s.includes('✅')) return 4; // Proven
-                if (s.includes('🌿')) return 3; // Traditional
-                if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) return 2; // Warning
-                return 1; // False
+                const s = item?.status ? item.status.toString() : '';
+                if (s.includes('محقق بنسبة معتبرة')) return 5;
+                if (s.includes('محقق بنسبة متوسطة')) return 4;
+                if (s.includes('جزئي') || s.includes('Angel') || s.includes('تركيز')) return 3;
+                if (s.includes('مبالغة') || s.includes('تناقض') || s.includes('لا توجد') || s.includes('فارغ')) return 1;
+                return 2;
             };
             return getScore(b) - getScore(a);
         });
     }, [results]);
 
-    const ClaimRow = ({ result, index }) => {
-        const [expanded, setExpanded] = useState(false);
-        const [contentHeight, setContentHeight] = useState(0);
-        const animController = useRef(new Animated.Value(0)).current;
-
-        const getStatusConfig = (statusRaw) => {
-            const s = statusRaw ? statusRaw.toString() : '';
-            if (s.includes('❌') || s.includes('تسويقي') || s.includes('🚫') || s.includes('لا توجد')) {
-                return { color: COLORS.danger, icon: 'times-circle', bg: COLORS.danger + '1A' };
-            }
-            if (s.includes('Angel') || s.includes('تركيز') || s.includes('⚠️')) {
-                return { color: COLORS.warning, icon: 'exclamation-circle', bg: COLORS.warning + '1A' };
-            }
-            if (s.includes('🌿') || s.includes('تقليديا')) {
-                return { color: COLORS.success, icon: 'leaf', bg: COLORS.success + '1A' };
-            }
-            return { color: COLORS.info, icon: 'check-circle', bg: COLORS.info + '1A' };
-        };
-
-        const config = getStatusConfig(result.status);
-        const cleanStatus = cleanStatusText(result.status);
-
-        // --- DATA PROCESSING FOR LAYOUT ---
-        const rawEvidence = [...(result.proven || []), ...(result.traditionallyProven || [])];
-
-        // Split into Strong (Primary) vs Weak (Trace)
-        const strongEvidence = [];
-        const weakEvidence = [];
-
-        rawEvidence.forEach(item => {
-            const isObj = typeof item === 'object';
-            const data = {
-                name: isObj ? item.name : item,
-                benefit: isObj ? item.benefit : null,
-                isTrace: isObj ? item.isTrace : false,
-                // --- NEW: Quantitative Data ---
-                pct: isObj ? item.estimatedPct : null,
-                badge: isObj ? item.dosageBadge : null,
-                display: isObj ? item.concentrationDisplay : null
-            };
-            if (data.isTrace) weakEvidence.push(data);
-            else strongEvidence.push(data);
-        });
-
-        const toggle = () => {
-            const targetValue = expanded ? 0 : 1;
-            setExpanded(!expanded);
-            Animated.timing(animController, {
-                toValue: targetValue, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: false
-            }).start();
-        };
-
-        const rotateArrow = animController.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
-        const heightInterpolate = animController.interpolate({ inputRange: [0, 1], outputRange: [0, contentHeight], extrapolate: 'clamp' });
-
-        return (
-            <View style={[styles.claimRowWrapper, index !== sortedResults.length - 1 && styles.claimRowBorder]}>
-                <TouchableOpacity onPress={toggle} activeOpacity={0.7}>
-                    <Animated.View style={[
-                        styles.claimRowMain,
-                        { backgroundColor: animController.interpolate({ inputRange: [0, 1], outputRange: ['transparent', config.bg] }) }
-                    ]}>
-                        <View style={styles.claimIconCol}>
-                            <FontAwesome5 name={config.icon} size={20} color={config.color} />
-                        </View>
-                        <View style={styles.claimTextCol}>
-                            <Animated.Text style={[styles.claimTextTitle, { color: animController.interpolate({ inputRange: [0, 1], outputRange: [COLORS.textPrimary, config.color] }) }]}>
-                                {result.claim}
-                            </Animated.Text>
-                            <Text style={[styles.claimTextStatus, { color: config.color }]}>{cleanStatus}</Text>
-                        </View>
-                        <View style={styles.claimArrowCol}>
-                            <Animated.View style={{ transform: [{ rotate: rotateArrow }] }}>
-                                <FontAwesome5 name="chevron-down" size={14} color={COLORS.textDim} />
-                            </Animated.View>
-                        </View>
-                    </Animated.View>
-                </TouchableOpacity>
-
-                <Animated.View style={{ height: heightInterpolate, overflow: 'hidden' }}>
-                    <View
-                        style={[styles.claimDetails, { position: 'absolute', width: '100%' }]}
-                        onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h > 0 && h !== contentHeight) setContentHeight(h); }}
-                    >
-                        {/* Explanation Text */}
-                        <Text style={styles.claimExplanation}>{result.explanation}</Text>
-
-                        {/* --- SECTION 1: PRIMARY DRIVERS (Strong) --- */}
-                        {strongEvidence.length > 0 && (
-                            <View style={styles.evidenceGroup}>
-                                {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
-                                <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.success }]}>{t('comp_essential_actives', useCurrentLanguage())}</Text>
-                                    <FontAwesome5 name="check" size={10} color={COLORS.success} />
-                                </View>
-                                {/* === END OF CORRECTION === */}
-                                <View style={styles.chipContainer}>
-                                    {strongEvidence.map((ing, i) => (
-                                        <View key={i} style={styles.chipPrimary}>
-                                            <Text style={styles.chipTextPrimary}>
-                                                {ing.name}
-                                                {/* --- NEW: Show % and Badge --- */}
-                                                {ing.display && <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: COLORS.accentGreen }}>  {ing.display} {ing.badge}</Text>}
-                                                {ing.benefit && <Text style={styles.chipBenefit}> • {ing.benefit}</Text>}
-                                            </Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {weakEvidence.length > 0 && (
-                            <View style={[styles.evidenceGroup, { marginTop: strongEvidence.length > 0 ? 12 : 0 }]}>
-                                {/* === CORRECTED LABEL STRUCTURE (NO TEXT IN VIEW) === */}
-                                <View style={styles.evidenceLabelContainer}>
-                                    <Text style={[styles.evidenceLabelText, { color: COLORS.warning }]}>{t('comp_secondary_traces', useCurrentLanguage())}</Text>
-                                    <FontAwesome5 name="exclamation-triangle" size={10} color={COLORS.warning} />
-                                </View>
-                                {/* === END OF CORRECTION === */}
-                                <View style={styles.chipContainer}>
-                                    {weakEvidence.map((ing, i) => (
-                                        <View key={i} style={styles.chipTrace}>
-                                            <Text style={styles.chipTextTrace}>
-                                                {ing.name}
-                                                {/* --- NEW: Show % and Badge for Trace Evidence --- */}
-                                                {ing.display && <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: COLORS.warning }}>  {ing.display} {ing.badge}</Text>}
-                                                {ing.benefit && <Text style={styles.chipBenefitTrace}> • {ing.benefit}</Text>}
-                                            </Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-                    </View>
-                </Animated.View>
-            </View>
-        );
-    };
-
-    const getStatusWeight = (status) => {
-        const s = String(status || '').toLowerCase();
-        if (!s) return 0.5;
-
-        const positiveMarkers = ['✅', '🌿', 'proven', 'verified', 'supported', 'true', 'safe', 'effective', 'good', 'acceptable', 'traditional', 'credible', 'natural', 'beneficial'];
-        const negativeMarkers = ['❌', '🚫', 'misleading', 'false', 'unsupported', 'unproven', 'not proven', 'unsafe', 'bad', 'avoid', 'danger', 'toxic', 'harmful'];
-        const neutralMarkers = ['⚠️', 'angel', 'تركيز', 'mixed', 'neutral', 'unclear', 'unknown', 'uncertain', 'partial'];
-
-        if (positiveMarkers.some(marker => s.includes(marker))) return 1;
-        if (negativeMarkers.some(marker => s.includes(marker))) return 0;
-        if (neutralMarkers.some(marker => s.includes(marker))) return 0.5;
-        return 0.5;
-    };
-
     return (
         <View style={[styles.claimsContainer, style]}>
             <View style={styles.claimsHeader}>
                 <View>
-                    <Text style={styles.claimsTitle}>{t('comp_claims_title', useCurrentLanguage())}</Text>
-                    <Text style={styles.claimsSubtitle}>{t('comp_claims_sub', useCurrentLanguage())}</Text>
+                    <Text style={styles.claimsTitle}>{t('comp_claims_title', language) || 'تحليل الادعاءات'}</Text>
+                    <Text style={styles.claimsSubtitle}>{t('comp_claims_sub', language) || 'كشف المبالغات التسويقية'}</Text>
                 </View>
             </View>
 
             <View style={styles.claimsBody}>
                 {sortedResults.length > 0 ? (
-                    sortedResults.map((res, i) => <ClaimRow key={i} result={res} index={i} />)
+                    sortedResults.map((res, i) => (
+                        <ClaimRow
+                            key={res?.claim || `claim-${i}`}
+                            result={res}
+                            index={i}
+                            isLast={i === sortedResults.length - 1}
+                        />
+                    ))
                 ) : (
-                    <Text style={{ color: COLORS.textDim, textAlign: 'center', marginVertical: 20 }}>
-                        {t('comp_claims_no_data', useCurrentLanguage())}
+                    <Text style={{ color: COLORS.textDim, textAlign: 'center', marginVertical: 20, fontFamily: 'Tajawal-Regular' }}>
+                        {t('comp_claims_no_data', language) || 'لا توجد ادعاءات لمراجعتها.'}
                     </Text>
                 )}
             </View>
@@ -1900,24 +1973,30 @@ export default function OilGuardEngine() {
             const parseCatalogIngredientsWithAI = async () => {
                 try {
                     console.log("🤖 [OilGuard] Parsing catalog ingredients with AI:", params.ingredients);
+                    const knownCat = (params?.category && params.category !== 'other') ? params.category : productType;
+
                     const response = await fetch(VERCEL_PARSE_TEXT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: params.ingredients }),
+                        body: JSON.stringify({ 
+                            text: params.ingredients,
+                            productType: knownCat !== 'other' ? knownCat : undefined
+                        }),
                     });
-                    
+
                     if (!response.ok) throw new Error("AI parsing request failed");
                     const responseData = await response.json();
                     console.log("✅ [OilGuard] AI Parse result for catalog:", JSON.stringify(responseData, null, 2));
-                    
+
                     const jsonResponse = responseData.result;
                     const rawList = jsonResponse.ingredients_list || [];
                     const { ingredients } = await extractIngredientsFromAIText(rawList, language);
-                    
+
                     setOcrText(rawList.join('\n'));
                     setPreProcessedIngredients(ingredients);
-                    
-                    if (jsonResponse.detected_type) {
+
+                    // Only set AI type if category was not already known
+                    if (jsonResponse.detected_type && (!knownCat || knownCat === 'other')) {
                         setProductType(jsonResponse.detected_type);
                     }
                     
@@ -2114,7 +2193,8 @@ export default function OilGuardEngine() {
                 body: JSON.stringify({
                     base64Data: base64Data,
                     localOcrText: "",
-                    scanMode: scanMode
+                    scanMode: scanMode,
+                    productType: productType !== 'other' ? productType : undefined
                 }),
             });
 
@@ -2420,8 +2500,10 @@ export default function OilGuardEngine() {
             const response = await fetch(VERCEL_PARSE_TEXT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // FIX: Send the local variable, not the state
-                body: JSON.stringify({ text: textToProcess }),
+                body: JSON.stringify({ 
+                    text: textToProcess,
+                    productType: productType !== 'other' ? productType : undefined
+                }),
             });
 
             const responseData = await response.json();
@@ -2436,7 +2518,11 @@ export default function OilGuardEngine() {
 
             setOcrText(rawList.join('\n'));
             setPreProcessedIngredients(ingredients);
-            setProductType(jsonResponse.detected_type || 'other');
+
+            // Only update productType if user hasn't already chosen one
+            if (productType === 'other' && jsonResponse.detected_type) {
+                setProductType(jsonResponse.detected_type);
+            }
 
             setIsGeminiLoading(false);
             setLoading(false);
