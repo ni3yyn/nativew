@@ -406,18 +406,22 @@ const ClaimRow = ({ result, index, isLast }) => {
         const display = isObj ? (item.concentrationDisplay || (item.estimatedPct ? `~${item.estimatedPct}%` : null)) : null;
         const benefit = isObj ? item.benefit : null;
         const isTrace = isObj ? (item.isTrace ?? false) : false;
+        const estimatedPct = isObj ? (item.estimatedPct || (parseFloat(display?.replace(/[^0-9.]/g, '')) || 0)) : 0;
 
-        // Check if ingredient has a potent micro-active badge like "(فعال)"
         const isPotentActive = isObj && (
             item.isPotentMicro || 
             (display && (display.includes('فعال') || display.includes('كافٍ'))) ||
-            item.dosageBadge === 'potent'
+            item.dosageBadge === 'potent' ||
+            item.dosageBadge === 'optimal' ||
+            item.dosageBadge === 'effective'
         );
 
         const data = { name, display, benefit, isTrace, isPotentActive };
 
-        // If it is a potent active (like Allantoin or Bisabolol), promote it to Strong Evidence
-        if (isPotentActive || (!isTrace && !isLowConcentrationClaim)) {
+        // SCIENTIFIC GUARD: Anything >= 1.0% or clinically effective is ALWAYS Essential Active
+        const isClinicallyEffective = estimatedPct >= 1.0 || isPotentActive || (!isTrace && !isLowConcentrationClaim);
+
+        if (isClinicallyEffective) {
             strongEvidence.push(data);
         } else {
             weakEvidence.push(data);
