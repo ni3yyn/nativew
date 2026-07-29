@@ -180,7 +180,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                         const data = profileSnap.data();
                         const freshSettings = data.settings || data;
                         if (data.name && !freshSettings.name) freshSettings.name = data.name;
-                        finalProfile = { settings: freshSettings, points: data.points || 0 };
+                        finalProfile = { settings: freshSettings, points: data.points || 0, isFirstGen: data.isFirstGen === true };
                     }
                     const q = query(collection(db, 'profiles', userIdString, 'savedProducts'), orderBy('createdAt', 'desc'), limit(5));
                     const snapshot = await getDocs(q);
@@ -222,7 +222,7 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                 const freshSettings = data.settings || data;
                 if (data.name && !freshSettings.name) freshSettings.name = data.name;
                 
-                const freshProfileObj = { settings: freshSettings, points: data.points || 0 };
+                const freshProfileObj = { settings: freshSettings, points: data.points || 0, isFirstGen: data.isFirstGen === true };
                 setProfile(freshProfileObj);
 
                 if (currentUser?.settings) {
@@ -403,15 +403,40 @@ const UserProfileModal = ({ visible, onClose, targetUserId, initialData, current
                             </Animated.View>
 
                             <Animated.View style={[styles.bentoSection, getSlideStyle(badgesAnim)]}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>الأوسمة (قريبا جدا) </Text>
-                                    <Text style={[styles.countBadge, { color: COLORS.textSecondary, backgroundColor: COLORS.card, borderColor: COLORS.border }]}>{PLACEHOLDER_BADGES.length}</Text>
-                                </View>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesHScroll} snapToInterval={162} decelerationRate="fast">
-                                    {PLACEHOLDER_BADGES.map((badge) => (
-                                        <AnimatedBadgeCard key={badge.id} badge={badge} COLORS={COLORS} styles={styles} language={language} />
-                                    ))}
-                                </ScrollView>
+                                {(() => {
+                                    const earnedBadges = [];
+                                    if (profile.isFirstGen) {
+                                        earnedBadges.push({
+                                            id: 'first_gen',
+                                            name: { ar: 'الجيل الأول', en: 'First Gen' },
+                                            icon: 'seedling',
+                                            color: '#22C55E',
+                                            currentLevel: 1,
+                                            currentScore: 1,
+                                            nextTarget: null,
+                                            progressPercent: 100,
+                                            isMaxed: true,
+                                        });
+                                    }
+                                    const badgeList = [...earnedBadges, ...PLACEHOLDER_BADGES];
+                                    return (
+                                        <>
+                                            <View style={styles.sectionHeaderRow}>
+                                                <Text style={styles.sectionTitle}>{t('community_profile_badges', language)}</Text>
+                                                {earnedBadges.length > 0 && (
+                                                    <Text style={[styles.countBadge, { color: '#22C55E', backgroundColor: '#22C55E15', borderColor: '#22C55E40' }]}>
+                                                        {earnedBadges.length}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesHScroll} snapToInterval={162} decelerationRate="fast">
+                                                {badgeList.map((badge) => (
+                                                    <AnimatedBadgeCard key={badge.id} badge={badge} COLORS={COLORS} styles={styles} language={language} />
+                                                ))}
+                                            </ScrollView>
+                                        </>
+                                    );
+                                })()}
                             </Animated.View>
 
                             <Animated.View style={[styles.bentoSection, { marginBottom: 10 }, getSlideStyle(shelfAnim)]}>

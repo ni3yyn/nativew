@@ -15,7 +15,8 @@ import { getClaimData } from '../../utils/claimMapper';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { basicSkinTypes, basicScalpTypes, commonConditions } from '../../data/allergiesandconditions';
-import { t, language } from '../../i18n';
+import { t, interpolate } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // Components
 import FullImageViewer from '../common/FullImageViewer';
@@ -57,7 +58,7 @@ const getTargetTypeDisplay = (targetId, language) => {
   return targetId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-const QuestTile = ({ label, value, icon, onEdit, isMissing, unit = "", color, fieldName }) => {
+const QuestTile = ({ label, value, icon, onEdit, isMissing, unit = "", color, fieldName, lang }) => {
   const { colors: C } = useTheme();
   const rtl = useRTL();
 
@@ -94,8 +95,8 @@ const QuestTile = ({ label, value, icon, onEdit, isMissing, unit = "", color, fi
              <View style={[styles.iconBlurCircle, { backgroundColor: C.gold + '2A' }]}>
                <FontAwesome5 name={icon} size={14} color={C.gold} />
              </View>
-             <Text style={[styles.questAlertText, { color: C.gold, textAlign: rtl.textAlign }]}>{label} مطلوب</Text>
-             <Text style={[styles.questCallAction, { color: C.textPrimary, textAlign: rtl.textAlign }]}>ساهم واربح {earnedPoints} نقطة</Text>
+             <Text style={[styles.questAlertText, { color: C.gold, textAlign: rtl.textAlign }]}>{interpolate(t('catalog_required', lang), { label })}</Text>
+             <Text style={[styles.questCallAction, { color: C.textPrimary, textAlign: rtl.textAlign }]}>{interpolate(t('catalog_contribute_points', lang), { points: earnedPoints })}</Text>
           </LinearGradient>
         </Animated.View>
       </TouchableOpacity>
@@ -149,6 +150,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
   const { colors: C } = useTheme();
   const rtl = useRTL();
   const router = useRouter(); 
+  const lang = useCurrentLanguage(); 
   
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(false); 
@@ -190,15 +192,15 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
             // Show pending confirmation instead of points alert
             if (result && result.isPending) {
                 AlertService.success(
-                    t('contribution_submitted', language),
-                    t('contribution_pending_review_message', language)
+                    t('contribution_submitted', lang),
+                    t('contribution_pending_review_message', lang)
                 );
             }
         } catch (error) {
             console.error('Bounty submission error:', error);
             AlertService.error(
-                t('error', language),
-                t('contribution_submit_error', language)
+                t('error', lang),
+                t('contribution_submit_error', lang)
             );
         }
     }
@@ -299,7 +301,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                     >
                       <Ionicons name="earth" size={12} color={C.textSecondary} />
                       <Text style={[styles.microChipText, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
-                        {product.country || 'أضف منشأ'}
+                        {product.country || t('catalog_add_origin', lang)}
                       </Text>
                     </TouchableOpacity>
                     
@@ -326,23 +328,25 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
               <StaggeredView index={2}>
                 <View style={[styles.bentoQuestsRow, { flexDirection: rtl.flexDirection }]}>
                   <QuestTile 
-                    label="سعر تقريبي" 
+                    label={t('catalog_approximate_price', lang)} 
                     value={displayPrice} 
                     icon="money-bill-alt" 
-                    unit="د.ج" 
+                    unit={t('catalog_currency', lang)} 
                     isMissing={!displayPrice} 
                     color={C.textPrimary} 
                     onEdit={() => executeBounty('price')} 
                     fieldName="price"
+                    lang={lang}
                   />
                   <QuestTile 
-                    label="الحجم (مل)" 
+                    label={t('catalog_quantity_ml', lang)} 
                     value={product.quantity} 
                     icon="pump-soap" 
                     isMissing={!product.quantity} 
                     color={C.textPrimary} 
                     onEdit={() => executeBounty('quantity')} 
                     fieldName="quantity"
+                    lang={lang}
                   />
                 </View>
               </StaggeredView>
@@ -359,7 +363,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         <Feather name="plus" size={14} color={C.textPrimary} />
                       </TouchableOpacity>
                       <Text style={[styles.insightTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                        خصائص ومميزات
+                        {t('catalog_features_benefits', lang)}
                       </Text>
                     </View>
                     <View style={[styles.tagStream, { flexDirection: rtl.flexDirection }]}>
@@ -382,7 +386,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                           style={[styles.hollowTrigger, { borderColor: C.gold + '80' }]}
                         >
                           <Text style={[styles.hollowTriggerText, { color: C.gold, textAlign: rtl.textAlign }]}>
-                            أكمل مميزات العبوة ✨
+                            {t('catalog_complete_features', lang)}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -400,7 +404,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         <Feather name="plus" size={14} color={C.textPrimary} />
                       </TouchableOpacity>
                       <Text style={[styles.insightTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                        {t('catalog_recommended_for', language)}
+                        {t('catalog_recommended_for', lang)}
                       </Text>
                     </View>
                     <View style={[styles.tagStream, { flexDirection: rtl.flexDirection }]}>
@@ -410,7 +414,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                           style={[styles.stealthPill, { backgroundColor: C.card, borderColor: C.border, flexDirection: rtl.flexDirection }]}
                         >
                           <Text style={[styles.stealthPillText, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
-                            {getTargetTypeDisplay(t, language)}
+                            {getTargetTypeDisplay(t, lang)}
                           </Text>
                         </View>
                       )) : (
@@ -419,7 +423,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                           style={[styles.hollowTrigger, { borderColor: C.gold + '80' }]}
                         >
                           <Text style={[styles.hollowTriggerText, { color: C.gold, textAlign: rtl.textAlign }]}>
-                            {t('catalog_add_skin_types', language)}
+                            {t('catalog_add_skin_types', lang)}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -440,11 +444,11 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                     </TouchableOpacity>
                     <View style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 10 }}>
                       <Text style={[styles.insightTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                        الشيفرة الكيميائية (INCI)
+                        {t('catalog_chemical_code', lang)}
                       </Text>
                       <View style={[styles.scienceIndicator, { backgroundColor: C.accentGreen + '2A' }]}>
                         <Text style={{ color: C.accentGreen, fontSize: 10, fontFamily:'Tajawal-Bold' }}>
-                          مختصر
+                          {t('catalog_summary', lang)}
                         </Text>
                       </View>
                     </View>
@@ -459,13 +463,13 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         <Ionicons name="camera-outline" size={32} color={C.gold} />
                       </View>
                       <Text style={[styles.hologramHeader, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                        لا نملك قائمة المكونات 😞
+                        {t('catalog_no_ingredients', lang)}
                       </Text>
                       <Text style={[styles.hologramBody, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                        صوري الكلمات الإنجليزية خلف العبوة لاستخراجها فورا.
+                        {t('catalog_scan_hint', lang)}
                       </Text>
                       <View style={[styles.hologramAction, { backgroundColor: C.gold }]}>
-                        <Text style={styles.hologramActionTxt}>تصوير وإضافة المكونات</Text>
+                        <Text style={styles.hologramActionTxt}>{t('catalog_scan_action', lang)}</Text>
                       </View>
                     </TouchableOpacity>
                   ) : (
@@ -482,7 +486,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         onPress={toggleIngredients}
                       >
                         <Text style={[styles.expandInlineText, { color: C.accentGreen, textAlign: rtl.textAlign }]}>
-                          {isIngredientsExpanded ? 'إخفاء المكونات' : 'عرض القائمة بالكامل'}
+                          {isIngredientsExpanded ? t('catalog_hide_ingredients', lang) : t('catalog_show_full_list', lang)}
                         </Text>
                         <FontAwesome5 name={isIngredientsExpanded ? 'chevron-up' : 'chevron-down'} size={10} color={C.accentGreen} />
                       </TouchableOpacity>
@@ -543,7 +547,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                   <View style={[styles.disabledOverlayFill, { backgroundColor: C.background, borderColor: C.textDim + '50', flexDirection: rtl.flexDirection }]}>
                     <MaterialCommunityIcons name="robot-dead-outline" size={24} color={C.textDim} />
                     <Text style={[styles.btnArchitectText, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                      أضيفي المكونات أولا للتفعيل
+                      {t('catalog_activate_ingredients_first', lang)}
                     </Text>
                   </View>
                 ) : (
@@ -555,7 +559,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                   >
                     <MaterialCommunityIcons name="robot-outline" size={26} color={C.textOnAccent} />
                     <Text style={[styles.btnArchitectText, { color: C.textOnAccent, textAlign: rtl.textAlign }]}>
-                      فحص المنتج
+                      {t('catalog_scan_product_btn', lang)}
                     </Text>
                     <FontAwesome5 name="chevron-left" size={14} color={C.textOnAccent} />
                   </LinearGradient>

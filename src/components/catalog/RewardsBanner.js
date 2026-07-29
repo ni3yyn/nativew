@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -7,10 +7,18 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { getUserLevelData } from '../../utils/gamificationEngine';
 import { useRTL } from '../../hooks/useRTL';
+import { t, interpolate } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useAppContext } from '../../context/AppContext';
+import UserProfileModal from '../community/UserProfileModal';
 
 export default function RewardsBanner({ currentPoints, onPress }) {
     const { colors: C } = useTheme();
     const rtl = useRTL();
+    const lang = useCurrentLanguage();
+    const { user, userProfile } = useAppContext();
+
+    const [profileModalVisible, setProfileModalVisible] = useState(false);
     
     // Automatically calculate current tier, next tier, and progress
     const levelData = getUserLevelData(currentPoints || 0);
@@ -47,62 +55,75 @@ export default function RewardsBanner({ currentPoints, onPress }) {
 
     const handlePress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setProfileModalVisible(true);
         if (onPress) onPress();
     };
 
+    const currentUserObj = userProfile ? { ...userProfile, uid: user?.uid } : { uid: user?.uid };
+
     return (
-        <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
-            <Pressable 
-                onPressIn={handlePressIn} 
-                onPressOut={handlePressOut} 
-                onPress={handlePress}
-                style={[styles.rewardBanner, { borderColor: currentLevel.color + '35' }]}
-            >
-                <LinearGradient 
-                    colors={[C.card, currentLevel.color + '08']} 
-                    style={styles.rewardGradient} 
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        <>
+            <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
+                <Pressable 
+                    onPressIn={handlePressIn} 
+                    onPressOut={handlePressOut} 
+                    onPress={handlePress}
+                    style={[styles.rewardBanner, { borderColor: currentLevel.color + '35' }]}
                 >
-                    <View style={styles.contentZIndex}>
-                        <View style={[styles.topRow, { flexDirection: rtl.flexDirection }]}>
-                            <View style={styles.levelSection}>
-                                <View style={styles.levelTextBlock}>
-                                    <Text style={[styles.labelText, { color: C.textDim, textAlign: rtl.textAlign }]}>المستوى</Text>
-                                    <Text style={[styles.levelName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>{currentLevel.name}</Text>
+                    <LinearGradient 
+                        colors={[C.card, currentLevel.color + '08']} 
+                        style={styles.rewardGradient} 
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    >
+                        <View style={styles.contentZIndex}>
+                            <View style={[styles.topRow, { flexDirection: rtl.flexDirection }]}>
+                                <View style={styles.levelSection}>
+                                    <View style={styles.levelTextBlock}>
+                                        <Text style={[styles.labelText, { color: C.textDim, textAlign: rtl.textAlign }]}>{t('catalog_level', lang)}</Text>
+                                        <Text style={[styles.levelName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>{currentLevel.name}</Text>
+                                    </View>
+                                </View>
+
+                                <View style={[styles.pointsPill, { backgroundColor: currentLevel.color + '12' }]}> 
+                                    <Text style={[styles.pointsValue, { color: C.textPrimary }]}>{currentPoints || 0}</Text>
+                                    <FontAwesome5 name="star" size={11} color={C.gold} solid />
                                 </View>
                             </View>
 
-                            <View style={[styles.pointsPill, { backgroundColor: currentLevel.color + '12' }]}> 
-                                <Text style={[styles.pointsValue, { color: C.textPrimary }]}>{currentPoints || 0}</Text>
-                                <FontAwesome5 name="star" size={11} color={C.gold} solid />
+                            <View style={styles.progressWrap}>
+                                <View style={styles.progressMeta}>
+                                    {currentLevel.id !== nextLevel.id ? (
+                                        <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
+                                            {interpolate(t('catalog_points_left', lang), { points: pointsToNextLevel })}
+                                        </Text>
+                                    ) : (
+                                        <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>{t('catalog_max_level', lang)}</Text>
+                                    )}
+                                    <Text style={[styles.progressPercent, { color: currentLevel.color }]}>{Math.round(progressPercent)}%</Text>
+                                </View>
+
+                                <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}> 
+                                    <Animated.View
+                                        style={[
+                                            styles.progressBarFill,
+                                            { width: progressWidth, backgroundColor: currentLevel.color }
+                                        ]}
+                                    />
+                                </View>
                             </View>
                         </View>
+                    </LinearGradient>
+                </Pressable>
+            </Animated.View>
 
-                        <View style={styles.progressWrap}>
-                            <View style={styles.progressMeta}>
-                                {currentLevel.id !== nextLevel.id ? (
-                                    <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
-                                        تبقى <Text style={{ fontFamily: 'Tajawal-ExtraBold', color: C.textPrimary }}>{pointsToNextLevel}</Text> نقطة
-                                    </Text>
-                                ) : (
-                                    <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>أعلى مستوى</Text>
-                                )}
-                                <Text style={[styles.progressPercent, { color: currentLevel.color }]}>{Math.round(progressPercent)}%</Text>
-                            </View>
-
-                            <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}> 
-                                <Animated.View
-                                    style={[
-                                        styles.progressBarFill,
-                                        { width: progressWidth, backgroundColor: currentLevel.color }
-                                    ]}
-                                />
-                            </View>
-                        </View>
-                    </View>
-                </LinearGradient>
-            </Pressable>
-        </Animated.View>
+            <UserProfileModal
+                visible={profileModalVisible}
+                onClose={() => setProfileModalVisible(false)}
+                targetUserId={user?.uid}
+                initialData={userProfile}
+                currentUser={currentUserObj}
+            />
+        </>
     );
 }
 

@@ -12,6 +12,7 @@ import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
 import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { usePendingContributions } from '../../hooks/usePendingContributions';
 
@@ -28,6 +29,7 @@ const formatPrice = (price) => {
 
 export default function ProductCard({ item, index, onPress, onPressBounty, isCompareMode = false, isSelected = false }) {
     const { colors: C } = useTheme();
+    const lang = useCurrentLanguage();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(20)).current;
 
@@ -127,7 +129,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                     <View style={styles.cardFooter}>
                         {isMissingPrice ? (
                             hasPendingPrice ? (
-                                <PendingBadge field="price" C={C} />
+                                <PendingBadge field="price" C={C} lang={lang} />
                             ) : (
                                 <TouchableOpacity
                                     onPress={() => onPressBounty(item, 'price')}
@@ -138,7 +140,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                                 >
                                     <FontAwesome5 name="medal" size={10} color={C.gold} />
                                     <Text style={[styles.bountyText, { color: C.gold }]}>
-                                        {t('catalog_add_price')}
+                                        {t('catalog_add_price', lang)}
                                     </Text>
                                     <View style={[styles.pointsPill, { backgroundColor: C.gold }]}>
                                         <Text style={styles.pointsPillText}>+{pricePoints}</Text>
@@ -148,7 +150,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                         ) : (
                             <View style={styles.priceAndBountyRow}>
                                 <Text style={[styles.priceText, { color: C.primary }]}>
-                                    {displayPrice} {t('catalog_currency')}
+                                    {displayPrice} {t('catalog_currency', lang)}
                                 </Text>
                                 {isMissingIngredients &&
                                     !hasPendingIngredients &&
@@ -175,7 +177,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                                         </TouchableOpacity>
                                     )}
                                 {isMissingIngredients && hasPendingIngredients && (
-                                    <PendingBadge field="ingredients" C={C} small />
+                                    <PendingBadge field="ingredients" C={C} small lang={lang} />
                                 )}
                             </View>
                         )}
@@ -187,7 +189,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
 }
 
 // Helper component for pending badge
-const PendingBadge = ({ field, C, small }) => (
+const PendingBadge = ({ field, C, small, lang }) => (
     <View
         style={[
             styles.pendingBadge,
@@ -197,7 +199,7 @@ const PendingBadge = ({ field, C, small }) => (
     >
         <Feather name="clock" size={small ? 8 : 10} color={C.gold} />
         <Text style={[styles.pendingText, { color: C.gold, fontSize: small ? 9 : 10 }]}>
-            قيد المراجعة
+            {t('catalog_pending_review', lang)}
         </Text>
     </View>
 );

@@ -1,9 +1,10 @@
+// --- START OF FILE LoginScreen.js ---
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     StyleSheet, View, Text, TextInput, TouchableOpacity,
     Dimensions, KeyboardAvoidingView, Platform, ScrollView,
     Animated, Easing, ImageBackground, StatusBar, Linking,
-    LayoutAnimation, UIManager, ActivityIndicator, Image
+    LayoutAnimation, ActivityIndicator, Image
 } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
@@ -11,12 +12,11 @@ import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../src/config/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { t } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 
-// --- THEME CONSTANTS ---
+// --- THEME CONSTANTS (UNTOUCHED) ---
 const COLORS = {
     background: '#1A2D27',
     card: '#253D34',
@@ -36,76 +36,109 @@ const COLORS = {
 const BG_IMAGE = require('../../assets/lolo.jpg');
 const { width, height } = Dimensions.get('window');
 
-// --- LOGO ---
+// --- COMPACT LOGO ---
 const AppLogo = () => (
     <View style={styles.logoWrapper}>
         <Image
             source={require('../../assets/icon.png')}
-            style={{ width: 90, height: 90, borderRadius: 20 }}
+            style={{ width: 70, height: 70, borderRadius: 18 }}
             resizeMode="contain"
         />
-        {/* Glow behind logo */}
         <View style={styles.logoGlow} />
     </View>
 );
 
-// --- COMPONENT: SMOOTH TOAST ---
-const FloatingToast = ({ visible, title, message, type }) => {
+// --- COMPONENT: HIGH-CONTRAST FLOATING TOAST ---
+const FloatingToast = ({ visible, title, message, type, lang }) => {
     const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) {
             Animated.parallel([
-                Animated.spring(translateY, { toValue: 60, friction: 6, useNativeDriver: true }),
-                Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true })
+                Animated.spring(translateY, { toValue: 50, friction: 6, tension: 40, useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true })
             ]).start();
         } else {
-            Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+            Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
                 translateY.setValue(-100);
             });
         }
     }, [visible]);
 
     const isError = type === 'error';
+    const isRTL = lang === 'ar';
+
+    // High Contrast Colors for Maximum Visibility
+    const toastBg = isError ? '#230F12' : '#142520';
+    const toastBorder = isError ? '#EF4444' : COLORS.accentGreen;
     const iconName = isError ? 'exclamation-circle' : 'check-circle';
-    const iconColor = isError ? COLORS.danger : COLORS.accentGreen;
-    const borderColor = isError ? COLORS.danger : COLORS.accentGreen;
+    const iconColor = isError ? '#F87171' : COLORS.accentGreen;
+    const messageColor = isError ? '#FECACA' : '#D1D5DB';
 
     return (
-        <Animated.View style={[styles.toastContainer, { opacity, transform: [{ translateY }], borderColor }]}>
+        <Animated.View 
+            style={[
+                styles.toastContainer, 
+                { 
+                    opacity, 
+                    transform: [{ translateY }], 
+                    backgroundColor: toastBg,
+                    borderColor: toastBorder,
+                    borderWidth: 1.5,
+                    flexDirection: isRTL ? 'row-reverse' : 'row'
+                }
+            ]}
+        >
+            <FontAwesome5 
+                name={iconName} 
+                size={24} 
+                color={iconColor} 
+                style={isRTL ? { marginLeft: 14 } : { marginRight: 14 }} 
+            />
             <View style={styles.toastContent}>
-                <Text style={styles.toastTitle}>{title}</Text>
-                <Text style={styles.toastMessage}>{message}</Text>
+                <Text style={[styles.toastTitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+                    {title}
+                </Text>
+                <Text style={[styles.toastMessage, { color: messageColor, textAlign: isRTL ? 'right' : 'left' }]}>
+                    {message}
+                </Text>
             </View>
-            <FontAwesome5 name={iconName} size={24} color={iconColor} style={{ marginLeft: 15 }} />
         </Animated.View>
     );
 };
 
-// --- COMPONENT: BIO INPUT ---
+// --- COMPONENT: SLEEK BIO INPUT ---
 const BioInput = ({ icon, ...props }) => {
     const [focused, setFocused] = useState(false);
-    const scanAnim = useRef(new Animated.Value(0)).current;
+    const focusAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.timing(scanAnim, {
+        Animated.timing(focusAnim, {
             toValue: focused ? 1 : 0,
-            duration: 400,
+            duration: 250,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: false
         }).start();
     }, [focused]);
 
-    const lineWidth = scanAnim.interpolate({
+    const borderColor = focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0%', '100%']
+        outputRange: ['rgba(255,255,255,0.1)', COLORS.accentGreen]
+    });
+
+    const backgroundColor = focusAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['rgba(0, 0, 0, 0.4)', 'rgba(90, 156, 132, 0.15)']
     });
 
     return (
-        <View style={[styles.inputContainer, { backgroundColor: focused ? COLORS.inputBgActive : COLORS.inputBg }]}>
+        <Animated.View style={[
+            styles.inputContainer, 
+            { backgroundColor, borderColor }
+        ]}>
             <View style={styles.inputIconBox}>
-                <Ionicons name={icon} size={20} color={focused ? COLORS.accentGreen : COLORS.textDim} />
+                <Ionicons name={icon} size={18} color={focused ? COLORS.accentGreen : COLORS.textDim} />
             </View>
             <TextInput
                 placeholderTextColor={COLORS.textDim}
@@ -115,15 +148,11 @@ const BioInput = ({ icon, ...props }) => {
                 selectionColor={COLORS.accentGreen}
                 {...props}
             />
-            {/* Animated Underline */}
-            <View style={styles.scanLineTrack}>
-                <Animated.View style={[styles.scanLineFill, { width: lineWidth }]} />
-            </View>
-        </View>
+        </Animated.View>
     );
 };
 
-// --- COMPONENT: PARTICLES ---
+// --- COMPONENT: RESTORED PARTICLES (SPORE) ---
 const Spore = ({ size, startX, duration, delay }) => {
     const animY = useRef(new Animated.Value(0)).current;
     const animX = useRef(new Animated.Value(0)).current;
@@ -159,15 +188,30 @@ const Spore = ({ size, startX, duration, delay }) => {
 
 // --- MAIN SCREEN ---
 export default function LoginScreen() {
-    const language = useCurrentLanguage();
-    const [isLogin, setIsLogin] = useState(false); // Default to Signup
-    const[email, setEmail] = useState('');
+    const currentLanguage = useCurrentLanguage();
+    const [language, setLanguage] = useState('ar');
+    const [isLogin, setIsLogin] = useState(false);
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const[loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info' });
 
-    // Animation values
+    useEffect(() => {
+        if (currentLanguage) {
+            setLanguage(currentLanguage);
+        }
+    }, [currentLanguage]);
+
+    const isRTL = language === 'ar';
+    const rtl = {
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        textAlign: isRTL ? 'right' : 'left',
+        flexStart: isRTL ? 'flex-end' : 'flex-start',
+        flexEnd: isRTL ? 'flex-start' : 'flex-end',
+        alignSelf: isRTL ? 'flex-end' : 'flex-start',
+    };
+
     const containerOpacity = useRef(new Animated.Value(0)).current;
     const contentTranslateY = useRef(new Animated.Value(20)).current;
     const formOpacity = useRef(new Animated.Value(1)).current;
@@ -191,7 +235,9 @@ export default function LoginScreen() {
             Animated.timing(formOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
             Animated.timing(formSlide, { toValue: 10, duration: 150, useNativeDriver: true })
         ]).start(() => {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            if (Platform.OS !== 'web') {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
             setIsLogin(!isLogin);
             setAlertConfig({ ...alertConfig, visible: false });
             formSlide.setValue(-10);
@@ -223,7 +269,6 @@ export default function LoginScreen() {
 
                 const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-                // No Name here - will be set in Profile settings later
                 await setDoc(doc(db, 'profiles', cred.user.uid), {
                     email: cred.user.email,
                     createdAt: Timestamp.now(),
@@ -233,7 +278,7 @@ export default function LoginScreen() {
                         gender: '',
                         skinType: '',
                         scalpType: '',
-                        language: 'ar',
+                        language: language,
                         goals: [],
                         conditions: [],
                         allergies:[]
@@ -282,9 +327,8 @@ export default function LoginScreen() {
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
-                {/* Dark overlay to make text pop */}
                 <LinearGradient
-                    colors={['rgba(5, 15, 10, 0.7)', 'rgba(5, 15, 10, 0.9)']}
+                    colors={['rgba(15, 25, 20, 0.5)', 'rgba(10, 15, 12, 0.95)']}
                     style={StyleSheet.absoluteFill}
                 />
 
@@ -295,23 +339,16 @@ export default function LoginScreen() {
 
                         <Animated.View style={{ opacity: containerOpacity, transform: [{ translateY: contentTranslateY }], width: '100%', alignItems: 'center' }}>
 
-                            {/* Logo Area */}
+                            {/* Compact Header */}
                             <View style={styles.brandContainer}>
                                 <AppLogo />
                                 <Text style={styles.brandTitle}>{t('auth_brand_title', language)}</Text>
                                 <Text style={styles.brandSubtitle}>{t('auth_brand_subtitle', language)}</Text>
                             </View>
 
-                            {/* Glassmorphic Login Card */}
-                            <View style={styles.glassCard}>
-                                {/* Inner Gradient for sheen */}
-                                <LinearGradient
-                                    colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.01)']}
-                                    style={StyleSheet.absoluteFill}
-                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                                />
-
-                                <Animated.View style={{ opacity: formOpacity, transform:[{ translateY: formSlide }], padding: 25 }}>
+                            {/* Compact Card */}
+                            <View style={styles.sleekCard}>
+                                <Animated.View style={{ opacity: formOpacity, transform:[{ translateY: formSlide }], paddingHorizontal: 18, paddingVertical: 20 }}>
 
                                     <Text style={styles.formTitle}>
                                         {isLogin ? t('auth_welcome_back', language) : t('auth_join_family', language)}
@@ -327,7 +364,7 @@ export default function LoginScreen() {
                                         onChangeText={setEmail}
                                         keyboardType="email-address"
                                         autoCapitalize="none"
-                                        textAlign="right"
+                                        textAlign={rtl.textAlign}
                                     />
 
                                     <BioInput
@@ -336,12 +373,12 @@ export default function LoginScreen() {
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry
-                                        textAlign="right"
+                                        textAlign={rtl.textAlign}
                                     />
 
                                     {isLogin && (
                                         <TouchableOpacity 
-                                            style={styles.forgotPasswordBtn} 
+                                            style={[styles.forgotPasswordBtn, { alignSelf: rtl.flexStart }]} 
                                             onPress={handleForgotPassword} 
                                             disabled={resetLoading}
                                         >
@@ -355,7 +392,7 @@ export default function LoginScreen() {
 
                                     {!isLogin && (
                                         <View style={styles.privacyContainer}>
-                                            <Text style={styles.privacyText}>
+                                            <Text style={[styles.privacyText, { textAlign: rtl.textAlign }]}>
                                                 {t('auth_privacy_agree_prefix', language)}
                                                 <Text
                                                     style={styles.privacyLink}
@@ -373,17 +410,11 @@ export default function LoginScreen() {
                                         disabled={loading}
                                         activeOpacity={0.8}
                                     >
-                                        <LinearGradient
-                                            colors={[COLORS.accentGreen, '#4a8a73']}
-                                            style={styles.btnGradient}
-                                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                                        >
-                                            {loading ? (
-                                                <ActivityIndicator color={COLORS.textOnAccent} />
-                                            ) : (
-                                                <Text style={styles.btnText}>{isLogin ? t('auth_button_login', language) : t('auth_button_signup', language)}</Text>
-                                            )}
-                                        </LinearGradient>
+                                        {loading ? (
+                                            <ActivityIndicator color={COLORS.textOnAccent} />
+                                        ) : (
+                                            <Text style={styles.btnText}>{isLogin ? t('auth_button_login', language) : t('auth_button_signup', language)}</Text>
+                                        )}
                                     </TouchableOpacity>
 
                                     <TouchableOpacity style={styles.switchBtn} onPress={switchMode} activeOpacity={0.6}>
@@ -396,13 +427,32 @@ export default function LoginScreen() {
                                 </Animated.View>
                             </View>
 
-                            <Text style={styles.copyright}>{t('auth_copyright', language)}</Text>
+                            {/* Clean Visible Bottom Controls */}
+                            <View style={styles.bottomControls}>
+                                <View style={styles.languagePill}>
+                                    <TouchableOpacity 
+                                        style={styles.langBtn}
+                                        onPress={() => { Haptics.selectionAsync(); setLanguage('ar'); }}
+                                    >
+                                        <Text style={[styles.langText, language === 'ar' && styles.langTextActive]}>ARA</Text>
+                                    </TouchableOpacity>
+                                    <View style={styles.langDivider} />
+                                    <TouchableOpacity 
+                                        style={styles.langBtn}
+                                        onPress={() => { Haptics.selectionAsync(); setLanguage('en'); }}
+                                    >
+                                        <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>ENG</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={styles.copyright}>{t('auth_copyright', language)}</Text>
+                            </View>
 
                         </Animated.View>
                     </ScrollView>
                 </KeyboardAvoidingView>
 
-                <FloatingToast visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} />
+                {/* High Contrast Toast Layered On Top */}
+                <FloatingToast visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} lang={language} />
 
             </ImageBackground>
         </View>
@@ -410,106 +460,154 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000' },
-    scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+    container: { flex: 1, backgroundColor: '#0f1914' },
+    scrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10 },
 
-    // Brand
-    brandContainer: { alignItems: 'center', marginBottom: 40 },
+    // Compact Header
+    brandContainer: { alignItems: 'center', marginBottom: 15, marginTop: 10 },
     logoWrapper: {
-        alignItems: 'center', justifyContent: 'center', marginBottom: 15,
-        top: 15,
+        alignItems: 'center', justifyContent: 'center', marginBottom: 8,
     },
     logoGlow: {
-        position: 'absolute', width: 60, height: 60, borderRadius: 30,
-        backgroundColor: COLORS.accentGreen, opacity: 0.3, zIndex: -1,
+        position: 'absolute', width: 70, height: 70, borderRadius: 35,
+        backgroundColor: COLORS.accentGreen, opacity: 0.25, zIndex: -1,
         shadowColor: COLORS.accentGreen, shadowRadius: 30, shadowOpacity: 0.8
     },
     brandTitle: {
-        fontSize: 42, fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, letterSpacing: 1, marginBottom: 5,
-        textShadowColor: 'rgba(90, 156, 132, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20
+        fontSize: 32, fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, letterSpacing: 1, marginBottom: 2,
+        textShadowColor: 'rgba(90, 156, 132, 0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 15
     },
-    brandSubtitle: { color: COLORS.textSecondary, fontSize: 15, fontFamily: 'Tajawal-Regular' },
+    brandSubtitle: { color: COLORS.textSecondary, fontSize: 13, fontFamily: 'Tajawal-Regular' },
 
-    // Glass Card
-    glassCard: {
+    // Sleek Card
+    sleekCard: {
         width: '100%',
-        borderRadius: 30,
+        borderRadius: 22,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)', // Subtle glass border
-        overflow: 'hidden',
-        backgroundColor: 'rgba(26, 45, 39, 0.6)', // Base transparency
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.5,
-        shadowRadius: 30,
-        elevation: 20
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 15
     },
-    formTitle: { fontSize: 24, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 8, fontFamily: 'Tajawal-ExtraBold' },
-    formSub: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 30, fontFamily: 'Tajawal-Regular', lineHeight: 22 },
+    formTitle: { fontSize: 20, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 4, fontFamily: 'Tajawal-ExtraBold' },
+    formSub: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 16, fontFamily: 'Tajawal-Regular', lineHeight: 18 },
 
-    // Inputs
+    // Inputs (Sleek Pill Shape)
     inputContainer: {
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: COLORS.inputBg,
-        borderRadius: 18, marginBottom: 16,
-        height: 56, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
-        position: 'relative', overflow: 'hidden'
+        borderRadius: 99, marginBottom: 12,
+        height: 50, borderWidth: 1,
     },
-    inputIconBox: { width: 50, alignItems: 'center', justifyContent: 'center', height: '100%' },
-    textInput: { flex: 1, height: '100%', color: COLORS.textPrimary, fontSize: 15, fontFamily: 'Tajawal-Regular', paddingRight: 15 },
-    scanLineTrack: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: 'rgba(255,255,255,0.05)' },
-    scanLineFill: { height: '100%', backgroundColor: COLORS.accentGreen, shadowColor: COLORS.accentGreen, shadowOpacity: 1, shadowRadius: 5 },
+    inputIconBox: { width: 44, alignItems: 'center', justifyContent: 'center', height: '100%' },
+    textInput: { 
+        flex: 1, 
+        height: '100%', 
+        color: COLORS.textPrimary, 
+        fontSize: 14, 
+        fontFamily: 'Tajawal-Regular',
+        paddingRight: 16, 
+        paddingLeft: 8 
+    },
 
     // Buttons
-    mainBtn: { marginTop: 15, borderRadius: 18, overflow: 'hidden', shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowRadius: 15, shadowOffset: { width: 0, height: 5 } },
-    btnGradient: { height: 56, alignItems: 'center', justifyContent: 'center' },
-    btnText: { color: COLORS.textOnAccent, fontSize: 18, fontFamily: 'Tajawal-Bold' },
+    mainBtn: { 
+        marginTop: 8, 
+        borderRadius: 99, 
+        backgroundColor: COLORS.accentGreen,
+        height: 50,
+        alignItems: 'center', 
+        justifyContent: 'center',
+        shadowColor: COLORS.accentGreen, 
+        shadowOpacity: 0.25, 
+        shadowRadius: 10, 
+        shadowOffset: { width: 0, height: 4 } 
+    },
+    btnText: { color: COLORS.textOnAccent, fontSize: 15, fontFamily: 'Tajawal-Bold' },
 
-    switchBtn: { alignItems: 'center', marginTop: 25, padding: 10 },
-    switchText: { color: COLORS.textDim, fontSize: 14, fontFamily: 'Tajawal-Regular' },
-    linkText: { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' },
+    switchBtn: { alignItems: 'center', marginTop: 14, padding: 6 },
+    switchText: { color: COLORS.textDim, fontSize: 13, fontFamily: 'Tajawal-Regular' },
+    linkText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' },
     
     // Forgot Password
     forgotPasswordBtn: {
         alignSelf: 'flex-start',
-        marginBottom: 15,
-        marginTop: -5,
-        paddingHorizontal: 5,
+        marginBottom: 10,
+        marginTop: -2,
+        paddingHorizontal: 8,
     },
     forgotPasswordText: {
-        color: COLORS.accentGreen,
-        fontSize: 13,
-        fontFamily: 'Tajawal-Regular',
-    },
-
-    copyright: { textAlign: 'center', color: COLORS.textDim, marginTop: 40, fontSize: 11, opacity: 0.6, fontFamily: 'Tajawal-Regular' },
-
-    // Toast
-    toastContainer: {
-        position: 'absolute', top: 60, left: 20, right: 20,
-        zIndex: 100, borderRadius: 16, overflow: 'hidden',
-        backgroundColor: COLORS.card, borderWidth: 1,
-        flexDirection: 'row-reverse', alignItems: 'center', padding: 16,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10
-    },
-    toastContent: { flex: 1 },
-    toastTitle: { color: COLORS.textPrimary, fontSize: 14, fontFamily: 'Tajawal-Bold', marginBottom: 2, textAlign: 'right' },
-    toastMessage: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Regular', textAlign: 'right' },
-    privacyContainer: {
-        marginTop: 5,
-        marginBottom: 15,
-        paddingHorizontal: 5,
-    },
-    privacyText: {
         color: COLORS.textSecondary,
         fontSize: 12,
         fontFamily: 'Tajawal-Regular',
-        textAlign: 'right',
-        lineHeight: 18,
+    },
+
+    // Compact Bottom Controls
+    bottomControls: {
+        alignItems: 'center',
+        marginTop: 15,
+        marginBottom: 8
+    },
+    languagePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 99,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        marginBottom: 8,
+    },
+    langBtn: {
+        paddingVertical: 5,
+        paddingHorizontal: 14,
+    },
+    langText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        color: COLORS.textDim,
+        letterSpacing: 1,
+    },
+    langTextActive: {
+        color: COLORS.textPrimary,
+    },
+    langDivider: {
+        width: 1,
+        height: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    
+    copyright: { textAlign: 'center', color: COLORS.textDim, fontSize: 11, opacity: 0.7, fontFamily: 'Tajawal-Regular' },
+
+    // Toast Container (Max Z-Index & Elevation)
+    toastContainer: {
+        position: 'absolute', top: 45, left: 16, right: 16,
+        zIndex: 99999, borderRadius: 16, overflow: 'hidden',
+        alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.6, shadowRadius: 20, elevation: 25
+    },
+    toastContent: { flex: 1 },
+    toastTitle: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Tajawal-Bold', marginBottom: 2 },
+    toastMessage: { fontSize: 12.5, fontFamily: 'Tajawal-Regular', lineHeight: 18 },
+    
+    privacyContainer: {
+        marginTop: 2,
+        marginBottom: 10,
+        paddingHorizontal: 8,
+    },
+    privacyText: {
+        color: COLORS.textSecondary,
+        fontSize: 11,
+        fontFamily: 'Tajawal-Regular',
+        lineHeight: 16,
     },
     privacyLink: {
-        color: COLORS.accentGreen,
+        color: COLORS.textPrimary,
         fontFamily: 'Tajawal-Bold',
         textDecorationLine: 'underline',
     },
 });
+// --- END OF FILE LoginScreen.js ---
