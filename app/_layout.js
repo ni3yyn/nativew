@@ -88,6 +88,12 @@ const useDailyPresence = (user) => {
 const adIsVisibleRef = { current: false };
 
 export const useSilentUpdates = () => {
+  useEffect(() => {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.log('ℹ️ OTA updates disabled in __DEV__ mode.');
+    }
+  }, []);
+
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     return;
   }
@@ -98,7 +104,8 @@ export const useSilentUpdates = () => {
   const hasReloadedRef = useRef(false);
 
   const logUpdateState = () => {
-    console.log('🧾 OTA state', {
+    console.log('🧾 OTA State Diagnostic:', {
+      isEnabled: Updates.isEnabled,
       channel: Updates.channel,
       runtimeVersion: Updates.runtimeVersion,
       updateId: Updates.updateId,
@@ -121,7 +128,7 @@ export const useSilentUpdates = () => {
   useEffect(() => {
     isUpdatePendingRef.current = isUpdatePending;
     if (isUpdatePending) {
-      console.log('✅ OTA Update is pending and ready.');
+      console.log('✅ OTA Update is pending and ready to apply.');
     }
   }, [isUpdatePending]);
 
@@ -140,7 +147,7 @@ export const useSilentUpdates = () => {
             console.log('🔄 App confirmed in background for 1.5s. Reloading for OTA...');
             safeReload();
           } else {
-            console.log('⏸️ OTA reload cancelled — app returned to foreground (was ad overlay).');
+            console.log('⏸️ OTA reload cancelled — app returned to foreground.');
           }
         }, 1500);
       }
@@ -157,16 +164,20 @@ export const useSilentUpdates = () => {
     const syncUpdate = async () => {
       try {
         logUpdateState();
+        if (!Updates.isEnabled) {
+          console.log('⚠️ Expo Updates is disabled natively.');
+          return;
+        }
         const result = await Updates.checkForUpdateAsync();
         if (result.isAvailable) {
           console.log('⬇️ OTA available. Downloading now...');
           await Updates.fetchUpdateAsync();
-          console.log('✅ OTA downloaded. Will apply on next genuine background transition.');
+          console.log('✅ OTA downloaded. Will apply on next background transition or next cold launch.');
         } else {
-          console.log('👍 App is up to date. No OTA available.');
+          console.log('👍 App is up to date. No OTA update available.');
         }
       } catch (e) {
-        console.log('OTA check failed:', e.message || e);
+        console.log('⚠️ OTA check failed:', e.message || e);
       }
     };
 
@@ -425,9 +436,6 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   // ➤ CURRENT VERSION (Must match app.json)
   const APP_VERSION = '1.9.0';
-
-  // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
-  console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
