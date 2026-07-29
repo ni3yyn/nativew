@@ -88,44 +88,20 @@ const useDailyPresence = (user) => {
 const adIsVisibleRef = { current: false };
 
 export const useSilentUpdates = () => {
-  useEffect(() => {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.log('ℹ️ OTA updates disabled in __DEV__ mode.');
-    }
-  }, []);
+  const isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
 
-  if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    return;
-  }
-
-  const { isUpdatePending } = Updates.useUpdates();
+  // All hooks declared unconditionally — required by React Rules of Hooks
+  const updatesState = isDevMode ? { isUpdatePending: false } : Updates.useUpdates();
+  const { isUpdatePending } = updatesState;
   const isUpdatePendingRef = useRef(false);
   const reloadTimeoutRef = useRef(null);
   const hasReloadedRef = useRef(false);
 
-  const logUpdateState = () => {
-    console.log('🧾 OTA State Diagnostic:', {
-      isEnabled: Updates.isEnabled,
-      channel: Updates.channel,
-      runtimeVersion: Updates.runtimeVersion,
-      updateId: Updates.updateId,
-      isEmbeddedLaunch: Updates.isEmbeddedLaunch,
-      createdAt: Updates.createdAt,
-    });
-  };
-
-  const safeReload = () => {
-    if (hasReloadedRef.current) return;
-    if (adIsVisibleRef.current) {
-      console.log('⏸️ OTA reload skipped — ad overlay is visible.');
+  useEffect(() => {
+    if (isDevMode) {
+      console.log('ℹ️ OTA updates disabled in __DEV__ mode.');
       return;
     }
-    hasReloadedRef.current = true;
-    console.log('🔄 Applying OTA update now...');
-    Updates.reloadAsync();
-  };
-
-  useEffect(() => {
     isUpdatePendingRef.current = isUpdatePending;
     if (isUpdatePending) {
       console.log('✅ OTA Update is pending and ready to apply.');
@@ -133,19 +109,24 @@ export const useSilentUpdates = () => {
   }, [isUpdatePending]);
 
   useEffect(() => {
+    if (isDevMode) return;
+
     const handleAppStateChange = (nextAppState) => {
-      // Clear any pending debounce on state change
       if (reloadTimeoutRef.current) {
         clearTimeout(reloadTimeoutRef.current);
         reloadTimeoutRef.current = null;
       }
-
       if (nextAppState === 'background' && isUpdatePendingRef.current) {
-        // Debounce: wait 1.5s to confirm it's a real background (not an ad overlay flicker)
         reloadTimeoutRef.current = setTimeout(() => {
           if (AppState.currentState === 'background') {
-            console.log('🔄 App confirmed in background for 1.5s. Reloading for OTA...');
-            safeReload();
+            if (hasReloadedRef.current) return;
+            if (adIsVisibleRef.current) {
+              console.log('⏸️ OTA reload skipped — ad overlay is visible.');
+              return;
+            }
+            hasReloadedRef.current = true;
+            console.log('🔄 Applying OTA update now...');
+            Updates.reloadAsync();
           } else {
             console.log('⏸️ OTA reload cancelled — app returned to foreground.');
           }
@@ -161,9 +142,17 @@ export const useSilentUpdates = () => {
   }, []);
 
   useEffect(() => {
+    if (isDevMode) return;
+
     const syncUpdate = async () => {
       try {
-        logUpdateState();
+        console.log('🧾 OTA State:', {
+          isEnabled: Updates.isEnabled,
+          channel: Updates.channel,
+          runtimeVersion: Updates.runtimeVersion,
+          updateId: Updates.updateId,
+          isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+        });
         if (!Updates.isEnabled) {
           console.log('⚠️ Expo Updates is disabled natively.');
           return;
@@ -172,7 +161,7 @@ export const useSilentUpdates = () => {
         if (result.isAvailable) {
           console.log('⬇️ OTA available. Downloading now...');
           await Updates.fetchUpdateAsync();
-          console.log('✅ OTA downloaded. Will apply on next background transition or next cold launch.');
+          console.log('✅ OTA downloaded. Will apply on next background transition.');
         } else {
           console.log('👍 App is up to date. No OTA update available.');
         }
