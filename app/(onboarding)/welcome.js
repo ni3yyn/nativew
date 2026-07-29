@@ -1,8 +1,10 @@
+// --- START OF FILE WelcomeScreen.js ---
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   Dimensions, KeyboardAvoidingView, Platform, ScrollView,
-  Animated, Easing, ImageBackground, StatusBar, Keyboard // <--- 1. ADD Keyboard IMPORT
+  Animated, Easing, ImageBackground, StatusBar, Keyboard
 } from 'react-native';
 
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -23,24 +25,24 @@ import {
   commonAllergies,
 } from '../../src/data/allergiesandconditions';
 
-// --- CONFIGURATION ---
-
-const { width, height } = Dimensions.get('window');
-const BG_IMAGE = require('../../assets/lolo.jpg');
-
+// --- THEME CONSTANTS ---
 const COLORS = {
-  background: '#1A2D27',
-  card: '#253D34',
-  border: 'rgba(90, 156, 132, 0.25)',
+  background: '#0f1914',
+  card: 'rgba(255, 255, 255, 0.04)',
+  cardSelected: 'rgba(90, 156, 132, 0.22)',
+  border: 'rgba(255, 255, 255, 0.12)',
+  borderSelected: '#5A9C84',
   textDim: '#6B7C76',
   accentGreen: '#5A9C84',
   primary: '#A3E4D7',
-  textPrimary: '#F1F3F2',
-  textSecondary: '#A3B1AC',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#C5D3CE',
   textOnAccent: '#1A2D27',
-  danger: '#ef4444',
-  glassTint: 'rgba(26, 45, 39, 0.85)',
+  danger: '#F87171',
 };
+
+const { width, height } = Dimensions.get('window');
+const BG_IMAGE = require('../../assets/lolo.jpg');
 
 // --- DATA CONSTANTS ---
 const SKIN_OPTIONS = basicSkinTypes.map((item) => ({
@@ -65,6 +67,7 @@ const GOALS_LIST = [
 const CONDITIONS_LIST = commonConditions;
 const ALLERGIES_LIST = commonAllergies;
 
+// FIXED: Syntax error in scalp subtitle ternary operator
 const getStepConfig = (gender, language) => {
   const isFemale = gender === 'أنثى';
   return [
@@ -79,36 +82,64 @@ const getStepConfig = (gender, language) => {
   ];
 };
 
-// --- COMPONENT: ORGANIC SPORE ---
-const Spore = ({ size, startX, duration }) => {
+// --- COMPONENT: PARTICLES ---
+const Spore = ({ size, startX, duration, delay }) => {
   const animY = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true })).start();
-  }, []);
-  const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
+  const animX = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0)).current;
 
-  // 2. ADD pointerEvents="none" to ensure particles never block clicks
+  useEffect(() => {
+      Animated.timing(scale, { toValue: 1, duration: 1000, delay, useNativeDriver: true }).start();
+      const floatLoop = Animated.loop(Animated.timing(animY, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }));
+      const driftLoop = Animated.loop(Animated.sequence([
+          Animated.timing(animX, { toValue: 1, duration: duration * 0.33, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+          Animated.timing(animX, { toValue: -1, duration: duration * 0.33, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+          Animated.timing(animX, { toValue: 0, duration: duration * 0.34, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ]));
+
+      const timeout = setTimeout(() => { floatLoop.start(); driftLoop.start(); }, delay);
+      return () => { clearTimeout(timeout); floatLoop.stop(); driftLoop.stop(); };
+  }, []);
+
+  const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
+  const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-30, 30] });
+
   return (
-    <Animated.View
-        pointerEvents="none"
-        style={{ position: 'absolute', left: startX, width: size, height: size, borderRadius: size/2, backgroundColor: COLORS.accentGreen, opacity: 0.2, transform: [{ translateY }] }}
-    />
+      <Animated.View
+          pointerEvents="none"
+          style={{
+              position: 'absolute', left: startX, width: size, height: size,
+              borderRadius: size / 2, backgroundColor: COLORS.accentGreen,
+              transform: [{ translateY }, { translateX }, { scale }],
+              opacity: 0.35, zIndex: 0,
+          }}
+      />
   );
 };
 
 // --- COMPONENT: SQUARE OPTION ---
 const SquareOption = ({ label, icon, selected, onPress, index }) => {
     const scale = useRef(new Animated.Value(0)).current;
-    useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: 100 + (index * 50), useNativeDriver: true }).start(); }, []);
+    useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: 60 + (index * 40), useNativeDriver: true }).start(); }, []);
 
     return (
-        <Animated.View style={{ transform: [{ scale }], width: '47%', aspectRatio: 1.1, marginBottom: 12 }}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }} style={[styles.squareCard, selected && styles.cardSelected]}>
+        <Animated.View style={{ transform: [{ scale }], width: '47%', aspectRatio: 1.05, marginBottom: 14 }}>
+            <TouchableOpacity 
+                activeOpacity={0.7} 
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }} 
+                style={[styles.squareCard, selected && styles.cardSelected]}
+            >
                 <View style={[styles.iconContainer, selected && { backgroundColor: COLORS.accentGreen }]}>
-                    <FontAwesome5 name={icon} size={24} color={selected ? COLORS.textOnAccent : COLORS.accentGreen} />
+                    <FontAwesome5 name={icon} size={22} color={selected ? COLORS.textOnAccent : COLORS.primary} />
                 </View>
-                <Text style={[styles.optionText, selected && { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' }]}>{label}</Text>
-                {selected && <View style={styles.checkBadge}><FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} /></View>}
+                <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                    {label}
+                </Text>
+                {selected && (
+                    <View style={styles.checkBadge}>
+                        <FontAwesome5 name="check" size={9} color={COLORS.textOnAccent} />
+                    </View>
+                )}
             </TouchableOpacity>
         </Animated.View>
     );
@@ -116,13 +147,13 @@ const SquareOption = ({ label, icon, selected, onPress, index }) => {
 
 // --- COMPONENT: ROW OPTION ---
 const RowOption = ({ label, selected, onPress, index, category, description, language }) => {
-    const slide = useRef(new Animated.Value(50)).current;
+    const slide = useRef(new Animated.Value(30)).current;
     const fade = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         Animated.parallel([
-            Animated.timing(slide, { toValue: 0, duration: 300, delay: 100 + (index * 40), useNativeDriver: true }),
-            Animated.timing(fade, { toValue: 1, duration: 300, delay: 100 + (index * 40), useNativeDriver: true })
+            Animated.timing(slide, { toValue: 0, duration: 250, delay: 50 + (index * 35), useNativeDriver: true }),
+            Animated.timing(fade, { toValue: 1, duration: 250, delay: 50 + (index * 35), useNativeDriver: true })
         ]).start();
     }, []);
 
@@ -132,18 +163,39 @@ const RowOption = ({ label, selected, onPress, index, category, description, lan
       health: t('onboarding_category_health', language),
     };
     const subText = description || (category ? catMap[category] : null);
+    const isRTL = language === 'ar';
 
     return (
-        <Animated.View style={{ transform: [{ translateX: slide }], opacity: fade }}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.selectionAsync(); onPress(); }} style={styles.rowContainer}>
-                <View style={[styles.rowInner, selected && styles.rowSelected]}>
-                    <View style={[styles.checkbox, selected && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]}>
-                        {selected && <FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} />}
-                    </View>
-                    <View style={{flex: 1}}>
-                        <Text style={[styles.rowText, selected && { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' }]}>{label}</Text>
-                        {subText && <Text style={[styles.rowSub, selected && { color: COLORS.textSecondary }]}>{subText}</Text>}
-                    </View>
+        <Animated.View style={{ transform: [{ translateX: slide }], opacity: fade, marginBottom: 10 }}>
+            <TouchableOpacity 
+                activeOpacity={0.75} 
+                onPress={() => { Haptics.selectionAsync(); onPress(); }} 
+                style={[styles.rowInner, selected && styles.rowSelected]}
+            >
+                <View style={[
+                    styles.checkbox, 
+                    selected && { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen },
+                    isRTL ? { marginLeft: 14 } : { marginRight: 14 }
+                ]}>
+                    {selected && <FontAwesome5 name="check" size={10} color={COLORS.textOnAccent} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={[
+                        styles.rowText, 
+                        selected && { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' },
+                        { textAlign: isRTL ? 'right' : 'left' }
+                    ]}>
+                        {label}
+                    </Text>
+                    {subText && (
+                        <Text style={[
+                            styles.rowSub, 
+                            selected && { color: COLORS.primary },
+                            { textAlign: isRTL ? 'right' : 'left' }
+                        ]}>
+                            {subText}
+                        </Text>
+                    )}
                 </View>
             </TouchableOpacity>
         </Animated.View>
@@ -158,6 +210,7 @@ export default function WelcomeScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
 
+  const isRTL = language === 'ar';
   const hasShownAlert = useRef(false);
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -182,12 +235,13 @@ export default function WelcomeScreen() {
   });
 
   const STEPS = useMemo(() => getStepConfig(formData.gender, language), [formData.gender, language]);
+  
   const particles = useMemo(() => [...Array(20)].map((_, i) => ({
     id: i,
-    size: Math.random()*5+2,
-    startX: Math.random()*width,
-    duration: 15000+Math.random()*10000,
-    delay: Math.random()*5000
+    size: Math.random() * 6 + 2,
+    startX: Math.random() * width,
+    duration: 10000 + Math.random() * 8000,
+    delay: Math.random() * 5000
   })), []);
 
   useEffect(() => {
@@ -207,14 +261,14 @@ export default function WelcomeScreen() {
   useEffect(() => {
       Animated.timing(progressAnim, {
           toValue: (currentStep + 1) / STEPS.length,
-          duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: false
+          duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: false
       }).start();
   }, [currentStep]);
 
   useEffect(() => {
     Animated.timing(errorFadeAnim, {
         toValue: showNameError ? 1 : 0,
-        duration: 300,
+        duration: 250,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false
     }).start();
@@ -222,31 +276,30 @@ export default function WelcomeScreen() {
 
   const changeStep = (dir) => {
       const next = currentStep + dir;
-      if(next < 0 || next >= STEPS.length) {
-          if(next >= STEPS.length) finishOnboarding();
+      if (next < 0 || next >= STEPS.length) {
+          if (next >= STEPS.length) finishOnboarding();
           return;
       }
 
       setShowNameError(false);
 
       Animated.parallel([
-          Animated.timing(contentOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.timing(contentTransX, { toValue: dir > 0 ? -40 : 40, duration: 200, useNativeDriver: true })
+          Animated.timing(contentOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+          Animated.timing(contentTransX, { toValue: dir > 0 ? -30 : 30, duration: 150, useNativeDriver: true })
       ]).start(() => {
           setCurrentStep(next);
-          contentTransX.setValue(dir > 0 ? 40 : -40);
+          contentTransX.setValue(dir > 0 ? 30 : -30);
 
           setTimeout(() => {
               Animated.parallel([
-                Animated.timing(contentOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.spring(contentTransX, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
+                Animated.timing(contentOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+                Animated.spring(contentTransX, { toValue: 0, friction: 7, tension: 45, useNativeDriver: true })
               ]).start();
-          }, 50);
+          }, 30);
       });
   };
 
   const handleNextStep = () => {
-    // 3. FORCE KEYBOARD DISMISSAL - This fixes the "Double Tap" requirement
     Keyboard.dismiss();
 
     if (STEPS[currentStep].id === 'name') {
@@ -262,7 +315,7 @@ export default function WelcomeScreen() {
 
   const handleSingleSelect = (field, value) => {
       setFormData(prev => ({ ...prev, [field]: value }));
-      setTimeout(() => changeStep(1), 350);
+      setTimeout(() => changeStep(1), 300);
   };
 
   const toggleMulti = (field, value) => {
@@ -293,22 +346,26 @@ export default function WelcomeScreen() {
           );
           case 1: return (
               <View style={styles.nameContainer}>
-                  <TextInput
-                    style={[styles.bigInput, showNameError && { borderBottomColor: COLORS.danger, color: COLORS.danger }]}
-                    placeholder={t('onboarding_name_placeholder', language)}
-                    placeholderTextColor={COLORS.textDim}
-                    value={formData.name}
-                    onChangeText={t => {
-                        setFormData({...formData, name: t});
-                        if (t.trim().length >= 4) setShowNameError(false);
-                    }}
-                    textAlign="center"
-                    autoFocus
-                    returnKeyType="done"
-                    onSubmitEditing={handleNextStep}
-                  />
+                  <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={[styles.bigInput, showNameError && { borderColor: COLORS.danger, color: COLORS.danger }]}
+                        placeholder={t('onboarding_name_placeholder', language)}
+                        placeholderTextColor={COLORS.textDim}
+                        value={formData.name}
+                        onChangeText={t => {
+                            setFormData({...formData, name: t});
+                            if (t.trim().length >= 4) setShowNameError(false);
+                        }}
+                        textAlign="center"
+                        autoFocus
+                        returnKeyType="done"
+                        onSubmitEditing={handleNextStep}
+                        selectionColor={COLORS.accentGreen}
+                      />
+                  </View>
+
                   <Animated.View style={{
-                      height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 30] }),
+                      height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 26] }),
                       opacity: errorFadeAnim,
                       overflow: 'hidden',
                       justifyContent: 'center',
@@ -356,17 +413,15 @@ export default function WelcomeScreen() {
           case 7: return (
               <View style={styles.centerFlex}>
                   <View style={styles.successIcon}>
-                      <FontAwesome5 name="check" size={55} color={COLORS.textOnAccent} />
+                      <FontAwesome5 name="check" size={45} color={COLORS.textOnAccent} />
                   </View>
-                  <Text style={styles.finishTitle}>{STEPS[currentStep].title}</Text>
-                  <Text style={styles.finishSub}>{STEPS[currentStep].subtitle}</Text>
               </View>
           );
       }
   };
 
   const isNextEnabled = () => {
-      if(currentStep === 1 && formData.name.trim().length === 0) return false;
+      if (currentStep === 1 && formData.name.trim().length === 0) return false;
       return true;
   };
 
@@ -374,68 +429,94 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
-        <LinearGradient colors={['rgba(26, 45, 39, 0.85)', 'rgba(26, 45, 39, 0.95)']} style={StyleSheet.absoluteFill} />
+        <LinearGradient 
+          colors={['rgba(15, 25, 20, 0.6)', 'rgba(10, 15, 12, 0.98)']} 
+          style={StyleSheet.absoluteFill} 
+        />
         {particles.map(p => <Spore key={p.id} {...p} />)}
 
         <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "padding"}
-            style={{flex: 1}}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
         >
-          <View style={[styles.safeArea, { paddingTop: 40 + insets.top, paddingBottom: insets.bottom }]}>
+          <View style={[styles.safeArea, { paddingTop: 20 + insets.top, paddingBottom: 15 + insets.bottom }]}>
 
+            {/* Static Progress Bar */}
             <View style={styles.progressContainer}>
-              <Text style={styles.stepCounter}>{interpolate(t('onboarding_step_counter', language), { current: currentStep + 1, total: STEPS.length })}</Text>
+              <Text style={[styles.stepCounter, { textAlign: isRTL ? 'right' : 'left' }]}>
+                {interpolate(t('onboarding_step_counter', language), { current: currentStep + 1, total: STEPS.length })}
+              </Text>
               <View style={styles.track}>
-                <Animated.View style={[styles.fill, { width: progressAnim.interpolate({inputRange:[0,1], outputRange:['0%','100%']}) }]} />
+                <Animated.View style={[styles.fill, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
               </View>
             </View>
 
-            <View style={styles.cardContainer}>
-                <View style={[styles.glass, { backgroundColor: COLORS.glassTint, borderColor: COLORS.border, borderWidth: 1 }]}>
-                    <View style={styles.cardHeader}>
+            {/* Scrollable Frameless Content */}
+            <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
+                <ScrollView
+                    key={currentStep}
+                    contentContainerStyle={{
+                        flexGrow: 1,
+                        paddingBottom: 20,
+                        justifyContent: currentStep === 1 || currentStep === 7 ? 'center' : 'flex-start'
+                    }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="always"
+                >
+                    {/* Header Text moving with Content */}
+                    <View style={styles.headerTextContainer}>
                         <Text style={styles.title}>{STEPS[currentStep]?.title}</Text>
                         <Text style={styles.subtitle}>{STEPS[currentStep]?.subtitle}</Text>
                     </View>
 
-                    <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
-                        <ScrollView
-                            key={currentStep}
-                            contentContainerStyle={{
-                                flexGrow: 1,
-                                paddingBottom: 20,
-                                paddingTop: currentStep === 1 ? 20 : 0,
-                                justifyContent: currentStep === 1 ? 'flex-start' : 'center'
-                            }}
-                            showsVerticalScrollIndicator={false}
-                            // 4. IMPORTANT: Allow taps to pass through even if keyboard logic is lingering
-                            keyboardShouldPersistTaps="always"
-                        >
-                            {renderContent()}
-                        </ScrollView>
-                    </Animated.View>
+                    {renderContent()}
+                </ScrollView>
+            </Animated.View>
 
-                    <View style={styles.footer}>
-                        {currentStep > 0 ? (
-                            <TouchableOpacity onPress={() => changeStep(-1)} style={styles.backBtn}>
-                                <Ionicons name="arrow-back" size={24} color={COLORS.textSecondary} />
-                            </TouchableOpacity>
-                        ) : <View style={{ width: 50 }} />}
+            {/* Fixed Footer Buttons */}
+            <View style={styles.fixedFooter}>
+                {currentStep > 0 ? (
+                    <TouchableOpacity 
+                        onPress={() => changeStep(-1)} 
+                        style={styles.backBtn}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons 
+                            name={isRTL ? "arrow-forward" : "arrow-back"} 
+                            size={24} 
+                            color={COLORS.textPrimary} 
+                        />
+                    </TouchableOpacity>
+                ) : <View style={{ width: 54 }} />}
 
-                        {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
-                            <TouchableOpacity
-                                onPress={handleNextStep}
-                                disabled={!isNextEnabled() || loading}
-                                style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
-                            >
-                                <LinearGradient colors={[COLORS.accentGreen, '#4a8a73']} style={styles.btnGradient} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
-                                    {loading ? <Text style={styles.btnText}>{t('onboarding_saving', language)}</Text> : <Text style={styles.btnText}>{currentStep === 7 ? (formData.gender === 'أنثى' ? t('onboarding_start_female', language) : t('onboarding_start_male', language)) : t('onboarding_next', language)}</Text>}
-                                    {currentStep !== 7 && !loading && <Ionicons name="arrow-forward" size={18} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />}
-                                </LinearGradient>
-                            </TouchableOpacity>
+                {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
+                    <TouchableOpacity
+                        onPress={handleNextStep}
+                        disabled={!isNextEnabled() || loading}
+                        style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
+                        activeOpacity={0.8}
+                    >
+                        {loading ? (
+                            <Text style={styles.btnText}>{t('onboarding_saving', language)}</Text>
+                        ) : (
+                            <View style={styles.btnContent}>
+                            <Text style={styles.btnText}>
+                                {currentStep === 7 
+                                ? (formData.gender === 'أنثى' ? t('onboarding_start_female', language) : t('onboarding_start_male', language)) 
+                                : t('onboarding_next', language)}
+                            </Text>
+                            {currentStep !== 7 && (
+                                <Ionicons 
+                                name={isRTL ? "arrow-back" : "arrow-forward"} 
+                                size={20} 
+                                color={COLORS.textOnAccent} 
+                                style={{ marginHorizontal: 8 }} 
+                                />
+                            )}
+                            </View>
                         )}
-                    </View>
-                </View>
+                    </TouchableOpacity>
+                )}
             </View>
 
           </View>
@@ -446,76 +527,191 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  safeArea: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  progressContainer: { marginBottom: 15, paddingHorizontal: 5 },
-  stepCounter: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 13, marginBottom: 8, textAlign: 'right' },
-  track: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: COLORS.accentGreen, borderRadius: 3 },
-  cardContainer: { flex: 0.90, marginBottom: 20 },
-  glass: { flex: 1, borderRadius: 30, overflow: 'hidden', paddingVertical: 25, paddingHorizontal: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 20 },
-  cardHeader: { alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  title: { fontSize: 26, fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 14, fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, textAlign: 'center' },
-  gridCenter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: '100%', gap: 15 },
-  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'center', paddingHorizontal: 5 },
-  listContainer: { width: '100%', gap: 10 },
-  squareCard: { flex: 1, height: '100%', borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, padding: 10 },
-  cardSelected: { borderColor: COLORS.accentGreen, borderWidth: 2, backgroundColor: 'rgba(90, 156, 132, 0.15)' },
-  iconContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  optionText: { fontSize: 16, fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, textAlign: 'center' },
-  checkBadge: { position: 'absolute', top: 10, right: 10, backgroundColor: COLORS.accentGreen, padding: 4, borderRadius: 10 },
-  rowContainer: { width: '100%' },
-  rowInner: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border
-},
-rowSelected: {
-    borderColor: COLORS.accentGreen,
-    borderWidth: 1,
-    backgroundColor: 'rgba(90, 156, 132, 0.15)'
-},
-checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: COLORS.textDim,
+  container: { flex: 1, backgroundColor: '#0f1914' },
+  safeArea: { flex: 1, paddingHorizontal: 16 },
+
+  // Progress Bar
+  progressContainer: { marginBottom: 20, paddingHorizontal: 4 },
+  stepCounter: { color: COLORS.textSecondary, fontFamily: 'Tajawal-Bold', fontSize: 13, marginBottom: 6 },
+  track: { height: 5, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 99, overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: COLORS.accentGreen, borderRadius: 99 },
+
+  // Frameless Header Text
+  headerTextContainer: { 
+    alignItems: 'center', 
+    marginBottom: 24, 
+    paddingHorizontal: 10 
+  },
+  title: { 
+    fontSize: 28, 
+    fontFamily: 'Tajawal-ExtraBold', 
+    color: COLORS.textPrimary, 
+    textAlign: 'center', 
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)', 
+    textShadowOffset: { width: 0, height: 2 }, 
+    textShadowRadius: 10 
+  },
+  subtitle: { 
+    fontSize: 15, 
+    fontFamily: 'Tajawal-Regular', 
+    color: COLORS.textSecondary, 
+    textAlign: 'center', 
+    lineHeight: 22 
+  },
+
+  // Square Option Grid (High Contrast)
+  gridCenter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'center' },
+  
+  squareCard: {
+    flex: 1,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 15,
-    marginRight: 0
-},
-rowText: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+  },
+  cardSelected: {
+    borderColor: COLORS.accentGreen,
+    backgroundColor: COLORS.cardSelected,
+    shadowColor: COLORS.accentGreen,
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+  },
+  iconContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  optionText: { fontSize: 16, fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, textAlign: 'center' },
+  optionTextSelected: { color: COLORS.textPrimary, fontFamily: 'Tajawal-ExtraBold' },
+  checkBadge: { 
+    position: 'absolute', 
+    top: 12, 
+    right: 12, 
+    backgroundColor: COLORS.accentGreen, 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+
+  // Row Option List (High Contrast)
+  listContainer: { width: '100%' },
+  rowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  rowSelected: {
+    borderColor: COLORS.accentGreen,
+    backgroundColor: COLORS.cardSelected,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: {
     fontSize: 16,
     fontFamily: 'Tajawal-Regular',
-    color: COLORS.textPrimary,
-    flex: 1,
-    textAlign: 'right'
-},
-rowSub: {
-    fontSize: 12,
-    fontFamily: 'Tajawal-Regular',
     color: COLORS.textSecondary,
-    marginTop: 4,
-    textAlign: 'right'
-},
-  nameContainer: { width: '100%', alignItems: 'center', gap: 10, marginTop: Platform.OS === 'ios' ? 20 : 40 },
-  bigInput: { width: '100%', fontSize: 26, fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, borderBottomWidth: 2, borderBottomColor: COLORS.accentGreen, paddingVertical: 10, textAlign: 'center' },
-  inputHint: { color: COLORS.textDim, fontSize: 14, fontFamily: 'Tajawal-Regular', marginTop: 10 },
+    flex: 1,
+  },
+  rowSub: {
+    fontSize: 13,
+    fontFamily: 'Tajawal-Regular',
+    color: COLORS.textDim,
+    marginTop: 3,
+  },
+
+  // Name Input Container
+  nameContainer: { width: '100%', alignItems: 'center' },
+  inputWrapper: {
+    width: '100%',
+    borderRadius: 99,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 20,
+    height: 60,
+    justifyContent: 'center',
+  },
+  bigInput: {
+    width: '100%',
+    fontSize: 22,
+    fontFamily: 'Tajawal-Bold',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  inputHint: { color: COLORS.textDim, fontSize: 13, fontFamily: 'Tajawal-Regular', marginTop: 12, textAlign: 'center' },
   errorText: { color: COLORS.danger, fontSize: 14, fontFamily: 'Tajawal-Bold', textAlign: 'center' },
+
+  // Step Finish Screen
   centerFlex: { width: '100%', alignItems: 'center', justifyContent: 'center' },
-  successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.accentGreen, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  finishTitle: { fontSize: 26, fontFamily: 'Tajawal-Bold', color: COLORS.textPrimary, marginBottom: 8 },
-  finishSub: { fontSize: 15, fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, paddingTop: 15 },
-  backBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-  nextBtn: { flex: 1, marginLeft: 15, height: 50, borderRadius: 25, overflow: 'hidden' },
-  btnGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold', fontSize: 18 }
+  successIcon: { 
+    width: 100, 
+    height: 100, 
+    borderRadius: 50, 
+    backgroundColor: COLORS.accentGreen, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 24,
+    shadowColor: COLORS.accentGreen,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+
+  // Fixed Footer Navigation
+  fixedFooter: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingTop: 10,
+  },
+  backBtn: { 
+    width: 54, 
+    height: 54, 
+    borderRadius: 27, 
+    backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  nextBtn: { 
+    flex: 1, 
+    marginLeft: 16, 
+    height: 54, 
+    borderRadius: 99, 
+    backgroundColor: COLORS.accentGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.accentGreen,
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  btnText: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-ExtraBold', fontSize: 17 },
 });
+
+// --- END OF FILE WelcomeScreen.js ---

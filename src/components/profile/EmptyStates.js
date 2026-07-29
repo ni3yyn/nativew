@@ -138,7 +138,7 @@ export const ShelfEmptyState = ({ onPress }) => {
             <View style={styles.container}>
                 <View style={styles.iconCircle}>
                     <Image
-                        source={require('../../../assets/icon.png')}
+                        source={require('../../../assets/logo.png')}
                         style={{ width: 80, height: 80, resizeMode: 'contain', opacity: 0.9 }}
                     />
                 </View>

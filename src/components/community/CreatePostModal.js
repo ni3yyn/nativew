@@ -560,7 +560,7 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                                 </View>
 
                                                 <Image
-                                                    source={p.productImage ? { uri: p.productImage } : require('../../../assets/icon.png')}
+                                                    source={p.productImage ? { uri: p.productImage } : require('../../../assets/logo.png')}
                                                     style={styles.productThumbSmall}
                                                 />
 
