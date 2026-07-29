@@ -92,10 +92,10 @@ android {
     defaultConfig {
         applicationId 'com.wathiq.app'
         minSdkVersion 24  
-        targetSdkVersion 35
+        targetSdkVersion 36
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 16
+        versionCode 17
         versionName "1.9.0"
         resConfigs "en"
         
