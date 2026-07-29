@@ -445,7 +445,8 @@ export default function CatalogScreen() {
 
   // ---------------- UI RENDERS ----------------
 
-  if (checkingIntro || loading) {
+  // 1. First, wait to figure out IF we need to show the intro
+  if (checkingIntro) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
         <ActivityIndicator size="large" color={C.accentGreen} />
@@ -453,8 +454,18 @@ export default function CatalogScreen() {
     );
   }
 
+  // 2. If we need to show the intro, show it now (blocks data loading spinner)
   if (showIntro) {
     return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
+  }
+
+  // 3. Once the intro is done (or skipped), show a spinner while data downloads
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: C.background }]}>
+        <ActivityIndicator size="large" color={C.accentGreen} />
+      </View>
+    );
   }
 
   return (
