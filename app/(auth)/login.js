@@ -40,7 +40,7 @@ const { width, height } = Dimensions.get('window');
 const AppLogo = () => (
     <View style={styles.logoWrapper}>
         <Image
-            source={require('../../assets/adaptive-icon.png')}
+            source={require('../../assets/logo.png')}
             style={{ width: 70, height: 70, borderRadius: 18 }}
             resizeMode="contain"
         />
