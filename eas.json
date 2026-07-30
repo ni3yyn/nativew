@@ -12,7 +12,7 @@
       "channel": "preview",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease --stacktrace --info"
+        "gradleCommand": ":app:assembleRelease"
       }
     },
     "production": {

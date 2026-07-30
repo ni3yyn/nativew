@@ -87,48 +87,63 @@ const useDailyPresence = (user) => {
 // Shared ref so the ad hook can signal "don't reload right now"
 const adIsVisibleRef = { current: false };
 
+// ============================================================================
+// 1. HELPER: SILENT UPDATE HOOK
+// IMPORTANT: All hooks (useUpdates, useRef, useEffect) MUST be called
+// unconditionally — Rules of Hooks require that. The __DEV__ guard is placed
+// INSIDE the effect body, never before any hook call.
+// ============================================================================
 export const useSilentUpdates = () => {
-  const isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
-
-  // All hooks declared unconditionally — required by React Rules of Hooks
-  const updatesState = isDevMode ? { isUpdatePending: false } : Updates.useUpdates();
-  const { isUpdatePending } = updatesState;
+  // ✅ All hooks called unconditionally — no early return before this point
+  const { isUpdatePending } = Updates.useUpdates();
   const isUpdatePendingRef = useRef(false);
   const reloadTimeoutRef = useRef(null);
   const hasReloadedRef = useRef(false);
 
-  useEffect(() => {
-    if (isDevMode) {
-      console.log('ℹ️ OTA updates disabled in __DEV__ mode.');
+  const logUpdateState = () => {
+    console.log('🧾 OTA state', {
+      channel: Updates.channel,
+      runtimeVersion: Updates.runtimeVersion,
+      updateId: Updates.updateId,
+      isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+      createdAt: Updates.createdAt,
+    });
+  };
+
+  const safeReload = () => {
+    if (hasReloadedRef.current) return;
+    if (adIsVisibleRef.current) {
+      console.log('⏸️ OTA reload skipped — ad overlay is visible.');
       return;
     }
+    hasReloadedRef.current = true;
+    console.log('🔄 Applying OTA update now...');
+    Updates.reloadAsync();
+  };
+
+  useEffect(() => {
     isUpdatePendingRef.current = isUpdatePending;
     if (isUpdatePending) {
-      console.log('✅ OTA Update is pending and ready to apply.');
+      console.log('✅ OTA Update is pending and ready.');
     }
   }, [isUpdatePending]);
 
   useEffect(() => {
-    if (isDevMode) return;
-
     const handleAppStateChange = (nextAppState) => {
+      // Clear any pending debounce on state change
       if (reloadTimeoutRef.current) {
         clearTimeout(reloadTimeoutRef.current);
         reloadTimeoutRef.current = null;
       }
+
       if (nextAppState === 'background' && isUpdatePendingRef.current) {
+        // Debounce: wait 1.5s to confirm it's a real background (not an ad overlay flicker)
         reloadTimeoutRef.current = setTimeout(() => {
           if (AppState.currentState === 'background') {
-            if (hasReloadedRef.current) return;
-            if (adIsVisibleRef.current) {
-              console.log('⏸️ OTA reload skipped — ad overlay is visible.');
-              return;
-            }
-            hasReloadedRef.current = true;
-            console.log('🔄 Applying OTA update now...');
-            Updates.reloadAsync();
+            console.log('🔄 App confirmed in background for 1.5s. Reloading for OTA...');
+            safeReload();
           } else {
-            console.log('⏸️ OTA reload cancelled — app returned to foreground.');
+            console.log('⏸️ OTA reload cancelled — app returned to foreground (was ad overlay).');
           }
         }, 1500);
       }
@@ -142,31 +157,25 @@ export const useSilentUpdates = () => {
   }, []);
 
   useEffect(() => {
-    if (isDevMode) return;
+    // ✅ __DEV__ guard is INSIDE the effect — hooks above are still called unconditionally
+    if (__DEV__) {
+      console.log('🛠️ DEV mode — skipping manual OTA check (native handles it in release).');
+      return;
+    }
 
     const syncUpdate = async () => {
       try {
-        console.log('🧾 OTA State:', {
-          isEnabled: Updates.isEnabled,
-          channel: Updates.channel,
-          runtimeVersion: Updates.runtimeVersion,
-          updateId: Updates.updateId,
-          isEmbeddedLaunch: Updates.isEmbeddedLaunch,
-        });
-        if (!Updates.isEnabled) {
-          console.log('⚠️ Expo Updates is disabled natively.');
-          return;
-        }
+        logUpdateState();
         const result = await Updates.checkForUpdateAsync();
         if (result.isAvailable) {
           console.log('⬇️ OTA available. Downloading now...');
           await Updates.fetchUpdateAsync();
-          console.log('✅ OTA downloaded. Will apply on next background transition.');
+          console.log('✅ OTA downloaded. Will apply on next genuine background transition.');
         } else {
-          console.log('👍 App is up to date. No OTA update available.');
+          console.log('👍 App is up to date. No OTA available.');
         }
       } catch (e) {
-        console.log('⚠️ OTA check failed:', e.message || e);
+        console.log('OTA check failed:', e.message || e);
       }
     };
 
@@ -425,6 +434,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   // ➤ CURRENT VERSION (Must match app.json)
   const APP_VERSION = '1.9.0';
+
+  // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
+  console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');
 
   // ➤ ACTIVATE SILENT UPDATES
   useSilentUpdates();
