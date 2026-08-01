@@ -130,20 +130,32 @@ import {
   // --- SHELF (FIREBASE) ---
   export const saveProductToShelf = async (userId, product) => {
     try {
-        const imageToSave = product.productImage || product.imageUrl || null;
+        const imageToSave = product.image || product.productImage || product.imageUrl || null;
         await addDoc(collection(db, 'profiles', userId, 'savedProducts'), {
             userId,
-            productName: product.name || product.productName,
+            productId: product.id || null,
+            productName: product.name || product.productName || '',
+            brand: product.brand || null,
             productImage: imageToSave,
-            analysisData: product.analysisData, 
+            ingredients: product.ingredients || null,
+            analysisData: product.analysisData || null, 
             marketingClaims: product.marketingClaims || [],
-            productType: product.productType || product.analysisData?.product_type || 'other',
+            productType: product.category?.id || product.productType || product.analysisData?.product_type || 'other',
             createdAt: serverTimestamp(),
-            source: 'community_save'
+            source: 'catalog_quick_save'
         });
     } catch (error) {
         console.error("Save Product Error:", error);
         AlertService.error(t('alert_error_title'), t('alert_save_product_error'));
+        throw error;
+    }
+  };
+
+  export const removeProductFromShelf = async (userId, shelfDocId) => {
+    try {
+        await deleteDoc(doc(db, 'profiles', userId, 'savedProducts', shelfDocId));
+    } catch (error) {
+        console.error("Remove Product Error:", error);
         throw error;
     }
   };

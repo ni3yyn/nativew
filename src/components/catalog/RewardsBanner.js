@@ -12,7 +12,7 @@ import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useAppContext } from '../../context/AppContext';
 import UserProfileModal from '../community/UserProfileModal';
 
-export default function RewardsBanner({ currentPoints, onPress }) {
+export default function RewardsBanner({ currentPoints, onPress, scrollY, collapsed }) {
     const { colors: C } = useTheme();
     const rtl = useRTL();
     const lang = useCurrentLanguage();
@@ -37,16 +37,41 @@ export default function RewardsBanner({ currentPoints, onPress }) {
             easing: Easing.out(Easing.cubic),
             useNativeDriver: false, // width animation requires false
         }).start();
-    },[progressPercent]);
+    }, [progressPercent]);
 
     const progressWidth = progressAnim.interpolate({
         inputRange: [0, 100],
         outputRange: ['0%', '100%']
     });
 
+    // Collapse animations based on scrollY prop
+    const bannerHeight = scrollY ? scrollY.interpolate({
+        inputRange: [0, 50, 100],
+        outputRange: [56, 40, 0],
+        extrapolate: 'clamp'
+    }) : new Animated.Value(56);
+
+    const bannerOpacity = scrollY ? scrollY.interpolate({
+        inputRange: [0, 50, 100],
+        outputRange: [1, 0.8, 0],
+        extrapolate: 'clamp'
+    }) : new Animated.Value(1);
+
+    const bannerMargin = scrollY ? scrollY.interpolate({
+        inputRange: [0, 50, 100],
+        outputRange: [6, 3, 0],
+        extrapolate: 'clamp'
+    }) : new Animated.Value(6);
+
+    const scale = scrollY ? scrollY.interpolate({
+        inputRange: [0, 50, 100],
+        outputRange: [1, 0.95, 0.6],
+        extrapolate: 'clamp'
+    }) : new Animated.Value(1);
+
     // Tactile button feel
     const handlePressIn = () => {
-        Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true }).start();
+        Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true }).start();
     };
     
     const handlePressOut = () => {
@@ -63,57 +88,63 @@ export default function RewardsBanner({ currentPoints, onPress }) {
 
     return (
         <>
-            <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
-                <Pressable 
-                    onPressIn={handlePressIn} 
-                    onPressOut={handlePressOut} 
-                    onPress={handlePress}
-                    style={[styles.rewardBanner, { borderColor: currentLevel.color + '35' }]}
-                >
-                    <LinearGradient 
-                        colors={[C.card, currentLevel.color + '08']} 
-                        style={styles.rewardGradient} 
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            <Animated.View 
+                style={[
+                    styles.container, 
+                    { 
+                        height: bannerHeight,
+                        opacity: bannerOpacity,
+                        marginBottom: bannerMargin,
+                        transform: [{ scale: scale }]
+                    }
+                ]}
+            >
+                <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
+                    <Pressable 
+                        onPressIn={handlePressIn} 
+                        onPressOut={handlePressOut} 
+                        onPress={handlePress}
+                        style={styles.rewardBanner}
                     >
-                        <View style={styles.contentZIndex}>
-                            <View style={[styles.topRow, { flexDirection: rtl.flexDirection }]}>
-                                <View style={styles.levelSection}>
-                                    <View style={styles.levelTextBlock}>
-                                        <Text style={[styles.labelText, { color: C.textDim, textAlign: rtl.textAlign }]}>{t('catalog_level', lang)}</Text>
-                                        <Text style={[styles.levelName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>{currentLevel.name}</Text>
+                        <LinearGradient 
+                            colors={[C.card + '00', currentLevel.color + '00']} 
+                            style={styles.rewardGradient} 
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                        >
+                            <View style={styles.contentZIndex}>
+                                <View style={[styles.row, { flexDirection: rtl.flexDirection }]}>
+                                    {/* Level Indicator - Compact */}
+                                    <View style={styles.levelIndicator}>
+                                        <View style={[styles.levelDot, { backgroundColor: currentLevel.color }]} />
+                                        <Text style={[styles.levelName, { color: C.textPrimary }]}>
+                                            {currentLevel.name}
+                                        </Text>
+                                    </View>
+
+                                    {/* Progress Bar - Compact */}
+                                    <View style={styles.progressWrap}>
+                                        <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}>
+                                            <Animated.View
+                                                style={[
+                                                    styles.progressBarFill,
+                                                    { width: progressWidth, backgroundColor: currentLevel.color }
+                                                ]}
+                                            />
+                                        </View>
+                                    </View>
+
+                                    {/* Points - Compact */}
+                                    <View style={[styles.pointsPill, { backgroundColor: 'transparent'}]}>
+                                        <Text style={[styles.pointsValue, { color: C.textPrimary }]}>
+                                            {currentPoints || 0}
+                                        </Text>
+                                        <FontAwesome5 name="star" size={9} color={C.gold} solid />
                                     </View>
                                 </View>
-
-                                <View style={[styles.pointsPill, { backgroundColor: currentLevel.color + '12' }]}> 
-                                    <Text style={[styles.pointsValue, { color: C.textPrimary }]}>{currentPoints || 0}</Text>
-                                    <FontAwesome5 name="star" size={11} color={C.gold} solid />
-                                </View>
                             </View>
-
-                            <View style={styles.progressWrap}>
-                                <View style={styles.progressMeta}>
-                                    {currentLevel.id !== nextLevel.id ? (
-                                        <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
-                                            {interpolate(t('catalog_points_left', lang), { points: pointsToNextLevel })}
-                                        </Text>
-                                    ) : (
-                                        <Text style={[styles.progressLabel, { color: C.textSecondary, textAlign: rtl.textAlign }]}>{t('catalog_max_level', lang)}</Text>
-                                    )}
-                                    <Text style={[styles.progressPercent, { color: currentLevel.color }]}>{Math.round(progressPercent)}%</Text>
-                                </View>
-
-                                <View style={[styles.progressBarBg, { backgroundColor: C.textDim + '20' }]}> 
-                                    <Animated.View
-                                        style={[
-                                            styles.progressBarFill,
-                                            { width: progressWidth, backgroundColor: currentLevel.color }
-                                        ]}
-                                    />
-                                </View>
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </Pressable>
+                        </LinearGradient>
+                    </Pressable>
+                </Animated.View>
             </Animated.View>
 
             <UserProfileModal
@@ -130,89 +161,78 @@ export default function RewardsBanner({ currentPoints, onPress }) {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        marginBottom: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
     },
     rewardBanner: {
-        borderRadius: 12,
-        borderWidth: 1,
+        borderRadius: 0,
         overflow: 'hidden',
+        height: '100%',
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+        backgroundColor: 'transparent',
     },
     rewardGradient: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        minHeight: 90,
+        paddingHorizontal: 4, // CHANGED: was 12, now reduced to 4
+        paddingVertical: 2,   // CHANGED: was 6, now reduced to 2
+        height: '100%',
         justifyContent: 'center'
     },
     contentZIndex: {
         zIndex: 2,
     },
-    topRow: {
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    levelSection: {
+    row: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
+        justifyContent: 'space-between',
+        gap: 6, // CHANGED: was 8, slightly reduced
     },
-    levelTextBlock: {
-        flex: 1,
+    levelIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4, // CHANGED: was 5, slightly reduced
+        minWidth: 50,
     },
-    labelText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 9,
-        marginBottom: 1,
+    levelDot: {
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
     },
     levelName: {
         fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 12,
-    },
-    pointsPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 5,
-        borderRadius: 999,
-    },
-    pointsValue: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 14,
-        letterSpacing: -0.3,
+        fontSize: 15,
+        letterSpacing: 0.3,
     },
     progressWrap: {
-        gap: 5,
-    },
-    progressMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-    },
-    progressLabel: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 11,
         flex: 1,
-    },
-    progressPercent: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 12,
-        marginStart: 6,
+        marginHorizontal: 2, // CHANGED: was 4, reduced
     },
     progressBarBg: {
-        height: 6,
+        height: 4,
         borderRadius: 999,
         overflow: 'hidden',
-        width: '100%'
+        width: '100%',
     },
     progressBarFill: {
         height: '100%',
         borderRadius: 999,
-    }
+    },
+    pointsPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2, // CHANGED: was 3, slightly reduced
+        paddingHorizontal: 4, // CHANGED: was 6, reduced
+        paddingVertical: 1, // CHANGED: was 2, reduced
+        borderRadius: 999,
+        minWidth: 35, // CHANGED: was 40, reduced
+        justifyContent: 'center',
+    },
+    pointsValue: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 15,
+        letterSpacing: -0.2,
+    },
 });

@@ -653,6 +653,10 @@ export const translations = {
     catalog_filter_apply: 'تطبيق التصفية',
     catalog_category_all: 'الكل',
 
+    product_removed_from_shelf: 'تمت إزالة المنتج من الرف بنجاح',
+    product_added_to_shelf: 'تمت إضافة المنتج للرف بنجاح',
+    product_already_on_shelf: 'المنتج موجود بالفعل في الرف الخاص بك',
+
     // Product Types
     product_type_cleanser: 'غسول وجه',
     product_type_skin_serum: 'سيروم للبشرة',
@@ -1039,6 +1043,9 @@ export const translations = {
     catalog_filter_apply: 'تطبيق الفلتر',
     catalog_add_price: 'أضيفي السعر',
     catalog_currency: 'د.ج',
+    catalog_empty_title: 'لا توجد منتجات',
+    catalog_empty_description: 'عذراً، لم نعثر على منتجك. إن كان لديك، أضيفيه و ساهمي في مجتمع وثيق.',
+    catalog_add_product_action: 'أضيفي منتجك',
 
     // OilGuard Components
     oilguard_suggested_alternative: 'بديل مقترح',
@@ -1571,6 +1578,9 @@ export const translations = {
     catalog_pending_review: 'Pending Review',
     catalog_scan_product_btn: 'Scan Product',
     catalog_points_suffix: 'points',
+    product_removed_from_shelf: 'Product removed from shelf',
+    product_added_to_shelf: 'Product added to shelf',
+    product_already_on_shelf: 'Product already on shelf',
 
     // Claims Mapping
     claim_gentle_cleansing: 'Gentle cleansing',
@@ -1971,6 +1981,9 @@ export const translations = {
     catalog_filter_apply: 'Apply filters',
     catalog_add_price: 'Add price',
     catalog_currency: 'DZD',
+    catalog_empty_title : 'No Products Found',
+    catalog_empty_description: "Sorry, we couldn't find your product. If you have it, add it here and contribute to Wathiq community.",
+    catalog_add_product_action: 'Add Your Product',
     community_audio_check_internet: 'Could not play audio, please check your internet connection.',
     community_verified_admin_tip: 'Admin-verified tip',
     community_read: 'Read',

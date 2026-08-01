@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated } from 'react-native';
+import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,7 +38,6 @@ const getPriceValue = (price) => {
 };
 
 // Helper to determine if a product is Algerian
-// Adjust the property fields here based on your actual database schema
 const isAlgerianProduct = (product) => {
     if (!product) return false;
     
@@ -73,6 +72,7 @@ export default function CatalogScreen() {
   const params = useLocalSearchParams();
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [selectedCompareIds, setSelectedCompareIds] = useState([]);
+  const [scrollY] = useState(new Animated.Value(0));
   
   // App States
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,10 @@ export default function CatalogScreen() {
 
   // Animation State for Compare Banner
   const compareBannerAnim = useRef(new Animated.Value(0)).current;
+  
+  // Animation for Plus Button
+  const plusScaleAnim = useRef(new Animated.Value(1)).current;
+  const plusPulseAnim = useRef(new Animated.Value(1)).current;
 
   // 1. Check if intro should be shown
   useEffect(() => {
@@ -177,7 +181,7 @@ export default function CatalogScreen() {
     Animated.timing(compareBannerAnim, {
       toValue: isCompareMode ? 1 : 0,
       duration: 300,
-      useNativeDriver: false, // Must be false for layout properties (height, margin, border)
+      useNativeDriver: false,
     }).start();
   }, [isCompareMode, compareBannerAnim]);
 
@@ -230,6 +234,11 @@ export default function CatalogScreen() {
 
   // Optimized Filter Logic
   const filteredData = useMemo(() => {
+    // Safety check - ensure products is an array
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return [];
+    }
+    
     const searchLower = search.toLowerCase();
     
     let result = products.filter(p => {
@@ -253,28 +262,69 @@ export default function CatalogScreen() {
             const aIsAlg = isAlgerianProduct(a);
             const bIsAlg = isAlgerianProduct(b);
             
-            if (aIsAlg && !bIsAlg) return -1; // 'a' moves up
-            if (!aIsAlg && bIsAlg) return 1;  // 'b' moves up
-            return 0; // Keep original order if both are Algerian or both are not
+            if (aIsAlg && !bIsAlg) return -1;
+            if (!aIsAlg && bIsAlg) return 1;
+            return 0;
         });
     }
 
     return result;
   }, [search, activeCat, products, advancedFilters]);
 
+  // Pulse animation for plus button when empty state
+  useEffect(() => {
+    let pulseAnimation;
+    
+    // Safety check - ensure filteredData is an array before checking length
+    if (Array.isArray(filteredData) && filteredData.length === 0 && !loading) {
+      pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(plusPulseAnim, {
+            toValue: 1.2,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(plusPulseAnim, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimation.start();
+    } else {
+      plusPulseAnim.setValue(1);
+      if (pulseAnimation) {
+        pulseAnimation.stop();
+      }
+    }
+    
+    return () => {
+      if (pulseAnimation) {
+        pulseAnimation.stop();
+      }
+    };
+  }, [filteredData, loading, plusPulseAnim]);
+
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
   }, [search, activeCat, advancedFilters, products]);
 
   const visibleData = useMemo(() => {
+    // Safety check - ensure filteredData is an array
+    if (!Array.isArray(filteredData)) {
+      return [];
+    }
     return filteredData.slice(0, visibleCount);
   }, [filteredData, visibleCount]);
 
   const handleLoadMore = useCallback(() => {
-    if (visibleCount < filteredData.length) {
+    if (Array.isArray(filteredData) && visibleCount < filteredData.length) {
       setVisibleCount(prev => prev + ITEMS_PER_PAGE);
     }
-  }, [visibleCount, filteredData.length]);
+  }, [visibleCount, filteredData]);
 
   const handleContribute = useCallback((product, field) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -319,7 +369,7 @@ export default function CatalogScreen() {
                   rightProduct: JSON.stringify(prod2)
                 }
               });
-            }, 300); // Wait for the transition to finish before navigating
+            }, 300);
           }
           return next;
         }
@@ -391,7 +441,6 @@ export default function CatalogScreen() {
     setIsCompareMode(nextCompareMode);
     
     if (!nextCompareMode) {
-        // Clear selected items instantly if we are turning it off
         setSelectedCompareIds([]);
     } else {
       AlertService.show({
@@ -405,11 +454,24 @@ export default function CatalogScreen() {
 
   const handleOpenAddProduct = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Animated.sequence([
+      Animated.timing(plusScaleAnim, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(plusScaleAnim, {
+        toValue: 1,
+        friction: 3,
+        tension: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
     setAddProductVisible(true);
-  }, []);
+  }, [plusScaleAnim]);
 
   // FlatList performance extractions
-  const keyExtractor = useCallback(item => item.id.toString(), []);
+  const keyExtractor = useCallback(item => item.id?.toString() || Math.random().toString(), []);
   
   const renderProduct = useCallback(({ item, index }) => (
       <ProductCard 
@@ -422,15 +484,35 @@ export default function CatalogScreen() {
       />
   ), [handleProductPress, handleContribute, isCompareMode, selectedCompareIds]);
 
-  const ListEmptyComponent = useMemo(() => (
+  const ListEmptyComponent = useMemo(() => {
+    const hasSearchTerm = search.length > 0;
+    const hasActiveFilter = advancedFilters.brand !== 'all' || advancedFilters.bountiesOnly || advancedFilters.sort !== 'default';
+    
+    return (
       <View style={styles.emptyContainer}>
-          <FontAwesome5 name="search-minus" size={40} color={C.textDim} style={{marginBottom: 15}}/>
-          <Text style={styles.emptyText}>{t('catalog_empty_title', language)}</Text>
+        <FontAwesome5 name={hasSearchTerm || hasActiveFilter ? "search-minus" : "box-open"} size={50} color={C.textDim} style={{marginBottom: 15, opacity: 0.5}}/>
+        <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
+          {t('catalog_empty_title', language)}
+        </Text>
+        <Text style={[styles.emptyDescription, { color: C.textDim }]}>
+          {t('catalog_empty_description', language)}
+        </Text>
+        <TouchableOpacity 
+          style={[styles.emptyAddButton, { backgroundColor: C.accentGreen + '15', borderColor: C.accentGreen }]}
+          onPress={handleOpenAddProduct}
+          activeOpacity={0.7}
+        >
+          <FontAwesome5 name="plus-circle" size={18} color={C.accentGreen} />
+          <Text style={[styles.emptyAddButtonText, { color: C.accentGreen }]}>
+            {t('catalog_add_product_action', language)}
+          </Text>
+        </TouchableOpacity>
       </View>
-  ), [styles.emptyContainer, styles.emptyText, C.textDim, language]);
+    );
+  }, [C.textDim, C.textPrimary, C.accentGreen, language, styles, search.length, advancedFilters, handleOpenAddProduct]);
 
   const ListFooterComponent = useMemo(() => {
-      if (visibleCount < filteredData.length) {
+      if (Array.isArray(filteredData) && visibleCount < filteredData.length) {
           return (
               <View style={{ paddingVertical: 20, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color={C.accentGreen} />
@@ -438,8 +520,7 @@ export default function CatalogScreen() {
           );
       }
       return null;
-  }, [visibleCount, filteredData.length, C.accentGreen]);
-
+  }, [visibleCount, filteredData, C.accentGreen]);
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
@@ -479,43 +560,21 @@ export default function CatalogScreen() {
       </TouchableOpacity>
       
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        
         <View style={styles.topRow}>
           <TouchableOpacity onLongPress={toggleDevMode} activeOpacity={0.7}>
             <Text style={[styles.title, { color: C.textPrimary }]}>{t('catalog_title', language)}</Text>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
             <TouchableOpacity onPress={refreshData} disabled={syncing}>
-               {syncing ? <ActivityIndicator size="small" color={C.gold} /> : <Feather name="refresh-cw" size={20} color={C.textDim} />}
+              {syncing ? <ActivityIndicator size="small" color={C.gold} /> : <Feather name="refresh-cw" size={20} color={C.textDim} />}
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Smoothly animated compare banner */}
-        <Animated.View 
-          style={[
-            styles.compareBanner, 
-            { 
-              backgroundColor: C.accentGreen + '1A', 
-              borderColor: C.accentGreen + '30', 
-              flexDirection: rtl.flexDirection,
-              height: bannerHeight,
-              opacity: bannerOpacity,
-              marginBottom: bannerMargin,
-              borderWidth: bannerBorder,
-            }
-          ]}
-        >
-          <MaterialCommunityIcons name="information-outline" size={16} color={C.accentGreen} style={{ marginHorizontal: 6 }} />
-          <Text 
-            style={[styles.compareBannerText, { color: C.accentGreen, textAlign: rtl.textAlign }]}
-            numberOfLines={1}
-          >
-            {t('catalog_compare_banner', language)} ({selectedCompareIds.length}/2)
-          </Text>
-        </Animated.View>
-
-        <RewardsBanner currentPoints={userPoints} />
+        <RewardsBanner 
+          currentPoints={userPoints} 
+          scrollY={scrollY}
+        />
 
         <View style={[styles.searchContainer, { backgroundColor: C.card, borderColor: C.border }]}>
           <FontAwesome5 name="search" size={14} color={C.textDim} style={styles.searchIcon} />
@@ -526,6 +585,12 @@ export default function CatalogScreen() {
             value={search} 
             onChangeText={setSearch} 
             textAlign={rtl.textAlign}
+            textAlignVertical="center"
+            paddingVertical={0}
+            paddingTop={0}
+            paddingBottom={0}
+            height="100%"
+            includeFontPadding={false}
           />
           <View style={[styles.divider, { backgroundColor: C.border }]} />
           <TouchableOpacity onPress={handleFilterOpen} style={styles.filterBtn}>
@@ -542,17 +607,24 @@ export default function CatalogScreen() {
         keyExtractor={keyExtractor} 
         showsVerticalScrollIndicator={false}
         renderItem={renderProduct}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+  styles.list,
+  // If empty, make it fill the whole screen
+  (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
+]}
         refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshData} tintColor={C.gold} />}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5} 
         ListEmptyComponent={ListEmptyComponent}
         ListFooterComponent={ListFooterComponent}
-        // FlatList Performance properties
         initialNumToRender={ITEMS_PER_PAGE}
         maxToRenderPerBatch={ITEMS_PER_PAGE}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
       />
 
       <View style={styles.fabStack}>
@@ -577,22 +649,30 @@ export default function CatalogScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[
+        <Animated.View
+          style={{
+            transform: [
+              { scale: plusPulseAnim }
+            ]
+          }}
+        >
+          <TouchableOpacity 
+            style={[
               styles.fab, 
               rtl.flexDirection === 'row-reverse' ? { left: 20 } : { right: 20 }
-          ]} 
-          activeOpacity={0.8}
-          onPress={handleOpenAddProduct}
-        >
-          <LinearGradient
+            ]} 
+            activeOpacity={0.8}
+            onPress={handleOpenAddProduct}
+          >
+            <LinearGradient
               colors={[C.accentGreen, C.card]}
               style={styles.fabGradient}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          >
+            >
               <Feather name="plus" size={24} color={C.textOnAccent} />
-          </LinearGradient>
-        </TouchableOpacity>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={closeProductDetail} onContribute={handleContribute} />
@@ -609,15 +689,65 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 10 },
   topRow: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   title: { fontFamily: 'Tajawal-ExtraBold', fontSize: isEn ? 26 : 24 },
-  searchContainer: { flexDirection: rtl.flexDirection, height: 50, borderRadius: 14, alignItems: 'center', borderWidth: 1, marginBottom: 10, paddingHorizontal: 15 },
+  searchContainer: { 
+    flexDirection: rtl.flexDirection, 
+    height: 50, 
+    borderRadius: 14, 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    marginBottom: 10, 
+    paddingHorizontal: 15 
+  },
   searchIcon: { marginEnd: 10 },
-  input: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: isEn ? 16 : 14, paddingTop: Platform.OS === 'android' ? 3 : 0, textAlign: rtl.textAlign },
+  input: { 
+    flex: 1, 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: isEn ? 16 : 14, 
+    textAlign: rtl.textAlign,
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    height: '100%',
+    includeFontPadding: false,
+  },
   divider: { width: 1, height: 25, marginHorizontal: 10 },
   filterBtn: { padding: 8, position: 'relative', justifyContent: 'center', alignItems: 'center' },
   activeFilterDot: { position: 'absolute', top: 5, right: 5, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   list: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 },
-  emptyContainer: { alignItems: 'center', marginTop: 60 },
-  emptyText: { color: C.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: isEn ? 18 : 16 },
+  emptyContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginTop: 60,
+    paddingHorizontal: 30,
+  },
+  emptyTitle: { 
+    fontFamily: 'Tajawal-Bold', 
+    fontSize: isEn ? 20 : 18,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptyDescription: { 
+    fontFamily: 'Tajawal-Regular', 
+    fontSize: isEn ? 15 : 14,
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 22,
+    opacity: 0.8,
+  },
+  emptyAddButton: {
+    flexDirection: rtl.flexDirection,
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  emptyAddButtonText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: isEn ? 15 : 14,
+  },
   fabStack: { position: 'absolute', bottom: 90, zIndex: 100, gap: 10 },
   fab: { position: 'relative', zIndex: 100 },
   fabSecondary: { position: 'relative', zIndex: 100 },
@@ -629,10 +759,15 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden', // Ensures text doesn't spill out while height is animating from 0
+    overflow: 'hidden',
   },
   compareBannerText: { 
     fontFamily: 'Tajawal-Bold', 
     fontSize: 13 
   },
+  emptyList: {
+  flex: 1,
+  justifyContent: 'center',
+  paddingBottom: 250,
+}
 });

@@ -5,6 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 
 const FullImageViewer = ({ visible, imageUrl, onClose }) => {
+    const [hasError, setHasError] = React.useState(false);
+
+    React.useEffect(() => {
+        setHasError(false);
+    }, [imageUrl]);
+
     if (!visible || !imageUrl) return null;
     
     return (
@@ -22,7 +28,18 @@ const FullImageViewer = ({ visible, imageUrl, onClose }) => {
                     showsHorizontalScrollIndicator={false}
                     showsVerticalScrollIndicator={false}
                 >
-                    <Image source={{ uri: imageUrl }} style={styles.viewerImage} resizeMode="contain" />
+                    {hasError ? (
+                        <View style={styles.errorContainer}>
+                            <Ionicons name="image-outline" size={80} color="#666" />
+                        </View>
+                    ) : (
+                        <Image 
+                            source={{ uri: imageUrl }} 
+                            style={styles.viewerImage} 
+                            resizeMode="contain" 
+                            onError={() => setHasError(true)}
+                        />
+                    )}
                 </ScrollView>
             </View>
         </Modal>
@@ -32,8 +49,9 @@ const FullImageViewer = ({ visible, imageUrl, onClose }) => {
 const styles = StyleSheet.create({
     viewerContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
     viewerCloseBtn: { position: 'absolute', top: 50, right: 20, zIndex: 10, padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 25 },
-    scrollContent: { flex: 1, justifyContent: 'center' },
-    viewerImage: { width: width, height: height * 0.8 },
+    scrollContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' },
+    viewerImage: { width: width, height: height * 0.85 },
+    errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
 
 export default FullImageViewer;

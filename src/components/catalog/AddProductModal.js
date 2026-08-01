@@ -290,7 +290,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
 
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
             });
 
@@ -682,7 +682,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                 <Image 
                                                     source={{ uri: selectedImage }} 
                                                     style={styles.selectedImage}
-                                                    resizeMode="cover"
+                                                    resizeMode="contain"
                                                 />
                                                 <TouchableOpacity
                                                     style={styles.removeImageBtn}
@@ -1012,10 +1012,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     selectedImage: {
-        width: 150,
-        height: 150,
-        borderRadius: 12,
-    },
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+},
     removeImageBtn: {
         position: 'absolute',
         top: -10,

@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 
 // Context & Utilities
 import { useTheme } from '../../context/ThemeContext';
+import { useAppContext } from '../../context/AppContext';
 import { useRTL } from '../../hooks/useRTL';
 import { getClaimData } from '../../utils/claimMapper';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
@@ -17,6 +18,8 @@ import { getPointsForField } from '../../utils/gamificationEngine';
 import { basicSkinTypes, basicScalpTypes, commonConditions } from '../../data/allergiesandconditions';
 import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { saveProductToShelf, removeProductFromShelf } from '../../services/communityService';
+import { AlertService } from '../../services/alertService';
 
 // Components
 import FullImageViewer from '../common/FullImageViewer';
@@ -148,6 +151,7 @@ const StaggeredView = ({ children, index }) => {
 
 export default function CatalogDetailModal({ visible, onClose, product, onContribute }) {
   const { colors: C } = useTheme();
+  const { user, savedProducts } = useAppContext();
   const rtl = useRTL();
   const router = useRouter(); 
   const lang = useCurrentLanguage(); 
@@ -155,6 +159,60 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(false); 
   const [isNavigating, setIsNavigating] = useState(false);
+
+  const [modalImageUri, setModalImageUri] = useState(() => getOptimizedImage(product?.image, 600));
+  const [hasModalImageError, setHasModalImageError] = useState(false);
+
+  useEffect(() => {
+    setModalImageUri(getOptimizedImage(product?.image, 600));
+    setHasModalImageError(false);
+  }, [product?.image]);
+
+  const handleModalImageError = () => {
+    const rawImage = product?.image ? String(product.image).trim() : '';
+    if (modalImageUri !== rawImage && rawImage) {
+      setModalImageUri(rawImage);
+    } else {
+      setHasModalImageError(true);
+    }
+  };
+
+  const savedItem = (savedProducts || []).find(
+    p => p.productId === product?.id || p.id === product?.id || 
+    (p.productName && product?.name && p.productName.toLowerCase() === product.name.toLowerCase())
+  );
+  const isSaved = !!savedItem;
+
+  const handleQuickSave = async () => {
+    if (!user) {
+      AlertService.show({
+        title: t('login_required', lang) || 'تسجيل الدخول مطلوب',
+        message: t('login_to_save_shelf', lang) || 'يرجى تسجيل الدخول لحفظ المنتجات في رفّك',
+        type: 'warning',
+        buttons: [{ text: t('announcement_ok', lang) || 'حسنا', style: 'primary' }]
+      });
+      return;
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (isSaved && savedItem?.id) {
+        await removeProductFromShelf(user.uid, savedItem.id);
+        AlertService.success(
+          t('community_deleted_title', lang) || 'تم الحذف',
+          t('product_removed_from_shelf', lang) || 'تم إزالة المنتج من رفّك'
+        );
+      } else {
+        await saveProductToShelf(user.uid, product);
+        AlertService.success(
+          t('community_saved_title', lang) || 'تم الحفظ',
+          t('community_saved_message', lang) || 'تمت إضافة المنتج إلى رفّك بنجاح'
+        );
+      }
+    } catch (err) {
+      console.error("Quick save error in detail modal:", err);
+    }
+  };
   
   // Animations - matching AddProductModal pattern
   const animState = useRef(new Animated.Value(0)).current;
@@ -260,6 +318,20 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
             <View style={styles.topNotchContainer}>
               <View style={[styles.liquidNotch, { backgroundColor: C.textDim + '30' }]} />
             </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleQuickSave}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.modalTopRightBookmark}
+            >
+              <FontAwesome5 
+                name="bookmark" 
+                size={20} 
+                color={isSaved ? C.accentGreen : C.textDim} 
+                solid={isSaved} 
+              />
+            </TouchableOpacity>
             
             <Animated.ScrollView 
               showsVerticalScrollIndicator={false} 
@@ -278,11 +350,16 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                     style={styles.productStage}
                   >
                     <Animated.View style={[styles.productStageInner, { transform:[{ scale: heroImageScale }, { translateY: heroTranslateY }] }]}>
-                      <Image 
-                        source={{ uri: getOptimizedImage(product.image, 600) }} 
-                        style={styles.productRender} 
-                        resizeMode="contain" 
-                      />
+                      {(!modalImageUri || hasModalImageError) ? (
+                        <FontAwesome5 name={product.category?.icon || 'box'} size={60} color={C.textDim} />
+                      ) : (
+                        <Image 
+                          source={{ uri: modalImageUri }} 
+                          style={styles.productRender} 
+                          resizeMode="contain" 
+                          onError={handleModalImageError}
+                        />
+                      )}
                     </Animated.View>
                     <View style={styles.stageExpandHint}>
                       <Ionicons name="scan" size={16} color="rgba(255,255,255,0.8)" />
@@ -610,9 +687,28 @@ const styles = StyleSheet.create({
   },
   immersiveHeroSection: {
     alignItems: 'center',
-    height: 280,
+    height: 310,
     justifyContent: 'center',
     marginTop: 25,
+  },
+  heroQuickSaveBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  heroQuickSaveText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 12,
   },
   auraBackglow: {
     position: 'absolute',
@@ -624,7 +720,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   productStage: {
-    width: 220,
+    width: 240,
     height: 240,
     justifyContent: 'center',
     alignItems: 'center',
@@ -637,8 +733,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   productRender: {
-    width: '85%',
-    height: '85%',
+    width: '100%',
+    height: '100%',
   },
   stageExpandHint: {
     position: 'absolute',
@@ -939,5 +1035,14 @@ const styles = StyleSheet.create({
   btnArchitectText: {
     fontFamily: 'Tajawal-ExtraBold',
     fontSize: 16,
+  },
+  modalTopRightBookmark: {
+    position: 'absolute',
+    top: 20,  // Adjust this value to position it below the notch
+    right: 20,
+    zIndex: 20,
+    padding: 10,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,0,0,0.3)', // Optional: adds a subtle background
   },
 });

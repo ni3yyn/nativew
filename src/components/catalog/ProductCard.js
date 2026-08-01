@@ -9,12 +9,16 @@ import {
     Image,
 } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
+import { useAppContext } from '../../context/AppContext';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { usePendingContributions } from '../../hooks/usePendingContributions';
+import { saveProductToShelf, removeProductFromShelf } from '../../services/communityService';
+import { AlertService } from '../../services/alertService';
 
 const formatPrice = (price) => {
     if (!price) return null;
@@ -29,9 +33,65 @@ const formatPrice = (price) => {
 
 export default function ProductCard({ item, index, onPress, onPressBounty, isCompareMode = false, isSelected = false }) {
     const { colors: C } = useTheme();
+    const { user, savedProducts } = useAppContext();
     const lang = useCurrentLanguage();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(20)).current;
+
+    const [imageUri, setImageUri] = React.useState(() => getOptimizedImage(item?.image, 250));
+    const [hasImageError, setHasImageError] = React.useState(false);
+
+    useEffect(() => {
+        setImageUri(getOptimizedImage(item?.image, 250));
+        setHasImageError(false);
+    }, [item?.image]);
+
+    const handleImageError = () => {
+        const rawImage = item?.image ? String(item.image).trim() : '';
+        if (imageUri !== rawImage && rawImage) {
+            setImageUri(rawImage);
+        } else {
+            setHasImageError(true);
+        }
+    };
+
+    const savedItem = (savedProducts || []).find(
+        p => p.productId === item?.id || p.id === item?.id || 
+        (p.productName && item?.name && p.productName.toLowerCase() === item.name.toLowerCase())
+    );
+    const isSaved = !!savedItem;
+
+    const handleQuickSave = async (e) => {
+        e?.stopPropagation?.();
+        if (!user) {
+            AlertService.show({
+                title: t('login_required', lang) || 'تسجيل الدخول مطلوب',
+                message: t('login_to_save_shelf', lang) || 'يرجى تسجيل الدخول لحفظ المنتجات في رفّك',
+                type: 'warning',
+                buttons: [{ text: t('announcement_ok', lang) || 'حسنا', style: 'primary' }]
+            });
+            return;
+        }
+
+        try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            if (isSaved && savedItem?.id) {
+                await removeProductFromShelf(user.uid, savedItem.id);
+                AlertService.success(
+                    t('community_deleted_title', lang) || 'تم الحذف',
+                    t('product_removed_from_shelf', lang) || 'تم إزالة المنتج من رفّك'
+                );
+            } else {
+                await saveProductToShelf(user.uid, item);
+                AlertService.success(
+                    t('community_saved_title', lang) || 'تم الحفظ',
+                    t('community_saved_message', lang) || 'تمت إضافة المنتج إلى رفّك بنجاح'
+                );
+            }
+        } catch (err) {
+            console.error("Quick save error:", err);
+        }
+    };
 
     // Check if any pending contribution exists for this product
     const { hasPending, loading } = usePendingContributions(item.id);
@@ -82,11 +142,16 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                 style={styles.touchableArea}
             >
                 <View style={styles.cardImageContainer}>
-                    <Image
-                        source={{ uri: getOptimizedImage(item.image, 250) }}
-                        style={styles.cardImage}
-                        resizeMode="contain"
-                    />
+                    {(!imageUri || hasImageError) ? (
+                        <FontAwesome5 name={item.category?.icon || 'box'} size={28} color={C.textDim} />
+                    ) : (
+                        <Image
+                            source={{ uri: imageUri }}
+                            style={styles.cardImage}
+                            resizeMode="contain"
+                            onError={handleImageError}
+                        />
+                    )}
                     {isCompareMode && (
                         <View style={[
                             styles.compareCheckbox,
@@ -109,14 +174,30 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
 
                 <View style={styles.cardContent}>
                     <View style={styles.brandRow}>
-                        <Text style={[styles.brandText, { color: C.accentGreen }]}>
-                            {item.brand}
-                        </Text>
-                        {item.quantity ? (
-                            <Text style={[styles.qtyText, { color: C.textDim }]}>
-                                {item.quantity}
+                        <View style={styles.brandWithQty}>
+                            <Text style={[styles.brandText, { color: C.accentGreen }]}>
+                                {item.brand}
                             </Text>
-                        ) : null}
+                            {item.quantity ? (
+                                <Text style={[styles.qtyText, { color: C.textDim }]}>
+                                    • {item.quantity}
+                                </Text>
+                            ) : null}
+                        </View>
+
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={handleQuickSave}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={styles.cleanBookmarkBtn}
+                        >
+                            <FontAwesome5 
+                                name="bookmark" 
+                                size={17} 
+                                color={isSaved ? C.accentGreen : C.textDim} 
+                                solid={isSaved} 
+                            />
+                        </TouchableOpacity>
                     </View>
 
                     <Text
@@ -226,8 +307,10 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 4,
+        overflow: 'hidden',
     },
-    cardImage: { width: '85%', height: '85%' },
+    cardImage: { width: '100%', height: '100%' },
     categoryBadge: {
         position: 'absolute',
         bottom: 5,
@@ -241,8 +324,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    brandWithQty: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6,
+    },
     brandText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 12 },
     qtyText: { fontFamily: 'Tajawal-Regular', fontSize: 11 },
+    cleanBookmarkBtn: {
+        padding: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     productName: { fontFamily: 'Tajawal-Bold', fontSize: 14, textAlign: 'right' },
     cardFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
     priceText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 15 },
