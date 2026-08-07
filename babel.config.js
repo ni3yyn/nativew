@@ -7,10 +7,20 @@ module.exports = function (api) {
     ],
     overrides: [
       {
-        // Only plain .js/.jsx files in node_modules — excludes .ts files
-        // like expo-file-system's ExpoFileSystem.ts, avoiding the
-        // plugins-before-presets/TS-declare conflict.
-        test: /node_modules\/.+\.jsx?$/,
+        test: (filename) => {
+          if (!filename) return false;
+          // Only transform your installed packages that use private properties
+          return (
+            filename.includes('react-native-svg') ||
+            filename.includes('expo-file-system') ||
+            filename.includes('expo-modules-core') ||
+            filename.includes('react-native-gesture-handler') ||
+            filename.includes('react-native-screens') ||
+            filename.includes('expo-camera') ||
+            filename.includes('expo-av') ||
+            filename.includes('expo-image-manipulator')
+          );
+        },
         plugins: [
           ['@babel/plugin-transform-private-methods', { loose: true }],
           ['@babel/plugin-transform-private-property-in-object', { loose: true }],
