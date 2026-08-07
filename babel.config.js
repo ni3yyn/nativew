@@ -1,23 +1,14 @@
+// babel.config.js
+// Required for Expo SDK 54 / Expo Router / Hermes / EAS Update.
+// babel-preset-expo handles: Hermes transforms, automatic React import,
+// async route imports for expo-router, and module system compatibility.
+// babel-plugin-transform-import-meta handles import.meta used by Supabase.
 module.exports = function (api) {
   api.cache(true);
   return {
     presets: ['babel-preset-expo'],
     plugins: [
       'babel-plugin-transform-import-meta',
-      ['@babel/plugin-transform-class-properties', { loose: true }],
-      ['@babel/plugin-transform-private-methods', { loose: true }],
-      ['@babel/plugin-transform-private-property-in-object', { loose: true }]
     ],
-    // 🌟 THIS IS THE FIX: Force Babel to translate #private variables inside node_modules
-    overrides: [
-      {
-        test: /node_modules/,
-        plugins: [
-          ['@babel/plugin-transform-class-properties', { loose: true }],
-          ['@babel/plugin-transform-private-methods', { loose: true }],
-          ['@babel/plugin-transform-private-property-in-object', { loose: true }]
-        ]
-      }
-    ]
   };
 };
