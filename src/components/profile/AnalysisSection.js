@@ -177,7 +177,7 @@ export const AnalysisSection = ({
                 {
                     id: 'teaser-barrier',
                     title: 'صحة حاجزك الجلدي',
-                    short_summary: 'أضف منتجاتك لتعرف حال حاجزك — وأين تقع الثغرات',
+                    short_summary: 'أضيفيمنتجاتك لتعرف حال حاجزك — وأين تقع الثغرات',
                     severity: 'info',
                     type: 'goal_analysis',
                     customData: {
@@ -215,7 +215,7 @@ export const AnalysisSection = ({
                 !coveredGoalIds.has('brightening') && {
                     id: 'teaser-brightening',
                     title: 'مسار التفتيح',
-                    short_summary: 'كم يدعم روتينك هدف التفتيح؟ أضف منتجاتك',
+                    short_summary: 'كم يدعم روتينك هدف التفتيح؟ أضيفيمنتجاتك',
                     severity: 'info',
                     type: 'goal_analysis',
                     customData: {

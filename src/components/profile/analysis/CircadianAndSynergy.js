@@ -37,7 +37,7 @@ const LockedCircadianOverlay = ({ router }) => {
                     <FontAwesome5 name="lock" size={22} color={C.accentGreen} />
                 </View>
                 <Text style={[circadianLockedStyles.lockTitle, { color: C.textPrimary }]}>
-                    {isRTL ? 'أضف منتجاتك' : 'Add Your Products'}
+                    {isRTL ? 'أضيفيمنتجاتك' : 'Add Your Products'}
                 </Text>
                 <Text style={[circadianLockedStyles.lockSubtitle, { color: C.textSecondary }]}>
                     {isRTL
@@ -53,7 +53,7 @@ const LockedCircadianOverlay = ({ router }) => {
                 >
                     <FontAwesome5 name="plus" size={12} color="#fff" style={{ marginRight: 6 }} />
                     <Text style={circadianLockedStyles.ctaText}>
-                        {isRTL ? 'أضف منتجاً الآن' : 'Add a Product'}
+                        {isRTL ? 'أضيفيمنتجاً الآن' : 'Add a Product'}
                     </Text>
                 </Pressable>
             </View>

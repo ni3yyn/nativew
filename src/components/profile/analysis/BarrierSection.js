@@ -303,7 +303,7 @@ const LockedBarrierOverlay = ({ router }) => {
                     <FontAwesome5 name="lock" size={22} color={COLORS.accentGreen} />
                 </View>
                 <Text style={[lockedOverlayStyles.lockTitle, { color: COLORS.textPrimary }]}>
-                    {isRTL ? 'أضف منتجاتك' : 'Add Your Products'}
+                    {isRTL ? 'أضيفيمنتجاتك' : 'Add Your Products'}
                 </Text>
                 <Text style={[lockedOverlayStyles.lockSubtitle, { color: COLORS.textSecondary }]}>
                     {isRTL
@@ -319,7 +319,7 @@ const LockedBarrierOverlay = ({ router }) => {
                 >
                     <FontAwesome5 name="plus" size={12} color="#fff" style={{ marginRight: 6 }} />
                     <Text style={lockedOverlayStyles.ctaText}>
-                        {isRTL ? 'أضف منتجاً الآن' : 'Add a Product'}
+                        {isRTL ? 'أضيفيمنتجاً الآن' : 'Add a Product'}
                     </Text>
                 </Pressable>
             </View>
