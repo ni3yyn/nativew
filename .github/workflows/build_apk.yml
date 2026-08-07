@@ -1,7 +1,7 @@
 name: Build Release AAB
 
 on:
-  workflow_dispatch: # Allows manual run
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,22 +11,19 @@ on:
 
 jobs:
   build:
-    name:  Build Android AAB
+    name: Build Android AAB
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout Code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Setup Java
       - name: Setup JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Cache Gradle
-      - name:  Cache Gradle
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
@@ -36,25 +33,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 4. Setup Node
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: '20.x'
           cache: 'yarn'
 
-      # 5. Install Dependencies
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      # 6. Decode Keystore from GitHub Secrets
+      # ADD THIS STEP to fix the idb package
+      - name: Fix Firebase idb dependency
+        run: |
+          cd node_modules/idb
+          # Create the missing file that Firebase expects
+          if [ ! -f build/index.cjs ]; then
+            mkdir -p build
+            # If index.js exists, copy it
+            if [ -f build/index.js ]; then
+              cp build/index.js build/index.cjs
+            else
+              # Otherwise create a minimal wrapper
+              echo "module.exports = require('./index.js');" > build/index.cjs
+            fi
+          fi
+
+      - name: Clear Metro Cache
+        run: |
+          rm -rf node_modules/.cache
+          rm -rf android/app/build/generated/assets
+
       - name: Decode Keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
-      # 7. Build the Signed AAB
       - name: Build AAB
         working-directory: android
         env:
@@ -62,11 +76,10 @@ jobs:
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Boost memory for Gradle
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
+          NODE_ENV: production
         run: ./gradlew bundleRelease
 
-      # 8. Upload AAB as Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
