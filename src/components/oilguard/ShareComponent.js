@@ -1,3 +1,5 @@
+// PremiumShareButton.js (ShareComponent.js)
+
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, Pressable, ActivityIndicator, 
@@ -43,6 +45,70 @@ const THEMES = {
     white: { id: 'white', primary: '#FFFFFF', accent: '#1A2D27', text: '#1A2D27', gradient: ['#FFFFFF', '#F5F5F5', '#E0E0E0'], glass: 'rgba(255, 255, 255, 0.8)', border: 'rgba(26, 45, 39, 0.1)', btn: ['#1A2D27', '#2F4F4F'], isDark: false }
 };
 
+// 🌟 NORMALIZE ANALYSIS DATA FOR TEMPLATE COMPATIBILITY (FIXES CLAIMS SHOWING AS FALSE)
+const normalizeAnalysisForShare = (analysis, product) => {
+    if (!analysis) return { oilGuardScore: product?.score || 0, marketing_results: [], user_specific_alerts: [] };
+
+    const rawClaims = analysis.marketing_results || 
+                      analysis.evaluated_claims || 
+                      analysis.claims_evaluated || 
+                      [];
+
+    const normalizedClaims = rawClaims.map(item => {
+        const claimText = typeof item === 'object' ? (item.claim || item.label || item.name || '') : String(item);
+        const statusStr = typeof item === 'object' ? String(item.status || item.verdict || '').toLowerCase() : '';
+
+        // Check if claim is positive/supported according to logic.js
+        const isVerified = statusStr.includes('محقق') || 
+                           statusStr.includes('✅') || 
+                           statusStr.includes('verified') || 
+                           statusStr.includes('approved') || 
+                           statusStr.includes('ممتاز');
+
+        const isCaution = statusStr.includes('مختلط') || 
+                          statusStr.includes('دون الفعال') || 
+                          statusStr.includes('منخفض') || 
+                          statusStr.includes('جزئي') || 
+                          statusStr.includes('حذر') || 
+                          statusStr.includes('⚠️') || 
+                          statusStr.includes('⚖️');
+
+        const isRejected = statusStr.includes('وهمي') || 
+                           statusStr.includes('مبالغة') || 
+                           statusStr.includes('تناقض') || 
+                           statusStr.includes('مضلل') || 
+                           statusStr.includes('فارغ') || 
+                           statusStr.includes('لا توجد') || 
+                           statusStr.includes('❌') || 
+                           statusStr.includes('🚫');
+
+        const finalVerified = isVerified && !isRejected;
+
+        return {
+            ...item,
+            claim: claimText,
+            name: claimText,
+            title: claimText,
+            status: statusStr || (finalVerified ? '✅ مؤكد' : '❌ غير متوافق'),
+            isVerified: finalVerified,
+            isValid: finalVerified,
+            verified: finalVerified,
+            isCaution,
+            isRejected,
+            displayStatus: isRejected ? '❌ غير متوافق' : (isCaution ? '⚠️ غير مؤكد' : '✅ مؤكد')
+        };
+    });
+
+    return {
+        ...analysis,
+        oilGuardScore: analysis.oilGuardScore || product?.score || 0,
+        finalVerdict: analysis.finalVerdict || analysis.verdict || 'تم التقييم بنجاح',
+        marketing_results: normalizedClaims,
+        evaluated_claims: normalizedClaims,
+        claims_evaluated: normalizedClaims
+    };
+};
+
 const PremiumShareButton = ({ 
     product,        // FOR PROFILE (Shelf Object)
     analysis,       // FOR OILGUARD FALLBACK
@@ -56,10 +122,14 @@ const PremiumShareButton = ({
     const language = useCurrentLanguage();
     const viewShotRef = useRef();
 
-    // --- SMART DATA EXTRACTION ---
-    const finalAnalysis = product?.analysisData || analysis;
-    const initialName = product?.productName || manualName || '';
-    const initialImage = product?.productImage || manualImage || null;
+    // 🌟 SMART DATA EXTRACTION & CLAIM NORMALIZATION
+    const finalAnalysis = useMemo(() => {
+        const raw = product?.analysisData || analysis;
+        return normalizeAnalysisForShare(raw, product);
+    }, [product, analysis]);
+
+    const initialName = product?.productName || product?.name || manualName || '';
+    const initialImage = product?.productImage || product?.imageUrl || product?.image || manualImage || null;
 
     const [modalVisible, setModalVisible] = useState(false);
     const [editorVisible, setEditorVisible] = useState(false);
@@ -87,7 +157,7 @@ const PremiumShareButton = ({
             setProductName(manualName || '');
             setUserImage(manualImage || null);
         }
-    }, [manualName, manualImage]);
+    }, [manualName, manualImage, product]);
 
     useEffect(() => {
         let animation;
@@ -102,7 +172,7 @@ const PremiumShareButton = ({
             animation.start();
         }
         return () => animation?.stop();
-    }, [modalVisible]);
+    }, [modalVisible, pulseAnim]);
 
     const activeTemplateConfig = EXTENDED_REGISTRY.find(t => t.id === selectedTemplateId) || EXTENDED_REGISTRY[0];
     const CurrentTemplate = activeTemplateConfig.component;
@@ -210,7 +280,8 @@ const PremiumShareButton = ({
                     pressed && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }
                 ]}
             >
-                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} /><Text style={[styles.trigText, { color: textColor }]}>{t('share_button_label', language)}</Text>
+                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} />
+                <Text style={[styles.trigText, { color: textColor }]}>{t('share_button_label', language)}</Text>
             </Pressable>
 
             <Modal visible={modalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setModalVisible(false)}>
@@ -279,24 +350,24 @@ const PremiumShareButton = ({
                                     style={styles.list}
                                     contentContainerStyle={{ paddingLeft: 40 }}
                                 >
-                                    {EXTENDED_REGISTRY.map(template => (  // Change 't' to 'template'
-    <Pressable 
-        key={template.id} 
-        onPress={() => { setSelectedTemplateId(template.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
-        style={[styles.tempItem, selectedTemplateId === template.id && styles.tempActive]}
-    >
-        <View style={[styles.tempIcon, selectedTemplateId === template.id && { backgroundColor: currentThemeData.accent }]}>
-            <MaterialCommunityIcons 
-                name={template.icon} 
-                size={24} 
-                color={selectedTemplateId === template.id ? currentThemeData.primary : '#666'} 
-            />
-        </View>
-        <Text style={[styles.tempText, { color: selectedTemplateId === template.id ? currentThemeData.accent : '#666' }]}>
-            {t(`template_${template.id}_name`, language)}  {/* Use template.id */}
-        </Text>
-    </Pressable>
-))}
+                                    {EXTENDED_REGISTRY.map(template => (
+                                        <Pressable 
+                                            key={template.id} 
+                                            onPress={() => { setSelectedTemplateId(template.id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} 
+                                            style={[styles.tempItem, selectedTemplateId === template.id && styles.tempActive]}
+                                        >
+                                            <View style={[styles.tempIcon, selectedTemplateId === template.id && { backgroundColor: currentThemeData.accent }]}>
+                                                <MaterialCommunityIcons 
+                                                    name={template.icon} 
+                                                    size={24} 
+                                                    color={selectedTemplateId === template.id ? currentThemeData.primary : '#666'} 
+                                                />
+                                            </View>
+                                            <Text style={[styles.tempText, { color: selectedTemplateId === template.id ? currentThemeData.accent : '#666' }]}>
+                                                {t(`template_${template.id}_name`, language)}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
                                 </ScrollView>
                             </View>
 
@@ -387,7 +458,7 @@ const PremiumShareButton = ({
 };
 
 const styles = StyleSheet.create({
-    trig: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 15,},
+    trig: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 15 },
     trigText: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
     sheet: { height: SCREEN_HEIGHT * 0.9, backgroundColor: '#0A0A0A', borderTopLeftRadius: 35, borderTopRightRadius: 35 },

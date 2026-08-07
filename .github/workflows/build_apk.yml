@@ -74,4 +74,3 @@ jobs:
         with:
           name: wathiq-release-bundle
           path: android/app/build/outputs/bundle/release/app-release.aab
-

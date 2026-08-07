@@ -1,4 +1,4 @@
-
+// src/components/oilguard/templates/Template01.js
 
 import React from 'react';
 import { t } from '../../../i18n';
@@ -8,30 +8,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 
-// --- DECORATIVE LAYER ---
-// --- DECORATIVE LAYER (Boosted with Floating Icons) ---
 const BackgroundDecor = ({ theme }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {/* Large Shapes */}
         <View style={{ position: 'absolute', top: -100, right: -50, width: 400, height: 400, borderRadius: 200, backgroundColor: theme.accent, opacity: 0.15, transform: [{ scaleX: 1.2 }] }} />
         <View style={{ position: 'absolute', bottom: -50, left: -100, width: 350, height: 350, borderRadius: 175, backgroundColor: theme.text, opacity: 0.1, }} />
-        
-        {/* Floating Icons Scattered */}
         <MaterialCommunityIcons name="star-four-points" size={40} color={theme.accent} style={{ position: 'absolute', top: 120, left: 40, opacity: 0.4 }} />
         <MaterialCommunityIcons name="star-four-points" size={20} color={theme.accent} style={{ position: 'absolute', top: 160, left: 90, opacity: 0.2 }} />
         <MaterialCommunityIcons name="molecule" size={60} color={theme.text} style={{ position: 'absolute', top: '35%', right: 40, opacity: 0.08, transform: [{rotate: '15deg'}] }} />
         <FontAwesome5 name="heart" size={24} color={theme.text} style={{ position: 'absolute', bottom: 220, right: 60, opacity: 0.15, transform: [{rotate: '15deg'}] }} />
         <Ionicons name="sparkles" size={30} color={theme.accent} style={{ position: 'absolute', bottom: '40%', left: 30, opacity: 0.2 }} />
         <MaterialCommunityIcons name="flask-outline" size={80} color={theme.accent} style={{ position: 'absolute', bottom: 100, left: -20, opacity: 0.05, transform: [{rotate: '-20deg'}] }} />
-        
-        {/* Circles */}
         <View style={{ position: 'absolute', top: '45%', right: -30, width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: theme.accent, opacity: 0.1 }} />
     </View>
 );
 
 const ScoreRing = ({ score, theme }) => {
-    const language = useCurrentLanguage(); // Add this line at the top of the component
-
+    const language = useCurrentLanguage();
     const size = 190; const r = 80; const circ = 2 * Math.PI * r;
     const color = score >= 80 ? '#10B981' : score >= 50 ? theme.accent : '#EF4444';
     return (
@@ -48,19 +40,26 @@ const ScoreRing = ({ score, theme }) => {
     );
 };
 
-// --- HELPER FOR CLAIMS STATUS ---
-const getClaimStyle = (status, language) => {
-    if (status.includes('✅')) return { color: '#10B981', icon: 'checkmark-circle' }; // Verified
-    if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf' };             // Moderate
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'alert-circle', note: t('oilguard_ineffective_ratio', language) }; // Angel Dusting
-    // Both Deception and No Evidence are now RED
+// 🌟 ACCURATE CLAIM EVALUATION STYLER
+const getClaimStyle = (item, language) => {
+    if (!item) return { color: '#EF4444', icon: 'close-circle' };
+    const status = typeof item === 'object' ? (item.displayStatus || item.status || '') : String(item);
+    const isVerified = typeof item === 'object' ? item.isVerified : false;
+    const isCaution = typeof item === 'object' ? item.isCaution : false;
+
+    if (isVerified || status.includes('✅') || status.includes('محقق') || status.includes('مؤكد') || status.includes('verified') || status.includes('approved')) {
+        return { color: '#10B981', icon: 'checkmark-circle' };
+    }
+    if (isCaution || status.includes('🌿') || status.includes('⚠️') || status.includes('Angel') || status.includes('مختلط') || status.includes('جزئي') || status.includes('منخفض')) {
+        return { color: '#F59E0B', icon: 'alert-circle', note: status.includes('Angel') ? t('oilguard_ineffective_ratio', language) : null };
+    }
     return { color: '#EF4444', icon: 'close-circle' };
 };
 
 export default function Template01({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
-    const language = useCurrentLanguage(); // Add this line at the top of the component
+    const language = useCurrentLanguage();
     const safe = analysis || {};
-    const claims = (safe.marketing_results || []).slice(0, 4);
+    const claims = (safe.marketing_results || safe.evaluated_claims || []).slice(0, 4);
 
     return (
         <View style={[styles.container, { backgroundColor: theme.primary }]}>
@@ -80,10 +79,10 @@ export default function Template01({ analysis, typeLabel, productName, imageUri,
                     <ScoreRing score={safe.oilGuardScore || 0} theme={theme} />
                     <View style={styles.miniPills}>
                         <View style={[styles.miniPill, {backgroundColor: `${theme.accent}25`}]}>
-                            <Text style={[styles.miniText, {color: theme.text}]}>${t('oilguard_safety', language)} {safe.safety?.score}%</Text>
+                            <Text style={[styles.miniText, {color: theme.text}]}>{t('oilguard_safety', language)} {safe.safety?.score || 0}%</Text>
                         </View>
                         <View style={[styles.miniPill, {backgroundColor: `${theme.accent}25`}]}>
-                            <Text style={[styles.miniText, {color: theme.text}]}>${t('oilguard_efficacy', language)} {safe.efficacy?.score}%</Text>
+                            <Text style={[styles.miniText, {color: theme.text}]}>{t('oilguard_efficacy', language)} {safe.efficacy?.score || 0}%</Text>
                         </View>
                     </View>
                 </View>
@@ -106,12 +105,13 @@ export default function Template01({ analysis, typeLabel, productName, imageUri,
                 
                 <View style={styles.grid}>
                     {claims.map((item, i) => {
-                        const style = getClaimStyle(item.status, language);
+                        const style = getClaimStyle(item, language);
+                        const claimTitle = typeof item === 'object' ? (item.claim || item.label || item.name) : item;
                         return (
                             <View key={i} style={[styles.gridItem, { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
                                 <Ionicons name={style.icon} size={20} color={style.color} />
                                 <Text style={[styles.gridText, { color: theme.text }]} numberOfLines={1}>
-                                    {item.claim} {style.note && <Text style={{color: style.color, fontSize: 10}}>{style.note}</Text>}
+                                    {claimTitle} {style.note && <Text style={{color: style.color, fontSize: 10}}>{style.note}</Text>}
                                 </Text>
                             </View>
                         );
@@ -135,7 +135,7 @@ export default function Template01({ analysis, typeLabel, productName, imageUri,
                     </View>
                 </View>
                 <Text style={[styles.disclaimerText, { color: theme.text }]}>
-                ${t('oilguard_disclaimer', language)}
+                    {t('oilguard_disclaimer', language)}
                 </Text>
             </View>
         </View>

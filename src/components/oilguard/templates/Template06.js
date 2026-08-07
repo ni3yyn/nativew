@@ -1,3 +1,4 @@
+// src/components/oilguard/templates/Template06.js
 
 import React from 'react';
 import { t } from '../../../i18n';
@@ -6,42 +7,41 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// --- DECORATIVE LAYER ---
 const BackgroundDecor = ({ theme }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {/* Large Arc & Circles */}
         <View style={{ position: 'absolute', bottom: -150, left: 0, right: 0, height: 350, borderTopLeftRadius: 300, borderTopRightRadius: 300, backgroundColor: theme.accent, opacity: 0.1 }} />
         <View style={{ position: 'absolute', top: -80, left: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: theme.text, opacity: 0.08 }} />
-        
-        {/* Densely Floating Stars and Sparkles */}
         <FontAwesome5 name="star" size={18} color={theme.text} style={{ position: 'absolute', top: 150, right: 40, opacity: 0.3 }} />
         <FontAwesome5 name="star" size={12} color={theme.text} style={{ position: 'absolute', top: 180, right: 80, opacity: 0.2 }} />
         <FontAwesome5 name="star" size={24} color={theme.accent} style={{ position: 'absolute', top: '40%', left: 30, opacity: 0.15, transform: [{rotate: '20deg'}] }} />
-        
         <Ionicons name="heart-outline" size={32} color={theme.accent} style={{ position: 'absolute', bottom: 400, right: 30, opacity: 0.2 }} />
         <Ionicons name="sparkles" size={50} color={theme.text} style={{ position: 'absolute', bottom: 120, left: 50, opacity: 0.1 }} />
-        
         <MaterialCommunityIcons name="star-shooting-outline" size={60} color={theme.accent} style={{ position: 'absolute', top: '15%', left: '20%', opacity: 0.08, transform: [{rotate: '-10deg'}] }} />
         <MaterialCommunityIcons name="flower-outline" size={80} color={theme.text} style={{ position: 'absolute', bottom: '25%', right: -20, opacity: 0.05 }} />
-        
         <View style={{ position: 'absolute', top: 300, right: 20, width: 12, height: 12, borderRadius: 6, backgroundColor: theme.accent, opacity: 0.3 }} />
         <View style={{ position: 'absolute', top: 320, right: 50, width: 8, height: 8, borderRadius: 4, backgroundColor: theme.text, opacity: 0.2 }} />
     </View>
 );
 
-// --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status, language) => {
-    if (status.includes('✅')) return { color: '#10B981', icon: 'check' };
-    if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf' };
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', note: t('oilguard_ineffective_ratio', language) };
-    // Red for both Lies and No Evidence
+const getClaimStyle = (item, language) => {
+    if (!item) return { color: '#EF4444', icon: 'times' };
+    const status = typeof item === 'object' ? (item.displayStatus || item.status || '') : String(item);
+    const isVerified = typeof item === 'object' ? item.isVerified : false;
+    const isCaution = typeof item === 'object' ? item.isCaution : false;
+
+    if (isVerified || status.includes('✅') || status.includes('محقق') || status.includes('مؤكد') || status.includes('verified') || status.includes('approved')) {
+        return { color: '#10B981', icon: 'check' };
+    }
+    if (isCaution || status.includes('🌿') || status.includes('⚠️') || status.includes('Angel') || status.includes('مختلط') || status.includes('جزئي') || status.includes('منخفض')) {
+        return { color: '#F59E0B', icon: 'exclamation', note: status.includes('Angel') ? t('oilguard_ineffective_ratio', language) : null };
+    }
     return { color: '#EF4444', icon: 'times' };
 };
 
 export default function Template06({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
     const language = useCurrentLanguage();
     const safe = analysis || {};
-    const claims = (safe.marketing_results || []).slice(0, 3);
+    const claims = (safe.marketing_results || safe.evaluated_claims || []).slice(0, 3);
     const safetyScore = safe.safety?.score || 0;
     const efficacyScore = safe.efficacy?.score || 0;
 
@@ -73,7 +73,7 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                     )}
                     
                     <View style={[styles.scoreBadge, { backgroundColor: theme.accent }]}>
-                        <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore}%</Text>
+                        <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore || 0}%</Text>
                         <Text style={[styles.scoreLabel, { color: theme.primary }]}>{t('oilguard_brand_score', language)}</Text>
                     </View>
                 </View>
@@ -88,11 +88,11 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.statsRow}>
                     <View style={[styles.statPill, { borderColor: theme.border, backgroundColor: `${theme.text}10` }]}>
                         <Ionicons name="shield-checkmark" size={18} color={theme.accent} />
-                        <Text style={[styles.statText, { color: theme.text }]}>${t('oilguard_safety', language)} {safetyScore}%</Text>
+                        <Text style={[styles.statText, { color: theme.text }]}>{t('oilguard_safety', language)} {safetyScore}%</Text>
                     </View>
                     <View style={[styles.statPill, { borderColor: theme.border, backgroundColor: `${theme.text}10` }]}>
                         <Ionicons name="star" size={18} color={theme.accent} />
-                        <Text style={[styles.statText, { color: theme.text }]}>${t('oilguard_efficacy', language)} {efficacyScore}%</Text>
+                        <Text style={[styles.statText, { color: theme.text }]}>{t('oilguard_efficacy', language)} {efficacyScore}%</Text>
                     </View>
                 </View>
 
@@ -107,14 +107,15 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
             <View style={styles.claimsSection}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('oilguard_marketing_analysis', language)}:</Text>
                 {claims.map((c, i) => {
-                    const style = getClaimStyle(c.status, language);
+                    const style = getClaimStyle(c, language);
+                    const claimTitle = typeof c === 'object' ? (c.claim || c.label || c.name) : c;
                     return (
                         <View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                             <View style={[styles.claimIcon, { backgroundColor: theme.accent }]}>
                                 <FontAwesome5 name={style.icon} size={14} color={style.color === '#EF4444' ? '#EF4444' : theme.primary} />
                             </View>
                             <Text style={[styles.claimText, { color: theme.text }]} numberOfLines={2}>
-                                {c.claim} {style.note && <Text style={{color: style.color, fontSize: 12}}>{style.note}</Text>}
+                                {claimTitle} {style.note && <Text style={{color: style.color, fontSize: 12}}>{style.note}</Text>}
                             </Text>
                         </View>
                     );
@@ -125,7 +126,7 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.disclaimerBox}>
                     <MaterialCommunityIcons name="information-variant" size={18} color={theme.text} style={{ opacity: 0.5 }} />
                     <Text style={[styles.disclaimerText, { color: theme.text }]}>
-                        ${t('oilguard_disclaimer', language)}
+                        {t('oilguard_disclaimer', language)}
                     </Text>
                 </View>
 
@@ -147,8 +148,6 @@ export default function Template06({ analysis, typeLabel, productName, imageUri,
                         <Text style={[styles.socialText, { color: theme.text }]}>{t('oilguard_brand_name', language)}</Text>
                     </View>
                 </View>
-                
-                <Text style={[styles.brandLink, { color: theme.accent }]}>WWW.WATHIQ.WEB.APP</Text>
             </View>
         </View>
     );
@@ -185,5 +184,4 @@ const styles = StyleSheet.create({
     socialItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
     socialText: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
     socialSep: { width: 2, height: 16, opacity: 0.3 },
-    brandLink: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, letterSpacing: 3, opacity: 0.4, marginTop: 5 }
 });

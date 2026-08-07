@@ -1,4 +1,4 @@
-
+// src/components/oilguard/templates/Template04.js
 
 import React from 'react';
 import { t } from '../../../i18n';
@@ -7,38 +7,38 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// --- DECORATIVE LAYER ---
 const BackgroundDecor = ({ theme }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {/* Blobs */}
         <View style={{ position: 'absolute', top: -50, left: '10%', width: 450, height: 450, borderRadius: 225, backgroundColor: theme.accent, opacity: 0.12 }} />
         <View style={{ position: 'absolute', bottom: 150, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: theme.text, opacity: 0.08 }} />
-        
-        {/* Floating Science & Beauty Icons */}
         <MaterialCommunityIcons name="flask-round-bottom-outline" size={100} color={theme.accent} style={{ position: 'absolute', top: 40, right: 20, opacity: 0.07, transform: [{ rotate: '15deg' }] }} />
         <Ionicons name="sparkles" size={40} color={theme.accent} style={{ position: 'absolute', top: 450, left: 40, opacity: 0.3 }} />
         <Ionicons name="sparkles-outline" size={24} color={theme.text} style={{ position: 'absolute', top: 480, left: 80, opacity: 0.2 }} />
-        
         <MaterialCommunityIcons name="dna" size={70} color={theme.text} style={{ position: 'absolute', bottom: '30%', left: 20, opacity: 0.06, transform: [{ rotate: '-45deg' }] }} />
         <MaterialCommunityIcons name="star-three-points" size={30} color={theme.accent} style={{ position: 'absolute', bottom: 420, right: 50, opacity: 0.2 }} />
-        
         <FontAwesome5 name="magic" size={24} color={theme.accent} style={{ position: 'absolute', bottom: 200, left: 100, opacity: 0.1, transform: [{ rotate: '20deg' }] }} />
     </View>
 );
 
-// --- HELPER FOR CLAIMS ---
-const getClaimStyle = (status, language) => {
-    if (status.includes('✅')) return { color: '#10B981', icon: 'check', bg: '#10B981' };
-    if (status.includes('🌿')) return { color: '#06B6D4', icon: 'leaf', bg: '#06B6D4' };
-    if (status.includes('⚠️') || status.includes('Angel')) return { color: '#F59E0B', icon: 'exclamation', bg: '#F59E0B', note: t('oilguard_ineffective_ratio', language) };
-    // Red for both Lies and No Evidence
+const getClaimStyle = (item, language) => {
+    if (!item) return { color: '#EF4444', icon: 'times', bg: '#EF4444' };
+    const status = typeof item === 'object' ? (item.displayStatus || item.status || '') : String(item);
+    const isVerified = typeof item === 'object' ? item.isVerified : false;
+    const isCaution = typeof item === 'object' ? item.isCaution : false;
+
+    if (isVerified || status.includes('✅') || status.includes('محقق') || status.includes('مؤكد') || status.includes('verified') || status.includes('approved')) {
+        return { color: '#10B981', icon: 'check', bg: '#10B981' };
+    }
+    if (isCaution || status.includes('🌿') || status.includes('⚠️') || status.includes('Angel') || status.includes('مختلط') || status.includes('جزئي') || status.includes('منخفض')) {
+        return { color: '#F59E0B', icon: 'exclamation', bg: '#F59E0B', note: status.includes('Angel') ? t('oilguard_ineffective_ratio', language) : null };
+    }
     return { color: '#EF4444', icon: 'times', bg: '#EF4444' };
 };
 
 export default function Template04({ analysis, typeLabel, productName, imageUri, theme, imgPos }) {
     const language = useCurrentLanguage();
     const safe = analysis || {};
-    const claims = (safe.marketing_results || []).slice(0, 3);
+    const claims = (safe.marketing_results || safe.evaluated_claims || []).slice(0, 3);
     const safetyScore = safe.safety?.score || 0;
     const efficacyScore = safe.efficacy?.score || 0;
 
@@ -48,7 +48,6 @@ export default function Template04({ analysis, typeLabel, productName, imageUri,
             <BackgroundDecor theme={theme} />
             
             <View style={[styles.compactBlock, { backgroundColor: theme.glass, borderColor: theme.border }]}>
-                
                 <View style={styles.imageScoreRow}>
                     <View style={styles.imageContainer}>
                         {imageUri && (
@@ -62,14 +61,14 @@ export default function Template04({ analysis, typeLabel, productName, imageUri,
 
                     <View style={styles.scoreCol}>
                         <View style={[styles.mainScorePill, { backgroundColor: theme.accent }]}>
-                            <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore}%</Text>
+                            <Text style={[styles.scoreValue, { color: theme.primary }]}>{safe.oilGuardScore || 0}%</Text>
                             <Text style={[styles.scoreLabel, { color: theme.primary }]}>{t('oilguard_brand_score', language)}</Text>
                         </View>
                         <View style={[styles.subScorePill, { borderColor: theme.border }]}>
-                            <Text style={[styles.subScoreText, { color: theme.text }]}>${t('oilguard_safety', language)} {safetyScore}%</Text>
+                            <Text style={[styles.subScoreText, { color: theme.text }]}>{t('oilguard_safety', language)} {safetyScore}%</Text>
                         </View>
                         <View style={[styles.subScorePill, { borderColor: theme.border }]}>
-                            <Text style={[styles.subScoreText, { color: theme.text }]}>${t('oilguard_efficacy', language)} {efficacyScore}%</Text>
+                            <Text style={[styles.subScoreText, { color: theme.text }]}>{t('oilguard_efficacy', language)} {efficacyScore}%</Text>
                         </View>
                     </View>
                 </View>
@@ -87,20 +86,20 @@ export default function Template04({ analysis, typeLabel, productName, imageUri,
                         </Text>
                     </View>
                 </View>
-
             </View>
 
             <View style={styles.claimsSection}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('oilguard_marketing_analysis', language)}:</Text>
                 {claims.map((c, i) => {
-                    const style = getClaimStyle(c.status, language);
+                    const style = getClaimStyle(c, language);
+                    const claimTitle = typeof c === 'object' ? (c.claim || c.label || c.name) : c;
                     return (
                         <View key={i} style={[styles.claimCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
                             <View style={[styles.claimIcon, { backgroundColor: style.bg }]}>
                                 <FontAwesome5 name={style.icon} size={14} color={theme.primary} />
                             </View>
                             <Text style={[styles.claimText, { color: theme.text }]} numberOfLines={2}>
-                                {c.claim} {style.note && <Text style={{color: style.color, fontSize: 12}}>{style.note}</Text>}
+                                {claimTitle} {style.note && <Text style={{color: style.color, fontSize: 12}}>{style.note}</Text>}
                             </Text>
                         </View>
                     );
@@ -111,12 +110,12 @@ export default function Template04({ analysis, typeLabel, productName, imageUri,
                 <View style={styles.disclaimerBox}>
                     <MaterialCommunityIcons name="information-variant" size={16} color={theme.text} style={{ opacity: 0.5 }} />
                     <Text style={[styles.disclaimerText, { color: theme.text }]}>
-                    ${t('oilguard_disclaimer', language)}
+                        {t('oilguard_disclaimer', language)}
                     </Text>
                 </View>
 
                 <View style={[styles.ctaButton, { backgroundColor: theme.text }]}>
-                    <Text style={[styles.ctaText, { color: theme.primary }]}>حللي منتجاتك مجانا عبر WATHIQ.WEB.APP</Text>
+                    <Text style={[styles.ctaText, { color: theme.primary }]}>{t('oilguard_cta_analyze', language)}</Text>
                 </View>
 
                 <View style={styles.socialRow}>
