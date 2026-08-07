@@ -40,7 +40,9 @@ jobs:
           cache: 'yarn'
 
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          rm -rf node_modules yarn.lock
+          yarn install
 
       # FIX: Use working-directory or full path
       - name: Fix Firebase idb dependency

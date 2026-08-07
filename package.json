@@ -65,6 +65,9 @@
     "zustand": "4"
   },
   "private": true,
+  "resolutions": {
+    "**/idb": "8.0.2"
+  },
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.18.6",
