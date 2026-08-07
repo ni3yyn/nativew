@@ -185,7 +185,7 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress, isLocked 
                             {/* Footer call to action */}
                             <View style={styles.footer}>
                                 <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary }}>
-                                    {isRTL ? 'اضغط لعرض تفاصيل تعارض المكونات وأفضل أوقات الاستخدام' : 'Press to view chemical synergies & timing logs'}
+                                    {isRTL ? 'اضغطيلعرض تفاصيل تعارض المكونات وأفضل أوقات الاستخدام' : 'Press to view chemical synergies & timing logs'}
                                 </Text>
                                 <FontAwesome5 name="chevron-left" size={9} color={C.textDim} />
                             </View>

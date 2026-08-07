@@ -611,11 +611,7 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
                                     جاري التحليل…
                                 </Text>
                             )}
-                            {(product.analysisStatus === 'needs_claims' || product.analysisStatus === 'pending') && (
-                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.accentGreen + 'CC', textAlign: 'right', marginTop: 2 }}>
-                                    اضغط للتحليل
-                                </Text>
-                            )}
+                            
                         </View>
 
                         <View style={styles.listImageWrapper}>
