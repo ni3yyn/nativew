@@ -7,28 +7,48 @@ module.exports = function (api) {
     ],
     overrides: [
       {
+        // Expo TypeScript packages with JSX - need full transformation
         test: (filename) => {
           if (!filename) return false;
-          // Only transform Expo packages that use private properties AND TypeScript
           return (
-            filename.includes('expo-file-system') ||
-            filename.includes('expo-modules-core') ||
             filename.includes('expo-camera') ||
-            filename.includes('expo-av') ||
-            filename.includes('expo-image-manipulator')
+            filename.includes('expo-av')
           );
         },
         plugins: [
-          // TypeScript must come FIRST
-          ['@babel/plugin-transform-typescript', { allowDeclareFields: true }],
-          // Then class features plugins in loose mode
+          ['@babel/plugin-transform-typescript', { 
+            allowDeclareFields: true,
+            isTSX: true  // Enable TSX support for JSX in TypeScript
+          }],
+          ['@babel/plugin-transform-react-jsx', {
+            runtime: 'automatic'  // Match Expo's default JSX transform
+          }],
           ['@babel/plugin-transform-class-properties', { loose: true }],
           ['@babel/plugin-transform-private-methods', { loose: true }],
           ['@babel/plugin-transform-private-property-in-object', { loose: true }],
         ],
       },
       {
-        // Separate override for JS packages that only need private properties
+        // Expo TypeScript packages without JSX
+        test: (filename) => {
+          if (!filename) return false;
+          return (
+            filename.includes('expo-file-system') ||
+            filename.includes('expo-modules-core') ||
+            filename.includes('expo-image-manipulator')
+          );
+        },
+        plugins: [
+          ['@babel/plugin-transform-typescript', { 
+            allowDeclareFields: true 
+          }],
+          ['@babel/plugin-transform-class-properties', { loose: true }],
+          ['@babel/plugin-transform-private-methods', { loose: true }],
+          ['@babel/plugin-transform-private-property-in-object', { loose: true }],
+        ],
+      },
+      {
+        // JavaScript packages with private properties
         test: (filename) => {
           if (!filename) return false;
           return (
