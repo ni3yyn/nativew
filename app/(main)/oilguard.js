@@ -38,7 +38,7 @@ import ScoreBreakdownModal from '../../src/components/oilguard/ScoreBreakdownMod
 import { VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoiceCard'; // Adjust path if needed
 import { VerifiedDetailModal } from '../../src/components/oilguard/VerifiedDetailModal';
 import { scheduleAuthenticNotifications } from '../../src/utils/notificationHelper';
-
+import ProductResultHeader from '../../src/components/oilguard/ProductResultHeader';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -3051,6 +3051,13 @@ export default function OilGuardEngine() {
 
                         {/* A. CONTENT SECTION */}
                         <View style={styles.dashboardGlass}>
+
+                            {/* --- PREMIUM PRODUCT HEADER --- */}
+                            <ProductResultHeader 
+                                productName={productName}
+                                imageUri={frontImageUri}
+                                categoryLabel={PRODUCT_TYPES.find(t => t.id === productType)?.label}
+                            />
 
                             {/* Gauge */}
                             <View style={styles.gaugeSection}>

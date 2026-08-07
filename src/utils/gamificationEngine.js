@@ -2,7 +2,7 @@
 
 export const BOUNTY_REWARDS = {
     ingredients: 100,      // الأصعب والأكثر قيمة
-    newProduct: 150,       // إضافة منتج غير موجود
+    newProduct: 200,       // إضافة منتج غير موجود
     marketingClaims: 30,   // المميزات
     targetTypes: 30,       // الفئة المستهدفة
     price: 15,             // السعر
