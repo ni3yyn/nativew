@@ -2604,16 +2604,6 @@ const getStylesContent = (C) => ({
         paddingHorizontal: 5,
         paddingBottom: 25,
     },
-    modernCardContainer: {
-        width: 150,
-        height: 150,
-        borderRadius: 22,
-        padding: 14,
-        justifyContent: 'space-between',
-        borderWidth: 1,
-        backgroundColor: C.card,
-        overflow: 'hidden',
-    },
     modernCardHeader: {
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',

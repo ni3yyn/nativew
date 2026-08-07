@@ -340,9 +340,16 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
 
     // 🌟 FORMATTED ARABIC CLAIMS FOR DROPDOWN
     const formattedClaims = useMemo(() => {
-        if (!selectedCatId) return [];
-        const rawClaims = getClaimsForCategory(selectedCatId);
-        return rawClaims.map(claim => ({ id: claim, label: claim }));
+        // If a category is selected, try fetching category-specific claims
+        if (selectedCatId) {
+            const rawClaims = getClaimsForCategory(selectedCatId);
+            if (rawClaims && rawClaims.length > 0) {
+                return rawClaims.map(claim => ({ id: claim, label: claim }));
+            }
+        }
+        
+        // Fallback: Show all general claims from SERVER_ARABIC_CLAIMS
+        return SERVER_ARABIC_CLAIMS.map(claim => ({ id: claim, label: claim }));
     }, [selectedCatId]);
 
     const handleCategorySelect = (cat) => {

@@ -55,27 +55,57 @@ const StandardInsightCard = ({ insight, onPress, index }) => {
 
 export const AnalysisCarousel = ({ insights, onSelect }) => {
     const { colors: COLORS } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
+    const { isRTL } = useRTL();
+    const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
+
     return (
-        <View style={{ marginBottom: 25 }}>
-            <View style={styles.header}>
-                <Text style={styles.carouselTitle}>{t('oilguard_highlights', useCurrentLanguage())}</Text>
+        <View style={{ marginBottom: 22 }}>
+            {/* HEADER WITH SWIPE HINT */}
+            <View style={styles.carouselHeaderRow}>
+                <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
+                
+                {/* 🌟 UX HINT BADGE (Shown when > 2 insights) */}
+                {insights.length > 2 && (
+                    <View style={styles.swipeHintBadge}>
+                        <Text style={styles.swipeHintText}>
+                            {isRTL ? 'اسحب لرؤية المزيد' : 'Swipe for more'}
+                        </Text>
+                        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={10} color={COLORS.accentGreen} />
+                    </View>
+                )}
             </View>
 
+            {/* HORIZONTAL CAROUSEL WITH PEEKING & SNAP SCROLLING */}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.carouselContentContainer}
-                style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }}
+                snapToInterval={142} // 132 (card width) + 10 (gap)
+                decelerationRate="fast"
+                contentContainerStyle={[
+                    styles.carouselContentContainer,
+                    { flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }
+                ]}
             >
                 {insights.map((insight, index) => {
-                    const isWeather = insight.customData?.type === 'weather_advice' ||
-                        insight.customData?.type === 'weather_dashboard';
+                    const paddingStyle = { width: 'auto', ...(isRTL ? { paddingLeft: 12 } : { paddingRight: 12 }) };
 
+                    // Check for Weather Alerts (WRAPPED WITH StaggeredItem FOR UNIFORM PADDING)
+                    const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
                     if (isWeather) {
-                        return <WeatherMiniCard key={insight.id} insight={insight} onPress={onSelect} />;
+                        return (
+                            <StaggeredItem key={insight.id} index={index} style={paddingStyle} animated={false}>
+                                <WeatherMiniCard insight={insight} onPress={onSelect} />
+                            </StaggeredItem>
+                        );
                     }
 
+                    // Check for Night Prep
+                    if (insight.id === 'night-prep-forecast') {
+                        return <NightPrepMiniCard key={insight.id} insight={insight} onPress={onSelect} index={index} />;
+                    }
+
+                    // Default Standard Card
                     return <StandardInsightCard key={insight.id} insight={insight} onPress={onSelect} index={index} />;
                 })}
             </ScrollView>

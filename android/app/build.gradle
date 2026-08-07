@@ -95,7 +95,7 @@ android {
         targetSdkVersion 36
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 20
+        versionCode 21
         versionName "1.9.2"
         resConfigs "en"
 
