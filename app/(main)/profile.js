@@ -3502,8 +3502,8 @@ const getStylesContent = (C) => ({
         fontSize: 10,
     },
     weatherCardContainer: {
-        width: 150,
-        height: 150,
+        width: 132,
+        height: 132,
         borderRadius: 22,
         padding: 14,
         justifyContent: 'space-between',

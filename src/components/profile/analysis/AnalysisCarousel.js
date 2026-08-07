@@ -87,11 +87,6 @@ const createStyles = (COLORS) => StyleSheet.create({
     header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 4 },
     carouselTitle: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'right' },
     carouselContentContainer: { paddingHorizontal: 4, flexDirection: 'row-reverse', gap: 10, paddingBottom: 5 },
-    modernCardContainer: {
-        width: 140, height: 160, borderRadius: 20, overflow: 'hidden',
-        borderWidth: 1.5, padding: 14, justifyContent: 'space-between',
-        backgroundColor: COLORS.card,
-    },
     modernCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     modernIconBox: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     statusDot: { width: 7, height: 7, borderRadius: 3.5 },

@@ -64,7 +64,7 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1024m"
           NODE_ENV: production
-        run: ./gradlew bundleRelease
+        run: ./gradlew bundleRelease -PkotlinVersion=2.3.0 -Pexpo.kotlinVersion=2.3.0
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
