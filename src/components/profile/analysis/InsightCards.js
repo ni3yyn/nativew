@@ -164,22 +164,37 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
     const language = useCurrentLanguage();
     const { isRTL } = useRTL();
     const styles = React.useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
+
     return (
-        <View style={{ marginBottom: 25 }}>
-            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, marginBottom: 15 }}>
+        <View style={{ marginBottom: 22 }}>
+            {/* HEADER WITH SWIPE HINT */}
+            <View style={styles.carouselHeaderRow}>
                 <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
+                
+                {/* 🌟 UX HINT BADGE (Shown when > 2 insights) */}
+                {insights.length > 2 && (
+                    <View style={styles.swipeHintBadge}>
+                        <Text style={styles.swipeHintText}>
+                            {isRTL ? 'اسحب لرؤية المزيد' : 'Swipe for more'}
+                        </Text>
+                        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={10} color={COLORS.accentGreen} />
+                    </View>
+                )}
             </View>
+
+            {/* HORIZONTAL CAROUSEL WITH PEEKING & SNAP SCROLLING */}
             <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    
-    contentContainerStyle={[
-        styles.carouselContentContainer,
-        { flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }
-    ]}
->
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={142} // 132 (card width) + 10 (gap)
+                decelerationRate="fast"
+                contentContainerStyle={[
+                    styles.carouselContentContainer,
+                    { flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }
+                ]}
+            >
                 {insights.map((insight, index) => {
-                    // Check for Weather Alerts (secondary weather cards)
+                    // Check for Weather Alerts
                     const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
                     if (isWeather) return <WeatherMiniCard key={insight.id} insight={insight} onPress={onSelect} />;
 
@@ -207,14 +222,57 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
     allClearIconWrapper: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.success + '1A', justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: COLORS.success + '33' },
     allClearTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary },
     allClearSummary: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 5, lineHeight: 20 },
-    carouselTitle: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary, textAlign: 'center', paddingHorizontal: 5 },
 
-    // Modern Mini Cards
-    modernCardContainer: { width: 150, height: 160, borderRadius: 22, padding: 14, justifyContent: 'space-between', borderWidth: 1, backgroundColor: COLORS.card, overflow: 'hidden' },
+    /* CAROUSEL HEADER & SWIPE HINT */
+    carouselHeaderRow: { 
+        flexDirection: isRTL ? 'row-reverse' : 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        paddingHorizontal: 4, 
+        marginBottom: 12 
+    },
+    carouselTitle: { 
+        fontFamily: 'Tajawal-ExtraBold', 
+        fontSize: 16, 
+        color: COLORS.textPrimary 
+    },
+    swipeHintBadge: {
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: COLORS.accentGreen + '18',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.accentGreen + '30',
+    },
+    swipeHintText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
+        color: COLORS.accentGreen,
+    },
+    carouselContentContainer: { 
+        paddingHorizontal: 1, 
+        gap: 1, 
+        paddingBottom: 5 
+    },
+
+    /* 🌟 COMPACT PEEKING CARDS (132px WIDTH ALLOWS NEXT CARD TO PEEK OUT) 🌟 */
+    modernCardContainer: { 
+        width: 132, 
+        height: 132, 
+        borderRadius: 20, 
+        padding: 12, 
+        justifyContent: 'space-between', 
+        borderWidth: 1, 
+        backgroundColor: COLORS.card, 
+        overflow: 'hidden' 
+    },
     modernCardHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' },
-    modernIconBox: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    modernIconBox: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     statusDot: { width: 6, height: 6, borderRadius: 3, opacity: 0.6 },
-    modernCardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textPrimary, textAlign: isRTL ? 'right' : 'left', lineHeight: 18, marginTop: 8, marginBottom: 4 },
+    modernCardTitle: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.textPrimary, textAlign: isRTL ? 'right' : 'left', lineHeight: 17, marginTop: 4 },
     modernCardFooter: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 4, opacity: 0.8 },
     readMoreText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
     nightMiniText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: '#c7d2fe', textAlign: isRTL ? 'right' : 'left', lineHeight: 16 }

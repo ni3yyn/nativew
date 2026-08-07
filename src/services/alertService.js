@@ -1,3 +1,4 @@
+import { Platform, ToastAndroid } from 'react-native';
 import { t } from '../i18n';
 
 let alertRef = null;
@@ -17,6 +18,15 @@ export const AlertService = {
     show: ({ title, message, type = 'info', buttons = [], onDismiss }) => {
         if (alertRef) {
             alertRef.open({ title, message, type, buttons, onDismiss });
+        }
+    },
+
+    // 4. Small Native Toast (Non-modal bottom pill)
+    toast: (message) => {
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(message, ToastAndroid.SHORT);
+        } else if (alertRef && alertRef.toast) {
+            alertRef.toast(message);
         }
     },
 

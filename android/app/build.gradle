@@ -95,8 +95,8 @@ android {
         targetSdkVersion 36
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 19
-        versionName "1.9.1"
+        versionCode 20
+        versionName "1.9.2"
         resConfigs "en"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""

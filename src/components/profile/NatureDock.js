@@ -102,41 +102,45 @@ const DockSheet = ({ visible, onClose, type, onSelect }) => {
             return (
                 <>
                     <View style={styles.handle} />
-                    <Text style={styles.sheetTitle}>{t('dock_camera_sheet_title', language)}</Text>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('scan_product')}>
+                    <Text style={styles.sheetTitle}>{t('dock_camera_sheet_title', language) || "إضافة منتج جديد"}</Text>
+                    
+                    {/* 1. PRIMARY: CATALOG SEARCH */}
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('search_catalog')}>
                         <LinearGradient colors={[COLORS.accentGreen, COLORS.accentGreen]} style={styles.actionButtonMain}>
                             <View style={styles.iconBoxMain}>
-                                <MaterialIcons name="camera" size={24} color={COLORS.textOnAccent} />
+                                <MaterialIcons name="search" size={24} color={COLORS.textOnAccent} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.btnTitleMain}>{t('dock_scan_product', language)}</Text>
-                                <Text style={styles.btnSubMain}>{t('dock_scan_product_sub', language)}</Text>
+                                <Text style={styles.btnTitleMain}>{t('dock_catalog', language) || "البحث في الكتالوج"}</Text>
+                                <Text style={styles.btnSubMain}>{t('dock_catalog_sub', language) || "تصفح آلاف المنتجات المحللة مسبقاً"}</Text>
                             </View>
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textOnAccent} />
                         </LinearGradient>
                     </TouchableOpacity>
 
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('search_catalog')}>
-                        <View style={styles.actionButtonSecondary}>
-                            <View style={styles.iconBoxSec}>
-                                <MaterialIcons name="search" size={24} color={COLORS.textPrimary} />
+                    {/* 2. SECONDARY: SCAN BARCODE */}
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('scan_product')}>
+                        <View style={[styles.actionButtonSecondary, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]}>
+                            <View style={[styles.iconBoxSec, { backgroundColor: COLORS.textOnAccent + '20' }]}>
+                                <MaterialIcons name="qr-code-scanner" size={24} color={COLORS.textOnAccent} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.btnTitleSec}>{t('dock_catalog', language)}</Text>
-                                <Text style={styles.btnSubSec}>{t('dock_catalog_sub', language)}</Text>
+                                <Text style={[styles.btnTitleSec, { color: COLORS.textOnAccent }]}>{t('dock_scan_product', language) || "مسح الباركود"}</Text>
+                                <Text style={[styles.btnSubSec, { color: COLORS.textOnAccent + 'CC' }]}>{t('dock_scan_product_sub', language) || "استخدم الكاميرا لتحليل منتج غير موجود"}</Text>
                             </View>
-                            <MaterialIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
+                            <MaterialIcons name="chevron-left" size={20} color={COLORS.textOnAccent} />
                         </View>
                     </TouchableOpacity>
                     
+                    {/* 3. TERTIARY: COMPARE PRODUCTS */}
                     <TouchableOpacity activeOpacity={0.8} onPress={() => handleAction('compare_products')}>
                         <View style={styles.actionButtonSecondary}>
                             <View style={styles.iconBoxSec}>
                                 <MaterialIcons name="compare-arrows" size={24} color={COLORS.textPrimary} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.btnTitleSec}>{t('dock_compare_products', language)}</Text>
-                                <Text style={styles.btnSubSec}>{t('dock_compare_products_sub', language)}</Text>
+                                <Text style={styles.btnTitleSec}>{t('dock_compare_products', language) || "مقارنة المنتجات"}</Text>
+                                <Text style={styles.btnSubSec}>{t('dock_compare_products_sub', language) || "مقارنة المكونات لاختيار الأفضل"}</Text>
                             </View>
                             <MaterialIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
                         </View>
@@ -343,7 +347,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                                 style={styles.cameraGradient}
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                             >
-                                <FontAwesome5 name="camera" size={24} color={COLORS.textOnAccent} style={{ zIndex: 2 }} />
+                                <FontAwesome5 name="plus" size={24} color={COLORS.textOnAccent} style={{ zIndex: 2 }} />
                                 <Animated.View style={[
                                     styles.shimmerBar,
                                     { transform: [{ translateX: shimmerTranslate }, { rotate: '30deg' }] }
@@ -351,7 +355,7 @@ export const NatureDock = ({ activeTab, onTabChange, navigation }) => {
                             </LinearGradient>
                         </Animated.View>
                     </TouchableOpacity>
-                    <Text style={styles.watheeqLabel}>{t('brand_wathiq', language)}</Text>
+                    <Text style={styles.watheeqLabel}>{t('brand_wathiq', language) || "إضافة"}</Text>
                 </View>
 
                 <View style={styles.dockContainer}>

@@ -18,11 +18,17 @@ import { getPointsForField } from '../../utils/gamificationEngine';
 import { basicSkinTypes, basicScalpTypes, commonConditions } from '../../data/allergiesandconditions';
 import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
-import { saveProductToShelf, removeProductFromShelf } from '../../services/communityService';
+import { 
+  saveProductToShelf, 
+  removeProductFromShelf,
+  analyzeAndEnrichShelfProduct,
+  markShelfProductNeedsClaims 
+} from '../../services/communityService';
 import { AlertService } from '../../services/alertService';
 
 // Components
 import FullImageViewer from '../common/FullImageViewer';
+import ClaimsPickerModal from './ClaimsPickerModal';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -151,7 +157,7 @@ const StaggeredView = ({ children, index }) => {
 
 export default function CatalogDetailModal({ visible, onClose, product, onContribute }) {
   const { colors: C } = useTheme();
-  const { user, savedProducts } = useAppContext();
+  const { user, userProfile, savedProducts } = useAppContext();
   const rtl = useRTL();
   const router = useRouter(); 
   const lang = useCurrentLanguage(); 
@@ -159,6 +165,10 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(false); 
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // ── Smart save state ──────────────────────────────────────────────────────
+  const [showClaimsPicker, setShowClaimsPicker] = useState(false);
+  const pendingDocIdRef = useRef(null);
 
   const [modalImageUri, setModalImageUri] = useState(() => getOptimizedImage(product?.image, 600));
   const [hasModalImageError, setHasModalImageError] = useState(false);
@@ -181,9 +191,21 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
     p => p.productId === product?.id || p.id === product?.id || 
     (p.productName && product?.name && p.productName.toLowerCase() === product.name.toLowerCase())
   );
-  const isSaved = !!savedItem;
+  // Optimistic state for 0ms instant UI toggle
+  const [optimisticSaved, setOptimisticSaved] = useState(null);
+  const isSaved = optimisticSaved !== null ? optimisticSaved : !!savedItem;
 
-  const handleQuickSave = async () => {
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    setOptimisticSaved(null);
+  }, [savedProducts]);
+
+  const handleQuickSave = () => {
     if (!user) {
       AlertService.show({
         title: t('login_required', lang) || 'تسجيل الدخول مطلوب',
@@ -196,21 +218,66 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       if (isSaved && savedItem?.id) {
-        await removeProductFromShelf(user.uid, savedItem.id);
-        AlertService.success(
-          t('community_deleted_title', lang) || 'تم الحذف',
-          t('product_removed_from_shelf', lang) || 'تم إزالة المنتج من رفّك'
-        );
-      } else {
-        await saveProductToShelf(user.uid, product);
-        AlertService.success(
-          t('community_saved_title', lang) || 'تم الحفظ',
-          t('community_saved_message', lang) || 'تمت إضافة المنتج إلى رفّك بنجاح'
-        );
+        setOptimisticSaved(false); // Instant text toggle
+
+        removeProductFromShelf(user.uid, savedItem.id).catch(err => {
+          console.error("Quick remove error in detail modal:", err);
+          if (isMountedRef.current) setOptimisticSaved(true);
+        });
+        return;
       }
+
+      setOptimisticSaved(true); // Instant text toggle
+
+      const hasIngredients = Array.isArray(product.ingredients) 
+          ? product.ingredients.length > 0 
+          : !!(product.ingredients && String(product.ingredients).trim());
+      const hasClaims = Array.isArray(product.marketingClaims) && product.marketingClaims.length > 0;
+
+      saveProductToShelf(user.uid, product).then(shelfDocId => {
+        if (!shelfDocId) return;
+        pendingDocIdRef.current = shelfDocId;
+
+        if (!hasIngredients) {
+          AlertService.toast(`تمت إضافة ${product.name} إلى رفّك ✓`);
+          return;
+        }
+
+        if (hasClaims) {
+          AlertService.toast(`تم حفظ ${product.name}، وجاري التحليل 🧪`);
+          analyzeAndEnrichShelfProduct(
+            user.uid, shelfDocId, product, userProfile, product.marketingClaims
+          ).catch(err => console.warn('[BackgroundAnalysis] Detail error:', err));
+        } else {
+          if (isMountedRef.current) setShowClaimsPicker(true);
+        }
+      }).catch(err => {
+        console.error("Quick save error in detail modal:", err);
+        if (isMountedRef.current) setOptimisticSaved(false);
+      });
     } catch (err) {
       console.error("Quick save error in detail modal:", err);
+    }
+  };
+
+  const handleClaimsConfirmed = (selectedClaims) => {
+    setShowClaimsPicker(false);
+    const docId = pendingDocIdRef.current;
+    if (!docId || !user) return;
+
+    AlertService.toast(`تم حفظ ${product.name}، وجاري التحليل 🧪`);
+    analyzeAndEnrichShelfProduct(
+      user.uid, docId, product, userProfile, selectedClaims
+    ).catch(err => console.warn('[BackgroundAnalysis] Claims error:', err));
+  };
+
+  const handlePickerDismiss = () => {
+    setShowClaimsPicker(false);
+    const docId = pendingDocIdRef.current;
+    if (docId && user) {
+      markShelfProductNeedsClaims(user.uid, docId).catch(err => console.warn('[NeedsClaims] Dismiss error:', err));
     }
   };
   
@@ -391,9 +458,26 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                   </View>
 
                   <View style={[styles.titleReadout, { alignItems: rtl.isRTL ? 'flex-end' : 'flex-start' }]}>
-                    <Text style={[styles.brandSigniture, { color: C.accentGreen, textAlign: rtl.textAlign }]}>
-                      {product.brand}
-                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        if (!product.brand) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        handleClose();
+                        setTimeout(() => {
+                          router.push({
+                            pathname: '/CatalogScreen',
+                            params: { search: product.brand }
+                          });
+                        }, 300);
+                      }}
+                      style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, marginBottom: 4 }}
+                    >
+                      <Text style={[styles.brandSigniture, { color: C.accentGreen, textAlign: rtl.textAlign }]}>
+                        {product.brand}
+                      </Text>
+                      <FontAwesome5 name="search" size={11} color={C.accentGreen} style={{ opacity: 0.8 }} />
+                    </TouchableOpacity>
                     <Text style={[styles.grandProductName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
                       {product.name}
                     </Text>
@@ -651,6 +735,13 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
         visible={isViewerVisible} 
         imageUrl={product.image} 
         onClose={() => setIsViewerVisible(false)} 
+      />
+
+      <ClaimsPickerModal
+        visible={showClaimsPicker}
+        product={product}
+        onConfirm={handleClaimsConfirmed}
+        onDismiss={handlePickerDismiss}
       />
     </>
   );

@@ -230,6 +230,113 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
     // --- RENDERER: GOAL DASHBOARD ---
     // ========================================================================
     const renderGoalContent = (data) => {
+        // ── EMPTY SHELF ROADMAP ───────────────────────────────────────────────
+        // Shown when goal cards are client-side generated (no products added yet)
+        if (data?.isEmptyState) {
+            const heroIngs = data.heroIngredients || [];
+            const tips = data.routineTips || [];
+
+            return (
+                <View>
+                    {/* Header */}
+                    <View style={styles.headerCentered}>
+                        <View style={[styles.iconLargeCircle, { backgroundColor: colors.accentGreen + '1A' }]}>
+                            <MaterialCommunityIcons name="flag-checkered" size={36} color={colors.accentGreen} />
+                        </View>
+                        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{data.goalLabel}</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 20, marginTop: 4 }}>
+                            أضيفي منتجاتكِ لنحلل أين أنتِ فعلاً في هذا المسار.
+                        </Text>
+                    </View>
+
+                    {/* Progress Preview (Teaser) */}
+                    <View style={{ alignItems: 'center', marginBottom: 28 }}>
+                        <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                            <ChartRing percentage={0} color={colors.border} radius={52} strokeWidth={8} />
+                            <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+                                <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
+                            </View>
+                        </View>
+                        <Text style={{ fontFamily: 'Tajawal-Bold', color: colors.textSecondary, fontSize: 12, marginTop: 8 }}>
+                            مؤشر التطابق — يظهر بعد إضافة منتجاتكِ
+                        </Text>
+                    </View>
+
+                    {/* Hero Ingredients Section */}
+                    <View style={[styles.sectionContainer, {
+                        backgroundColor: colors.accentGreen + '0D',
+                        borderWidth: 1,
+                        borderColor: colors.accentGreen + '22',
+                        borderRadius: 16,
+                        padding: 16,
+                        marginBottom: 16,
+                    }]}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                            <MaterialCommunityIcons name="flask-outline" size={16} color={colors.accentGreen} />
+                            <Text style={[styles.sectionTitle, { color: colors.accentGreen, marginBottom: 0 }]}>مكونات أساسية لهذا المسار</Text>
+                        </View>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: colors.textSecondary, fontSize: 12, textAlign: 'right', marginBottom: 12 }}>
+                            ابحثي عن منتجات تحتوي على هذه المكونات:
+                        </Text>
+                        <View style={styles.chipContainer}>
+                            {heroIngs.map((h, i) => (
+                                <View key={i} style={[styles.chip, { backgroundColor: colors.accentGreen + '12', borderColor: colors.accentGreen + '40' }]}>
+                                    <MaterialCommunityIcons name="check-circle-outline" size={13} color={colors.accentGreen} />
+                                    <Text style={[styles.chipText, { color: colors.accentGreen, fontSize: 12 }]}>{h.replace(/-/g, ' ')}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Routine Tips */}
+                    {tips.length > 0 && (
+                        <View style={[styles.sectionContainer, {
+                            backgroundColor: colors.warning + '0D',
+                            borderWidth: 1,
+                            borderColor: colors.warning + '22',
+                            borderRadius: 16,
+                            padding: 16,
+                            marginBottom: 16,
+                        }]}>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                <MaterialCommunityIcons name="clock-outline" size={16} color={colors.warning} />
+                                <Text style={[styles.sectionTitle, { color: colors.warning, marginBottom: 0 }]}>كيفية بناء روتينكِ</Text>
+                            </View>
+                            <View style={{ gap: 12 }}>
+                                {tips.map((tip, i) => (
+                                    <View key={i} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
+                                        <View style={{
+                                            width: 24, height: 24, borderRadius: 12,
+                                            backgroundColor: colors.warning + '22',
+                                            alignItems: 'center', justifyContent: 'center', marginTop: 1
+                                        }}>
+                                            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: colors.warning }}>{i + 1}</Text>
+                                        </View>
+                                        <Text style={{ fontFamily: 'Tajawal-Regular', color: colors.textPrimary, fontSize: 14, flex: 1, textAlign: 'right', lineHeight: 22 }}>{tip}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* CTA Hint */}
+                    {data.ctaHint && (
+                        <View style={{
+                            flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10,
+                            backgroundColor: colors.card, borderRadius: 14, padding: 14,
+                            borderWidth: 1, borderColor: colors.border, marginBottom: 4
+                        }}>
+                            <MaterialCommunityIcons name="lightbulb-outline" size={16} color={colors.gold || colors.warning} style={{ marginTop: 2 }} />
+                            <Text style={{ fontFamily: 'Tajawal-Regular', color: colors.textSecondary, fontSize: 13, flex: 1, textAlign: 'right', lineHeight: 20 }}>
+                                {data.ctaHint}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            );
+        }
+
+        // ── NORMAL PATH: Product Dashboard ────────────────────────────────────
         const score = data.score || 0;
         const ringColor = score >= 80 ? colors.success : score >= 60 ? colors.gold : colors.danger;
 

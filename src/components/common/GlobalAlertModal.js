@@ -78,7 +78,19 @@ const GlobalAlertModal = () => {
                     })
                 ]).start();
             },
-            close: handleClose
+            close: handleClose,
+            toast: (message) => {
+                setConfig({
+                    title: '',
+                    message,
+                    type: 'success',
+                    buttons: []
+                });
+                setVisible(true);
+                setTimeout(() => {
+                    handleClose();
+                }, 1800);
+            }
         });
 
         return () => AlertService.setRef(null);

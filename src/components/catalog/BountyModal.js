@@ -1,4 +1,5 @@
 // src/components/oilguard/BountyModal.js
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     View,
@@ -19,7 +20,7 @@ import {
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
-import { getClaimsByProductType, COUNTRIES } from '../../constants/productData';
+import { COUNTRIES } from '../../constants/productData';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
@@ -27,6 +28,57 @@ import { useRTL } from '../../hooks/useRTL';
 import { AlertService } from '../../services/alertService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// 🌟 OFFICIAL CLAIMS DIVISION BY PRODUCT TYPE
+export const CLAIMS_BY_CATEGORY = {
+    shampoo: ["تنظيف لطيف", "تنظيف عميق", "تنقية فروة الرأس", "مضاد للقشرة", "مخصص للشعر الدهني", "مخصص للشعر الجاف", "مضاد لتساقط الشعر", "تعزيز النمو", "تكثيف الشعر", "مرطب للشعر", "تغذية الشعر", "إصلاح الشعر المتضرر", "تلميع ولمعان", "تنعيم الشعر", "مكافحة التجعد", "حماية اللون", "حماية من الحرارة", "مهدئ", "مضاد للالتهابات"],
+    conditioner: ["تنعيم الشعر", "فك التشابك", "ترطيب مكثف", "إصلاح الشعر المتضرر", "حماية اللون", "تلميع ولمعان", "مكافحة التجعد", "تغذية الشعر", "مرطب للشعر"],
+    hair_mask: ["ترطيب مكثف", "تغذية الشعر", "إصلاح الشعر المتضرر", "تقوية الشعر", "تنعيم الشعر", "مكافحة التجعد", "حماية اللون", "تلميع ولمعان", "مرطب للشعر"],
+    hair_serum: ["تلميع ولمعان", "مكافحة التجعد", "حماية من الحرارة", "إصلاح الشعر المتضرر", "تنعيم الشعر", "مرطب للشعر", "تغذية الشعر", "حماية اللون", "تعزيز النمو", "مضاد لتساقط الشعر"],
+    skin_serum: ["مرطب للبشرة", "مكافحة التجاعيد", "شد البشرة", "تحفيز الكولاجين", "مضاد للأكسدة", "تفتيح البشرة", "توحيد لون البشرة", "تفتيح البقع الداكنة", "تفتيح تحت العين", "مهدئ", "مضاد للالتهابات", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "تنقية المسام", "توازن الزيوت", "مضاد لحب الشباب", "مضاد للرؤوس السوداء", "تقشير لطيف"],
+    oil_blend: ["مرطب للبشرة", "مرطب للشعر", "تغذية الشعر", "تعزيز النمو", "مكافحة التجاعيد", "شد البشرة", "تفتيح البقع الداكنة", "إصلاح الشعر المتضرر", "تلميع ولمعان", "مكافحة التجعد", "مخصص للشعر الدهني", "مخصص للشعر الجاف", "مضاد للأكسدة", "مهدئ", "مضاد للالتهابات"],
+    lotion_cream: ["مرطب للبشرة", "ترطيب مكثف", "للبشرة الجافة", "للبشرة الحساسة", "للبشرة الدهنية", "مهدئ", "مضاد للأكسدة", "مكافحة التجاعيد", "شد البشرة", "تحفيز الكولاجين", "تفتيح البشرة", "توحيد لون البشرة", "تفتيح البقع الداكنة", "تفتيح تحت العين", "تنقية المسام", "إزالة السيلوليت", "شد الجسم"],
+    eye_cream: ["تفتيح تحت العين", "مكافحة التجاعيد", "شد البشرة", "ترطيب مكثف", "مهدئ", "مضاد للأكسدة", "تحفيز الكولاجين"],
+    oil_replacement: ["ترطيب مكثف", "تغذية الشعر", "إصلاح الشعر المتضرر", "تقوية الشعر", "تنعيم الشعر", "مكافحة التجعد", "حماية اللون", "تلميع ولمعان", "مرطب للشعر"],
+    sunscreen: ["حماية من الشمس", "حماية واسعة الطيف", "مقاوم للماء", "مرطب للبشرة", "توحيد لون البشرة", "للبشرة الحساسة", "للبشرة الدهنية", "للبشرة الجافة", "مهدئ", "مضاد للأكسدة"],
+    cleanser: ["تنظيف عميق", "تنظيف لطيف", "إزالة المكياج", "للبشرة الدهنية", "للبشرة الجافة", "للبشرة الحساسة", "تنقية المسام", "مضاد لحب الشباب", "تقشير لطيف", "مرطب للبشرة", "مهدئ", "توازن الحموضة", "تفتيح البشرة"],
+    body_wash: ["تنظيف لطيف", "تنظيف عميق", "ترطيب مكثف", "للبشرة الحساسة", "إزالة السيلوليت", "شد الجسم", "تقشير لطيف", "مهدئ"],
+    scrub: ["تقشير", "تقشير لطيف", "تنقية المسام", "تنظيف عميق", "تفتيح البشرة", "تنعيم الشعر", "إزالة السيلوليت"],
+    toner: ["مرطب للبشرة", "تهدئة البشرة", "توازن الحموضة", "تقشير لطيف", "تنقية المسام", "قابض للمسام", "مضاد للأكسدة", "للبشرة الحساسة", "تفتيح البشرة"],
+    mask: ["تنقية عميقة", "ترطيب مكثف", "تفتيح البشرة", "توحيد لون البشرة", "شد البشرة", "تهدئة البشرة", "تقشير", "تنقية المسام", "مضاد لحب الشباب", "للبشرة الدهنية"],
+    other: ["مرطب للشعر", "مرطب للبشرة", "مهدئ", "مضاد للأكسدة", "مضاد للالتهابات", "تفتيح البشرة", "توحيد لون البشرة", "مكافحة التجاعيد", "تنقية المسام", "مضاد لحب الشباب"]
+};
+
+/**
+ * Maps raw category IDs or keywords to the correct key in CLAIMS_BY_CATEGORY
+ */
+export const getClaimsForCategory = (catId) => {
+    if (!catId) return CLAIMS_BY_CATEGORY.other;
+    const cleanId = String(catId).toLowerCase().trim();
+
+    if (CLAIMS_BY_CATEGORY[cleanId]) {
+        return CLAIMS_BY_CATEGORY[cleanId];
+    }
+
+    // Category Alias Resolver
+    if (cleanId.includes('shampoo')) return CLAIMS_BY_CATEGORY.shampoo;
+    if (cleanId.includes('conditioner')) return CLAIMS_BY_CATEGORY.conditioner;
+    if (cleanId.includes('hair_mask') || cleanId.includes('hairmask')) return CLAIMS_BY_CATEGORY.hair_mask;
+    if (cleanId.includes('hair_serum') || cleanId.includes('hairserum')) return CLAIMS_BY_CATEGORY.hair_serum;
+    if (cleanId.includes('skin_serum') || cleanId.includes('serum')) return CLAIMS_BY_CATEGORY.skin_serum;
+    if (cleanId.includes('oil_blend') || cleanId.includes('hair_oil') || cleanId.includes('face_oil')) return CLAIMS_BY_CATEGORY.oil_blend;
+    if (cleanId.includes('lotion') || cleanId.includes('cream') || cleanId.includes('moisturizer')) return CLAIMS_BY_CATEGORY.lotion_cream;
+    if (cleanId.includes('eye')) return CLAIMS_BY_CATEGORY.eye_cream;
+    if (cleanId.includes('replacement')) return CLAIMS_BY_CATEGORY.oil_replacement;
+    if (cleanId.includes('sun') || cleanId.includes('screen') || cleanId.includes('protection')) return CLAIMS_BY_CATEGORY.sunscreen;
+    if (cleanId.includes('clean') || cleanId.includes('wash') || cleanId.includes('foam')) return CLAIMS_BY_CATEGORY.cleanser;
+    if (cleanId.includes('body_wash') || cleanId.includes('shower')) return CLAIMS_BY_CATEGORY.body_wash;
+    if (cleanId.includes('scrub') || cleanId.includes('exfoliat')) return CLAIMS_BY_CATEGORY.scrub;
+    if (cleanId.includes('toner')) return CLAIMS_BY_CATEGORY.toner;
+    if (cleanId.includes('mask')) return CLAIMS_BY_CATEGORY.mask;
+
+    return CLAIMS_BY_CATEGORY.other;
+};
 
 // --- Staggered Animation Component ---
 const StaggeredView = ({ children, index }) => {
@@ -54,7 +106,6 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
     const { colors: C } = useTheme();
     const language = useCurrentLanguage();
     const rtl = useRTL();
-    const isEn = language === 'en';
     const animState = useRef(new Animated.Value(0)).current;
     const mainScrollViewRef = useRef(null);
 
@@ -147,7 +198,6 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
             const result = await onSubmit(product, field, finalValue);
             if (result && result.isPending) {
                 setIsPending(true);
-                // Auto close after showing pending message
                 setTimeout(() => handleClose(), 2000);
             } else {
                 handleClose();
@@ -163,24 +213,32 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
         }
     };
 
+    // 🌟 CATEGORY-ACCURATE CLAIMS & TARGET TYPES
     const availableTags = useMemo(() => {
-        if (field === 'marketingClaims')
-            return getClaimsByProductType(product?.category?.id || 'other');
-        if (field === 'targetTypes')
+        if (field === 'marketingClaims') {
+            return getClaimsForCategory(product?.category?.id);
+        }
+        if (field === 'targetTypes') {
             return [
                 'بشرة دهنية',
+                'بشرة عادية',
                 'بشرة جافة',
-                'بشرة حساسة',
                 'بشرة مختلطة',
-                'بشرة معرضة للحبوب',
-                'شعر جاف',
+                'بشرة حساسة',
+                'كل أنواع البشرة',
                 'شعر دهني',
+                'شعر جاف',
                 'شعر متضرر',
-                'شعر مصبوغ',
-                'فروة حساسة',
+                'شعر مصبوغ'
             ];
+        }
         return [];
     }, [field, product]);
+
+    const renderTagText = (tag) => {
+        if (/[\u0600-\u06FF]/.test(tag)) return tag;
+        return t(tag, language) || tag;
+    };
 
     const renderInputArea = () => {
         if (isPending) {
@@ -271,7 +329,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                             style={{ maxHeight: 220 }}
                             keyboardShouldPersistTaps="handled"
                         >
-                            {COUNTRIES.map((item, i) => {
+                            {COUNTRIES.map((item) => {
                                 const isSelected = textValue === item.id;
                                 return (
                                     <TouchableOpacity
@@ -352,7 +410,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                                             },
                                         ]}
                                     >
-                                        {t(tag, language)}
+                                        {renderTagText(tag)}
                                     </Text>
                                     {selectedTags.includes(tag) && (
                                         <Ionicons
@@ -468,7 +526,6 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                             <View style={{ height: 100 }} />
                         </ScrollView>
 
-                        {/* Footer */}
                         {!isPending && (
                             <View style={[styles.footer, { backgroundColor: C.background, borderTopColor: C.border, flexDirection: rtl.flexDirection }]}>
                                 <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>

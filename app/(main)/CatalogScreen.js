@@ -1,3 +1,5 @@
+// CatalogScreen.js
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -105,6 +107,7 @@ export default function CatalogScreen() {
   // Animation for Plus Button
   const plusScaleAnim = useRef(new Animated.Value(1)).current;
   const plusPulseAnim = useRef(new Animated.Value(1)).current;
+  const inputRef = useRef(null);
 
   // 1. Check if intro should be shown
   useEffect(() => {
@@ -185,12 +188,6 @@ export default function CatalogScreen() {
     }).start();
   }, [isCompareMode, compareBannerAnim]);
 
-  // Interpolations for smooth slide down
-  const bannerHeight = compareBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 42] });
-  const bannerOpacity = compareBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const bannerMargin = compareBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 15] });
-  const bannerBorder = compareBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-
   // Handler Optimizations
   const handleIntroFinish = useCallback(async () => {
     try {
@@ -233,8 +230,61 @@ export default function CatalogScreen() {
   }, [products]);
 
   // Optimized Filter Logic
+  // Inside CatalogScreen.js -> update filteredData definition:
+
+  // Alias maps for fuzzy matching skin types & claims
+  const SKIN_TYPE_ALIASES = {
+      'بشرة دهنية': ['بشرة دهنية', 'دهنية', 'oily'],
+      'بشرة مختلطة': ['بشرة مختلطة', 'مختلطة', 'combo', 'combination'],
+      'بشرة عادية': ['بشرة عادية', 'عادية', 'normal'],
+      'بشرة حساسة': ['بشرة حساسة', 'حساسة', 'sensitive'],
+      'بشرة معرضة للحبوب': ['بشرة معرضة للحبوب', 'معرضة للحبوب', 'حبوب', 'acne', 'acne_prone', 'حب الشباب'],
+  };
+
+  const CLAIM_ALIASES = {
+      'خالٍ من العطور': ['عطور', 'fragrance', 'perfume', 'unscented'],
+      'خالٍ من الكحول': ['كحول', 'alcohol'],
+      'غير مسبب للانسداد': ['انسداد', 'comedogenic', 'مسام'],
+      'خالٍ من البارابين': ['بارابين', 'paraben'],
+      'خالٍ من السلفات': ['سلفات', 'sulfate'],
+      'مناسب للبشرة الحساسة': ['حساسة', 'sensitive'],
+      'ترطيب عميق': ['ترطيب', 'hydrat'],
+      'تفتيح ونضارة': ['تفتيح', 'نضارة', 'brighten', 'glow'],
+      'مكافحة الحبوب': ['حبوب', 'حب الشباب', 'acne', 'blemish'],
+      'تهدئة الاحمرار': ['تهدئة', 'احمرار', 'sooth', 'calm', 'redness'],
+      'مكافحة التجاعيد': ['تجاعيد', 'شيخوخة', 'aging', 'wrinkle', 'firm'],
+      'حماية من الشمس': ['شمس', 'sun', 'uv', 'spf', 'واقي'],
+  };
+
+  const getProductClaims = (p) => {
+      const claims = [];
+      if (Array.isArray(p.marketingClaims)) claims.push(...p.marketingClaims);
+      if (Array.isArray(p.claims)) claims.push(...p.claims);
+      if (Array.isArray(p.selected_claims)) claims.push(...p.selected_claims);
+      if (Array.isArray(p.analysisData?.marketingClaims)) claims.push(...p.analysisData.marketingClaims);
+      if (Array.isArray(p.analysisData?.evaluated_claims)) claims.push(...p.analysisData.evaluated_claims);
+      if (Array.isArray(p.analysisData?.selected_claims)) claims.push(...p.analysisData.selected_claims);
+      return claims.map(c => typeof c === 'object' ? (c.label || c.name || c.title || '') : String(c)).filter(Boolean);
+  };
+
+  const getProductTargetSkinTypes = (p) => {
+      const types = [];
+      if (Array.isArray(p.targetSkinTypes)) types.push(...p.targetSkinTypes);
+      else if (typeof p.targetSkinTypes === 'string') types.push(p.targetSkinTypes);
+
+      if (Array.isArray(p.targetTypes)) types.push(...p.targetTypes);
+      else if (typeof p.targetTypes === 'string') types.push(p.targetTypes);
+
+      if (Array.isArray(p.skinType)) types.push(...p.skinType);
+      else if (typeof p.skinType === 'string') types.push(p.skinType);
+
+      if (Array.isArray(p.target_skin_types)) types.push(...p.target_skin_types);
+      if (Array.isArray(p.analysisData?.target_skin_types)) types.push(...p.analysisData.target_skin_types);
+
+      return types.map(t => String(t)).filter(Boolean);
+  };
+
   const filteredData = useMemo(() => {
-    // Safety check - ensure products is an array
     if (!products || !Array.isArray(products) || products.length === 0) {
       return [];
     }
@@ -242,26 +292,71 @@ export default function CatalogScreen() {
     const searchLower = search.toLowerCase();
     
     let result = products.filter(p => {
+      // 1. Search Query Match
       const matchSearch = searchLower === '' || 
                           (p.name || "").toLowerCase().includes(searchLower) || 
                           (p.brand || "").toLowerCase().includes(searchLower);
+      
+      // 2. Category Filter
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
+      
+      // 3. Brand Filter
       const matchBrand = advancedFilters.brand === 'all' || p.brand === advancedFilters.brand;
-      const matchBounty = advancedFilters.bountiesOnly ? (!p.price || !p.ingredients) : true;
+      
+      // 4. Algerian Local Filter
+      const matchLocal = advancedFilters.localOnly ? isAlgerianProduct(p) : true;
 
-      return matchSearch && matchCat && matchBrand && matchBounty;
+      // 5. Granular Missing Fields (Bounties) Filter
+      let matchMissing = true;
+      if (advancedFilters.missingFields && advancedFilters.missingFields.length > 0) {
+        matchMissing = advancedFilters.missingFields.some(fieldKey => {
+          if (fieldKey === 'price') return !p.price;
+          if (fieldKey === 'ingredients') return !p.ingredients || p.ingredients.trim() === '';
+          if (fieldKey === 'brand') return !p.brand;
+          if (fieldKey === 'claims') return getProductClaims(p).length === 0;
+          if (fieldKey === 'skinTypes') return getProductTargetSkinTypes(p).length === 0;
+          return false;
+        });
+      }
+
+      // 6. Target Skin Types Filter (Fuzzy Alias Match)
+      let matchSkinType = true;
+      if (advancedFilters.skinTypes && advancedFilters.skinTypes.length > 0) {
+        const prodTypes = getProductTargetSkinTypes(p);
+        matchSkinType = advancedFilters.skinTypes.some(selectedSt => {
+          const aliases = SKIN_TYPE_ALIASES[selectedSt] || [selectedSt.toLowerCase()];
+          return prodTypes.some(pt => {
+            const lowerPt = pt.toLowerCase();
+            return aliases.some(alias => lowerPt.includes(alias.toLowerCase()));
+          });
+        });
+      }
+
+      // 7. Claims Filter (Fuzzy Alias Match)
+      let matchClaims = true;
+      if (advancedFilters.claims && advancedFilters.claims.length > 0) {
+        const prodClaims = getProductClaims(p);
+        matchClaims = advancedFilters.claims.some(selectedCl => {
+          const aliases = CLAIM_ALIASES[selectedCl] || [selectedCl.toLowerCase()];
+          return prodClaims.some(pc => {
+            const lowerPc = pc.toLowerCase();
+            return aliases.some(alias => lowerPc.includes(alias.toLowerCase()));
+          });
+        });
+      }
+
+      return matchSearch && matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
     });
 
+    // Sorting
     if (advancedFilters.sort === 'price_asc') {
         result.sort((a, b) => (getPriceValue(a.price) || 999999) - (getPriceValue(b.price) || 999999));
     } else if (advancedFilters.sort === 'price_desc') {
         result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
     } else {
-        // Default Sort: Algerian products pushed to the top
         result.sort((a, b) => {
             const aIsAlg = isAlgerianProduct(a);
             const bIsAlg = isAlgerianProduct(b);
-            
             if (aIsAlg && !bIsAlg) return -1;
             if (!aIsAlg && bIsAlg) return 1;
             return 0;
@@ -275,7 +370,6 @@ export default function CatalogScreen() {
   useEffect(() => {
     let pulseAnimation;
     
-    // Safety check - ensure filteredData is an array before checking length
     if (Array.isArray(filteredData) && filteredData.length === 0 && !loading) {
       pulseAnimation = Animated.loop(
         Animated.sequence([
@@ -313,7 +407,6 @@ export default function CatalogScreen() {
   }, [search, activeCat, advancedFilters, products]);
 
   const visibleData = useMemo(() => {
-    // Safety check - ensure filteredData is an array
     if (!Array.isArray(filteredData)) {
       return [];
     }
@@ -377,7 +470,7 @@ export default function CatalogScreen() {
     } else {
       setSelectedProduct(product);
     }
-  }, [isCompareMode, params.compareSlot, params.leftProduct, params.rightProduct, products, router]);
+  }, [isCompareMode, params, products, router]);
 
   const handleBountySubmit = useCallback(async (product, field, value) => {
     try {
@@ -526,7 +619,6 @@ export default function CatalogScreen() {
 
   // ---------------- UI RENDERS ----------------
 
-  // 1. First, wait to figure out IF we need to show the intro
   if (checkingIntro) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
@@ -535,12 +627,10 @@ export default function CatalogScreen() {
     );
   }
 
-  // 2. If we need to show the intro, show it now (blocks data loading spinner)
   if (showIntro) {
     return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
   }
 
-  // 3. Once the intro is done (or skipped), show a spinner while data downloads
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: C.background }]}>
@@ -576,25 +666,47 @@ export default function CatalogScreen() {
           scrollY={scrollY}
         />
 
-        <View style={[styles.searchContainer, { backgroundColor: C.card, borderColor: C.border }]}>
-          <FontAwesome5 name="search" size={14} color={C.textDim} style={styles.searchIcon} />
-          <TextInput 
-            style={[styles.input, { color: C.textPrimary }]} 
-            placeholder={t('catalog_search_placeholder', language)} 
-            placeholderTextColor={C.textDim}
-            value={search} 
-            onChangeText={setSearch} 
-            textAlign={rtl.textAlign}
-            textAlignVertical="center"
-            paddingVertical={0}
-            paddingTop={0}
-            paddingBottom={0}
-            height="100%"
-            includeFontPadding={false}
-          />
+        {/* 🌟 IDENTICAL SEARCH BAR (MATCHES SHELF SEARCH BAR) 🌟 */}
+        <View style={[
+          styles.searchContainer, 
+          { 
+            backgroundColor: C.card, 
+            borderColor: C.accentGreen + '40',
+            shadowColor: C.accentGreen
+          }
+        ]}>
+          {/* TAPPING ANYWHERE IN THIS ENTIRE ZONE FOCUSES THE INPUT */}
+          <TouchableOpacity 
+            style={styles.searchSide}
+            activeOpacity={1}
+            onPress={() => inputRef.current?.focus()}
+          >
+            <FontAwesome5 name="search" size={16} color={C.textSecondary} />
+            <TextInput 
+              ref={inputRef}
+              style={[styles.input, { color: C.textPrimary }]} 
+              value={search} 
+              onChangeText={setSearch} 
+              textAlign={rtl.textAlign}
+              textAlignVertical="center"
+              paddingVertical={0}
+              paddingHorizontal={0}
+              height="100%"
+              includeFontPadding={false}
+            />
+          </TouchableOpacity>
+
           <View style={[styles.divider, { backgroundColor: C.border }]} />
-          <TouchableOpacity onPress={handleFilterOpen} style={styles.filterBtn}>
-            <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textDim} />
+
+          <TouchableOpacity 
+            onPress={handleFilterOpen} 
+            style={[
+              styles.filterBtn, 
+              { backgroundColor: C.accentGreen + '1A' }
+            ]}
+            activeOpacity={0.7}
+          >
+            <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textSecondary} />
             {hasActiveFilters && <View style={[styles.activeFilterDot, { backgroundColor: C.accentGreen, borderColor: C.card }]} />}
           </TouchableOpacity>
         </View>
@@ -608,10 +720,9 @@ export default function CatalogScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={renderProduct}
         contentContainerStyle={[
-  styles.list,
-  // If empty, make it fill the whole screen
-  (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
-]}
+          styles.list,
+          (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
+        ]}
         refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshData} tintColor={C.gold} />}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5} 
@@ -689,37 +800,78 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 10 },
   topRow: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   title: { fontFamily: 'Tajawal-ExtraBold', fontSize: isEn ? 26 : 24 },
+  
+  /* IDENTICAL SEARCH BAR STYLES (MATCHES SHELF SEARCH BAR) */
   searchContainer: { 
     flexDirection: rtl.flexDirection, 
-    height: 50, 
-    borderRadius: 14, 
+    height: 56, 
+    borderRadius: 20, 
     alignItems: 'center', 
     borderWidth: 1, 
     marginBottom: 10, 
-    paddingHorizontal: 15 
+    marginTop: 5,
+    paddingHorizontal: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  searchIcon: { marginEnd: 10 },
+  searchSide: {
+    flex: 1,
+    height: '100%',     // 🌟 Maximize touch height
+    flexDirection: rtl.flexDirection,
+    alignItems: 'center',
+    paddingRight: 12,
+    paddingLeft: 6,
+    gap: 10,
+  },
+  searchIcon: { 
+    // marginEnd removed — 'gap' in searchSide handles spacing cleanly
+  },
   input: { 
     flex: 1, 
+    height: '100%',     // 🌟 Fills entire search side for instant tap response
     fontFamily: 'Tajawal-Regular', 
-    fontSize: isEn ? 16 : 14, 
+    fontSize: isEn ? 20 : 20, 
     textAlign: rtl.textAlign,
     textAlignVertical: 'center',
     paddingVertical: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    height: '100%',
+    paddingHorizontal: 0,
+    margin: 0,
     includeFontPadding: false,
   },
-  divider: { width: 1, height: 25, marginHorizontal: 10 },
-  filterBtn: { padding: 8, position: 'relative', justifyContent: 'center', alignItems: 'center' },
-  activeFilterDot: { position: 'absolute', top: 5, right: 5, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
-  list: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 },
-  emptyContainer: { 
+  divider: { 
+    width: 1, 
+    height: 28, 
+    marginHorizontal: 8,
+    opacity: 0.5,
+  },
+  filterBtn: { 
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: 'center', 
     justifyContent: 'center',
-    marginTop: 60,
+    position: 'relative',
+  },
+  activeFilterDot: { 
+    position: 'absolute', 
+    top: -2, 
+    right: -2, 
+    width: 10, 
+    height: 10, 
+    borderRadius: 5, 
+    borderWidth: 2 
+  },
+  
+  list: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 1 },
+  emptyContainer: {
+    flex: 1,
+    minHeight: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 30,
+    paddingVertical: 24,
   },
   emptyTitle: { 
     fontFamily: 'Tajawal-Bold', 
@@ -754,20 +906,9 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
   fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   fabGradientActive: { borderWidth: 2, borderColor: C.textOnAccent, shadowOpacity: 0.45, shadowRadius: 10, transform: [{ scale: 1.03 }] },
   devModeToggle: { position: 'absolute', top: 0, left: 0, width: 50, height: 50, zIndex: 999 },
-  compareBanner: {
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  compareBannerText: { 
-    fontFamily: 'Tajawal-Bold', 
-    fontSize: 13 
-  },
   emptyList: {
-  flex: 1,
-  justifyContent: 'center',
-  paddingBottom: 250,
-}
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 0,
+  }
 });

@@ -208,18 +208,21 @@ const PostCard = React.memo(({ post, currentUser, onInteract, onDelete, onViewPr
         
         const handleProductPress = (prod) => {
             if (!onViewProduct) return;
+            const resolvedType = prod.productType || prod.type || prod.product_type || prod.category?.id || prod.analysisData?.product_type || 'other';
+            
             onViewProduct({
                 ...prod,
                 id: prod.id || 'unknown',
+                name: prod.productName || prod.name || t('community_product', language),
                 productName: prod.productName || prod.name || t('community_product', language),
-                productImage: prod.productImage || prod.image || null,
-                marketingClaims: prod.marketingClaims ||[],
-                analysisData: prod.analysisData || {
-                    oilGuardScore: prod.oilGuardScore || prod.score || 0,
-                    product_type: prod.productType || prod.type || 'other',
-                    detected_ingredients: prod.detected_ingredients || prod.ingredients || [],
-                    user_specific_alerts:[]
-                }
+                image: prod.productImage || prod.image || prod.imageUrl || null,
+                imageUrl: prod.productImage || prod.image || prod.imageUrl || null,
+                productImage: prod.productImage || prod.image || prod.imageUrl || null,
+                productType: resolvedType,
+                type: resolvedType,
+                marketingClaims: prod.marketingClaims || prod.claims || [],
+                ingredients: prod.ingredients || prod.analysisData?.detected_ingredients || [],
+                analysisData: prod.analysisData || null
             });
         };
         

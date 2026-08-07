@@ -26,115 +26,177 @@ const MiniScoreRing = ({ score, color, label }) => {
     );
 };
 
+// --- LOCK OVERLAY FOR CIRCADIAN (Glassmorphic) ---
+const LockedCircadianOverlay = ({ router }) => {
+    const { colors: C } = useTheme();
+    const { isRTL } = useRTL();
+    return (
+        <View style={circadianLockedStyles.overlay}>
+            <View style={circadianLockedStyles.glass}>
+                <View style={[circadianLockedStyles.iconCircle, { backgroundColor: C.accentGreen + '22', borderColor: C.accentGreen + '44' }]}>
+                    <FontAwesome5 name="lock" size={22} color={C.accentGreen} />
+                </View>
+                <Text style={[circadianLockedStyles.lockTitle, { color: C.textPrimary }]}>
+                    {isRTL ? 'أضف منتجاتك' : 'Add Your Products'}
+                </Text>
+                <Text style={[circadianLockedStyles.lockSubtitle, { color: C.textSecondary }]}>
+                    {isRTL
+                        ? 'لفتح تحليل التفاعلات الكيميائية'
+                        : 'to unlock Chemical Interaction Analysis'}
+                </Text>
+                <Pressable
+                    onPress={() => router?.push('/CatalogScreen')}
+                    style={({ pressed }) => [
+                        circadianLockedStyles.ctaButton,
+                        { backgroundColor: C.accentGreen, opacity: pressed ? 0.8 : 1 }
+                    ]}
+                >
+                    <FontAwesome5 name="plus" size={12} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={circadianLockedStyles.ctaText}>
+                        {isRTL ? 'أضف منتجاً الآن' : 'Add a Product'}
+                    </Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+};
+
 // --- 2. MAIN CARD ---
-export const CircadianAndSynergyCard = ({ circadian, synergy, onPress }) => {
+export const CircadianAndSynergyCard = ({ circadian, synergy, onPress, isLocked = false, router }) => {
     const { colors: C } = useTheme();
     const language = useCurrentLanguage();
     const { isRTL } = useRTL();
     const styles = useMemo(() => createStyles(C, isRTL), [C, isRTL]);
 
-    if (!circadian && (!synergy || (synergy.positive?.length === 0 && synergy.negative?.length === 0))) {
-        return null; // Don't render if no circadian routine set and no synergies detected
+    // When locked, show enticing placeholder data instead of null-checking out.
+    // This makes the card look active and real behind the overlay.
+    const PLACEHOLDER_CIRCADIAN = {
+        overallScore: 85,
+        amScore: 90,
+        pmScore: 80,
+        misplacements: [],
+        whyExplanations: [],
+    };
+    const PLACEHOLDER_SYNERGY = {
+        netScore: 3,
+        positive: [{ pair: ['niacinamide', 'hyaluronic-acid'], displayCI: '+2', whyAr: 'تعاون جيد' }],
+        negative: [],
+    };
+
+    const displayCircadian = isLocked ? PLACEHOLDER_CIRCADIAN : circadian;
+    const displaySynergy   = isLocked ? PLACEHOLDER_SYNERGY   : synergy;
+
+    // Original guard: skip render when no real data AND not locked
+    if (!isLocked && !circadian && (!synergy || (synergy.positive?.length === 0 && synergy.negative?.length === 0))) {
+        return null;
     }
 
-    const circadianScore = circadian?.overallScore ?? 100;
-    const netSynergy = synergy?.netScore ?? 0;
+    const circadianScore = displayCircadian?.overallScore ?? 100;
+    const netSynergy = displaySynergy?.netScore ?? 0;
     const synergyColor = netSynergy >= 10 ? C.success : (netSynergy >= 0 ? C.accentGreen : C.warning);
 
     return (
-        <PressableScale onPress={onPress}>
-            <ContentCard style={styles.card} animated={false}>
-                <View style={styles.cardPadding}>
-                    {/* Header */}
-                    <View style={styles.cardHeader}>
-                        <View style={styles.titleRow}>
-                            <FontAwesome5 name="magic" size={15} color={C.accentGreen} />
-                            <Text style={[styles.cardTitle, { color: C.textPrimary }]}>
-                                {isRTL ? 'تفاعلات الروتين' : 'Biochemistry & Alignment'}
-                            </Text>
-                        </View>
-                        <View style={{ backgroundColor: C.accentGreen + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: C.accentGreen }}>
-                                {isRTL ? 'التوقيت' : 'Timing & Synergy'}
-                            </Text>
-                        </View>
-                    </View>
-
-                    {/* Stats Rows */}
-                    <View style={styles.gridContainer}>
-                        {/* Left Column: Circadian Biology */}
-                        {circadian && (
-                            <View style={styles.gridCol}>
-                                <View style={styles.metricHeader}>
-                                    <FontAwesome5 name="history" size={14} color="#818cf8" style={{ marginLeft: 6 }} />
-                                    <Text style={[styles.metricTitle, { color: C.textPrimary }]}>
-                                        {isRTL ? 'الساعة البيولوجية' : 'Circadian Clock'}
+        <View style={{ position: 'relative' }}>
+            {/* Card content — dimmed when locked */}
+            <View style={isLocked ? { opacity: 0.35 } : undefined}>
+                <PressableScale onPress={isLocked ? undefined : onPress} disabled={isLocked}>
+                    <ContentCard style={styles.card} animated={false}>
+                        <View style={styles.cardPadding}>
+                            {/* Header */}
+                            <View style={styles.cardHeader}>
+                                <View style={styles.titleRow}>
+                                    <FontAwesome5 name="magic" size={15} color={C.accentGreen} />
+                                    <Text style={[styles.cardTitle, { color: C.textPrimary }]}>
+                                        {isRTL ? 'تفاعلات الروتين' : 'Biochemistry & Alignment'}
                                     </Text>
                                 </View>
-                                <View style={styles.metricRow}>
-                                    <MiniScoreRing score={circadianScore} color="#818cf8" label={isRTL ? 'التوافق' : 'Alignment'} />
-                                    <View style={{ flex: 1, marginRight: 10 }}>
-                                        <Text style={[styles.metricStatus, { color: '#818cf8' }]}>
-                                            {circadianScore >= 90 ? (isRTL ? 'مثالي' : 'Perfect') : (circadianScore >= 70 ? (isRTL ? 'جيد' : 'Good') : (isRTL ? 'يحتاج تعديل' : 'Alert'))}
-                                        </Text>
-                                        <Text style={styles.metricDesc} numberOfLines={2}>
-                                            {circadian.misplacements?.length > 0
-                                                ? (isRTL ? `وجدنا ${circadian.misplacements.length} مكونات في غير وقتها` : `${circadian.misplacements.length} items mismatched`)
-                                                : (isRTL ? 'كل المكونات في وقتها المثالي!' : 'Timing is fully optimized')}
-                                        </Text>
-                                    </View>
+                                <View style={{ backgroundColor: C.accentGreen + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: C.accentGreen }}>
+                                        {isRTL ? 'التوقيت' : 'Timing & Synergy'}
+                                    </Text>
                                 </View>
                             </View>
-                        )}
 
-                        {/* Divider */}
-                        {circadian && synergy && <View style={[styles.verticalDivider, { backgroundColor: C.border }]} />}
-
-                        {/* Right Column: Synergy Graph */}
-                        {synergy && (
-                            <View style={styles.gridCol}>
-                                <View style={styles.metricHeader}>
-                                    <FontAwesome5 name="atom" size={14} color={synergyColor} style={{ marginLeft: 6 }} />
-                                    <Text style={[styles.metricTitle, { color: C.textPrimary }]}>
-                                        {isRTL ? 'التفاعل الكيميائي' : 'Chemical Synergy'}
-                                    </Text>
-                                </View>
-                                <View style={styles.metricRow}>
-                                    <View style={{ alignItems: 'center', gap: 6 }}>
-                                        <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: synergyColor + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: synergyColor }}>
-                                            <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 13, color: synergyColor }}>
-                                                {netSynergy >= 0 ? `+${netSynergy}` : netSynergy}
+                            {/* Stats Rows */}
+                            <View style={styles.gridContainer}>
+                                {/* Left Column: Circadian Biology */}
+                                {displayCircadian && (
+                                    <View style={styles.gridCol}>
+                                        <View style={styles.metricHeader}>
+                                            <FontAwesome5 name="history" size={14} color="#818cf8" style={{ marginLeft: 6 }} />
+                                            <Text style={[styles.metricTitle, { color: C.textPrimary }]}>
+                                                {isRTL ? 'الساعة البيولوجية' : 'Circadian Clock'}
                                             </Text>
                                         </View>
-                                        <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: C.textSecondary }}>
-                                            {isRTL ? 'مؤشر التفاعل' : 'Synergy Index'}
-                                        </Text>
+                                        <View style={styles.metricRow}>
+                                            <MiniScoreRing score={circadianScore} color="#818cf8" label={isRTL ? 'التوافق' : 'Alignment'} />
+                                            <View style={{ flex: 1, marginRight: 10 }}>
+                                                <Text style={[styles.metricStatus, { color: '#818cf8' }]}>
+                                                    {circadianScore >= 90 ? (isRTL ? 'مثالي' : 'Perfect') : (circadianScore >= 70 ? (isRTL ? 'جيد' : 'Good') : (isRTL ? 'يحتاج تعديل' : 'Alert'))}
+                                                </Text>
+                                                <Text style={styles.metricDesc} numberOfLines={2}>
+                                                    {displayCircadian.misplacements?.length > 0
+                                                        ? (isRTL ? `وجدنا ${displayCircadian.misplacements.length} مكونات في غير وقتها` : `${displayCircadian.misplacements.length} items mismatched`)
+                                                        : (isRTL ? 'كل المكونات في وقتها المثالي!' : 'Timing is fully optimized')}
+                                                </Text>
+                                            </View>
+                                        </View>
                                     </View>
-                                    <View style={{ flex: 1, marginRight: 10 }}>
-                                        <Text style={[styles.metricStatus, { color: synergyColor }]}>
-                                            {netSynergy >= 15 ? (isRTL ? 'انسجام ممتاز' : 'Elite Synergy') : (netSynergy >= 0 ? (isRTL ? 'متناسق' : 'Synergized') : (isRTL ? 'تعارض كيميائي' : 'Conflict'))}
-                                        </Text>
-                                        <Text style={styles.metricDesc} numberOfLines={2}>
-                                            {isRTL
-                                                ? `تفاعلات: +${synergy.positive?.length || 0} إيجابي ، -${synergy.negative?.length || 0} سلبي`
-                                                : `Interactions: +${synergy.positive?.length || 0} pos, -${synergy.negative?.length || 0} neg`}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-                    </View>
+                                )}
 
-                    {/* Footer call to action */}
-                    <View style={styles.footer}>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary }}>
-                            {isRTL ? 'اضغط لعرض تفاصيل تعارض المكونات وأفضل أوقات الاستخدام' : 'Press to view chemical synergies & timing logs'}
-                        </Text>
-                        <FontAwesome5 name="chevron-left" size={9} color={C.textDim} />
-                    </View>
-                </View>
-            </ContentCard>
-        </PressableScale>
+                                {/* Divider */}
+                                {displayCircadian && displaySynergy && <View style={[styles.verticalDivider, { backgroundColor: C.border }]} />}
+
+                                {/* Right Column: Synergy Graph */}
+                                {displaySynergy && (
+                                    <View style={styles.gridCol}>
+                                        <View style={styles.metricHeader}>
+                                            <FontAwesome5 name="atom" size={14} color={synergyColor} style={{ marginLeft: 6 }} />
+                                            <Text style={[styles.metricTitle, { color: C.textPrimary }]}>
+                                                {isRTL ? 'التفاعل الكيميائي' : 'Chemical Synergy'}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.metricRow}>
+                                            <View style={{ alignItems: 'center', gap: 6 }}>
+                                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: synergyColor + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: synergyColor }}>
+                                                    <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 13, color: synergyColor }}>
+                                                        {netSynergy >= 0 ? `+${netSynergy}` : netSynergy}
+                                                    </Text>
+                                                </View>
+                                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: C.textSecondary }}>
+                                                    {isRTL ? 'مؤشر التفاعل' : 'Synergy Index'}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1, marginRight: 10 }}>
+                                                <Text style={[styles.metricStatus, { color: synergyColor }]}>
+                                                    {netSynergy >= 15 ? (isRTL ? 'انسجام ممتاز' : 'Elite Synergy') : (netSynergy >= 0 ? (isRTL ? 'متناسق' : 'Synergized') : (isRTL ? 'تعارض كيميائي' : 'Conflict'))}
+                                                </Text>
+                                                <Text style={styles.metricDesc} numberOfLines={2}>
+                                                    {isRTL
+                                                        ? `تفاعلات: +${displaySynergy.positive?.length || 0} إيجابي ، -${displaySynergy.negative?.length || 0} سلبي`
+                                                        : `Interactions: +${displaySynergy.positive?.length || 0} pos, -${displaySynergy.negative?.length || 0} neg`}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Footer call to action */}
+                            <View style={styles.footer}>
+                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary }}>
+                                    {isRTL ? 'اضغط لعرض تفاصيل تعارض المكونات وأفضل أوقات الاستخدام' : 'Press to view chemical synergies & timing logs'}
+                                </Text>
+                                <FontAwesome5 name="chevron-left" size={9} color={C.textDim} />
+                            </View>
+                        </View>
+                    </ContentCard>
+                </PressableScale>
+            </View>
+
+            {/* Lock Overlay — rendered on top when locked */}
+            {isLocked && <LockedCircadianOverlay router={router} />}
+        </View>
     );
 };
 
@@ -565,4 +627,59 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     // Action button
     closeButton: { backgroundColor: C.textPrimary, paddingVertical: 16, borderRadius: 18, alignItems: 'center', marginTop: 25 },
     closeButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.card }
+});
+
+// ============================================================================
+// --- CIRCADIAN CARD LOCK OVERLAY STYLES ---
+// ============================================================================
+const circadianLockedStyles = StyleSheet.create({
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
+        zIndex: 10,
+        backgroundColor: 'rgba(6, 10, 18, 0.68)',
+    },
+    glass: {
+        alignItems: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 18,
+        gap: 6,
+    },
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        marginBottom: 6,
+    },
+    lockTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    lockSubtitle: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        textAlign: 'center',
+        lineHeight: 18,
+        opacity: 0.75,
+    },
+    ctaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 9,
+        borderRadius: 20,
+        marginTop: 6,
+    },
+    ctaText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: '#fff',
+    },
 });

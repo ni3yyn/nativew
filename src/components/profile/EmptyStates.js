@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useContext, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Easing, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -126,7 +126,7 @@ const WathiqButton = ({ label, icon, iconFamily = "MaterialIcons", onPress, vari
 };
 
 // --- 1. SHELF EMPTY STATE (Updated with instruction step) ---
-export const ShelfEmptyState = ({ onPress }) => {
+export const ShelfEmptyState = ({ onSearchPress, onScanPress }) => {
     const { colors: colorsFromTheme } = useTheme();
     const language = useCurrentLanguage();
     const { isRTL } = useRTL();
@@ -155,9 +155,28 @@ export const ShelfEmptyState = ({ onPress }) => {
                     <FeatureItem icon="save" text={t('empty_shelf_step_4', language)} styles={styles} COLORS={COLORS} />
                 </View>
 
-                <View style={{ width: '100%' }}>
-                    <WathiqButton label={t('empty_add_product_now', language)} icon="add-a-photo" onPress={onPress} />
+                {/* 🌟 NEW DUAL-ACTION BUTTON CONTAINER 🌟 */}
+                <View style={styles.emptyActionContainer}>
+                    {/* PRIMARY ACTION: CATALOG */}
+                    <WathiqButton 
+                        label={t('dock_catalog', language) || "البحث في الكتالوج"} 
+                        icon="search" 
+                        onPress={onSearchPress} 
+                    />
+
+                    {/* SECONDARY ACTION: SCANNER */}
+                    <TouchableOpacity 
+                        style={[styles.secondaryScanBtn, { borderColor: COLORS.accentGreen + '50' }]}
+                        activeOpacity={0.7}
+                        onPress={onScanPress}
+                    >
+                        <MaterialIcons name="qr-code-scanner" size={18} color={COLORS.accentGreen} />
+                        <Text style={[styles.secondaryScanText, { color: COLORS.accentGreen }]}>
+                            {t('dock_scan_product', language) || "أو مسح باركود منتج"}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
+
             </View>
         </FadeInView>
     );
@@ -594,5 +613,24 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
         fontFamily: 'Tajawal-Regular',
         fontSize: 11,
         color: COLORS.textDim,
-    }
+    },
+    emptyActionContainer: {
+        width: '100%',
+        marginTop: 10,
+        gap: 12, // Space between primary and secondary buttons
+    },
+    secondaryScanBtn: {
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        backgroundColor: 'transparent',
+        gap: 8,
+    },
+    secondaryScanText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+    },
 });

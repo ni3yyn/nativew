@@ -292,55 +292,116 @@ export const BarrierDetailsModal = ({ visible, onClose, data }) => {
     );
 };
 
-// --- 5. MAIN CARD (Unchanged) ---
-export const BarrierCard = ({ barrier, onPress }) => {
+// --- LOCK OVERLAY (Glassmorphic) ---
+const LockedBarrierOverlay = ({ router }) => {
+    const { colors: COLORS } = useTheme();
+    const { isRTL } = useRTL();
+    return (
+        <View style={lockedOverlayStyles.overlay}>
+            <View style={lockedOverlayStyles.glass}>
+                <View style={[lockedOverlayStyles.iconCircle, { backgroundColor: COLORS.accentGreen + '22', borderColor: COLORS.accentGreen + '44' }]}>
+                    <FontAwesome5 name="lock" size={22} color={COLORS.accentGreen} />
+                </View>
+                <Text style={[lockedOverlayStyles.lockTitle, { color: COLORS.textPrimary }]}>
+                    {isRTL ? 'أضف منتجاتك' : 'Add Your Products'}
+                </Text>
+                <Text style={[lockedOverlayStyles.lockSubtitle, { color: COLORS.textSecondary }]}>
+                    {isRTL
+                        ? 'لفتح تحليل الحاجز الجلدي'
+                        : 'to unlock Barrier Health Analysis'}
+                </Text>
+                <Pressable
+                    onPress={() => router?.push('/CatalogScreen')}
+                    style={({ pressed }) => [
+                        lockedOverlayStyles.ctaButton,
+                        { backgroundColor: COLORS.accentGreen, opacity: pressed ? 0.8 : 1 }
+                    ]}
+                >
+                    <FontAwesome5 name="plus" size={12} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={lockedOverlayStyles.ctaText}>
+                        {isRTL ? 'أضف منتجاً الآن' : 'Add a Product'}
+                    </Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+};
+
+// --- 5. MAIN CARD ---
+export const BarrierCard = ({ barrier, onPress, isLocked = false, router }) => {
     const { colors: COLORS } = useTheme();
     const language = useCurrentLanguage();
     const { isRTL } = useRTL();
     const styles = useMemo(() => createStyles(COLORS, isRTL), [COLORS, isRTL]);
+
+    // Placeholder data shown behind the lock when shelf is empty.
+    // Realistic-looking values create psychological pull to unlock.
+    const displayBarrier = isLocked
+        ? {
+            score: 72,
+            status: isRTL ? 'تحت الضغط' : 'Under Stress',
+            desc: isRTL ? 'الحاجز تحت ضغط – ارفعي الترطيب والإصلاح' : 'Barrier under pressure – boost repair',
+            color: '#f59e0b',
+            stressScore: 17.8,
+            repairScore: 18.8,
+            contraindications: [],
+        }
+        : (barrier || {
+            score: 0, status: '...', color: COLORS.textSecondary, desc: '',
+            totalIrritation: 0, totalSoothing: 0, offenders: [], defenders: []
+          });
+
     return (
-        <PressableScale onPress={onPress}>
-            <ContentCard style={styles.card} animated={false}>
-                <View style={styles.cardPadding}>
-                    <View style={styles.cardHeader}>
-                        <View style={styles.titleRow}>
-                            <FontAwesome5 name="shield-alt" size={16} color={barrier.color} />
-                            <Text style={[styles.cardTitle, { color: barrier.color }]}>{t('barrier_skin_health', language)}</Text>
-                        </View>
-                        <View style={{ backgroundColor: barrier.color + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: barrier.color }}>{t('barrier_medical_analysis', language)}</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.metricContainer}>
-                        <Text style={[styles.metricScore, { color: barrier.color }]}>{barrier.score}%</Text>
-                        <View style={styles.metricTextContainer}>
-                            <Text style={[styles.metricStatus, { color: barrier.color }]}>{barrier.status}</Text>
-                            <Text style={styles.metricDesc} numberOfLines={1}>{barrier.desc}</Text>
-                        </View>
-                    </View>
-
-                    <ClinicalProgressBar score={barrier.score} color={barrier.color} />
-
-                    <View style={styles.footer}>
-                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
-                            {(barrier.stressScore ?? barrier.stats?.load ?? 0) > 0
-                                ? interpolate(t('barrier_chemical_load', language), {
-                                    load: (barrier.stressScore ?? barrier.stats?.load ?? 0).toFixed(1),
-                                    repair: (barrier.repairScore ?? barrier.stats?.repair ?? 0).toFixed(1)
-                                })
-                                : t('barrier_no_chemical_stress', language)}
-                        </Text>
-                        {barrier.contraindications && barrier.contraindications.length > 0 && (
-                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 5 }}>
-                                <MaterialIcons name="error" size={14} color={COLORS.danger} />
-                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.danger }}>{t('barrier_important_alert', language)}</Text>
+        <View style={{ position: 'relative' }}>
+            {/* Card content — dimmed when locked */}
+            <View style={isLocked ? { opacity: 0.35 } : undefined}>
+                <Pressable onPress={isLocked ? undefined : onPress} disabled={isLocked}>
+                    <ContentCard style={styles.card} animated={false}>
+                        <View style={styles.cardPadding}>
+                            <View style={styles.cardHeader}>
+                                <View style={styles.titleRow}>
+                                    <FontAwesome5 name="shield-alt" size={16} color={displayBarrier.color} />
+                                    <Text style={[styles.cardTitle, { color: displayBarrier.color }]}>{t('barrier_skin_health', language)}</Text>
+                                </View>
+                                <View style={{ backgroundColor: displayBarrier.color + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: displayBarrier.color }}>{t('barrier_medical_analysis', language)}</Text>
+                                </View>
                             </View>
-                        )}
-                    </View>
-                </View>
-            </ContentCard>
-        </PressableScale>
+
+                            <View style={styles.metricContainer}>
+                                <Text style={[styles.metricScore, { color: displayBarrier.color }]}>{displayBarrier.score}%</Text>
+                                <View style={styles.metricTextContainer}>
+                                    <Text style={[styles.metricStatus, { color: displayBarrier.color }]}>{displayBarrier.status}</Text>
+                                    <Text style={styles.metricDesc} numberOfLines={1}>{displayBarrier.desc}</Text>
+                                </View>
+                            </View>
+
+                            <ClinicalProgressBar score={displayBarrier.score} color={displayBarrier.color} />
+
+                            <View style={styles.footer}>
+                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: COLORS.textSecondary }}>
+                                    {(displayBarrier.stressScore ?? displayBarrier.stats?.load ?? 0) > 0
+                                        ? interpolate(t('barrier_chemical_load', language), {
+                                            load: (displayBarrier.stressScore ?? displayBarrier.stats?.load ?? 0).toFixed(1),
+                                            repair: (displayBarrier.repairScore ?? displayBarrier.stats?.repair ?? 0).toFixed(1)
+                                          })
+                                        : t('barrier_no_chemical_stress', language)}
+                                </Text>
+                                {displayBarrier.contraindications && displayBarrier.contraindications.length > 0 && (
+                                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 5 }}>
+                                        <MaterialIcons name="error" size={14} color={COLORS.danger} />
+                                        <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: COLORS.danger }}>{t('barrier_important_alert', language)}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    </ContentCard>
+                </Pressable>
+            </View>
+
+            {/* Lock Overlay — rendered on top when locked */}
+            {isLocked && <LockedBarrierOverlay router={router} />}
+        </View>
     );
 };
 
@@ -422,4 +483,59 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
     metricBoxTitle: { fontFamily: 'Tajawal-Bold', fontSize: 11, marginBottom: 4 },
     metricBoxValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
     metricBoxUnit: { fontFamily: 'Tajawal-Regular', fontSize: 10 }
+});
+
+// ============================================================================
+// --- LOCK OVERLAY STYLES ---
+// ============================================================================
+const lockedOverlayStyles = StyleSheet.create({
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
+        zIndex: 10,
+        backgroundColor: 'rgba(6, 10, 18, 0.68)',
+    },
+    glass: {
+        alignItems: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 18,
+        gap: 6,
+    },
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        marginBottom: 6,
+    },
+    lockTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    lockSubtitle: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        textAlign: 'center',
+        lineHeight: 18,
+        opacity: 0.75,
+    },
+    ctaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 9,
+        borderRadius: 20,
+        marginTop: 6,
+    },
+    ctaText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+        color: '#fff',
+    },
 });

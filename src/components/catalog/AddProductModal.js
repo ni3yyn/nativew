@@ -1,3 +1,5 @@
+// AddProductModal.js
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
@@ -10,32 +12,48 @@ import * as ImagePicker from 'expo-image-picker';
 
 // Context & Data
 import { useTheme } from '../../context/ThemeContext';
-import { PRODUCT_TYPES, getClaimsByProductType, COUNTRIES } from '../../constants/productData';
+import { PRODUCT_TYPES, COUNTRIES } from '../../constants/productData';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 import { compressImage, uploadImageToCloudinary } from '../../services/imageService';
 import CustomCameraModal from '../../components/oilguard/CustomCameraModal';
 import { AlertService } from '../../services/alertService';
+import { getClaimsForCategory } from './BountyModal';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// --- DATA CONSTANTS ---
-
+// 🌟 ARABIC TARGET TYPES (IDs match Arabic labels for Firestore)
 const TARGET_TYPES = [
-    { id: 'oily_skin', label: 'بشرة دهنية' },
-    { id: 'normal_skin', label: 'بشرة عادية' },
-    { id: 'dry_skin', label: 'بشرة جافة' },
-    { id: 'combination_skin', label: 'بشرة مختلطة' },
-    { id: 'sensitive_skin', label: 'بشرة حساسة' },
-    { id: 'all_skin_types', label: 'كل أنواع البشرة' },
-    { id: 'oily_hair', label: 'شعر دهني' },
-    { id: 'dry_hair', label: 'شعر جاف' },
-    { id: 'damaged_hair', label: 'شعر متضرر' },
-    { id: 'colored_hair', label: 'شعر مصبوغ' },
+    { id: 'بشرة دهنية', label: 'بشرة دهنية' },
+    { id: 'بشرة عادية', label: 'بشرة عادية' },
+    { id: 'بشرة جافة', label: 'بشرة جافة' },
+    { id: 'بشرة مختلطة', label: 'بشرة مختلطة' },
+    { id: 'بشرة حساسة', label: 'بشرة حساسة' },
+    { id: 'كل أنواع البشرة', label: 'كل أنواع البشرة' },
+    { id: 'شعر دهني', label: 'شعر دهني' },
+    { id: 'شعر جاف', label: 'شعر جاف' },
+    { id: 'شعر متضرر', label: 'شعر متضرر' },
+    { id: 'شعر مصبوغ', label: 'شعر مصبوغ' },
 ];
 
-// --- Custom Premium Dropdown Component ---
+// 🌟 SERVER ARABIC CLAIMS LIST (45 Claims)
+const SERVER_ARABIC_CLAIMS = [
+    "مضاد لتساقط الشعر", "تعزيز النمو", "تكثيف الشعر", "مرطب للشعر",
+    "مخصص للشعر الجاف", "مخصص للشعر الدهني", "مضاد للقشرة", "مكافحة التجعد",
+    "إصلاح الشعر المتضرر", "حماية من الحرارة", "تغذية الشعر", "تلميع ولمعان",
+    "حماية اللون", "تفتيح البشرة", "توحيد لون البشرة", "تفتيح البقع الداكنة",
+    "مكافحة التجاعيد", "شد البشرة", "تحفيز الكولاجين", "تفتيح تحت العين",
+    "مضاد لحب الشباب", "مضاد للرؤوس السوداء", "تنقية المسام", "توازن الدهون والزيوت",
+    "للبشرة الدهنية", "للبشرة الجافة", "للبشرة الحساسة", "مرطب للبشرة",
+    "مهدئ", "مضاد للالتهابات", "تقشير لطيف", "تنظيف عميق",
+    "تنظيف لطيف", "إزالة المكياج", "تهدئة البشرة", "توازن الحموضة",
+    "قابض للمسام", "تقشير", "تنقية عميقة", "مضاد للأكسدة",
+    "إزالة السيلوليت", "شد الجسم", "حماية من الشمس", "حماية واسعة الطيف",
+    "مقاوم للماء"
+];
+
+// Custom Dropdown Component
 const CustomDropdown = ({ icon, title, subtitle, items, selectedItems, onSelect, multiSelect, placeholder, C, rtl }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownHeight] = useState(new Animated.Value(0));
@@ -204,7 +222,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     const animState = useRef(new Animated.Value(0)).current;
     const mainScrollViewRef = useRef(null);
 
-    // --- Form States ---
+    // Form States
     const [brand, setBrand] = useState('');
     const [name, setName] = useState('');
     const [qtyValue, setQtyValue] = useState('');
@@ -244,34 +262,21 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         });
     };
 
-    // Image Handling with Camera Integration
     const handleImageCapture = async (photo) => {
         setCameraVisible(false);
         setUploadingImage(true);
-        
         try {
-            // Upload to Cloudinary (already compressed in camera)
             const uploadedUrl = await uploadImageToCloudinary(photo.uri);
-            
             if (uploadedUrl) {
                 setImageUrl(uploadedUrl);
                 setSelectedImage(uploadedUrl);
-                AlertService.success(
-                    t('success', language),
-                    t('image_uploaded_success', language)
-                );
+                AlertService.success(t('success', language), t('image_uploaded_success', language));
             } else {
-                AlertService.error(
-                    t('error', language),
-                    t('image_upload_failed', language)
-                );
+                AlertService.error(t('error', language), t('image_upload_failed', language));
             }
         } catch (error) {
             console.error('Upload error:', error);
-            AlertService.error(
-                t('error', language),
-                t('image_upload_failed', language)
-            );
+            AlertService.error(t('error', language), t('image_upload_failed', language));
         } finally {
             setUploadingImage(false);
         }
@@ -281,10 +286,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                AlertService.error(
-                    t('permission_required', language),
-                    t('gallery_permission_denied', language)
-                );
+                AlertService.error(t('permission_required', language), t('gallery_permission_denied', language));
                 return;
             }
 
@@ -296,35 +298,21 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
 
             if (!result.canceled) {
                 setUploadingImage(true);
-                
-                // Compress image
                 const compressedUri = await compressImage(result.assets[0].uri);
-                
-                // Upload to Cloudinary
                 const uploadedUrl = await uploadImageToCloudinary(compressedUri);
                 
                 if (uploadedUrl) {
                     setImageUrl(uploadedUrl);
                     setSelectedImage(uploadedUrl);
-                    AlertService.success(
-                        t('success', language),
-                        t('image_uploaded_success', language)
-                    );
+                    AlertService.success(t('success', language), t('image_uploaded_success', language));
                 } else {
-                    AlertService.error(
-                        t('error', language),
-                        t('image_upload_failed', language)
-                    );
+                    AlertService.error(t('error', language), t('image_upload_failed', language));
                 }
-                
                 setUploadingImage(false);
             }
         } catch (error) {
             console.error('Error picking image:', error);
-            AlertService.error(
-                t('error', language),
-                t('image_pick_error', language)
-            );
+            AlertService.error(t('error', language), t('image_pick_error', language));
             setUploadingImage(false);
         }
     };
@@ -335,25 +323,13 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             message: t('choose_image_source', language),
             type: 'info',
             buttons: [
-                { 
-                    text: t('camera', language), 
-                    style: 'primary', 
-                    onPress: () => setCameraVisible(true) 
-                },
-                { 
-                    text: t('gallery', language), 
-                    style: 'secondary', 
-                    onPress: pickFromGallery 
-                },
-                { 
-                    text: t('cancel', language), 
-                    style: 'secondary' 
-                }
+                { text: t('camera', language), style: 'primary', onPress: () => setCameraVisible(true) },
+                { text: t('gallery', language), style: 'secondary', onPress: pickFromGallery },
+                { text: t('cancel', language), style: 'secondary' }
             ]
         });
     };
 
-    // Format categories for dropdown
     const formattedCategories = useMemo(() => {
         return PRODUCT_TYPES.map(cat => ({
             id: cat.id,
@@ -362,17 +338,16 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         }));
     }, [language]);
 
-    // Format claims for dropdown based on selected category
+    // 🌟 FORMATTED ARABIC CLAIMS FOR DROPDOWN
     const formattedClaims = useMemo(() => {
         if (!selectedCatId) return [];
-        const rawClaims = getClaimsByProductType(selectedCatId);
+        const rawClaims = getClaimsForCategory(selectedCatId);
         return rawClaims.map(claim => ({ id: claim, label: claim }));
     }, [selectedCatId]);
 
     const handleCategorySelect = (cat) => {
         if (selectedCatId !== cat.id) {
             setSelectedCatId(cat.id);
-            setSelectedClaims([]);
         }
     };
 
@@ -392,6 +367,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         setIsSubmitting(true);
         const catObj = PRODUCT_TYPES.find(c => c.id === selectedCatId);
 
+        // 🌟 FIRESTORE PAYLOAD SENDS ARABIC STRINGS DIRECTLY FOR TARGETS & CLAIMS
         const finalProduct = {
             brand: brand.trim(),
             name: name.trim(),
@@ -401,8 +377,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             category: { id: catObj.id, label: t(catObj.labelKey, language), icon: catObj.icon },
             quantity: qtyValue ? `${qtyValue} ${qtyUnit}` : "null",
             price: { min: parseInt(priceMin) || null, max: null, currency: "DZD" },
-            targetTypes: selectedTargets,
-            marketingClaims: selectedClaims
+            targetTypes: selectedTargets,        // Pure Arabic text array e.g. ["بشرة دهنية"]
+            marketingClaims: selectedClaims      // Pure Arabic text array e.g. ["مرطب للبشرة"]
         };
 
         try {
@@ -598,6 +574,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                     </View>
                                 </View>
 
+                                {/* TARGET AUDIENCE DROPDOWN */}
                                 <View style={styles.sectionMargin}>
                                     <CustomDropdown
                                         icon="account-star-outline"
@@ -613,22 +590,21 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                     />
                                 </View>
 
-                                {selectedCatId && formattedClaims.length > 0 && (
-                                    <View style={styles.sectionMargin}>
-                                        <CustomDropdown
-                                            icon="check-decagram-outline"
-                                            title={t('product_claims', language)}
-                                            subtitle={t('benefits_claims', language)}
-                                            items={formattedClaims}
-                                            selectedItems={selectedClaims}
-                                            multiSelect={true}
-                                            onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
-                                            placeholder={t('select_claims', language)}
-                                            C={C}
-                                            rtl={rtl}
-                                        />
-                                    </View>
-                                )}
+                                {/* CLAIMS DROPDOWN */}
+                                <View style={styles.sectionMargin}>
+                                    <CustomDropdown
+                                        icon="check-decagram-outline"
+                                        title={t('product_claims', language)}
+                                        subtitle={t('benefits_claims', language)}
+                                        items={formattedClaims}
+                                        selectedItems={selectedClaims}
+                                        multiSelect={true}
+                                        onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
+                                        placeholder={t('select_claims', language)}
+                                        C={C}
+                                        rtl={rtl}
+                                    />
+                                </View>
 
                                 <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
                                     <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
@@ -711,7 +687,6 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 <View style={{ height: 100 }} />
                             </ScrollView>
 
-                            {/* Footer */}
                             <View style={[styles.footer, { backgroundColor: C.background, borderTopColor: C.border, flexDirection: rtl.flexDirection }]}>
                                 <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
                                     <Text style={{ color: C.textDim, fontFamily: 'Tajawal-Bold', fontSize: 15 }}>
@@ -746,7 +721,6 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                 </Animated.View>
             </Modal>
 
-            {/* Camera Modal */}
             <CustomCameraModal
                 isVisible={cameraVisible}
                 onClose={() => setCameraVisible(false)}
@@ -813,7 +787,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
     },
-
     glassCard: {
         borderRadius: 20,
         padding: 16,
@@ -836,7 +809,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 15,
     },
-
     dropdownContainer: {
         borderRadius: 18,
         borderWidth: 1,
@@ -907,7 +879,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-
     input: {
         height: 48,
         fontSize: 14,
@@ -988,7 +959,6 @@ const styles = StyleSheet.create({
     sectionMargin: {
         marginBottom: 16,
     },
-    
     imageUploadArea: {
         borderWidth: 2,
         borderStyle: 'dashed',
@@ -1012,10 +982,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     selectedImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-},
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+    },
     removeImageBtn: {
         position: 'absolute',
         top: -10,
@@ -1041,7 +1011,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Tajawal-Regular',
         fontSize: 11,
     },
-
     footer: {
         position: 'absolute',
         bottom: 0,

@@ -3,7 +3,7 @@
     "name": "وثيق",
     "slug": "nativew",
     "scheme": "whathiq",
-    "version": "1.9.1",
+    "version": "1.9.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -46,7 +46,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK"
       ],
-      "runtimeVersion": "1.9.1"
+      "runtimeVersion": "1.9.2"
     },
     "web": {
       "favicon": "./assets/favicon.png"

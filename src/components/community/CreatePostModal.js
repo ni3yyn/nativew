@@ -45,8 +45,7 @@ const ImageBox = ({ imageUri, onPress, label, onDelete, necessary, COLORS, style
     </TouchableOpacity>
 );
 
-const MilestoneInput = ({ item, index, onPickImage, onChangeLabel, onDelete, canDelete, COLORS, styles }) => (
-    <View style={styles.milestoneCard}>
+const MilestoneInput = ({ item, index, onPickImage, onChangeLabel, onDelete, canDelete, COLORS, styles, language }) => (    <View style={styles.milestoneCard}>
         <View style={styles.milestoneHeader}>
             <Text style={styles.milestoneIndex}>{t('community_create_post_milestone_label', language, { index: index + 1 })}</Text>
             {canDelete && (
@@ -376,24 +375,27 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
             console.log(`[CreatePostModal] Resolved Routine Snapshot (AM Steps): ${routineSnapshot.am.length}`);
         }
 
+        const resolvedType = selectedProduct.productType || 
+                             selectedProduct.category?.id || 
+                             selectedProduct.analysisData?.product_type || 
+                             'other';
+
         const payload = {
             type, content,
-            title: (type === 'qa' || type === 'tips') && title ? title.trim() : null,            rating: type === 'review' ? rating : null,
+            title: (type === 'qa' || type === 'tips') && title ? title.trim() : null,
+            rating: type === 'review' ? rating : null,
             taggedProduct: selectedProduct ? {
                 id: selectedProduct.id,
-                name: selectedProduct.productName,
-                score: selectedProduct.analysisData?.oilGuardScore || 0,
-                imageUrl: selectedProduct.productImage,
-                analysisData: selectedProduct.analysisData, // Passed for ingredients extraction in service
-                marketingClaims: selectedProduct.marketingClaims
+                name: selectedProduct.productName || selectedProduct.name,
+                score: selectedProduct.analysisData?.oilGuardScore || selectedProduct.score || 0,
+                imageUrl: selectedProduct.productImage || selectedProduct.imageUrl || selectedProduct.image,
+                productType: resolvedType,
+                type: resolvedType,
+                analysisData: selectedProduct.analysisData || null,
+                marketingClaims: selectedProduct.marketingClaims || selectedProduct.claims || []
             } : null,
             journeyProducts: type === 'journey' ? journeyProducts : null,
-
-            // 🔴 MODIFICATION START
-            // Use the uploadedMainUrl, which will be null if type is 'routine_rate'
             imageUrl: uploadedMainUrl,
-            // 🔴 MODIFICATION END
-
             milestones: processedMilestones,
             duration: type === 'journey' ? `${t('journey_prefix_after', language)} ${durValue} ${t('journey_unit_' + (durUnit === 'أيام' ? 'days' : durUnit === 'أسابيع' ? 'weeks' : durUnit === 'أشهر' ? 'months' : 'years'), language)}` : null,
             routineSnapshot
@@ -591,20 +593,21 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                                 </View>
                                 {milestones.map((m, index) => (
                                     <MilestoneInput
-                                        key={index}
-                                        item={m}
-                                        index={index}
-                                        onPickImage={() => pickMilestoneImage(index)}
-                                        onChangeLabel={(txt) => {
-                                            const next = [...milestones];
-                                            next[index].label = txt;
-                                            setMilestones(next);
-                                        }}
-                                        onDelete={() => setMilestones(prev => prev.filter((_, i) => i !== index))}
-                                        canDelete={milestones.length > 1}
-                                        COLORS={COLORS}
-                                        styles={styles}
-                                    />
+                                    key={index}
+                                    item={m}
+                                    index={index}
+                                    onPickImage={() => pickMilestoneImage(index)}
+                                    onChangeLabel={(txt) => {
+                                        const next = [...milestones];
+                                        next[index].label = txt;
+                                        setMilestones(next);
+                                    }}
+                                    onDelete={() => setMilestones(prev => prev.filter((_, i) => i !== index))}
+                                    canDelete={milestones.length > 1}
+                                    COLORS={COLORS}
+                                    styles={styles}
+                                    language={language}
+                                />
                                 ))}
                             </View>
                         )}

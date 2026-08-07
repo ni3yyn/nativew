@@ -32,6 +32,10 @@ import {
 import { PRODUCT_TYPES } from '../../src/constants/productData';
 import { AlertService } from '../../src/services/alertService';
 import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge';
+import { analyzeAndEnrichShelfProduct, markShelfProductNeedsClaims } from '../../src/services/communityService';
+import ClaimsPickerModal from '../../src/components/catalog/ClaimsPickerModal';
+import ShelfSearchBar from '../../src/components/profile/ShelfSearchBar';
+import ProductDetailsSheet from '../../src/components/profile/ProductDetailsSheet';
 import {
     ShelfEmptyState,
     AnalysisEmptyState,
@@ -452,6 +456,23 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     const styles = useMemo(() => createStyles(C), [C]);
     const language = useCurrentLanguage();
     const translateX = useRef(new Animated.Value(0)).current;
+    const shimmerAnim = useRef(new Animated.Value(0)).current;
+    const { user, userProfile } = useAppContext();
+
+    // State for inline claims picker (used from shelf for 'needs_claims' retry)
+    const [showRetryPicker, setShowRetryPicker] = useState(false);
+
+    // Shimmer loop — only for truly in-flight states
+    useEffect(() => {
+        const status = product.analysisStatus;
+        if (status === 'analyzing') {
+            const anim = Animated.loop(
+                Animated.timing(shimmerAnim, { toValue: 1, duration: 1100, useNativeDriver: true })
+            );
+            anim.start();
+            return () => anim.stop();
+        }
+    }, [product.analysisStatus]);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -470,375 +491,165 @@ const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     ).current;
 
     const score = product.analysisData?.oilGuardScore || 0;
-    const typeObj = PRODUCT_TYPES.find(type => type.id === product.analysisData?.product_type);
+    const typeObj = PRODUCT_TYPES.find(type => type.id === (product.analysisData?.product_type || product.productType));
     const productTypeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
 
-    return (
-        <View style={styles.productListItemWrapper}>
-            <View style={styles.deleteActionContainer}>
-                <FontAwesome5 name="trash-alt" size={22} color={C.danger} />
-            </View>
+    // ── Score slot: renders differently per analysisStatus ───────────────────
+    const renderScoreSlot = () => {
+        const status = product.analysisStatus;
 
-            <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
-                <Pressable style={styles.productListItem} onPress={onPress}>
-
-                    <View style={styles.listItemScoreContainer}>
-                        <WathiqScoreBadge score={score} size={54} />
-                    </View>
-
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemName} numberOfLines={1}>{product.productName}</Text>
-                        <Text style={styles.listItemType}>{productTypeLabel}</Text>
-                    </View>
-
-                    <View style={styles.listImageWrapper}>
-                        {product.productImage ? (
-                            <Image source={{ uri: product.productImage }} style={styles.listProductImage} />
-                        ) : (
-                            <View style={styles.listImagePlaceholder}>
-                                <FontAwesome5 name="wine-bottle" size={18} color={C.textDim} />
-                            </View>
-                        )}
-                    </View>
-
-                </Pressable>
-            </Animated.View>
-        </View>
-    );
-});
-
-const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
-    const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage();
-    const animController = useRef(new Animated.Value(0)).current;
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedName, setEditedName] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [isRescanning, setIsRescanning] = useState(false);
-    const { user, userProfile, savedProducts, setSavedProducts } = useAppContext();
-
-    useEffect(() => {
-        if (isVisible && product) {
-            setEditedName(product.productName);
-            setIsEditing(false);
-
-            Animated.spring(animController, {
-                toValue: 1,
-                damping: 15,
-                stiffness: 100,
-                useNativeDriver: true,
-            }).start();
-        } else if (!isVisible) {
-            Animated.timing(animController, {
-                toValue: 0,
-                duration: 250,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [isVisible, product, animController]);
-
-    const handleClose = () => {
-        Keyboard.dismiss();
-        Animated.timing(animController, {
-            toValue: 0,
-            duration: 250,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-        }).start(({ finished }) => {
-            if (finished) onClose();
-        });
-    };
-
-    const handleSaveName = async () => {
-        if (!editedName.trim()) return;
-        if (editedName.trim() === product?.productName) { setIsEditing(false); return; }
-
-        setIsSaving(true);
-        try {
-            const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
-            await updateDoc(productRef, { productName: editedName.trim() });
-
-            const updatedList = savedProducts.map(p =>
-                p.id === product.id ? { ...p, productName: editedName.trim() } : p
+        // ── Analyzing → shimmer ring ─────────────────────────────────────────
+        if (status === 'analyzing') {
+            const shimX = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-54, 54] });
+            return (
+                <View style={[
+                    styles.listItemScoreContainer,
+                    { width: 54, height: 54, borderRadius: 27, overflow: 'hidden', backgroundColor: C.border }
+                ]}>
+                    <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: shimX }] }]}>
+                        <LinearGradient
+                            colors={['transparent', 'rgba(255,255,255,0.15)', 'transparent']}
+                            style={{ flex: 1 }} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                        />
+                    </Animated.View>
+                    <MaterialCommunityIcons
+                        name="flask-outline" size={20} color={C.textDim}
+                        style={{ position: 'absolute', alignSelf: 'center', top: 17 }}
+                    />
+                </View>
             );
-            setSavedProducts(updatedList);
-
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setIsEditing(false);
-        } catch (error) {
-            AlertService.error(t('status_error', language), t('error_update_name', language));
-        } finally {
-            setIsSaving(false);
         }
-    };
 
-    const handleRescanProduct = async () => {
-        setIsRescanning(true);
-        try {
-            const rawIngredients = product.analysisData.raw_ingredients_list ||
-                [...(product.analysisData.detected_ingredients || []).map(ing => typeof ing === 'object' && ing !== null ? ing.name : ing), ...(product.analysisData.unknown_ingredients || [])];
-
-            const response = await fetch(`${PROFILE_API_URL}/evaluate.js`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ingredients_list: rawIngredients,
-                    product_type: product.productType || product.analysisData.product_type || 'other',
-                    selected_claims: product.marketingClaims || [],
-                    user_profile: userProfile?.settings || {}
-                })
-            });
-
-            if (response.ok) {
-                const newAnalysisData = await response.json();
-                const productRef = doc(db, 'profiles', user.uid, 'savedProducts', product.id);
-                await updateDoc(productRef, { analysisData: newAnalysisData });
-
-                const updatedList = savedProducts.map(p =>
-                    p.id === product.id ? { ...p, analysisData: newAnalysisData } : p
-                );
-                setSavedProducts(updatedList);
-
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                AlertService.success(t('rescan_success_title', language) || "Success", t('rescan_success_msg', language) || `Product successfully rescanned`);
-                onClose();
-            } else {
-                throw new Error("Failed to evaluate");
-            }
-        } catch (err) {
-            console.error("Rescan Error:", err);
-            AlertService.error(t('rescan_failed_title', language) || "Error", t('rescan_failed_msg', language) || "Failed to rescan product.");
-        } finally {
-            setIsRescanning(false);
+        // ── needs_claims → "تحليل الآن" button (taps open picker) ───────────
+        if (status === 'needs_claims' || status === 'pending') {
+            return (
+                <TouchableOpacity
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setShowRetryPicker(true);
+                    }}
+                    style={[
+                        styles.listItemScoreContainer,
+                        {
+                            width: 54, height: 54, borderRadius: 14,
+                            backgroundColor: C.accentGreen + '15',
+                            borderWidth: 1.5, borderColor: C.accentGreen + '50',
+                            borderStyle: 'dashed',
+                            alignItems: 'center', justifyContent: 'center', gap: 3,
+                        }
+                    ]}
+                >
+                    <MaterialCommunityIcons name="flask" size={18} color={C.accentGreen} />
+                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 8, color: C.accentGreen, textAlign: 'center', lineHeight: 10 }}>
+                        {'تحليل\nالآن'}
+                    </Text>
+                </TouchableOpacity>
+            );
         }
-    };
 
-    const handleDeletePress = () => {
-        AlertService.confirm(
-            t('delete_product_title', language),
-            t('delete_product_confirm', language),
-            async () => {
-                Animated.timing(animController, {
-                    toValue: 0,
-                    duration: 200,
-                    useNativeDriver: true,
-                }).start(() => {
-                    onClose();
-                    setTimeout(() => onDelete(product.id), 300);
-                });
-            }
+        // ── failed → red retry button ────────────────────────────────────────
+        if (status === 'failed') {
+            return (
+                <TouchableOpacity
+                    onPress={() => {
+                        if (!user) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        // If product has claims, retry directly. Otherwise reopen picker.
+                        if (product.marketingClaims?.length > 0) {
+                            analyzeAndEnrichShelfProduct(
+                                user.uid, product.id, product, userProfile,
+                                product.marketingClaims || []
+                            );
+                        } else {
+                            setShowRetryPicker(true);
+                        }
+                    }}
+                    style={[
+                        styles.listItemScoreContainer,
+                        {
+                            width: 54, height: 54, borderRadius: 14,
+                            backgroundColor: C.danger + '15',
+                            borderWidth: 1, borderColor: C.danger + '40',
+                            alignItems: 'center', justifyContent: 'center', gap: 2,
+                        }
+                    ]}
+                >
+                    <MaterialCommunityIcons name="refresh" size={18} color={C.danger} />
+                    <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 8, color: C.danger, textAlign: 'center', lineHeight: 10 }}>
+                        {'تحليل\nمجدداً'}
+                    </Text>
+                </TouchableOpacity>
+            );
+        }
+
+        // ── done / no_ingredients / default → normal badge ───────────────────
+        return (
+            <View style={styles.listItemScoreContainer}>
+                <WathiqScoreBadge score={score} size={54} />
+            </View>
         );
     };
 
-    const getAlertStyle = (type) => {
-        const safeType = type ? type.toLowerCase() : 'info';
-        switch (safeType) {
-            case 'risk': case 'danger': case 'critical':
-                return { bg: 'rgba(239, 68, 68, 0.1)', border: C.danger, text: C.danger, icon: 'exclamation-circle' };
-            case 'caution': case 'warning':
-                return { bg: 'rgba(245, 158, 11, 0.1)', border: C.warning, text: C.warning, icon: 'exclamation-triangle' };
-            case 'good': case 'success':
-                return { bg: 'rgba(34, 197, 94, 0.1)', border: C.success, text: C.success, icon: 'check-circle' };
-            default:
-                return { bg: 'rgba(59, 130, 246, 0.1)', border: C.info, text: C.info, icon: 'info-circle' };
-        }
-    };
-
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
-
-    if (!product || !isVisible) return null;
-
-    const productImage = product?.productImage;
-    const {
-        oilGuardScore = 0,
-        finalVerdict = t('status_unknown', language),
-        product_type = 'other',
-        detected_ingredients = [],
-        user_specific_alerts = [],
-        safety = { score: 0 },
-        efficacy = { score: 0 }
-    } = product?.analysisData || {};
-
-    const scoreColor = oilGuardScore >= 80 ? C.success : oilGuardScore >= 65 ? C.warning : C.danger;
-
-    const typeObj = PRODUCT_TYPES.find(tObj => tObj.id === product_type);
-    const typeLabel = typeObj ? t(typeObj.labelKey, language) : t('product_fallback_label', language);
-
     return (
-        <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-            <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-            </Animated.View>
-
-            <Animated.View style={[styles.sheetContainer, { transform: [{ translateY }] }]}>
-                <View style={styles.sheetContent}>
-                    <View style={styles.sheetHandleBar}>
-                        <View style={styles.sheetHandle} />
-                    </View>
-
-                    <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-                        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                            {productImage ? (
-                                <View style={styles.productImageContainer}>
-                                    <Image source={{ uri: productImage }} style={styles.productRealImage} resizeMode="cover" />
-                                    <View style={[styles.scoreBadgeFloat, { backgroundColor: scoreColor }]}>
-                                        <Text style={styles.scoreBadgeText}>{oilGuardScore}</Text>
-                                    </View>
-                                </View>
-                            ) : (
-                                <View style={{
-                                    width: 80, height: 80, borderRadius: 40,
-                                    backgroundColor: C.background,
-                                    justifyContent: 'center', alignItems: 'center',
-                                    marginBottom: 15, borderWidth: 2, borderColor: scoreColor
-                                }}>
-                                    <FontAwesome5 name={typeObj?.icon || 'tint'} size={32} color={scoreColor} />
-                                </View>
-                            )}
-
-                            {isEditing ? (
-                                <View style={styles.editTitleContainer}>
-                                    <TextInput
-                                        value={editedName}
-                                        onChangeText={setEditedName}
-                                        style={styles.editTitleInput}
-                                        autoFocus
-                                        textAlign="right"
-                                    />
-                                    <View style={styles.editActionsRow}>
-                                        <TouchableOpacity onPress={() => setIsEditing(false)} style={[styles.editActionBtn, { backgroundColor: C.background, borderColor: C.border }]}>
-                                            <FontAwesome5 name="times" size={14} color={C.textSecondary} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={handleSaveName} disabled={isSaving} style={[styles.editActionBtn, { backgroundColor: C.accentGreen }]}>
-                                            {isSaving ? <ActivityIndicator size="small" color={C.textOnAccent} /> : <FontAwesome5 name="check" size={14} color={C.textOnAccent} />}
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            ) : (
-                                <View style={styles.titleDisplayRow}>
-                                    <Text style={styles.sheetProductTitle}>{product.productName}</Text>
-                                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editIconBtn}>
-                                        <Feather name="edit-2" size={16} color={C.accentGreen} />
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                            <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, marginTop: 5 }}>{typeLabel}</Text>
-                        </View>
-
-                        <View style={styles.sheetActionsRow}>
-                            <View style={{ flex: 1 }}>
-                                <PremiumShareButton
-                                    analysis={product.analysisData}
-                                    product={product}
-                                    typeLabel={typeLabel}
-                                    customStyle={[styles.sheetShareBtn, { backgroundColor: C.accentGreen + '15', borderColor: C.accentGreen + '40' }]}
-                                    iconSize={16}
-                                    textColor={C.accentGreen}
-                                />
-                            </View>
-
-                            <TouchableOpacity
-                                onPress={handleDeletePress}
-                                style={[styles.sheetDeleteBtn, { backgroundColor: C.danger + '15', borderColor: C.danger + '40' }]}
-                            >
-                                <FontAwesome5 name="trash-alt" size={16} color={C.danger} />
-                                <Text style={[styles.sheetBtnText, { color: C.danger }]}>{t('action_delete', language)}</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.sheetSection}>
-                            <View style={[styles.alertBox, { backgroundColor: scoreColor + '15', borderColor: scoreColor }]}>
-                                {!productImage && (
-                                    <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
-                                        <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: scoreColor }}>{oilGuardScore}</Text>
-                                    </View>
-                                )}
-                                {!productImage && <View style={{ width: 1, height: '80%', backgroundColor: scoreColor, opacity: 0.3, marginHorizontal: 10 }} />}
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ color: scoreColor, fontFamily: 'Tajawal-Bold', fontSize: 16, textAlign: 'center' }}>
-                                        {finalVerdict}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.sheetPillarsContainer}>
-                            <View style={styles.sheetPillar}>
-                                <FontAwesome5 name="magic" size={18} color={C.accentGreen} />
-                                <Text style={styles.sheetPillarLabel}>{t('oilguard_stat_efficacy', language)}</Text>
-                                <Text style={styles.sheetPillarValue}>{typeof efficacy === 'object' ? efficacy.score : efficacy}%</Text>
-                            </View>
-                            <View style={styles.sheetDividerVertical} />
-                            <View style={styles.sheetPillar}>
-                                <FontAwesome5 name="shield-alt" size={18} color={C.gold} />
-                                <Text style={styles.sheetPillarLabel}>{t('oilguard_stat_safety', language)}</Text>
-                                <Text style={styles.sheetPillarValue}>{typeof safety === 'object' ? safety.score : safety}%</Text>
-                            </View>
-                        </View>
-
-                        {user_specific_alerts.length > 0 && (
-                            <View style={styles.sheetSection}>
-                                <Text style={[styles.sheetSectionTitle, { color: C.textPrimary }]}>{t('profile_analysis_user_notes', language)}</Text>
-                                {user_specific_alerts.map((alert, i) => {
-                                    const isObj = typeof alert === 'object' && alert !== null;
-                                    const alertText = isObj ? alert.text : alert;
-                                    const alertType = isObj ? alert.type : 'info';
-                                    const style = getAlertStyle(alertType);
-                                    return (
-                                        <View key={i} style={[styles.alertBox, { backgroundColor: style.bg, borderColor: style.border, marginBottom: 8 }]}>
-                                            <FontAwesome5 name={style.icon} size={16} color={style.text} />
-                                            <Text style={[styles.alertBoxText, { color: style.text }]}>{alertText}</Text>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        )}
-
-                        <View style={styles.sheetSection}>
-                            <Text style={styles.sheetSectionTitle}>{t('sheet_detected_ingredients', language)} ({detected_ingredients.length + (product.analysisData?.unknown_ingredients?.length || 0)})</Text>
-                            <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-                                {detected_ingredients.map((ing, i) => {
-                                    const ingName = (typeof ing === 'object' && ing !== null) ? ing.name : ing;
-                                    return (
-                                        <View key={`det-${i}`} style={styles.ingredientChip}>
-                                            <Text style={styles.ingredientChipText}>{ingName}</Text>
-                                        </View>
-                                    );
-                                })}
-                                {product.analysisData?.unknown_ingredients && product.analysisData.unknown_ingredients.map((ing, i) => (
-                                    <View key={`unk-${i}`} style={[styles.ingredientChip, { backgroundColor: C.surface, borderColor: C.border, borderStyle: 'dashed', borderWidth: 1 }]}>
-                                        <Text style={[styles.ingredientChipText, { color: C.textDim }]}>{ing}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-
-                        {product.analysisData?.unknown_ingredients?.length > 0 && (
-                            <TouchableOpacity
-                                style={{ marginTop: 15, backgroundColor: C.accentGreen, padding: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 }}
-                                onPress={handleRescanProduct}
-                                disabled={isRescanning}
-                            >
-                                {isRescanning ? <ActivityIndicator color={C.textOnAccent} size="small" /> : <FontAwesome5 name="sync" size={16} color={C.textOnAccent} />}
-                                <Text style={{ color: C.textOnAccent, fontFamily: 'Tajawal-Bold', fontSize: 14 }}>
-                                    {isRescanning ? (t('rescanning', language) || "Rescanning...") : (t('rescan_all', language) || "Rescan Product")}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-
-                        <Pressable onPress={handleClose} style={[styles.closeButton, { marginTop: 20 }]}>
-                            <Text style={styles.closeButtonText}>{t('sheet_close', language)}</Text>
-                        </Pressable>
-                    </ScrollView>
+        <>
+            <View style={styles.productListItemWrapper}>
+                <View style={styles.deleteActionContainer}>
+                    <FontAwesome5 name="trash-alt" size={22} color={C.danger} />
                 </View>
-            </Animated.View>
-        </Modal>
+
+                <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+                    <Pressable style={styles.productListItem} onPress={onPress}>
+
+                        {renderScoreSlot()}
+
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemName} numberOfLines={1}>{product.productName}</Text>
+                            <Text style={styles.listItemType}>{productTypeLabel}</Text>
+                            {/* Inline hints below name */}
+                            {product.analysisStatus === 'analyzing' && (
+                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textDim, textAlign: 'right', marginTop: 2 }}>
+                                    جاري التحليل…
+                                </Text>
+                            )}
+                            {(product.analysisStatus === 'needs_claims' || product.analysisStatus === 'pending') && (
+                                <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.accentGreen + 'CC', textAlign: 'right', marginTop: 2 }}>
+                                    اضغط للتحليل
+                                </Text>
+                            )}
+                        </View>
+
+                        <View style={styles.listImageWrapper}>
+                            {product.productImage ? (
+                                <Image source={{ uri: product.productImage }} style={styles.listProductImage} />
+                            ) : (
+                                <View style={styles.listImagePlaceholder}>
+                                    <FontAwesome5 name="wine-bottle" size={18} color={C.textDim} />
+                                </View>
+                            )}
+                        </View>
+
+                    </Pressable>
+                </Animated.View>
+            </View>
+
+            {/* Inline claims picker for retry from shelf */}
+            <ClaimsPickerModal
+                visible={showRetryPicker}
+                product={product}
+                onConfirm={(selectedClaims) => {
+                    setShowRetryPicker(false);
+                    if (!user) return;
+                    analyzeAndEnrichShelfProduct(
+                        user.uid, product.id, product, userProfile, selectedClaims
+                    );
+                }}
+                onDismiss={() => setShowRetryPicker(false)}
+            />
+        </>
     );
-};
+});
+
+
 
 const GlobalInput = (props) => {
     const { colors: C } = useTheme();
@@ -861,7 +672,6 @@ const GlobalInput = (props) => {
 const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProfile }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const language = useCurrentLanguage();
     const [refreshing, setRefreshing] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const { user, setSavedProducts } = useAppContext();
@@ -890,27 +700,19 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProf
 
     return (
         <View style={{ flex: 1 }}>
-            <ContentCard delay={100} style={{ padding: 15, marginBottom: 8, marginTop: -12 }}>
-                <View style={styles.statsContainer}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>{t('stat_total_products', language)}</Text>
-                        <AnimatedCount value={products.length} style={styles.statValue} />
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>{t('stat_protection_products', language)}</Text>
-                        <AnimatedCount value={products.filter(p => p.analysisData?.product_type === 'sunscreen').length} style={styles.statValue} />
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>{t('stat_effective_products', language)}</Text>
-                        <AnimatedCount value={products.filter(p => p.analysisData?.efficacy?.score > 60).length} style={styles.statValue} />
-                    </View>
-                </View>
-            </ContentCard>
+            
+            {/* 🌟 THE NEW BEAUTIFUL SEARCH BAR 🌟 */}
+            <ShelfSearchBar 
+                onSearchPress={() => router.push('/CatalogScreen')} 
+                onScanPress={() => router.push('/oilguard')} 
+            />
+
+            {/* (Stats have been completely removed from here) */}
 
             {empty ? (
-                <ShelfEmptyState onPress={() => router.push('/oilguard')} />
+                <ShelfEmptyState 
+                    onSearchPress={() => router.push('/CatalogScreen')} 
+                    onScanPress={() => router.push('/oilguard')} />
             ) : (
                 <FlatList
                     data={products}
@@ -1730,6 +1532,82 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const mainColor = getSeverityColor(insight.severity);
 
     const renderGoalDashboard = (data) => {
+        // ── EMPTY SHELF PATH: Roadmap View ─────────────────────────────────────
+        // When user has 0 products, show a goal roadmap with hero ingredients
+        // and routine tips — NOT the product dashboard with empty foundHeroes.
+        if (data.isEmptyState) {
+            const heroIngs = data.heroIngredients || [];
+            const tips = data.routineTips || [];
+            return (
+                <View>
+                    {/* Goal Header */}
+                    <View style={{ alignItems: 'center', marginBottom: 28 }}>
+                        <View style={[
+                            styles.modalIconContainer,
+                            { backgroundColor: C.accentGreen + '1A', borderWidth: 1, borderColor: C.accentGreen + '33', marginBottom: 14, width: 64, height: 64, borderRadius: 32 }
+                        ]}>
+                            <FontAwesome5 name="flag" size={22} color={C.accentGreen} />
+                        </View>
+                        <Text style={[styles.modalTitle, { textAlign: 'center' }]}>{data.goalLabel}</Text>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                            لبدء تحليل مساركِ حقيقياً، أضيفي منتجاتكِ في الرف أولاً.
+                        </Text>
+                    </View>
+
+                    {/* Hero Ingredients */}
+                    <View style={[styles.ingSection, { backgroundColor: 'rgba(34,197,94,0.06)', borderWidth: 1, borderColor: C.accentGreen + '22', borderRadius: 16, padding: 16 }]}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                            <FontAwesome5 name="flask" size={13} color={C.accentGreen} />
+                            <Text style={[styles.ingSectionTitle, { color: C.accentGreen, marginBottom: 0 }]}>مكونات أساسية لهذا المسار</Text>
+                        </View>
+                        <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, fontSize: 12, textAlign: 'right', marginBottom: 12 }}>
+                            ابحثي عن منتجات تحتوي على هذه المكونات:
+                        </Text>
+                        <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                            {heroIngs.map((h, i) => (
+                                <View key={i} style={[styles.ingredientChip, { backgroundColor: 'rgba(34,197,94,0.1)', borderColor: C.accentGreen + '44', borderWidth: 1 }]}>
+                                    <Text style={[styles.ingredientChipText, { color: C.accentGreen }]}>
+                                        {h.replace(/-/g, ' ')}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Routine Tips */}
+                    {tips.length > 0 && (
+                        <View style={[styles.ingSection, { backgroundColor: 'rgba(251,191,36,0.06)', borderWidth: 1, borderColor: C.warning + '22', borderRadius: 16, padding: 16, marginTop: 14 }]}>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                <FontAwesome5 name="clock" size={13} color={C.warning} />
+                                <Text style={[styles.ingSectionTitle, { color: C.warning, marginBottom: 0 }]}>كيفية بناء روتينكِ</Text>
+                            </View>
+                            <View style={{ gap: 10 }}>
+                                {tips.map((tip, i) => (
+                                    <View key={i} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
+                                        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: C.warning + '22', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                                            <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 10, color: C.warning }}>{i + 1}</Text>
+                                        </View>
+                                        <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textPrimary, fontSize: 13, flex: 1, textAlign: 'right', lineHeight: 20 }}>{tip}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* CTA Hint */}
+                    {data.ctaHint && (
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10, marginTop: 14, backgroundColor: C.card, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.border }}>
+                            <FontAwesome5 name="lightbulb" size={13} color={C.gold} style={{ marginTop: 2 }} />
+                            <Text style={{ fontFamily: 'Tajawal-Regular', color: C.textSecondary, fontSize: 12, flex: 1, textAlign: 'right', lineHeight: 20 }}>
+                                {data.ctaHint}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            );
+        }
+
+        // ── NORMAL PATH: Product Dashboard ──────────────────────────────────────
         const foundHeroes = data?.foundHeroes || [];
         const missingHeroes = data?.missingHeroes || [];
         const relatedProducts = insight.related_products || [];
@@ -1766,7 +1644,10 @@ const InsightDetailsModal = ({ visible, onClose, insight }) => {
                                 </View>
                             ))
                         ) : (
-                            <Text style={styles.noDataText}>لا توجد مكونات قوية لهذا الهدف حتى الآن.</Text>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+                                <FontAwesome5 name="info-circle" size={13} color={C.textSecondary} />
+                                <Text style={[styles.noDataText, { marginBottom: 0 }]}>لم نعثر بعد على مكونات حاسمة لهذا الهدف في منتجاتكِ.</Text>
+                            </View>
                         )}
                     </View>
                 </View>
@@ -2019,7 +1900,7 @@ export default function ProfileScreen() {
     // --- 5. API LOGIC: PROFILE ANALYSIS (FAST) ---
     // ========================================================================
     const runProfileAnalysis = useCallback(async (forceRefresh = false) => {
-        if (!savedProducts || savedProducts.length === 0) return;
+        // NOTE: Allowed to run with 0 products — Goal Insights derive from userProfile.settings.goals
 
         const currentHash = generateFingerprint(savedProducts, userProfile?.settings);
 
@@ -2058,7 +1939,7 @@ export default function ProfileScreen() {
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
     // ========================================================================
     const runWeatherAnalysis = useCallback(async () => {
-        if (!savedProducts || savedProducts.length === 0) return;
+        // NOTE: Weather analysis runs independently of products — always execute
 
         setIsAnalyzingWeather(true);
         setWeatherErrorType(null);
@@ -2614,42 +2495,6 @@ const getStylesContent = (C) => ({
         shadowRadius: 10,
         elevation: 20,
     },
-    sheetPillarsContainer: {
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-around',
-        padding: 15,
-        backgroundColor: C.background,
-        borderRadius: 16,
-        marginBottom: 15,
-        marginHorizontal: 15,
-    },
-    sheetPillar: {
-        alignItems: 'center',
-        gap: 8,
-        flex: 1,
-    },
-    sheetDividerVertical: {
-        width: 1,
-        backgroundColor: C.border,
-        marginHorizontal: 10,
-    },
-    sheetPillarLabel: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 12,
-        color: C.textSecondary,
-    },
-    sheetSection: {
-        paddingHorizontal: 15,
-        marginBottom: 15,
-    },
-    sheetSectionTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 16,
-        color: C.textPrimary,
-        textAlign: 'right',
-        marginBottom: 10,
-        paddingRight: 5,
-    },
     alertBox: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -2680,52 +2525,6 @@ const getStylesContent = (C) => ({
         fontSize: 13,
         color: C.textSecondary,
         textAlign: 'center',
-    },
-    titleDisplayRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 10,
-        width: '100%',
-    },
-    editIconBtn: {
-        padding: 8,
-        backgroundColor: C.accentGreen + '1A',
-        borderRadius: 8,
-        marginLeft: -12
-    },
-    editTitleContainer: {
-        width: '100%',
-        alignItems: 'center',
-        marginTop: 10,
-        gap: 10,
-        paddingHorizontal: 20,
-    },
-    editTitleInput: {
-        width: '100%',
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 18,
-        color: C.textPrimary,
-        backgroundColor: C.background,
-        borderWidth: 1,
-        borderColor: C.accentGreen,
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        textAlign: 'center',
-    },
-    editActionsRow: {
-        flexDirection: 'row-reverse',
-        gap: 1,
-    },
-    editActionBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'transparent',
     },
     focusInsightCard: {
         borderRadius: 24,
@@ -3957,40 +3756,6 @@ const getStylesContent = (C) => ({
         paddingHorizontal: 12,
         width: '100%',
     },
-    productImageContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 24,
-        marginBottom: 15,
-        elevation: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        position: 'relative'
-    },
-    productRealImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)'
-    },
-    scoreBadgeFloat: {
-        position: 'absolute',
-        bottom: -10,
-        alignSelf: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: C.card
-    },
-    scoreBadgeText: {
-        fontFamily: 'Tajawal-ExtraBold',
-        color: '#1A2D27',
-        fontSize: 14
-    },
     emptyStateCard: {
         alignItems: 'center',
         padding: 30,
@@ -4048,36 +3813,6 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Bold',
         fontSize: 12,
         color: C.gold,
-    },
-    sheetActionsRow: {
-        flexDirection: 'row-reverse',
-        gap: 10,
-        marginBottom: 20,
-        width: '100%',
-    },
-    sheetShareBtn: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 12,
-        borderRadius: 14,
-        borderWidth: 1,
-        width: '100%',
-    },
-    sheetDeleteBtn: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 14,
-        borderWidth: 1,
-    },
-    sheetBtnText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 14,
     },
 });
 const styles = StyleSheet.create(getStylesContent(THEMES.original.colors));
