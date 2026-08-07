@@ -1974,6 +1974,25 @@ export default function OilGuardEngine() {
     // 2b. Automatically parse catalog ingredients via AI on mount if isAutoStart is true
     useEffect(() => {
         if (isAutoStart && params?.ingredients) {
+            const isDirectAnalyze = params?.directAnalyze === 'true';
+
+            if (isDirectAnalyze) {
+                console.log("⚡ [OilGuard] Fast-tracking catalog analysis directly to results...");
+                const fallbackList = params.ingredients.split(',').map(i => i.trim()).filter(Boolean);
+                const simpleIngredients = fallbackList.map((name, index) => ({
+                    id: `temp-${index}`,
+                    name: name,
+                    functionalCategory: 'تم الجلب من الكتالوج',
+                    chemicalType: ''
+                }));
+                
+                setPreProcessedIngredients(simpleIngredients);
+                setIsGeminiLoading(false); // Transitions animation from "AI parse" to "Analysis evaluate"
+                
+                executeAnalysis(simpleIngredients);
+                return;
+            }
+
             const parseCatalogIngredientsWithAI = async () => {
                 try {
                     console.log("🤖 [OilGuard] Parsing catalog ingredients with AI:", params.ingredients);
@@ -2432,7 +2451,7 @@ export default function OilGuardEngine() {
         }
     };
 
-    const executeAnalysis = async () => {
+    const executeAnalysis = async (ingredientsOverride = null) => {
         // 1. Trigger Transition INSTANTLY (Fast Mode: true)
         // We remove the Haptics call here because TouchableOpacity already handles it
         changeStep(3, { fast: true });
@@ -2441,7 +2460,8 @@ export default function OilGuardEngine() {
         // This allows the UI to paint the Loading Screen immediately without freezing
         setTimeout(async () => {
             try {
-                const rawList = preProcessedIngredients.map(i => i.name);
+                const targetIngredients = Array.isArray(ingredientsOverride) ? ingredientsOverride : preProcessedIngredients;
+                const rawList = targetIngredients.map(i => i.name);
 
                 const response = await fetch(VERCEL_EVALUATE_URL, {
                     method: 'POST',

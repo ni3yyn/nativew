@@ -679,6 +679,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                       executeBounty('ingredients'); 
                   } else {
                       setIsNavigating(true); 
+                      const hasEnoughClaims = Array.isArray(product.marketingClaims) && product.marketingClaims.length > 1;
                       setTimeout(() => {
                           if (typeof onClose === 'function') onClose();
                           setTimeout(() => {
@@ -687,6 +688,7 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                                   pathname: '/oilguard',
                                   params: {
                                       autoStart: 'true',
+                                      directAnalyze: hasEnoughClaims ? 'true' : 'false',
                                       ingredients: product.ingredients,
                                       category: product.category?.id || 'other',
                                       productName: product.name || '', 
