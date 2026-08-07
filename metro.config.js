@@ -10,7 +10,8 @@ config.transformer = {
 
 config.resolver = {
   ...config.resolver,
-  sourceExts: ['js', 'jsx', 'ts', 'tsx', 'json', 'mjs'],
+  // Added 'cjs' to the list below:
+  sourceExts: ['js', 'jsx', 'ts', 'tsx', 'json', 'mjs', 'cjs'],
   // Override to allow babel to process our targeted node_modules
   unstable_enableSymlinks: true,
   // Only block web-specific packages
