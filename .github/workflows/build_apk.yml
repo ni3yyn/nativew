@@ -36,29 +36,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'  # Latest LTS
           cache: 'yarn'
 
       - name: Install Dependencies
         run: |
-          rm -rf node_modules yarn.lock
+          rm -rf node_modules yarn.lock package-lock.json
           yarn install
-
-      # FIX: Use working-directory or full path
-      - name: Fix Firebase idb dependency
-        working-directory: node_modules/idb
-        run: |
-          mkdir -p build
-          if [ -f build/index.js ]; then
-            cp build/index.js build/index.cjs
-          elif [ -f build/index.mjs ]; then
-            cp build/index.mjs build/index.cjs
-          else
-            # Create a minimal CJS wrapper
-            echo "module.exports = require('./index.js');" > build/index.cjs
-          fi
-          # Verify the file was created
-          ls -la build/index.cjs
 
       - name: Clear Metro Cache
         run: |
