@@ -1,7 +1,14 @@
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['babel-preset-expo'],
+    presets: [
+      [
+        'babel-preset-expo',
+        {
+          unstable_transformProfile: 'default',
+        },
+      ],
+    ],
     plugins: [
       'babel-plugin-transform-import-meta',
     ],
@@ -48,10 +55,14 @@ module.exports = function (api) {
         ],
       },
       {
-        // JavaScript packages with private properties
+        // Packages with private properties (#privateField syntax)
         test: (filename) => {
           if (!filename) return false;
           return (
+            // Added idb and firebase here:
+            filename.includes('idb') ||
+            filename.includes('firebase') ||
+            filename.includes('@firebase') ||
             filename.includes('react-native-svg') ||
             filename.includes('react-native-gesture-handler') ||
             filename.includes('react-native-screens')
