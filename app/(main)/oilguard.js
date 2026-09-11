@@ -20,6 +20,7 @@ import { auth, db } from '../../src/config/firebase';
 import { useAppContext } from '../../src/context/AppContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as NavigationBar from 'expo-navigation-bar';
+import { useRTL } from '../../src/hooks/useRTL';
 import Fuse from 'fuse.js';
 
 // ... other imports
@@ -28,6 +29,7 @@ import { uploadImageToCloudinary, compressImage } from '../../src/services/image
 import { AlertService } from '../../src/services/alertService';
 import { uriToBase64 } from '../../src/utils/formatters';
 import { PRODUCT_TYPES, getClaimsByProductType } from '../../src/constants/productData';
+import AppTextInput from '../../src/components/common/AppTextInput';
 import CustomCameraModal from '../../src/components/oilguard/CustomCameraModal'; // <--- NEW IMPORT
 import ImageCropperModal from '../../src/components/oilguard/ImageCropperModal';
 import ActionRow from '../../src/components/oilguard/ActionRow'; // Adjust path if needed
@@ -138,8 +140,8 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 // ============================================================================
 
 const ContentGlow = ({ size = 160 }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const animScale = useRef(new Animated.Value(0.9)).current;
     const animOpacity = useRef(new Animated.Value(0.2)).current;
     const animX = useRef(new Animated.Value(0)).current;
@@ -177,8 +179,8 @@ const ContentGlow = ({ size = 160 }) => {
 };
 
 const Spore = ({ size, startX, duration, delay }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const animY = useRef(new Animated.Value(0)).current;
     const animX = useRef(new Animated.Value(0)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -200,8 +202,8 @@ const Spore = ({ size, startX, duration, delay }) => {
 };
 
 const ContentCard = ({ children, style, delay = 0 }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const opacity = useRef(new Animated.Value(0)).current;
     useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
@@ -220,8 +222,8 @@ const StaggeredItem = ({ index, children, style }) => {
 };
 
 const ScoreRing = React.memo(({ score = 0, size = 160 }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const animatedValue = useRef(new Animated.Value(0)).current;
     const textRef = useRef(null);
     const r = (size / 2) - 10;
@@ -279,8 +281,8 @@ const ScoreRing = React.memo(({ score = 0, size = 160 }) => {
 });
 
 const ConfidenceRing = ({ confidence }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const animatedValue = useRef(new Animated.Value(0)).current;
 
     const confidenceMap = {
@@ -347,8 +349,8 @@ const ConfidenceRing = ({ confidence }) => {
 // ============================================================================
 
 const ClaimRow = ({ result, index, isLast }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const language = useCurrentLanguage();
     const isRTL = I18nManager.isRTL || language === 'ar';
@@ -571,8 +573,8 @@ const ClaimRow = ({ result, index, isLast }) => {
 // --- IN FILE: oilguard.js ---
 
 const MarketingClaimsSection = ({ results, style }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const language = useCurrentLanguage();
 
@@ -622,8 +624,8 @@ const MarketingClaimsSection = ({ results, style }) => {
 };
 
 const SwipeHint = () => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const opacity = useRef(new Animated.Value(0)).current;
     const translateX = useRef(new Animated.Value(0)).current;
@@ -656,8 +658,8 @@ const SwipeHint = () => {
 };
 
 const Pagination = ({ data, scrollX }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     if (data.length <= PAGINATION_DOTS) {
         return (
@@ -727,8 +729,8 @@ const Pagination = ({ data, scrollX }) => {
 };
 
 const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const getWarningStyle = (level) => {
         // Normalize input to lowercase to ensure matching works even if backend sends "Risk" instead of "risk"
@@ -794,7 +796,7 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
                         {ingredient.warnings.map((warning, idx) => {
                             const style = getWarningStyle(warning.level);
                             return (
-                                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 1 }]}>
+                                <View key={idx} style={[styles.ingWarningBox, { backgroundColor: `${style.color}20`, borderColor: `${style.color}40`, borderWidth: 0.5 }]}>
                                     <FontAwesome5 name={style.icon} size={16} color={style.color} style={styles.ingWarningIcon} />
                                     {/* UPDATED LINE BELOW: We now pass the dynamic color to the text */}
                                     <Text style={[styles.ingWarningText, { color: style.color }]}>{warning.text}</Text>
@@ -809,8 +811,8 @@ const IngredientDetailCard = ({ ingredient, index, scrollX }) => {
 };
 
 const AnimatedCheckbox = ({ isSelected }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const scale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
     const checkScale = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
@@ -841,8 +843,8 @@ const AnimatedCheckbox = ({ isSelected }) => {
 };
 
 const Wave = ({ isFilling }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const waveAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -875,8 +877,8 @@ const Wave = ({ isFilling }) => {
 };
 
 const Bubble = ({ size, x, duration, delay }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const animY = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -911,8 +913,8 @@ const Bubble = ({ size, x, duration, delay }) => {
 };
 
 const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1500, style }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const [displayedText, setDisplayedText] = useState('');
     const [textIndex, setTextIndex] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -972,8 +974,8 @@ const Typewriter = ({ texts, typingSpeed = 80, deletingSpeed = 40, pauseDuration
 };
 
 const AnimatedTypeChip = ({ type, isSelected, onPress, index }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const anim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
 
@@ -1034,148 +1036,122 @@ const extractIngredientsFromAIText = async (inputData, language) => {
 const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, setScanMode }) => {
     const { colors } = useTheme();
     const language = useCurrentLanguage();
+    const rtl = useRTL();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-
-    // 1. Calculate height for perfect scan loop
-    const { width } = Dimensions.get('window');
-    const CARD_WIDTH = (width - 40) / 2; // (Screen - Padding) / 2 cards
-    const SCAN_HEIGHT = CARD_WIDTH / 0.65; // Matches the aspectRatio: 0.65 style
-
-    // Animations
-    const scanAnim = useRef(new Animated.Value(0)).current; // Laser position
-    const pulseAnim = useRef(new Animated.Value(1)).current; // Error pulse
-
-    useEffect(() => {
-        // Laser Loop
-        const scanLoop = Animated.loop(
-            Animated.sequence([
-                Animated.timing(scanAnim, {
-                    toValue: 1,
-                    duration: 2200,
-                    easing: Easing.linear,
-                    useNativeDriver: true
-                }),
-                Animated.delay(100) // Brief pause
-            ])
-        );
-
-        // Warning Pulse Loop
-        const pulseLoop = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 0.6, duration: 800, useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-            ])
-        );
-
-        scanLoop.start();
-        pulseLoop.start();
-
-        return () => {
-            scanLoop.stop();
-            pulseLoop.stop();
-        };
-    }, []);
-
-    const scanTranslateY = scanAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-5, SCAN_HEIGHT + 5]
-    });
+    const insets = useSafeAreaInsets();
 
     return (
-        <View style={styles.inputStepContainer}>
+        <ScrollView
+            style={{ flex: 1, width: '100%' }}
+            contentContainerStyle={[
+                styles.stepScrollContent,
+                { paddingBottom: 40 + insets.bottom }
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+        >
 
-            <View style={styles.heroVisualContainer}>
-                <View style={styles.guideSection}>
+            {/* ============ QUICK GUIDE CARD ============ */}
+            <View style={styles.guideCard}>
 
-                    {/* =============================================
-                        LEFT CARD: "SIGNAL LOST" (Wrong)
-                       ============================================= */}
-                    <View style={[styles.opticalCard, styles.cardError]}>
+                {/* Header */}
+                <View style={[styles.guideCardHeader, { flexDirection: rtl.flexDirection }]}>
+                    <View style={styles.guideBulbCircle}>
+                        <FontAwesome5 name="lightbulb" size={18} color={COLORS.accentGreen} />
+                    </View>
+                    <Text style={[styles.guideCardTitle, { textAlign: rtl.textAlign }]}>
+                        {t('oilguard_quick_guide', language) || 'Quick guide'}
+                    </Text>
+                </View>
 
-                        {/* HUD Corners */}
-                        <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.danger }]} />
-                        <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.danger }]} />
-                        <View style={[styles.hudCorner, styles.hudBL, { borderColor: COLORS.danger }]} />
-                        <View style={[styles.hudCorner, styles.hudBR, { borderColor: COLORS.danger }]} />
+                {/* Two demo columns */}
+                <View style={[styles.guideSection, { flexDirection: rtl.flexDirection }]}>
 
-                        <View style={styles.scannerScreen}>
-                            {/* YOUR LOCAL IMAGE HERE */}
+                    {/* LEFT: WRONG */}
+                    <View style={styles.guideColumn}>
+                        <View style={styles.guideImageWrapper}>
                             <Image
                                 source={require('../../assets/images/front.jpg')}
                                 style={styles.guideImage}
                             />
-
-                            {/* Dark Noise Overlay */}
-                            <View style={styles.noiseOverlay}>
-                                {/* Pulsing Icon */}
-                                <Animated.View style={{ opacity: pulseAnim, alignItems: 'center' }}>
-                                    <FontAwesome5 name="ban" size={28} color={COLORS.danger} />
-                                </Animated.View>
+                            <View
+                                style={[
+                                    styles.guideBadge,
+                                    { backgroundColor: COLORS.danger },
+                                    rtl.isRTL ? { right: 8, left: 'auto' } : { left: 8 }
+                                ]}
+                            >
+                                <FontAwesome5 name="times" size={16} color="#FFF" />
                             </View>
                         </View>
 
-                        <View style={styles.cardFooter}>
-                            <View style={[styles.indicatorDot, { backgroundColor: COLORS.danger }]} />
-                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
-                                {t('oilguard_guide_wrong', useCurrentLanguage())}
+                        <View style={[
+                            styles.guidePill,
+                            { backgroundColor: COLORS.danger + '20', alignSelf: rtl.alignSelf }
+                        ]}>
+                            <Text style={[styles.guidePillText, { color: COLORS.danger }]}>
+                                {t('oilguard_guide_not_this', language) || 'Not this'}
+                            </Text>
+                        </View>
+
+                        <Text style={[styles.guideColumnTitle, { textAlign: rtl.textAlign }]}>
+                            {t('oilguard_guide_full_product', language) || 'Full product'}
+                        </Text>
+
+                        <View style={styles.guideBullets}>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_1_bad', language) || 'Hard to read'}
+                            </Text>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_2_bad', language) || 'Contains too much info'}
+                            </Text>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_3_bad', language) || 'May lead to wrong results'}
                             </Text>
                         </View>
                     </View>
 
-
-                    {/* =============================================
-                        RIGHT CARD: "INTELLIGENCE FOUND" (Correct)
-                       ============================================= */}
-                    <View style={[styles.opticalCard, styles.cardSuccess]}>
-
-                        {/* HUD Corners */}
-                        <View style={[styles.hudCorner, styles.hudTL, { borderColor: COLORS.accentGreen }]} />
-                        <View style={[styles.hudCorner, styles.hudTR, { borderColor: COLORS.accentGreen }]} />
-                        <View style={[styles.hudCorner, styles.hudBL, { borderColor: COLORS.accentGreen }]} />
-                        <View style={[styles.hudCorner, styles.hudBR, { borderColor: COLORS.accentGreen }]} />
-
-                        <View style={styles.scannerScreen}>
-                            {/* YOUR LOCAL IMAGE HERE */}
+                    {/* RIGHT: CORRECT */}
+                    <View style={styles.guideColumn}>
+                        <View style={styles.guideImageWrapper}>
                             <Image
                                 source={require('../../assets/images/inci.jpg')}
                                 style={styles.guideImage}
                             />
-
-                            {/* Tech Grid Overlay (SVG pattern simulation) */}
-                            <View style={styles.gridOverlay}>
-                                <Svg height="100%" width="100%">
-                                    <Defs>
-                                        <SvgLinearGradient id={`gridGrad-${COLORS.accentGreen.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-                                            <Stop offset="0" stopColor={COLORS.accentGreen} stopOpacity="0.05" />
-                                            <Stop offset="1" stopColor={COLORS.accentGreen} stopOpacity="0.2" />
-                                        </SvgLinearGradient>
-                                    </Defs>
-                                    <Rect x="0" y="0" width="100%" height="100%" fill={`url(#gridGrad-${COLORS.accentGreen.replace('#', '')})`} />
-                                    {/* Horizontal grid lines */}
-                                    <Path d={`M0 ${SCAN_HEIGHT * 0.33} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
-                                    <Path d={`M0 ${SCAN_HEIGHT * 0.66} H${CARD_WIDTH}`} stroke={COLORS.accentGreen} strokeWidth="0.5" opacity="0.3" />
-                                </Svg>
+                            <View
+                                style={[
+                                    styles.guideBadge,
+                                    { backgroundColor: COLORS.accentGreen },
+                                    rtl.isRTL ? { right: 8, left: 'auto' } : { left: 8 }
+                                ]}
+                            >
+                                <FontAwesome5 name="check" size={16} color="#FFF" />
                             </View>
-
-                            {/* The Laser Beam */}
-                            <Animated.View style={[
-                                styles.laserBeam,
-                                { transform: [{ translateY: scanTranslateY }] }
-                            ]}>
-                                {/* Trail Gradient */}
-                                <LinearGradient
-                                    colors={['rgba(0, 255, 170, 0)', 'rgba(0, 255, 170, 0.25)']}
-                                    style={styles.laserGradient}
-                                />
-                            </Animated.View>
-
                         </View>
 
-                        <View style={styles.cardFooter}>
-                            <View style={[styles.indicatorDot, { backgroundColor: COLORS.accentGreen }]} />
-                            <Text style={[styles.footerLabel, { color: COLORS.textPrimary }]}>
-                                {t('oilguard_capture_ingredients', language)}
+                        <View style={[
+                            styles.guidePill,
+                            { backgroundColor: COLORS.accentGreen + '20', alignSelf: rtl.alignSelf }
+                        ]}>
+                            <Text style={[styles.guidePillText, { color: COLORS.accentGreen }]}>
+                                {t('oilguard_guide_this_better', language) || 'This is better'}
+                            </Text>
+                        </View>
+
+                        <Text style={[styles.guideColumnTitle, { textAlign: rtl.textAlign }]}>
+                            {t('oilguard_guide_inci', language) || 'Ingredient list (INCI)'}
+                        </Text>
+
+                        <View style={styles.guideBullets}>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_1_good', language) || 'Clear and focused'}
+                            </Text>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_2_good', language) || 'Easy to scan'}
+                            </Text>
+                            <Text style={[styles.guideBullet, { textAlign: rtl.textAlign }]}>
+                                • {t('oilguard_guide_bullet_3_good', language) || 'Gives accurate results'}
                             </Text>
                         </View>
                     </View>
@@ -1183,138 +1159,100 @@ const InputStepView = React.memo(({ onImageSelect, onManualSelect, scanMode, set
                 </View>
             </View>
 
-            {/* BOTTOM DECK (Unchanged) */}
-            <StaggeredItem index={0} style={styles.bottomDeck}>
-                <LinearGradient
-                    colors={[COLORS.card, COLORS.background]}
-                    style={styles.bottomDeckGradient}
-                >
-                    <View style={styles.deckHeader}>
-                        <Text style={styles.deckTitle}>{t('oilguard_ingredients_scan', language)}</Text>
-                        <Typewriter
-                            texts={[
-                                t('oilguard_typewriter_1', language),
-                                t('oilguard_typewriter_2', language),
-                                t('oilguard_typewriter_3', language),
-                            ]}
-                            typingSpeed={60}
-                            style={{
-                                container: { height: 24, justifyContent: 'center' },
-                                text: { fontFamily: 'Tajawal-Regular', color: COLORS.accentGreen, fontSize: 14 }
-                            }}
+            {/* ============ ACTION ZONE ============ */}
+            <View style={styles.actionZone}>
+
+                {/* Section Title */}
+                <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>
+                    {t('oilguard_choose_scan', language) || 'Choose how you want to scan'}
+                </Text>
+
+                {/* Stacked action buttons */}
+                <View style={styles.actionStack}>
+
+                    {/* CAMERA */}
+                    <TouchableOpacity
+                        style={[styles.actionCard, { flexDirection: rtl.flexDirection }]}
+                        onPress={() => onImageSelect('camera')}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.actionIconCircle}>
+                            <Ionicons name="camera-outline" size={26} color={COLORS.accentGreen} />
+                        </View>
+                        <View style={styles.actionTextCol}>
+                            <Text style={[styles.actionTitle, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_capture_ingredients', language)}
+                            </Text>
+                            <Text style={[styles.actionSub, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_action_camera_sub', language) || 'Take a new photo of the ingredient list'}
+                            </Text>
+                        </View>
+                        <Ionicons
+                            name={rtl.isRTL ? 'arrow-back' : 'arrow-forward'}
+                            size={20}
+                            color={COLORS.accentGreen}
                         />
-                    </View>
-
-                    {/* --- NEW: SCAN MODE TOGGLE --- */}
-                    <View style={{
-                        flexDirection: 'row',
-                        backgroundColor: COLORS.textPrimary + '0D',
-                        borderRadius: 12,
-                        padding: 4,
-                        marginTop: 'auto',
-                        marginBottom: 5,
-                        borderWidth: 1,
-                        borderColor: COLORS.textPrimary + '1A'
-                    }}>
-                        {/* Fast Mode Button */}
-                        <TouchableOpacity
-                            onPress={() => setScanMode('fast')}
-                            style={{
-                                flex: 1,
-                                paddingVertical: 8,
-                                borderRadius: 8,
-                                backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'row',
-                                gap: 6
-                            }}
-                        >
-                            <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim} />
-                            <Text style={{
-                                fontFamily: 'Tajawal-Bold',
-                                fontSize: 13,
-                                color: scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim
-                            }}>{t('oilguard_mode_fast', language)}</Text>
-                        </TouchableOpacity>
-
-                        {/* Accurate Mode Button */}
-                        <TouchableOpacity
-                            onPress={() => setScanMode('accurate')}
-                            style={{
-                                flex: 1,
-                                paddingVertical: 8,
-                                borderRadius: 8,
-                                backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'row',
-                                gap: 6
-                            }}
-                        >
-                            <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim} />
-                            <Text style={{
-                                fontFamily: 'Tajawal-Bold',
-                                fontSize: 13,
-                                color: scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim
-                            }}>{t('oilguard_mode_accurate', language)}</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Info Note based on selection */}
-                    <Text style={{
-                        fontFamily: 'Tajawal-Regular',
-                        color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen,
-                        fontSize: 12,
-                        textAlign: 'center',
-                        marginBottom: 10
-                    }}>
-                        {scanMode === 'accurate'
-                            ? t('oilguard_mode_accurate_note', language)
-                            : t('oilguard_mode_fast_note', language)}
-                    </Text>
-                    {/* --- END NEW UI --- */}
-
-
-
-                    <TouchableOpacity onPress={() => onImageSelect('camera')} style={styles.primaryActionBtn}>
-                        <LinearGradient
-                            colors={[String(COLORS.accentGreen), String(COLORS.accentGreen) + 'BF']}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                            style={styles.primaryActionGradient}
-                        >
-                            <View style={styles.iconCircle}>
-                                <Ionicons name="camera" size={28} color={COLORS.textOnAccent} />
-                            </View>
-                            <View>
-                                <Text style={styles.primaryActionTitle}>{t('oilguard_capture_ingredients', language)}</Text>
-                                <Text style={styles.primaryActionSub}>{t('oilguard_open_camera', language)}</Text>
-                            </View>
-                            <Ionicons name="chevron-back" size={24} color={COLORS.textOnAccent} style={{ opacity: 0.6, marginRight: 'auto' }} />
-                        </LinearGradient>
                     </TouchableOpacity>
 
-                    <View style={styles.secondaryActionsRow}>
-                        <TouchableOpacity onPress={() => onImageSelect('gallery')} style={styles.secondaryBtn}>
-                            <Ionicons name="images" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>{t('oilguard_gallery', language)}</Text>
-                        </TouchableOpacity>
-                        <View style={styles.verticalDivider} />
-                        <TouchableOpacity onPress={onManualSelect} style={styles.secondaryBtn}>
-                            <Ionicons name="search" size={22} color={COLORS.textSecondary} />
-                            <Text style={styles.secondaryBtnText}>{t('oilguard_manual_search', language)}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </LinearGradient>
-            </StaggeredItem>
-        </View>
+                    {/* GALLERY */}
+                    <TouchableOpacity
+                        style={[styles.actionCard, { flexDirection: rtl.flexDirection }]}
+                        onPress={() => onImageSelect('gallery')}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.actionIconCircle}>
+                            <Ionicons name="images-outline" size={26} color={COLORS.accentGreen} />
+                        </View>
+                        <View style={styles.actionTextCol}>
+                            <Text style={[styles.actionTitle, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_gallery', language)}
+                            </Text>
+                            <Text style={[styles.actionSub, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_action_gallery_sub', language) || 'Pick a photo from your device'}
+                            </Text>
+                        </View>
+                        <Ionicons
+                            name={rtl.isRTL ? 'arrow-back' : 'arrow-forward'}
+                            size={20}
+                            color={COLORS.accentGreen}
+                        />
+                    </TouchableOpacity>
+
+                    {/* MANUAL */}
+                    <TouchableOpacity
+                        style={[styles.actionCard, { flexDirection: rtl.flexDirection }]}
+                        onPress={onManualSelect}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.actionIconCircle}>
+                            <Ionicons name="keypad-outline" size={26} color={COLORS.accentGreen} />
+                        </View>
+                        <View style={styles.actionTextCol}>
+                            <Text style={[styles.actionTitle, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_manual_search', language)}
+                            </Text>
+                            <Text style={[styles.actionSub, { textAlign: rtl.textAlign }]}>
+                                {t('oilguard_action_manual_sub', language) || 'Type the ingredients instead'}
+                            </Text>
+                        </View>
+                        <Ionicons
+                            name={rtl.isRTL ? 'arrow-back' : 'arrow-forward'}
+                            size={20}
+                            color={COLORS.accentGreen}
+                        />
+                    </TouchableOpacity>
+
+                </View>
+            </View>
+
+        </ScrollView>
     );
 });
 
 // --- COMPLEX GAUGE COMPONENT (Replaces simple ScoreRing) ---
 const ComplexDashboardGauge = React.memo(({ score, size = 220 }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const animatedScore = useRef(new Animated.Value(0)).current;
     const textRef = useRef(null);
@@ -1399,7 +1337,7 @@ const ComplexDashboardGauge = React.memo(({ score, size = 220 }) => {
                 width: size * 0.96,
                 height: size * 0.96,
                 borderRadius: (size * 0.96) / 2,
-                borderWidth: 1,
+                borderWidth: 0.5,
                 borderColor: COLORS.accentGreen + '66',
                 borderStyle: 'dashed',
                 transform: [{ rotate: spin }]
@@ -1452,8 +1390,8 @@ const ComplexDashboardGauge = React.memo(({ score, size = 220 }) => {
 
 // --- STAT BAR COMPONENT ---
 const StatBar = React.memo(({ label, score, color, icon }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [barWidth, setBarWidth] = useState(0);
     const transX = useRef(new Animated.Value(0)).current;
@@ -1497,8 +1435,8 @@ const StatBar = React.memo(({ label, score, color, icon }) => {
 });
 
 const GlassPillar = React.memo(({ label, score, color, icon }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [barWidth, setBarWidth] = useState(0);
     const transX = useRef(new Animated.Value(0)).current;
@@ -1556,8 +1494,8 @@ const GlassPillar = React.memo(({ label, score, color, icon }) => {
 
 // --- NEW SPLIT MATCH COMPONENT ---
 const MatchBreakdown = ({ reasons = [] }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const language = useCurrentLanguage();
 
@@ -1620,8 +1558,8 @@ const MatchBreakdown = ({ reasons = [] }) => {
 };
 
 const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     return (
         <TouchableOpacity onPress={() => onToggle(item)} activeOpacity={0.7}>
@@ -1637,8 +1575,8 @@ const MemoizedClaimItem = React.memo(({ item, isSelected, onToggle }) => {
 });
 
 const AgentLoadingView = ({ language }) => {
-    const { colors } = useTheme();
-    const COLORS = colors || DEFAULT_COLORS;
+    const { colors, activeThemeId } = useTheme();
+const COLORS = colors || DEFAULT_COLORS;
     const [msgIndex, setMsgIndex] = useState(0);
     // Use standard Animated values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1705,7 +1643,7 @@ const AgentLoadingView = ({ language }) => {
             marginVertical: 20, marginHorizontal: 20,
             padding: 20, borderRadius: 16,
             backgroundColor: COLORS.textPrimary + '0D',
-            borderWidth: 1, borderColor: COLORS.accentGreen + '33',
+            borderWidth: 0.5, borderColor: COLORS.accentGreen + '33',
             alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden'
         }}>
@@ -1754,7 +1692,8 @@ const AgentLoadingView = ({ language }) => {
 //                        MAIN SCREEN COMPONENT
 // ============================================================================
 export default function OilGuardEngine() {
-    const { colors } = useTheme();
+    const { colors, activeThemeId } = useTheme();
+
     const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -2869,7 +2808,7 @@ export default function OilGuardEngine() {
                     <View style={styles.claimsSearchContainer}>
                         <View style={styles.searchInputWrapper}>
                             <FontAwesome5 name="search" size={16} color={COLORS.textDim} style={styles.searchIcon} />
-                            <TextInput
+                            <AppTextInput
                                 style={styles.claimsSearchInput}
                                 placeholder={t('oilguard_claims_search_placeholder', language)}
                                 placeholderTextColor={COLORS.textDim}
@@ -3182,7 +3121,7 @@ export default function OilGuardEngine() {
                             marginTop: 4,
                             padding: 20,
                             borderRadius: 24,
-                            borderWidth: 1,
+                            borderWidth: 0.5,
                             borderColor: COLORS.border,
                             backgroundColor: COLORS.textPrimary + '04',
                             alignItems: 'center',
@@ -3238,7 +3177,7 @@ export default function OilGuardEngine() {
                                     paddingHorizontal: 16,
                                     paddingVertical: 10,
                                     borderRadius: 14,
-                                    borderWidth: 1,
+                                    borderWidth: 0.5,
                                     borderColor: COLORS.accentGreen + '30',
                                     alignSelf: 'center',
                                 }}
@@ -3297,7 +3236,7 @@ export default function OilGuardEngine() {
                                 style={{
                                     flexDirection: isRTL ? 'row-reverse' : 'row',
                                     backgroundColor: COLORS.warning + '0D',
-                                    borderWidth: 1,
+                                    borderWidth: 0.5,
                                     borderColor: COLORS.warning + '33',
                                     padding: 12,
                                     borderRadius: 12,
@@ -3349,212 +3288,396 @@ export default function OilGuardEngine() {
     };
 
     return (
-        <View
-            style={[styles.container, { backgroundColor: COLORS.background }]}
-            // ROOT FIX: We measure the actual available space from the OS
-            onLayout={(e) => {
-                const { height } = e.nativeEvent.layout;
-                // Only accept measurements that look like a full screen
-                if (height > SCREEN_HEIGHT * 0.7) {
-                    setContainerHeight(height);
-                }
-            }}
-        >
-            {/* 1. Permanent System Overlays */}
-            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-            <View style={styles.darkOverlay} />
-            {particles.map((p) => <Spore key={p.id} {...p} />)}
+    <>
+        {activeThemeId === 'light' ? (
+            <LinearGradient
+                colors={[
+                    COLORS.background,
+                    COLORS.gradientStart || COLORS.background,
+                    COLORS.gradientMid || COLORS.accentGreen + '15',
+                    COLORS.gradientEnd || COLORS.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                onLayout={(e) => {
+                    const { height } = e.nativeEvent.layout;
+                    if (height > SCREEN_HEIGHT * 0.7) {
+                        setContainerHeight(height);
+                    }
+                }}
+            >
+                <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+                <View style={styles.darkOverlay} />
+                {particles.map((p) => <Spore key={p.id} {...p} />)}
 
-            {/* 
-            2. THE ROOT GATEKEEPER 
-            If containerHeight is 0, it means the OS hasn't finished 
-            calculating the layout. We show NOTHING (just background).
-        */}
-            {containerHeight === 0 ? (
-                <View style={{ flex: 1, backgroundColor: COLORS.background }} />
-            ) : (
-                <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
+                {containerHeight === 0 ? (
+                    <View style={{ flex: 1, backgroundColor: COLORS.background }} />
+                ) : (
+                    <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
+                        {step !== 2 && !isAnimatingTransition && (
+                            <View style={[styles.header, { marginTop: insets.top }]}>
+                                {step === 0 && <View style={styles.headerBlur} />}
+                                {step > 0 && (
+                                    <TouchableOpacity onPress={() => changeStep(step === 4 ? 2 : step - 1)} style={styles.backBtn}>
+                                        <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+                                    </TouchableOpacity>
+                                )}
+                                {step > 0 && <View style={{ width: 40 }} />}
+                            </View>
+                        )}
 
-                    {/* Header (Hidden on Step 2) */}
-                    {step !== 2 && !isAnimatingTransition && (
-                        <View style={[styles.header, { marginTop: insets.top }]}>
-                            {step === 0 && <View style={styles.headerBlur} />}
-
-                            {step > 0 && (
-                                <TouchableOpacity onPress={() => changeStep(step === 4 ? 2 : step - 1)} style={styles.backBtn}>
-                                    <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-                                </TouchableOpacity>
-                            )}
-
-                            {step > 0 && <View style={{ width: 40 }} />}
-                        </View>
-                    )}
-
-                    {/* 
-                   CONTENT STACK 
-                   We use the EXACT measured height from the OS 
-                */}
-                    <View style={{ flex: 1 }}>
-                        {step === 2 ? (
-                            <Animated.View style={{
-                                flex: 1,
-                                opacity: contentOpacity,
-                                transform: [{ translateX: contentTranslateX }],
-                                width: '100%'
-                            }}>
-                                {renderClaimsStep()}
-                            </Animated.View>
-                        ) : step === 0 ? (
-                            <Animated.View style={{
-                                flex: 1,
-                                width: '100%',
-                                opacity: contentOpacity,
-                                transform: [{ translateX: contentTranslateX }]
-                            }}>
-                                <InputStepView
-                                    onImageSelect={handleImageSelection}
-                                    onManualSelect={() => setManualModalVisible(true)}
-                                    scanMode={scanMode}
-                                    setScanMode={setScanMode}
-                                />
-                            </Animated.View>
-                        ) : step === 1 ? (
-                            <Animated.View style={{
-                                flex: 1,
-                                width: '100%',
-                                opacity: contentOpacity,
-                                transform: [{ translateX: contentTranslateX }],
-                                paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
-                                paddingHorizontal: 20
-                            }}>
-                                <ReviewStep
-                                    productType={productType}
-                                    setProductType={setProductType}
-                                    onConfirm={() => changeStep(2)}
-                                />
-                            </Animated.View>
-                        ) : (
-                            <ScrollView
-                                ref={scrollRef}
-                                contentContainerStyle={[
-                                    styles.scrollContent,
-                                    { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) },
-                                    step === 4 && { paddingHorizontal: 8 }
-                                ]}
-                                keyboardShouldPersistTaps="handled"
-                                showsVerticalScrollIndicator={false}
-                            >
+                        <View style={{ flex: 1 }}>
+                            {step === 2 ? (
                                 <Animated.View style={{
+                                    flex: 1,
                                     opacity: contentOpacity,
+                                    transform: [{ translateX: contentTranslateX }],
+                                    width: '100%'
+                                }}>
+                                    {renderClaimsStep()}
+                                </Animated.View>
+                            ) : step === 0 ? (
+                                <Animated.View style={{
+                                    flex: 1,
                                     width: '100%',
+                                    opacity: contentOpacity,
                                     transform: [{ translateX: contentTranslateX }]
                                 }}>
-                                    {step === 3 && (
-                                        <View style={{ height: height * 0.6, justifyContent: 'center' }}>
-                                            <LoadingScreen />
-                                        </View>
-                                    )}
-
-                                    {step === 4 && renderResultStep()}
+                                    <InputStepView
+                                        onImageSelect={handleImageSelection}
+                                        onManualSelect={() => setManualModalVisible(true)}
+                                        scanMode={scanMode}
+                                        setScanMode={setScanMode}
+                                    />
                                 </Animated.View>
-                            </ScrollView>
-                        )}
+                            ) : step === 1 ? (
+                                <Animated.View style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    opacity: contentOpacity,
+                                    transform: [{ translateX: contentTranslateX }],
+                                    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+                                    paddingHorizontal: 20
+                                }}>
+                                    <ReviewStep
+                                        productType={productType}
+                                        setProductType={setProductType}
+                                        onConfirm={() => changeStep(2)}
+                                    />
+                                </Animated.View>
+                            ) : (
+                                <ScrollView
+                                    ref={scrollRef}
+                                    contentContainerStyle={[
+                                        styles.scrollContent,
+                                        { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) },
+                                        step === 4 && { paddingHorizontal: 8 }
+                                    ]}
+                                    keyboardShouldPersistTaps="handled"
+                                    showsVerticalScrollIndicator={false}
+                                >
+                                    <Animated.View style={{
+                                        opacity: contentOpacity,
+                                        width: '100%',
+                                        transform: [{ translateX: contentTranslateX }]
+                                    }}>
+                                        {step === 3 && (
+                                            <View style={{ height: height * 0.6, justifyContent: 'center' }}>
+                                                <LoadingScreen />
+                                            </View>
+                                        )}
+                                        {step === 4 && renderResultStep()}
+                                    </Animated.View>
+                                </ScrollView>
+                            )}
+                        </View>
                     </View>
-                </View>
-            )}
+                )}
 
-            {/* 3. MODALS (Floating outside the layout calculation) */}
+                <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <Pressable style={StyleSheet.absoluteFill} onPress={() => setSaveModalVisible(false)} />
+                        <Animated.View style={styles.modalContent}>
+                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                                <Text style={styles.modalTitle}>{t('oilguard_save_result_title', language)}</Text>
+                                <Text style={styles.modalSub}>{t('oilguard_save_result_sub', language)}</Text>
+                            </View>
 
-            <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
-                <View style={styles.modalOverlay}>
-                    <Pressable style={StyleSheet.absoluteFill} blurRadius={10} onPress={() => setSaveModalVisible(false)} />
-                    <Animated.View style={styles.modalContent}>
-                        <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                            <Text style={styles.modalTitle}>{t('oilguard_save_result_title', language)}</Text>
-                            <Text style={styles.modalSub}>{t('oilguard_save_result_sub', language)}</Text>
-                        </View>
-
-                        <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
-                            {frontImageUri ? (
-                                <>
-                                    <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
-                                    <View style={styles.editBadge}>
-                                        <Feather name="edit-2" size={12} color="#FFF" />
+                            <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
+                                {frontImageUri ? (
+                                    <>
+                                        <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
+                                        <View style={styles.editBadge}>
+                                            <Feather name="edit-2" size={12} color="#FFF" />
+                                        </View>
+                                    </>
+                                ) : (
+                                    <View style={{ alignItems: 'center', gap: 8 }}>
+                                        <View style={styles.cameraIconCircle}>
+                                            <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                        </View>
+                                        <Text style={styles.pickerText}>{t('oilguard_product_image', language)}</Text>
                                     </View>
-                                </>
-                            ) : (
-                                <View style={{ alignItems: 'center', gap: 8 }}>
-                                    <View style={styles.cameraIconCircle}>
-                                        <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                )}
+                            </TouchableOpacity>
+
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>{t('oilguard_product_name', language)}</Text>
+                                <AppTextInput
+                                    style={styles.modalInput}
+                                    placeholder={t('oilguard_product_name_placeholder', language)}
+                                    placeholderTextColor={COLORS.textSecondary}
+                                    value={productName}
+                                    onChangeText={setProductName}
+                                    textAlign="right"
+                                />
+                            </View>
+
+                            <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
+                                {isSaving ? (
+                                    <ActivityIndicator color={COLORS.textOnAccent} />
+                                ) : (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.modalSaveButtonText}>{t('oilguard_save_to_shelf', language)}</Text>
+                                        <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
                                     </View>
-                                    <Text style={styles.pickerText}>{t('oilguard_product_image', language)}</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
+                                )}
+                            </Pressable>
+                        </Animated.View>
+                    </View>
+                </Modal>
 
-                        <View style={styles.inputWrapper}>
-                            <Text style={styles.inputLabel}>{t('oilguard_product_name', language)}</Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder={t('oilguard_product_name_placeholder', language)}
-                                placeholderTextColor={COLORS.textSecondary}
-                                value={productName}
-                                onChangeText={setProductName}
-                                textAlign="right"
-                            />
-                        </View>
+                <ManualInputSheet
+                    visible={isManualModalVisible}
+                    onClose={() => setManualModalVisible(false)}
+                    onSubmit={(text) => {
+                        setManualInputText(text);
+                        processManualText(text);
+                    }}
+                />
 
-                        <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
-                            {isSaving ? (
-                                <ActivityIndicator color={COLORS.textOnAccent} />
+                <CustomCameraModal
+                    isVisible={isCameraViewVisible}
+                    onClose={() => setCameraViewVisible(false)}
+                    onPictureTaken={handlePictureTaken}
+                />
+
+                <ImageCropperModal
+                    isVisible={cropperVisible}
+                    imageUri={tempImageUri}
+                    onClose={() => setCropperVisible(false)}
+                    onCropComplete={(cropped) => {
+                        setCropperVisible(false);
+                        processImageWithGemini(cropped.uri);
+                    }}
+                />
+
+                <ScoreBreakdownModal
+                    visible={isBreakdownModalVisible}
+                    onClose={() => setBreakdownModalVisible(false)}
+                    data={finalAnalysis?.scoreBreakdown}
+                    analysis={finalAnalysis}
+                />
+
+                <VerifiedDetailModal
+                    visible={isDetailVisible}
+                    onClose={() => setDetailVisible(false)}
+                    item={selectedRec}
+                />
+            </LinearGradient>
+        ) : (
+            <View
+                style={[styles.container, { backgroundColor: COLORS.background }]}
+                onLayout={(e) => {
+                    const { height } = e.nativeEvent.layout;
+                    if (height > SCREEN_HEIGHT * 0.7) {
+                        setContainerHeight(height);
+                    }
+                }}
+            >
+                <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+                <View style={styles.darkOverlay} />
+                {particles.map((p) => <Spore key={p.id} {...p} />)}
+
+                {containerHeight === 0 ? (
+                    <View style={{ flex: 1, backgroundColor: COLORS.background }} />
+                ) : (
+                    <View style={{ height: containerHeight, width: '100%', paddingTop: insets.top }}>
+                        {step !== 2 && !isAnimatingTransition && (
+                            <View style={[styles.header, { marginTop: insets.top }]}>
+                                {step === 0 && <View style={styles.headerBlur} />}
+                                {step > 0 && (
+                                    <TouchableOpacity onPress={() => changeStep(step === 4 ? 2 : step - 1)} style={styles.backBtn}>
+                                        <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+                                    </TouchableOpacity>
+                                )}
+                                {step > 0 && <View style={{ width: 40 }} />}
+                            </View>
+                        )}
+
+                        <View style={{ flex: 1 }}>
+                            {step === 2 ? (
+                                <Animated.View style={{
+                                    flex: 1,
+                                    opacity: contentOpacity,
+                                    transform: [{ translateX: contentTranslateX }],
+                                    width: '100%'
+                                }}>
+                                    {renderClaimsStep()}
+                                </Animated.View>
+                            ) : step === 0 ? (
+                                <Animated.View style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    opacity: contentOpacity,
+                                    transform: [{ translateX: contentTranslateX }]
+                                }}>
+                                    <InputStepView
+                                        onImageSelect={handleImageSelection}
+                                        onManualSelect={() => setManualModalVisible(true)}
+                                        scanMode={scanMode}
+                                        setScanMode={setScanMode}
+                                    />
+                                </Animated.View>
+                            ) : step === 1 ? (
+                                <Animated.View style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    opacity: contentOpacity,
+                                    transform: [{ translateX: contentTranslateX }],
+                                    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight : 40) + 70,
+                                    paddingHorizontal: 20
+                                }}>
+                                    <ReviewStep
+                                        productType={productType}
+                                        setProductType={setProductType}
+                                        onConfirm={() => changeStep(2)}
+                                    />
+                                </Animated.View>
                             ) : (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Text style={styles.modalSaveButtonText}>{t('oilguard_save_to_shelf', language)}</Text>
-                                    <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
-                                </View>
+                                <ScrollView
+                                    ref={scrollRef}
+                                    contentContainerStyle={[
+                                        styles.scrollContent,
+                                        { paddingBottom: 100 + (Platform.OS === 'android' ? 20 : insets.bottom) },
+                                        step === 4 && { paddingHorizontal: 8 }
+                                    ]}
+                                    keyboardShouldPersistTaps="handled"
+                                    showsVerticalScrollIndicator={false}
+                                >
+                                    <Animated.View style={{
+                                        opacity: contentOpacity,
+                                        width: '100%',
+                                        transform: [{ translateX: contentTranslateX }]
+                                    }}>
+                                        {step === 3 && (
+                                            <View style={{ height: height * 0.6, justifyContent: 'center' }}>
+                                                <LoadingScreen />
+                                            </View>
+                                        )}
+                                        {step === 4 && renderResultStep()}
+                                    </Animated.View>
+                                </ScrollView>
                             )}
-                        </Pressable>
-                    </Animated.View>
-                </View>
-            </Modal>
+                        </View>
+                    </View>
+                )}
 
-            <ManualInputSheet
-                visible={isManualModalVisible}
-                onClose={() => setManualModalVisible(false)}
-                onSubmit={(text) => {
-                    setManualInputText(text);
-                    processManualText(text);
-                }}
-            />
+                <Modal transparent visible={isSaveModalVisible} animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <Pressable style={StyleSheet.absoluteFill} onPress={() => setSaveModalVisible(false)} />
+                        <Animated.View style={styles.modalContent}>
+                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                                <Text style={styles.modalTitle}>{t('oilguard_save_result_title', language)}</Text>
+                                <Text style={styles.modalSub}>{t('oilguard_save_result_sub', language)}</Text>
+                            </View>
 
-            <CustomCameraModal
-                isVisible={isCameraViewVisible}
-                onClose={() => setCameraViewVisible(false)}
-                onPictureTaken={handlePictureTaken}
-            />
+                            <TouchableOpacity onPress={pickFrontImage} style={styles.frontImagePicker} activeOpacity={0.8}>
+                                {frontImageUri ? (
+                                    <>
+                                        <Image source={{ uri: frontImageUri }} style={styles.frontImagePreview} />
+                                        <View style={styles.editBadge}>
+                                            <Feather name="edit-2" size={12} color="#FFF" />
+                                        </View>
+                                    </>
+                                ) : (
+                                    <View style={{ alignItems: 'center', gap: 8 }}>
+                                        <View style={styles.cameraIconCircle}>
+                                            <Feather name="camera" size={24} color={COLORS.accentGreen} />
+                                        </View>
+                                        <Text style={styles.pickerText}>{t('oilguard_product_image', language)}</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
 
-            <ImageCropperModal
-                isVisible={cropperVisible}
-                imageUri={tempImageUri}
-                onClose={() => setCropperVisible(false)}
-                onCropComplete={(cropped) => {
-                    setCropperVisible(false);
-                    processImageWithGemini(cropped.uri);
-                }}
-            />
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>{t('oilguard_product_name', language)}</Text>
+                                <AppTextInput
+                                    style={styles.modalInput}
+                                    placeholder={t('oilguard_product_name_placeholder', language)}
+                                    placeholderTextColor={COLORS.textSecondary}
+                                    value={productName}
+                                    onChangeText={setProductName}
+                                    textAlign="right"
+                                />
+                            </View>
 
-            <ScoreBreakdownModal
-                visible={isBreakdownModalVisible}
-                onClose={() => setBreakdownModalVisible(false)}
-                data={finalAnalysis?.scoreBreakdown}
-                analysis={finalAnalysis}
-            />
+                            <Pressable onPress={handleSaveProduct} style={styles.modalSaveButton} disabled={isSaving}>
+                                {isSaving ? (
+                                    <ActivityIndicator color={COLORS.textOnAccent} />
+                                ) : (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.modalSaveButtonText}>{t('oilguard_save_to_shelf', language)}</Text>
+                                        <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} />
+                                    </View>
+                                )}
+                            </Pressable>
+                        </Animated.View>
+                    </View>
+                </Modal>
 
-            <VerifiedDetailModal
-                visible={isDetailVisible}
-                onClose={() => setDetailVisible(false)}
-                item={selectedRec}
-            />
-        </View>
-    );
+                <ManualInputSheet
+                    visible={isManualModalVisible}
+                    onClose={() => setManualModalVisible(false)}
+                    onSubmit={(text) => {
+                        setManualInputText(text);
+                        processManualText(text);
+                    }}
+                />
+
+                <CustomCameraModal
+                    isVisible={isCameraViewVisible}
+                    onClose={() => setCameraViewVisible(false)}
+                    onPictureTaken={handlePictureTaken}
+                />
+
+                <ImageCropperModal
+                    isVisible={cropperVisible}
+                    imageUri={tempImageUri}
+                    onClose={() => setCropperVisible(false)}
+                    onCropComplete={(cropped) => {
+                        setCropperVisible(false);
+                        processImageWithGemini(cropped.uri);
+                    }}
+                />
+
+                <ScoreBreakdownModal
+                    visible={isBreakdownModalVisible}
+                    onClose={() => setBreakdownModalVisible(false)}
+                    data={finalAnalysis?.scoreBreakdown}
+                    analysis={finalAnalysis}
+                />
+
+                <VerifiedDetailModal
+                    visible={isDetailVisible}
+                    onClose={() => setDetailVisible(false)}
+                    item={selectedRec}
+                />
+            </View>
+        )}
+    </>
+);
 }

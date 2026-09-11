@@ -1,4 +1,4 @@
-//comparison.js
+// comparison.js
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import {
@@ -19,6 +19,7 @@ import Fuse from 'fuse.js';
 import { useAppContext } from '../../src/context/AppContext';
 import { t } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import AppTextInput from '../../src/components/common/AppTextInput';
 
 // --- SHARED RESOURCES ---
 import {
@@ -67,7 +68,23 @@ const Spore = ({ size, duration, delay }) => {
         return () => { clearTimeout(timeout); };
     }, []);
 
-    return (<Animated.View style={{ position: 'absolute', zIndex: -1, width: size, height: size, borderRadius: size / 2, backgroundColor: COLORS.primaryGlow, transform: [{ translateY: animY.interpolate({ inputRange: [0, 1], outputRange: [height, -100] }) }, { translateX: animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] }) }], opacity }} />);
+    return (
+        <Animated.View 
+            style={{ 
+                position: 'absolute', 
+                zIndex: 0, 
+                width: size, 
+                height: size, 
+                borderRadius: size / 2, 
+                backgroundColor: COLORS.accentGlow || 'rgba(90, 156, 132, 0.40)', 
+                transform: [
+                    { translateY: animY.interpolate({ inputRange: [0, 1], outputRange: [height, -100] }) }, 
+                    { translateX: animX.interpolate({ inputRange: [-1, 1], outputRange: [-35, 35] }) }
+                ], 
+                opacity 
+            }} 
+        />
+    );
 };
 
 const StaggeredItem = ({ index, children, style }) => {
@@ -83,9 +100,10 @@ const StaggeredItem = ({ index, children, style }) => {
 };
 
 const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
-    const { colors } = useTheme();
+    const { theme, colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createComparisonStyles(COLORS), [COLORS]);
+    const isDark = theme?.isDark ?? true;
+    const styles = useMemo(() => createComparisonStyles(COLORS, isDark), [COLORS, isDark]);
     const animA = useRef(new Animated.Value(0)).current;
     const animB = useRef(new Animated.Value(0)).current;
 
@@ -146,7 +164,7 @@ const MetricDuelRow = ({ label, icon, scoreA, scoreB }) => {
 };
 
 // ============================================================================
-// EXACT CLAIM ROW FROM OILGUARD (Adapted only for pure UI usage)
+// EXACT CLAIM ROW FROM OILGUARD
 // ============================================================================
 const ClaimRow = ({ result, index, isLast, language }) => {
     const { colors } = useTheme();
@@ -355,14 +373,14 @@ const ClaimRow = ({ result, index, isLast, language }) => {
 };
 
 // ============================================================================
-// MarketingClaimsSection — clean sliding-pill switch (A/B), matches the
-// duel colour language used elsewhere while feeling calmer and more precise.
+// MarketingClaimsSection
 // ============================================================================
 const MarketingClaimsSection = ({ leftClaims, rightClaims, leftProduct, rightProduct, language }) => {
-    const { colors } = useTheme();
+    const { theme, colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
+    const isDark = theme?.isDark ?? true;
     const globalStyles = useMemo(() => createStyles(COLORS), [COLORS]);
-    const styles = useMemo(() => createComparisonStyles(COLORS), [COLORS]);
+    const styles = useMemo(() => createComparisonStyles(COLORS, isDark), [COLORS, isDark]);
 
     const [activeSide, setActiveSide] = useState('A');
     const rawData = activeSide === 'A' ? leftClaims : rightClaims;
@@ -472,7 +490,7 @@ const MarketingClaimsSection = ({ leftClaims, rightClaims, leftProduct, rightPro
 };
 
 // ============================================================================
-// Comparison Match Breakdown (Identical UI structure to OilGuard's MatchBreakdown)
+// Comparison Match Breakdown
 // ============================================================================
 const ComparisonMatchBreakdown = ({ leftProd, rightProd, leftLabel, rightLabel, language }) => {
     const { colors } = useTheme();
@@ -556,7 +574,6 @@ const ComparisonMatchBreakdown = ({ leftProd, rightProd, leftLabel, rightLabel, 
     );
 };
 
-
 const AnimatedCheckbox = ({ isSelected }) => {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
@@ -613,10 +630,15 @@ export default function ComparisonPage() {
     const language = useCurrentLanguage();
     const { userProfile } = useAppContext();
     const insets = useSafeAreaInsets();
-    const { colors } = useTheme();
+    
+    // Theme Hook & Adaptive Context
+    const { theme, colors, activeThemeId } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
+    const isDark = theme?.isDark ?? true;
+    const isLightTheme = activeThemeId === 'light';
+
     const globalStyles = useMemo(() => createStyles(COLORS), [COLORS]);
-    const styles = useMemo(() => createComparisonStyles(COLORS), [COLORS]);
+    const styles = useMemo(() => createComparisonStyles(COLORS, isDark), [COLORS, isDark]);
 
     // Core State
     const [step, setStep] = useState(0);
@@ -678,7 +700,6 @@ export default function ComparisonPage() {
             }
         }
 
-        // If BOTH products were passed together (e.g. from catalog multi-select compare mode)
         if (parsedLeft && parsedRight && parsedLeft.id && parsedRight.id) {
             setProductType(parsedLeft.category?.id || parsedRight.category?.id || 'other');
             setStep(2);
@@ -690,7 +711,7 @@ export default function ComparisonPage() {
     const contentTranslateX = useRef(new Animated.Value(0)).current;
     const fabAnim = useRef(new Animated.Value(0)).current;
     const fabPulseAnim = useRef(new Animated.Value(1)).current;
-    const scrollY = useRef(new Animated.Value(0)).current; // For header animation
+    const scrollY = useRef(new Animated.Value(0)).current;
 
     // Memoized Data for Fuse.js
     const claimsForType = useMemo(() => getClaimsByProductType(productType), [productType]);
@@ -978,9 +999,9 @@ export default function ComparisonPage() {
                                     </>
                                 ) : (
                                     <View style={styles.slotPlaceholder}>
-                                    <View style={styles.dashedIconCircle}>
-                                        <FontAwesome5 name="plus" size={20} color={COLORS.textSecondary} />
-                                    </View>
+                                        <View style={styles.dashedIconCircle}>
+                                            <FontAwesome5 name="plus" size={20} color={COLORS.textSecondary} />
+                                        </View>
                                         <Text style={styles.slotLabel}>{t('comp_slot_label', language)} {slot.l}</Text>
                                     </View>
                                 )}
@@ -1001,6 +1022,8 @@ export default function ComparisonPage() {
                         {
                             borderBottomLeftRadius: 0,
                             borderBottomRightRadius: 0,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
                             paddingBottom: insets.bottom > 0 ? insets.bottom + 15 : 30
                         }
                     ]}
@@ -1010,13 +1033,13 @@ export default function ComparisonPage() {
 
                         <View style={{
                             flexDirection: 'row',
-                            backgroundColor: COLORS.textPrimary + '0D',
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : (COLORS.surfaceSoft || 'rgba(0,0,0,0.04)'),
                             borderRadius: 12,
                             padding: 4,
                             marginTop: 10,
                             marginBottom: 5,
-                            borderWidth: 1,
-                            borderColor: COLORS.textPrimary + '1A'
+                            borderWidth: 0.5,
+                            borderColor: COLORS.border
                         }}>
                             <TouchableOpacity
                                 onPress={() => setScanMode('fast')}
@@ -1024,7 +1047,7 @@ export default function ComparisonPage() {
                                     flex: 1,
                                     paddingVertical: 8,
                                     borderRadius: 8,
-                                    backgroundColor: scanMode === 'fast' ? COLORS.primary : 'transparent',
+                                    backgroundColor: scanMode === 'fast' ? COLORS.accentGreen : 'transparent',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     flexDirection: 'row',
@@ -1045,7 +1068,7 @@ export default function ComparisonPage() {
                                     flex: 1,
                                     paddingVertical: 8,
                                     borderRadius: 8,
-                                    backgroundColor: scanMode === 'accurate' ? COLORS.primary : 'transparent',
+                                    backgroundColor: scanMode === 'accurate' ? COLORS.accentGreen : 'transparent',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     flexDirection: 'row',
@@ -1195,7 +1218,7 @@ export default function ComparisonPage() {
                     <View style={styles.claimsSearchContainer}>
                         <View style={styles.searchInputWrapper}>
                             <FontAwesome5 name="search" size={18} color={COLORS.textDim} style={styles.searchIcon} />
-                            <TextInput
+                            <AppTextInput
                                 style={styles.claimsSearchInput}
                                 placeholder={t('oilguard_claims_search_placeholder', language)}
                                 placeholderTextColor={COLORS.textDim}
@@ -1218,7 +1241,7 @@ export default function ComparisonPage() {
                                 style={globalStyles.fab}
                                 activeOpacity={0.7}
                             >
-                                <FontAwesome5 name="balance-scale" color={COLORS.darkGreen} size={32} />
+                                <FontAwesome5 name="balance-scale" color={COLORS.textOnAccent} size={32} />
                             </TouchableOpacity>
                         </Animated.View>
                     </Animated.View>
@@ -1228,9 +1251,7 @@ export default function ComparisonPage() {
     };
 
     // ============================================================================
-    // renderResults — cleaner, more spacious hero: fewer competing borders,
-    // clearer rhythm between the verdict, the profile duel, the metrics and the
-    // personal match, so the comparison reads calmly top to bottom.
+    // renderResults
     // ============================================================================
     const renderResults = () => {
         if (!left.analysisData || !right.analysisData) return null;
@@ -1251,8 +1272,8 @@ export default function ComparisonPage() {
                     <View style={[styles.heroWinnerCard, { borderColor: winnerColor + '55' }]}>
 
                         {/* Winner Banner */}
-                        <View style={[styles.winnerBanner, { backgroundColor: winnerColor + '1F' }]}>
-                            <View style={[styles.winnerIconCircle, { backgroundColor: winnerColor + '26' }]}>
+                        <View style={[styles.winnerBanner, { backgroundColor: winnerColor + (isDark ? '1F' : '15') }]}>
+                            <View style={[styles.winnerIconCircle, { backgroundColor: winnerColor + (isDark ? '26' : '20') }]}>
                                 <FontAwesome5 name="trophy" color={winnerColor} size={16} />
                             </View>
                             <Text style={[styles.winnerText, { color: winnerColor }]}>
@@ -1303,7 +1324,7 @@ export default function ComparisonPage() {
 
                         </View>
 
-                                                {/* Section Divider */}
+                        {/* Section Divider */}
                         <View style={styles.heroSectionDivider} />
 
                         {/* Integrated Metrics */}
@@ -1359,10 +1380,13 @@ export default function ComparisonPage() {
         );
     };
 
-    return (
-        <View style={globalStyles.container}>
-            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-            <View style={styles.darkOverlay} />
+    const renderContent = () => (
+        <View style={[globalStyles.container, { backgroundColor: 'transparent' }]}>
+            <StatusBar 
+                translucent 
+                backgroundColor="transparent" 
+                barStyle={isDark ? "light-content" : "dark-content"} 
+            />
             {particles.map((p) => <Spore key={p.id} {...p} />)}
 
             {step > 0 && step !== 1 && step !== 3 && step !== 4 && (
@@ -1375,7 +1399,6 @@ export default function ComparisonPage() {
             )}
 
             <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
-
                 <Animated.View style={{
                     flex: 1,
                     width: '100%',
@@ -1383,7 +1406,6 @@ export default function ComparisonPage() {
                     opacity: contentOpacity,
                     transform: [{ translateX: contentTranslateX }]
                 }}>
-
                     {step === 0 && renderArena()}
 
                     {(step === 1 || step === 4) && (
@@ -1411,16 +1433,39 @@ export default function ComparisonPage() {
                     {step === 3 && renderClaimsStep()}
 
                     {step === 5 && renderResults()}
-
                 </Animated.View>
             </View>
         </View>
     );
+
+    if (isLightTheme) {
+        return (
+            <LinearGradient
+                colors={[
+                    COLORS.background,
+                    COLORS.gradientStart || COLORS.background,
+                    COLORS.gradientMid || COLORS.accentGreen + '15',
+                    COLORS.gradientEnd || COLORS.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
+                {renderContent()}
+            </LinearGradient>
+        );
+    }
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            {renderContent()}
+        </View>
+    );
 }
 
-const createComparisonStyles = (COLORS) => StyleSheet.create({
-    darkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.0)' },
-
+const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
     arenaSlotsRow: {
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
@@ -1442,9 +1487,37 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
     },
     slotImage: { width: '100%', height: '100%', borderRadius: 24, position: 'absolute' },
     slotPlaceholder: { alignItems: 'center', gap: 12 },
-    dashedIconCircle: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: 'dashed', borderColor: COLORS.textSecondary, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
+    dashedIconCircle: { 
+        width: 64, 
+        height: 64, 
+        borderRadius: 32, 
+        borderWidth: 2, 
+        borderStyle: 'dashed', 
+        borderColor: COLORS.textSecondary, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' 
+    },
     slotLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 14 },
-    vsBadge: { position: 'absolute', left: '50%', marginLeft: -20, width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.gold, justifyContent: 'center', alignItems: 'center', zIndex: 5 },
+    vsBadge: { 
+        position: 'absolute', 
+        left: '50%', 
+        marginLeft: -20, 
+        width: 40, 
+        height: 40, 
+        borderRadius: 20, 
+        backgroundColor: COLORS.card, 
+        borderWidth: 1.5, 
+        borderColor: COLORS.gold, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        zIndex: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4
+    },
     vsText: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.gold },
     slotBadge: { position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 2 },
     slotBadgeText: { fontFamily: 'Tajawal-Bold', color: '#FFF', fontSize: 11 },
@@ -1468,8 +1541,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: COLORS.background + 'F2',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(10px)',
+        borderBottomColor: COLORS.border,
     },
     expandedHeader: {
         position: 'absolute',
@@ -1499,7 +1571,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
     searchInputWrapper: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: COLORS.inputBg || (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
         borderRadius: 16,
         paddingHorizontal: 15,
         height: 55,
@@ -1524,19 +1596,20 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         justifyContent: 'center',
     },
 
-    // --- NEW HERO RESULTS DESIGN (cleaner, more spacious, calmer) ---
+    // --- HERO RESULTS DESIGN ---
     heroWinnerCard: {
         backgroundColor: COLORS.card,
         borderRadius: 28,
-        borderWidth: 1, // Increased border width for big sections
+        borderWidth: 1,
+        borderColor: COLORS.border,
         width: '100%',
         paddingVertical: 16,
         marginTop: 8,
-        marginBottom: 0, // Remove bottom margin to close the gap
+        marginBottom: 0,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
+        shadowOpacity: isDark ? 0.2 : 0.08,
         shadowRadius: 16,
         elevation: 4
     },
@@ -1570,7 +1643,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         textTransform: 'uppercase'
     },
     heroProfilesRow: {
-        flexDirection: 'row-reverse', // Ensures A is Right, B is Left naturally
+        flexDirection: 'row-reverse',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         paddingHorizontal: 12
@@ -1587,13 +1660,13 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         padding: 3,
         borderWidth: 2,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(255,255,255,0.04)'
+        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'
     },
     heroProfileImg: {
         width: '100%',
         height: '100%',
         borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: COLORS.background,
     },
     heroProfileScore: {
         fontFamily: 'Tajawal-ExtraBold',
@@ -1621,7 +1694,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.card,
         borderWidth: 1.5,
         borderColor: COLORS.gold,
         justifyContent: 'center',
@@ -1638,11 +1711,11 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         backgroundColor: COLORS.border,
         opacity: 0.6,
         marginHorizontal: 30,
-        marginVertical: 12, // Reduced vertical margin to close gaps
+        marginVertical: 12,
     },
     heroMetricsSection: {
         paddingHorizontal: 12,
-        paddingVertical: 8, // Reduced padding to save space
+        paddingVertical: 8,
     },
     heroSectionLabel: {
         fontFamily: 'Tajawal-Bold',
@@ -1655,106 +1728,38 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         marginTop: 18
     },
 
-    // --- GENERIC STYLES ---
-    // Sliding pill switch (A/B). segmentIndicator is one continuous colored
-    // pill that glides between the two halves — replaces the old two-tone
-    // "both buttons filled" look with a single clear focal point.
-    segmentTrack: {
-        flexDirection: 'row-reverse',
-        backgroundColor: 'rgba(0,0,0,0.22)',
-        borderRadius: 14,
-        padding: 6,
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden'
-    },
-    segmentIndicator: {
-        position: 'absolute',
-        top: 6,
-        bottom: 6,
-        right: 6,
-        borderRadius: 10,
-        zIndex: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 3
-    },
-    segmentBtn: { flex: 1, paddingVertical: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-    segmentText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textSecondary },
-    segmentTextActive: { color: '#FFF' },
-
     duelContainer: { marginBottom: 0 },
     duelHeader: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     duelScore: { fontFamily: 'Tajawal-ExtraBold', fontSize: 17, width: 48 },
     duelLabelBox: { alignItems: 'center' },
     duelLabel: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textSecondary },
-    duelTrackContainer: { height: 16, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8, overflow: 'hidden', width: '100%' },
+    duelTrackContainer: { 
+        height: 16, 
+        backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : (COLORS.surfaceSoft || 'rgba(0,0,0,0.06)'), 
+        borderRadius: 8, 
+        overflow: 'hidden', 
+        width: '100%' 
+    },
     duelDivider: { width: 0 },
     duelBar: { height: '100%' },
 
     loadingLabel: { position: 'absolute', bottom: 100, width: '100%', textAlign: 'center', fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 16 },
-    resetBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', justifyContent: 'center', padding: 18, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, gap: 10, marginTop: 25, width: '100%' },
+    resetBtn: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        alignSelf: 'center', 
+        justifyContent: 'center', 
+        padding: 18, 
+        backgroundColor: COLORS.card, 
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 16, 
+        gap: 10, 
+        marginTop: 25, 
+        width: '100%' 
+    },
     resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 15 },
 
-    // Evidence & Chip Styles
-    evidenceGroup: {
-        marginTop: 10,
-        gap: 8
-    },
-    evidenceLabelContainer: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 6
-    },
-    evidenceLabelText: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 11
-    },
-    chipContainer: {
-        flexDirection: 'row-reverse',
-        flexWrap: 'wrap',
-        gap: 6
-    },
-
-    chipPrimary: {
-        backgroundColor: COLORS.success + '1A',
-        borderColor: COLORS.success + '4D',
-        borderWidth: 1,
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4
-    },
-    chipTextPrimary: {
-        color: COLORS.success,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 11,
-        textAlign: 'right'
-    },
-    chipBenefit: {
-        color: COLORS.success + 'B3',
-        fontSize: 10
-    },
-
-    chipTrace: {
-        backgroundColor: COLORS.warning + '1A',
-        borderColor: COLORS.warning + '4D',
-        borderWidth: 1,
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4
-    },
-    chipTextTrace: {
-        color: COLORS.warning,
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 11,
-        textAlign: 'right'
-    },
-    chipBenefitTrace: {
-        color: COLORS.warning + 'B3',
-        fontSize: 10
-    },
     searchIcon: {
         marginLeft: 10
     },
@@ -1762,7 +1767,7 @@ const createComparisonStyles = (COLORS) => StyleSheet.create({
         flexDirection: 'row-reverse',
         width: '100%',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.06)',
+        borderBottomColor: COLORS.border,
         marginBottom: 16
     },
     tabBtn: {

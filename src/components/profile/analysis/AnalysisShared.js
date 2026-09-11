@@ -1,9 +1,128 @@
 // src/components/profile/analysis/AnalysisShared.js
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing, Pressable } from 'react-native';
+import { View, Text, Animated, Easing, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle } from 'react-native-svg';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
+import { useRTL } from '../../../hooks/useRTL';
+import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+
+export const LockedComponentOverlay = ({
+    title,
+    subtitle,
+    buttonText,
+    iconName = 'lock',
+    onPress,
+    borderRadius = 24,
+}) => {
+    const { colors: COLORS } = useTheme();
+    const language = useCurrentLanguage();
+    const { isRTL } = useRTL();
+
+    const resolvedTitle = title || (isRTL ? 'أضيفي منتجاتك' : 'Add Your Products');
+    const resolvedBtnText = buttonText || (isRTL ? 'أضيفي منتجاً الآن' : 'Add a Product');
+
+    return (
+        <View style={[
+            sharedOverlayStyles.overlayContainer,
+            {
+                borderRadius,
+                backgroundColor: COLORS.background ? (COLORS.background + 'E6') : 'rgba(15, 23, 42, 0.88)',
+            }
+        ]}>
+            <View style={sharedOverlayStyles.glassBox}>
+                <View style={[
+                    sharedOverlayStyles.iconCircle,
+                    {
+                        backgroundColor: COLORS.accentGreen + '20',
+                        borderColor: COLORS.accentGreen + '44',
+                    }
+                ]}>
+                    <FontAwesome5 name={iconName} size={20} color={COLORS.accentGreen} />
+                </View>
+
+                <Text style={[sharedOverlayStyles.title, { color: COLORS.textPrimary }]}>
+                    {resolvedTitle}
+                </Text>
+
+                {subtitle ? (
+                    <Text style={[sharedOverlayStyles.subtitle, { color: COLORS.textSecondary }]}>
+                        {subtitle}
+                    </Text>
+                ) : null}
+
+                <Pressable
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        if (onPress) onPress();
+                    }}
+                    style={({ pressed }) => [
+                        sharedOverlayStyles.ctaBtn,
+                        {
+                            backgroundColor: COLORS.accentGreen,
+                            opacity: pressed ? 0.85 : 1,
+                        }
+                    ]}
+                >
+                    <FontAwesome5 name="plus" size={11} color={COLORS.textOnAccent || '#FFFFFF'} style={{ marginEnd: 6 }} />
+                    <Text style={[sharedOverlayStyles.ctaText, { color: COLORS.textOnAccent || '#FFFFFF' }]}>
+                        {resolvedBtnText}
+                    </Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+};
+
+const sharedOverlayStyles = StyleSheet.create({
+    overlayContainer: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    glassBox: {
+        alignItems: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 18,
+        gap: 6,
+    },
+    iconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 0.5,
+        marginBottom: 4,
+    },
+    title: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 12,
+        textAlign: 'center',
+        lineHeight: 18,
+        opacity: 0.85,
+    },
+    ctaBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 22,
+        paddingVertical: 10,
+        borderRadius: 20,
+        marginTop: 6,
+    },
+    ctaText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 13,
+    },
+});
 
 export const PressableScale = ({ onPress, children, style, disabled, onLongPress, delay = 0 }) => {
     const scale = useRef(new Animated.Value(0)).current;

@@ -97,20 +97,20 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
 
     useEffect(() => {
         if (visible) {
-            Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
+            Animated.spring(animController, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }).start();
             Haptics.selectionAsync();
         }
     }, [visible]);
 
     const handleClose = () => {
-        Animated.timing(animController, { toValue: 0, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+        Animated.timing(animController, { toValue: 0, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true })
             .start(({ finished }) => { if (finished) onClose(); });
     };
 
     if (!insight) return null;
 
     const theme = getSeverityTheme(insight.severity);
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height + 150, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     // ========================================================================
@@ -265,7 +265,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     {/* Hero Ingredients Section */}
                     <View style={[styles.sectionContainer, {
                         backgroundColor: colors.accentGreen + '0D',
-                        borderWidth: 1,
+                        borderWidth: 0.5,
                         borderColor: colors.accentGreen + '22',
                         borderRadius: 16,
                         padding: 16,
@@ -292,7 +292,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                     {tips.length > 0 && (
                         <View style={[styles.sectionContainer, {
                             backgroundColor: colors.warning + '0D',
-                            borderWidth: 1,
+                            borderWidth: 0.5,
                             borderColor: colors.warning + '22',
                             borderRadius: 16,
                             padding: 16,
@@ -324,7 +324,7 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                         <View style={{
                             flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10,
                             backgroundColor: colors.card, borderRadius: 14, padding: 14,
-                            borderWidth: 1, borderColor: colors.border, marginBottom: 4
+                            borderWidth: 0.5, borderColor: colors.border, marginBottom: 4
                         }}>
                             <MaterialCommunityIcons name="lightbulb-outline" size={16} color={colors.gold || colors.warning} style={{ marginTop: 2 }} />
                             <Text style={{ fontFamily: 'Tajawal-Regular', color: colors.textSecondary, fontSize: 13, flex: 1, textAlign: 'right', lineHeight: 20 }}>
@@ -452,15 +452,6 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
                                 </View>
                             )}
 
-                            {/* Close Button */}
-                            <TouchableOpacity
-                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleClose(); }}
-                                style={[styles.closeButton, { backgroundColor: colors.textPrimary }]}
-                                activeOpacity={0.9}
-                            >
-                                <Text style={[styles.closeButtonText, { color: colors.card }]}>{t('insight_close', language)}</Text>
-                            </TouchableOpacity>
-
                         </ScrollView>
                     </View>
                 </Animated.View>
@@ -472,8 +463,8 @@ export const InsightDetailsModal = ({ visible, onClose, insight }) => {
 const createStyles = (colors) => StyleSheet.create({
     // --- Layout ---
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1 },
-    sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '85%', zIndex: 2 },
-    sheetContent: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+    sheetContainer: { position: 'absolute', bottom: -150, left: 0, right: 0, height: height * 0.85 + 150, zIndex: 2 },
+    sheetContent: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden', paddingBottom: 150 },
     sheetHandleBar: { alignItems: 'center', paddingVertical: 15, width: '100%', zIndex: 10 },
     sheetHandle: { width: 40, height: 4, borderRadius: 10 },
     scrollContent: { paddingBottom: 50 },
@@ -484,7 +475,7 @@ const createStyles = (colors) => StyleSheet.create({
     headerCentered: { alignItems: 'center', marginBottom: 20, marginTop: 10 },
     iconLargeCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     headerTitle: { fontFamily: 'Tajawal-Bold', fontSize: 22, textAlign: 'center', marginBottom: 10 },
-    severityBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+    severityBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 0.5 },
     severityText: { fontFamily: 'Tajawal-Bold', fontSize: 13 },
 
     // --- Goal Header ---
@@ -498,7 +489,7 @@ const createStyles = (colors) => StyleSheet.create({
     bodyText: { fontFamily: 'Tajawal-Regular', fontSize: 16, textAlign: 'right', lineHeight: 26, marginBottom: 24 },
 
     // --- Action Card (Hero) ---
-    actionCard: { padding: 16, borderRadius: 16, marginBottom: 10, borderWidth: 1 },
+    actionCard: { padding: 16, borderRadius: 16, marginBottom: 10, borderWidth: 0.5 },
     actionHeaderRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     actionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
     actionText: { fontFamily: 'Tajawal-Bold', fontSize: 15, textAlign: 'right', lineHeight: 24 },
@@ -515,17 +506,17 @@ const createStyles = (colors) => StyleSheet.create({
     sectionContainer: { marginBottom: 10 },
     sectionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, textAlign: 'right', marginBottom: 12 },
     chipContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-    chip: { flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, gap: 6 },
+    chip: { flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 0.5, gap: 6 },
     chipText: { fontFamily: 'Tajawal-Bold', fontSize: 13 },
 
     // --- Products ---
-    productRow: { flexDirection: 'row-reverse', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1 },
-    productIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 12, borderWidth: 1 },
+    productRow: { flexDirection: 'row-reverse', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 0.5 },
+    productIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 12, borderWidth: 0.5 },
     productText: { fontFamily: 'Tajawal-Regular', fontSize: 14, flex: 1, textAlign: 'right' },
 
     // --- Goal Mini Pills ---
     productsWrap: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-    miniProductPill: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
+    miniProductPill: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 0.5 },
     miniProductText: { fontFamily: 'Tajawal-Regular', fontSize: 13 },
 
     // --- Alerts ---
@@ -533,7 +524,7 @@ const createStyles = (colors) => StyleSheet.create({
         flexDirection: 'row-reverse',
         backgroundColor: (colors.danger || '#ef4444') + '0D',
         padding: 16, borderRadius: 16, gap: 12, alignItems: 'flex-start', marginBottom: 24,
-        borderWidth: 1, borderColor: (colors.danger || '#ef4444') + '26'
+        borderWidth: 0.5, borderColor: (colors.danger || '#ef4444') + '26'
     },
     sunscreenIconBox: {
         width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center',

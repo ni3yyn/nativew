@@ -12,16 +12,17 @@ import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useAppContext } from '../../context/AppContext';
 import UserProfileModal from '../community/UserProfileModal';
 
-export default function RewardsBanner({ currentPoints, onPress, scrollY, collapsed }) {
+export default function RewardsBanner({ currentPoints, onPress, scrollY, collapsed, language }) {
     const { colors: C } = useTheme();
     const rtl = useRTL();
-    const lang = useCurrentLanguage();
+    const currentLang = useCurrentLanguage();
+    const lang = language || currentLang;
     const { user, userProfile } = useAppContext();
 
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     
-    // Automatically calculate current tier, next tier, and progress
-    const levelData = getUserLevelData(currentPoints || 0);
+    // Automatically calculate current tier, next tier, and progress with active language
+    const levelData = getUserLevelData(currentPoints || 0, lang);
     const { currentLevel, progressPercent, pointsToNextLevel, nextLevel } = levelData;
 
     // --- Animations ---
@@ -58,10 +59,10 @@ export default function RewardsBanner({ currentPoints, onPress, scrollY, collaps
     }) : new Animated.Value(1);
 
     const bannerMargin = scrollY ? scrollY.interpolate({
-        inputRange: [0, 50, 100],
-        outputRange: [6, 3, 0],
-        extrapolate: 'clamp'
-    }) : new Animated.Value(6);
+    inputRange: [0, 50, 100],
+    outputRange: [2, 1, 0],
+    extrapolate: 'clamp'
+}) : new Animated.Value(0); // 👈 Change 6 to 0
 
     const scale = scrollY ? scrollY.interpolate({
         inputRange: [0, 50, 100],
@@ -107,15 +108,15 @@ export default function RewardsBanner({ currentPoints, onPress, scrollY, collaps
                         style={styles.rewardBanner}
                     >
                         <LinearGradient 
-                            colors={[C.card + '00', currentLevel.color + '00']} 
+                            colors={[C.card + '00', C.accentGreen + '00']} 
                             style={styles.rewardGradient} 
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                         >
                             <View style={styles.contentZIndex}>
                                 <View style={[styles.row, { flexDirection: rtl.flexDirection }]}>
                                     {/* Level Indicator - Compact */}
-                                    <View style={styles.levelIndicator}>
-                                        <View style={[styles.levelDot, { backgroundColor: currentLevel.color }]} />
+                                    <View style={[styles.levelIndicator, { flexDirection: rtl.flexDirection }]}>
+                                        <View style={[styles.levelDot, { backgroundColor: C.accentGreen }]} />
                                         <Text style={[styles.levelName, { color: C.textPrimary }]}>
                                             {currentLevel.name}
                                         </Text>
@@ -127,14 +128,14 @@ export default function RewardsBanner({ currentPoints, onPress, scrollY, collaps
                                             <Animated.View
                                                 style={[
                                                     styles.progressBarFill,
-                                                    { width: progressWidth, backgroundColor: currentLevel.color }
+                                                    { width: progressWidth, backgroundColor: C.accentGreen }
                                                 ]}
                                             />
                                         </View>
                                     </View>
 
                                     {/* Points - Compact */}
-                                    <View style={[styles.pointsPill, { backgroundColor: 'transparent'}]}>
+                                    <View style={[styles.pointsPill, { flexDirection: rtl.flexDirection, backgroundColor: 'transparent' }]}>
                                         <Text style={[styles.pointsValue, { color: C.textPrimary }]}>
                                             {currentPoints || 0}
                                         </Text>
@@ -176,8 +177,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     rewardGradient: {
-        paddingHorizontal: 4, // CHANGED: was 12, now reduced to 4
-        paddingVertical: 2,   // CHANGED: was 6, now reduced to 2
+        paddingHorizontal: 4,
+        paddingVertical: 2,
         height: '100%',
         justifyContent: 'center'
     },
@@ -185,15 +186,13 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     row: {
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 6, // CHANGED: was 8, slightly reduced
+        gap: 6,
     },
     levelIndicator: {
-        flexDirection: 'row',
         alignItems: 'center',
-        gap: 4, // CHANGED: was 5, slightly reduced
+        gap: 4,
         minWidth: 50,
     },
     levelDot: {
@@ -208,7 +207,7 @@ const styles = StyleSheet.create({
     },
     progressWrap: {
         flex: 1,
-        marginHorizontal: 2, // CHANGED: was 4, reduced
+        marginHorizontal: 2,
     },
     progressBarBg: {
         height: 4,
@@ -221,13 +220,12 @@ const styles = StyleSheet.create({
         borderRadius: 999,
     },
     pointsPill: {
-        flexDirection: 'row',
         alignItems: 'center',
-        gap: 2, // CHANGED: was 3, slightly reduced
-        paddingHorizontal: 4, // CHANGED: was 6, reduced
-        paddingVertical: 1, // CHANGED: was 2, reduced
+        gap: 2,
+        paddingHorizontal: 4,
+        paddingVertical: 1,
         borderRadius: 999,
-        minWidth: 35, // CHANGED: was 40, reduced
+        minWidth: 35,
         justifyContent: 'center',
     },
     pointsValue: {

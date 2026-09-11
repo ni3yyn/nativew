@@ -216,7 +216,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 24,
         padding: 18,
         gap: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         position: 'relative',
     },
     cardLow: {
@@ -233,7 +233,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 30,
         backgroundColor: COLORS.textPrimary + '08',
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     pulseDot: {
         width: 5,
@@ -268,7 +268,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         padding: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: 0.5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,

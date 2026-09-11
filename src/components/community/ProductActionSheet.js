@@ -119,8 +119,8 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
             Animated.spring(animState, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true,
             }).start();
 
@@ -143,8 +143,8 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const handleClose = () => {
         Animated.timing(animState, {
             toValue: 0,
-            duration: 300,
-            easing: Easing.inOut(Easing.ease),
+            duration: 250,
+            easing: Easing.in(Easing.ease),
             useNativeDriver: true,
         }).start(() => {
             onClose();
@@ -217,7 +217,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
             Animated.timing(animState, {
                 toValue: 0,
                 duration: 250,
-                easing: Easing.inOut(Easing.ease),
+                easing: Easing.in(Easing.ease),
                 useNativeDriver: true,
             }).start(async () => {
                 if (onSave) {
@@ -525,7 +525,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
 const createStyles = (COLORS) => StyleSheet.create({
     sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-    sheetContainer: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 30, maxHeight: '90%' },
+    sheetContainer: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 180, marginBottom: -150, maxHeight: '90%' },
     sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginTop: 15, marginBottom: 10 },
     imageHeader: { width: '100%', height: 160, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', marginTop: -29, marginBottom: 0, position: 'relative' },
     sheetMainImage: { width: '100%', height: '100%' },
@@ -538,12 +538,12 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 12,
         zIndex: 5,
     },
-    comparisonBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
+    comparisonBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.border },
     compText: { color: '#FFF', fontFamily: 'Tajawal-Bold', fontSize: 11 },
     content: { padding: 25, paddingTop: 15 },
     tabContainer: { flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 12, padding: 4, marginBottom: 15 },
     tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
-    activeTab: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+    activeTab: { backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.border },
     tabText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.textSecondary },
     sheetHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 20 },
     sheetIconBox: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 15 },
@@ -553,10 +553,10 @@ const createStyles = (COLORS) => StyleSheet.create({
     bigScoreText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16 },
     alertsContainer: { marginBottom: 20 },
     sectionHeader: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12, textAlign: 'right', marginBottom: 10 },
-    alertBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
+    alertBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderWidth: 0.5, marginBottom: 8 },
     alertText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 13, textAlign: 'right', lineHeight: 20 },
     claimsAnalysisContainer: { marginBottom: 20, marginTop: 10 },
-    claimResultBox: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 10 },
+    claimResultBox: { borderRadius: 12, borderWidth: 0.5, padding: 12, marginBottom: 10 },
     claimHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginBottom: 6 },
     claimTitle: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
     claimStatus: { fontFamily: 'Tajawal-Bold', fontSize: 12, textAlign: 'right', marginBottom: 4 },
@@ -566,13 +566,13 @@ const createStyles = (COLORS) => StyleSheet.create({
     claimsEditor: { backgroundColor: COLORS.background, padding: 15, borderRadius: 12, marginBottom: 20 },
     claimsHint: { color: COLORS.textDim, fontSize: 12, fontFamily: 'Tajawal-Regular', marginBottom: 10, textAlign: 'right' },
     chipsContainer: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-    claimChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+    claimChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 0.5, borderColor: COLORS.border },
     claimText: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Regular' },
     applyBtn: { backgroundColor: COLORS.accentGreen, padding: 10, borderRadius: 8, alignItems: 'center', marginTop: 15 },
     applyBtnText: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold', fontSize: 14 },
     sheetActions: { flexDirection: 'row', gap: 15, marginTop: 10 },
     sheetBtnPrimary: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-    sheetBtnSecondary: { flex: 0.5, padding: 15, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+    sheetBtnSecondary: { flex: 0.5, padding: 15, borderRadius: 12, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.border },
     sheetBtnTextPrim: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' },
     sheetBtnTextSec: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' },
     scrollContainer: {

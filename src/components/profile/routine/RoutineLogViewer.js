@@ -144,7 +144,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 16,
         marginBottom: 20,
         overflow: 'hidden',
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border,
     },
     header: {
@@ -181,7 +181,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     badgeText: {
         fontFamily: 'Tajawal-Bold',
@@ -225,7 +225,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 8,
         marginTop: 8,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border,
     },
     productText: {

@@ -107,7 +107,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     height: height * 0.75,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
     overflow: 'hidden',
   },
@@ -153,7 +153,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 16,
     padding: 15,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
   },
   unreadItem: {
@@ -193,7 +193,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   unreadDot: {
     position: 'absolute',

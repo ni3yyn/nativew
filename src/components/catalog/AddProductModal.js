@@ -20,6 +20,7 @@ import { compressImage, uploadImageToCloudinary } from '../../services/imageServ
 import CustomCameraModal from '../../components/oilguard/CustomCameraModal';
 import { AlertService } from '../../services/alertService';
 import { getClaimsForCategory } from './BountyModal';
+import AppTextInput from '../common/AppTextInput';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -243,8 +244,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         if (visible) {
             Animated.spring(animState, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true,
             }).start();
         }
@@ -253,8 +254,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     const handleClose = () => {
         Animated.timing(animState, {
             toValue: 0,
-            duration: 300,
-            easing: Easing.inOut(Easing.ease),
+            duration: 250,
+            easing: Easing.in(Easing.ease),
             useNativeDriver: true,
         }).start(() => {
             onClose();
@@ -476,14 +477,14 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                             {t('basic_info', language)}
                                         </Text>
                                     </View>
-                                    <TextInput
+                                    <AppTextInput
                                         style={[styles.input, { color: C.textPrimary, borderBottomColor: C.border, textAlign: rtl.textAlign }]}
                                         placeholder={t('brand_placeholder', language)}
                                         placeholderTextColor={C.textDim}
                                         value={brand}
                                         onChangeText={setBrand}
                                     />
-                                    <TextInput
+                                    <AppTextInput
                                         style={[styles.input, { color: C.textPrimary, borderBottomColor: 'transparent', textAlign: rtl.textAlign }]}
                                         placeholder={t('product_name_placeholder', language)}
                                         placeholderTextColor={C.textDim}
@@ -530,7 +531,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                             <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
                                                 {t('price_dzd', language)}
                                             </Text>
-                                            <TextInput
+                                            <AppTextInput
                                                 style={[styles.rowInput, { color: C.textPrimary, textAlign: 'center' }]}
                                                 placeholder="00"
                                                 placeholderTextColor={C.textDim}
@@ -545,7 +546,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                 {t('quantity_size', language)}
                                             </Text>
                                             <View style={[styles.quantityRow, { flexDirection: rtl.flexDirection }]}>
-                                                <TextInput
+                                                <AppTextInput
                                                     style={[styles.quantityInput, { color: C.textPrimary, textAlign: 'center' }]}
                                                     placeholder="200"
                                                     placeholderTextColor={C.textDim}
@@ -626,7 +627,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                             {t('ai_ingredient_tip', language)}
                                         </Text>
                                     </View>
-                                    <TextInput
+                                    <AppTextInput
                                         style={[styles.textArea, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
                                         placeholder={t('ingredients_placeholder', language)}
                                         placeholderTextColor={C.textDim}
@@ -797,7 +798,7 @@ const styles = StyleSheet.create({
     glassCard: {
         borderRadius: 20,
         padding: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         marginBottom: 16,
     },
     sectionHeaderSimple: {
@@ -818,7 +819,7 @@ const styles = StyleSheet.create({
     },
     dropdownContainer: {
         borderRadius: 18,
-        borderWidth: 1,
+        borderWidth: 0.5,
         overflow: 'hidden',
     },
     dropdownHeader: {
@@ -889,7 +890,7 @@ const styles = StyleSheet.create({
     input: {
         height: 48,
         fontSize: 14,
-        fontFamily: 'Tajawal-Medium',
+        fontFamily: 'Tajawal-Regular',
         borderBottomWidth: 1,
         paddingHorizontal: 4,
     },
@@ -938,7 +939,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 8,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     textArea: {
         minHeight: 90,
@@ -946,7 +947,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Tajawal-Regular',
         textAlignVertical: 'top',
         paddingTop: 12,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderRadius: 12,
         padding: 12,
         marginBottom: 12,

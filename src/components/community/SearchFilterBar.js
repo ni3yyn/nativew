@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Animated, Keyboard, Easing } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Animated, Keyboard, Easing } from 'react-native';
+import AppTextInput from '../common/AppTextInput';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
@@ -45,9 +46,10 @@ const SporeParticle = ({ animateTrigger }) => {
 
 const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onToggleBioFilter }) => {
     const language = useCurrentLanguage();
-    const { colors } = useTheme();
+    const { colors, activeThemeId } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const isLightTheme = activeThemeId === 'light';
+    const styles = useMemo(() => createStyles(COLORS, isLightTheme), [COLORS, isLightTheme]);
     const slideAnim = useRef(new Animated.Value(-20)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -90,7 +92,7 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
             {/* Search Input */}
             <View style={styles.searchBox}>
                 <Ionicons name="search" size={18} color={COLORS.textDim} style={{ marginLeft: 10 }} />
-                <TextInput
+                <AppTextInput
                     style={styles.input}
                     placeholder={t('community_search_placeholder', language)}
                     placeholderTextColor={COLORS.textDim}
@@ -150,15 +152,15 @@ const SearchFilterBar = ({ searchQuery, onSearchChange, isBioFilterActive, onTog
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isLightTheme) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingBottom: 15,
+        paddingBottom: 6,
         paddingTop: 15,
         gap: 12,
-        backgroundColor: COLORS.background,
+        backgroundColor: 'transparent',
         zIndex: 10,
     },
     searchBox: {
@@ -169,8 +171,9 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 16,
         paddingHorizontal: 12,
         height: 48,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border,
+        // NO SHADOWS - completely clean
     },
     input: {
         flex: 1,
@@ -198,22 +201,14 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     bioButtonInactive: {
         width: 48,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.accentGreen,
-        shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 5,
+        // NO SHADOWS - completely clean
     },
     bioButtonActive: {
         paddingHorizontal: 16,
         borderWidth: 0,
-        shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 8,
+        // NO SHADOWS - completely clean
     },
     bioText: {
         fontFamily: 'Tajawal-Bold',

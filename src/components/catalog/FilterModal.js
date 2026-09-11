@@ -13,6 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
+import AppTextInput from '../common/AppTextInput';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -79,8 +80,8 @@ export default function FilterModal({ visible, onClose, onApply, currentFilters,
       requestAnimationFrame(() => {
         Animated.spring(animState, {
           toValue: 1,
-          friction: 8,
-          tension: 40,
+          friction: 9,
+          tension: 50,
           useNativeDriver: true,
         }).start();
       });
@@ -91,7 +92,7 @@ export default function FilterModal({ visible, onClose, onApply, currentFilters,
     Animated.timing(animState, {
       toValue: 0,
       duration: 250,
-      easing: Easing.inOut(Easing.ease),
+      easing: Easing.in(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
       if (typeof onClose === 'function') {
@@ -312,7 +313,7 @@ export default function FilterModal({ visible, onClose, onApply, currentFilters,
                   <View style={styles.brandDropdownBody}>
                     <View style={[styles.brandSearchInputWrap, { backgroundColor: C.background, borderColor: C.border, flexDirection: rtl.flexDirection }]}>
                       <FontAwesome5 name="search" size={12} color={C.textSecondary} />
-                      <TextInput
+                      <AppTextInput
                         style={[styles.brandSearchInput, { color: C.textPrimary, textAlign: rtl.textAlign }]}
                         placeholder={t('filter_search_brand_placeholder', language) || (isEn ? 'Search brand...' : 'ابحث عن ماركة...')}
                         placeholderTextColor={C.textSecondary + '80'}
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.88,
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderBottomWidth: 0,
     overflow: 'hidden'
   },
@@ -516,7 +517,7 @@ const styles = StyleSheet.create({
   bentoSection: {
     padding: 18,
     borderRadius: 22,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 16
   },
   sectionTitleRow: {
@@ -549,7 +550,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   brandDropdownBody: {
     marginTop: 14,
@@ -562,7 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 12,
     gap: 8,
   },

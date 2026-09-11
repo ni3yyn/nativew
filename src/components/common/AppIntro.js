@@ -16,32 +16,36 @@ const { width, height } = Dimensions.get('window');
 // 🔴 DEBUG FLAG: Set to 'false' for production
 const ALWAYS_SHOW_INTRO_DEBUG = false;
 
-// --- THEME ---
+// --- THEME (Wathiq Light) ---
 const COLORS = {
-    background: '#1A2D27',
-    card: '#253D34',
-    border: 'rgba(90, 156, 132, 0.25)',
-    textDim: '#6B7C76',
-    accentGreen: '#5A9C84',
-    accentGlow: 'rgba(90, 156, 132, 0.4)',
-    primary: '#A3E4D7',
-    textPrimary: '#F1F3F2',
-    textSecondary: '#A3B1AC',
-    textOnAccent: '#1A2D27',
-    danger: '#ef4444',
-    warning: '#f59e0b',
-    info: '#3b82f6',
-    success: '#22c55e',
-    gold: '#fbbf24'
+    background: '#F0F5F0',
+    card: '#F5FAF5',
+    border: 'rgba(39, 103, 81, 0.15)',
+    textDim: '#7A9A8A',
+    accentGreen: '#3D9275',
+    accentGlow: 'rgba(61, 146, 117, 0.20)',
+    primary: '#3F8F78',
+    textPrimary: '#18352D',
+    textSecondary: '#4A6B5F',
+    textOnAccent: '#F0F5F0',
+    danger: '#D94A4F',
+    warning: '#CC8A1A',
+    info: '#3F7FB8',
+    success: '#1C9A66',
+    gold: '#BF8F20',
+    surfaceSoft: '#EAF3EA',
+    surfaceGreen: '#DCEFE5',
+    activeBackground: '#D4ECE0',
+    divider: '#DCE8E0',
 };
 
 // --- 1. DATA ---
 const SLIDES = [
-    { id: 'slide1', icon: "shield-alt", color: COLORS.accentGreen, bgGradient: [COLORS.background, '#064E3B'] },
-    { id: 'slide2', icon: "search-plus", color: COLORS.gold, bgGradient: [COLORS.background, '#14532D'] },
-    { id: 'slide3', icon: "flask", color: COLORS.primary, bgGradient: [COLORS.background, '#065F46'] },
-    { id: 'slide4', icon: "users", color: '#6EE7B7', bgGradient: [COLORS.background, '#047857'] },
-    { id: 'slide5', icon: "balance-scale", color: COLORS.textPrimary, bgGradient: [COLORS.background, '#111827'] }
+    { id: 'slide1', icon: "shield-alt", color: COLORS.accentGreen, bgGradient: [COLORS.background, '#DCEFE5'] },
+    { id: 'slide2', icon: "search-plus", color: COLORS.gold, bgGradient: [COLORS.background, '#F7F2E2'] },
+    { id: 'slide3', icon: "flask", color: COLORS.primary, bgGradient: [COLORS.background, '#D8EFE4'] },
+    { id: 'slide4', icon: "users", color: '#277D64', bgGradient: [COLORS.background, '#D4ECE0'] },
+    { id: 'slide5', icon: "balance-scale", color: COLORS.textPrimary, bgGradient: [COLORS.background, '#DCE8E0'] }
 ];
 
 const getSlideContent = (id, language) => ({
@@ -84,7 +88,7 @@ const Particle = ({ delay, duration, startX, size, color }) => {
             Animated.sequence([
                 Animated.delay(delay),
                 Animated.parallel([
-                    Animated.timing(opacity, { toValue: 0.3, duration: 1000, useNativeDriver: true }),
+                    Animated.timing(opacity, { toValue: 0.25, duration: 1000, useNativeDriver: true }),
                     Animated.timing(animY, {
                         toValue: -height * 1.2,
                         duration: duration,
@@ -129,7 +133,7 @@ const SwipeHint = ({ language }) => {
     return (
         <View style={styles.swipeHintContainer}>
             <Animated.View style={{ transform: [{ translateX }], opacity }}>
-                <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color="rgba(255,255,255,0.6)" />
+                <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color={COLORS.textDim} />
             </Animated.View>
             <Text style={styles.swipeText}>{t('intro_swipe_hint', language)}</Text>
         </View>
@@ -139,7 +143,7 @@ const SwipeHint = ({ language }) => {
 const CustomSwitch = ({ value, onToggle, activeColor, language }) => (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={styles.switchContainer}>
         <View style={[styles.checkboxBase, value && { borderColor: activeColor, backgroundColor: activeColor }]}>
-            {value && <Ionicons name="checkmark" size={12} color="#000" />}
+            {value && <Ionicons name="checkmark" size={12} color={COLORS.textOnAccent} />}
         </View>
         <Text style={styles.switchText}>{t('intro_dont_show', language)}</Text>
     </TouchableOpacity>
@@ -217,19 +221,19 @@ const AppIntro = ({ visible, onClose }) => {
             <View style={{ width, alignItems: 'center', paddingHorizontal: 30 }}>
                 {/* Visual */}
                 <View style={styles.visualContainer}>
-                    <Animated.View style={[styles.orbitRing, { borderColor: 'rgba(255,255,255,0.08)', transform: [{ rotate: spin }, { scale }] }]}>
+                    <Animated.View style={[styles.orbitRing, { borderColor: 'rgba(39, 103, 81, 0.12)', transform: [{ rotate: spin }, { scale }] }]}>
                         <View style={[styles.orbitDot, { top: -4, backgroundColor: item.color }]} />
                         <View style={[styles.orbitDot, { bottom: -4, backgroundColor: item.color }]} />
                     </Animated.View>
 
-                    <Animated.View style={[styles.orbitRing, { width: 220, height: 220, borderRadius: 110, borderColor: 'rgba(255,255,255,0.15)', transform: [{ rotate: reverseSpin }, { scale }] }]}>
+                    <Animated.View style={[styles.orbitRing, { width: 220, height: 220, borderRadius: 110, borderColor: 'rgba(39, 103, 81, 0.20)', transform: [{ rotate: reverseSpin }, { scale }] }]}>
                         <View style={[styles.orbitDot, { left: -4, backgroundColor: item.color }]} />
                     </Animated.View>
 
                     <Animated.View style={[
                         styles.iconCore,
                         {
-                            backgroundColor: item.color + '15',
+                            backgroundColor: COLORS.card,
                             borderColor: item.color,
                             transform: [{ scale }]
                         }
@@ -240,7 +244,7 @@ const AppIntro = ({ visible, onClose }) => {
 
                 {/* Text */}
                 <Animated.View style={[styles.textWrapper, { transform: [{ translateX }], opacity }]}>
-                    <View style={[styles.subtitleBadge, { borderColor: item.color + '40', backgroundColor: item.color + '10' }]}>
+                    <View style={[styles.subtitleBadge, { borderColor: item.color + '40', backgroundColor: item.color + '15' }]}>
                         <Text style={[styles.subtitle, { color: item.color }]}>{slideContent.subtitle}</Text>
                     </View>
                     <Text style={styles.title}>{slideContent.title}</Text>
@@ -275,7 +279,7 @@ const AppIntro = ({ visible, onClose }) => {
     return (
         <Modal visible={true} transparent animationType="fade" statusBarTranslucent>
             <View style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
                 {/* Backgrounds */}
                 <AnimatedBackground scrollX={scrollX} />
@@ -360,7 +364,6 @@ const AppIntro = ({ visible, onClose }) => {
                                 ]} pointerEvents={currentIndex === lastIndex ? 'auto' : 'none'}>
                                     <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.9}>
                                         <LinearGradient colors={[COLORS.primary, COLORS.accentGreen]} style={styles.startBtnGradient}>
-                                            {/* Fixed: Removed extra whitespace that caused crashes */}
                                             <Text style={[styles.startBtnText, { color: COLORS.textOnAccent }]}>{t('intro_finish', language)}</Text>
                                             <Ionicons name="rocket-outline" size={24} color={COLORS.textOnAccent} />
                                         </LinearGradient>
@@ -382,7 +385,7 @@ const styles = StyleSheet.create({
     },
     noiseOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: 'rgba(0,0,0,0.02)',
     },
     header: {
         flexDirection: 'row',
@@ -392,10 +395,15 @@ const styles = StyleSheet.create({
     skipBtn: {
         paddingVertical: 8,
         paddingHorizontal: 16,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: COLORS.card,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: COLORS.border,
+        shadowColor: COLORS.textPrimary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
     },
     skipText: {
         fontFamily: 'Tajawal-Bold',
@@ -423,24 +431,25 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        shadowColor: "#FFF",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: 8,
+        shadowColor: COLORS.textPrimary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
     },
     iconCore: {
         width: 130,
         height: 130,
         borderRadius: 65,
-        backgroundColor: 'rgba(26, 45, 39, 0.9)',
+        backgroundColor: COLORS.card,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.1)',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.6,
-        shadowRadius: 30,
-        elevation: 25,
+        borderColor: COLORS.border,
+        shadowColor: COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 8,
     },
     textWrapper: {
         alignItems: 'center',
@@ -467,14 +476,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 15,
         lineHeight: 40,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 10,
     },
     divider: {
         width: 60,
         height: 4,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: COLORS.divider,
         borderRadius: 2,
         marginBottom: 20,
     },
@@ -500,7 +506,7 @@ const styles = StyleSheet.create({
         height: 6,
         width: 6,
         borderRadius: 3,
-        backgroundColor: '#FFF',
+        backgroundColor: COLORS.accentGreen,
     },
     controlsContainer: {
         width: '100%',
@@ -556,10 +562,10 @@ const styles = StyleSheet.create({
     startBtn: {
         borderRadius: 30,
         shadowColor: COLORS.accentGreen,
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 15,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+        elevation: 6,
     },
     startBtnGradient: {
         flexDirection: 'row-reverse',

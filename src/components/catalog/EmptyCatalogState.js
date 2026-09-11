@@ -28,7 +28,7 @@ const EmptyCatalogState = () => {
 
 const styles = StyleSheet.create({
     emptyContainer: { flex: 1, minHeight: 320, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, paddingVertical: 24 },
-    emptyIconBox: { width: 80, height: 80, borderRadius: 40, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+    emptyIconBox: { width: 80, height: 80, borderRadius: 40, borderWidth: 0.5, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
     emptyTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, marginBottom: 8 },
     emptySub: { fontFamily: 'Tajawal-Regular', fontSize: 14, textAlign: 'center', marginBottom: 25, lineHeight: 22 },
     addMissingBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 15, elevation: 5 },

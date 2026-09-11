@@ -25,8 +25,13 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 8000) => {
     }
 };
 
+let _memoryCatalogCache = null;
+
 export const CatalogService = {
   async fetchCatalog(forceUpdate = false) {
+    if (!forceUpdate && _memoryCatalogCache && Array.isArray(_memoryCatalogCache) && _memoryCatalogCache.length > 0) {
+      return _memoryCatalogCache;
+    }
     try {
       const dbInfo = await FileSystem.getInfoAsync(LOCAL_PATH);
       const etagInfo = await FileSystem.getInfoAsync(ETAG_PATH);
@@ -84,9 +89,16 @@ export const CatalogService = {
 
   // Helper: Safely reads the local cache and handles JSON corruption
   async readLocalCache() {
+    if (_memoryCatalogCache && Array.isArray(_memoryCatalogCache) && _memoryCatalogCache.length > 0) {
+      return _memoryCatalogCache;
+    }
     try {
       const localContent = await FileSystem.readAsStringAsync(LOCAL_PATH);
-      return JSON.parse(localContent);
+      const data = JSON.parse(localContent);
+      if (Array.isArray(data)) {
+        _memoryCatalogCache = data;
+      }
+      return data;
     } catch (parseError) {
       console.error("❌ Corrupted cache detected. Cleaning up...");
       await FileSystem.deleteAsync(LOCAL_PATH, { idempotent: true });

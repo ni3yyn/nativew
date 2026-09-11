@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+// --- START OF FILE ImageCropperModal.js ---
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,9 +14,12 @@ import {
   Platform,
   StatusBar,
   Image as RNImage,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../context/ThemeContext';
 import { t } from '../../i18n';
 import Slider from '@react-native-community/slider';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,13 +33,16 @@ const FOOTER_HEIGHT = 160;
 const WORKSPACE_HEIGHT = SCREEN_HEIGHT - FOOTER_HEIGHT - HEADER_HEIGHT;
 const MIN_CROP_SIZE = 60;
 
-const COLORS = {
-  bg: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.85)',
-  accent: '#10B981',
-  text: '#FFFFFF',
-  textDim: '#9CA3AF',
-  danger: '#EF4444'
+const DEFAULT_COLORS = {
+  background: '#1A2D27',
+  card: '#253D34',
+  border: 'rgba(90, 156, 132, 0.25)',
+  accentGreen: '#5A9C84',
+  textPrimary: '#F1F3F2',
+  textSecondary: '#A8B8B3',
+  textDim: '#82948E',
+  danger: '#EF4444',
+  textOnAccent: '#1A2D27',
 };
 
 const ASPECT_RATIOS = (lang) => [
@@ -45,7 +53,12 @@ const ASPECT_RATIOS = (lang) => [
 ];
 
 const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => {
+  const { colors } = useTheme();
+  const COLORS = colors || DEFAULT_COLORS;
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const language = useCurrentLanguage();
+  
   // --- STATE ---
   const [displayUri, setDisplayUri] = useState(null);
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
@@ -69,11 +82,35 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
   }, [maskRect]);
 
   // Animated Values
+  const modalAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   // Ref to store start position during drag
   const dragStartMaskRect = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
+  // --- MODAL PHYSICS ---
+  useEffect(() => {
+    if (isVisible) {
+      Animated.spring(modalAnim, {
+        toValue: 1,
+        friction: 9,
+        tension: 50,
+        useNativeDriver: true
+      }).start();
+    }
+  }, [isVisible]);
+
+  const handleClose = () => {
+    Animated.timing(modalAnim, {
+      toValue: 0,
+      duration: 250,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true
+    }).start(({ finished }) => {
+      if (finished) onClose();
+    });
+  };
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -136,14 +173,12 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
   };
 
   const calculateViewSize = (w, h) => {
-    // 1. Calculate how big the image will be on screen
     const scaleFactor = Math.min(SCREEN_WIDTH / w, WORKSPACE_HEIGHT / h);
     const displayedWidth = w * scaleFactor;
     const displayedHeight = h * scaleFactor;
 
     setViewSize({ width: displayedWidth, height: displayedHeight });
 
-    // 2. Initialize Mask to COVER THE WHOLE IMAGE (Centered)
     const initialX = (SCREEN_WIDTH - displayedWidth) / 2;
     const initialY = (WORKSPACE_HEIGHT - displayedHeight) / 2;
 
@@ -163,7 +198,6 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        // CRITICAL FIX: Grab the value from the REF, not the state closure
         dragStartMaskRect.current = { ...maskRectRef.current };
         Haptics.selectionAsync();
       },
@@ -302,36 +336,25 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
       const centerX = SCREEN_WIDTH / 2;
       const centerY = WORKSPACE_HEIGHT / 2;
 
-      // FIX 1: Use __getValue() to get the total position (offset + current value)
-      // This ensures we get the position even if the animation hasn't settled
       const currentPanX = panAnim.x.__getValue();
       const currentPanY = panAnim.y.__getValue();
 
-      // Calculate where the image is currently drawn on screen
       const visualImageX = centerX + currentPanX - (viewSize.width * scale) / 2;
       const visualImageY = centerY + currentPanY - (viewSize.height * scale) / 2;
 
-      // Calculate the difference between the Crop Box (mask) and the Image Edge
       const deltaX = maskRect.x - visualImageX;
       const deltaY = maskRect.y - visualImageY;
 
-      // Ratio converts "Screen Pixels" to "Image Pixels"
       const ratio = originalSize.width / viewSize.width;
 
-      // FIX 2: ROUNDING
-      // ImageManipulator requires integers. Floats cause "out of bounds" errors 
-      // which result in the library returning the original image.
       let cropX = Math.round((deltaX / scale) * ratio);
       let cropY = Math.round((deltaY / scale) * ratio);
       let cropW = Math.round((maskRect.width / scale) * ratio);
       let cropH = Math.round((maskRect.height / scale) * ratio);
 
-      // FIX 3: BOUNDARY CLAMPING
-      // Ensure we don't accidentally ask for pixels outside the image
       cropX = Math.max(0, cropX);
       cropY = Math.max(0, cropY);
 
-      // If rounding pushed the width over the edge, clamp it
       if (cropX + cropW > originalSize.width) {
         cropW = originalSize.width - cropX;
       }
@@ -339,16 +362,9 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
         cropH = originalSize.height - cropY;
       }
 
-      // FIX 4: ACTION ORDER
-      // We must Flip BEFORE Cropping. 
-      // Since you are calculating coordinates based on what you see (the flipped version),
-      // we must make the source image match that visual state before applying the crop rect.
       const actions = [];
-
       if (isFlippedH) actions.push({ flip: ImageManipulator.FlipType.Horizontal });
       if (isFlippedV) actions.push({ flip: ImageManipulator.FlipType.Vertical });
-
-      // Add crop action last
       actions.push({ crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } });
 
       const result = await ImageManipulator.manipulateAsync(
@@ -357,20 +373,39 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
         { format: ImageManipulator.SaveFormat.JPEG, compress: 0.95 }
       );
 
-      onCropComplete(result);
+      // Trigger the slide out animation, then pass result
+      Animated.timing(modalAnim, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true
+      }).start(() => {
+        onCropComplete(result);
+      });
+      
     } catch (err) {
       console.error(err);
-    } finally {
       setIsProcessing(false);
     }
   };
 
   if (!isVisible) return null;
 
+  const modalTranslateY = modalAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT, 0]
+  });
+
   return (
-    <Modal visible={isVisible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#111" />
+    <Modal visible={isVisible} animationType="none" transparent={true} onRequestClose={handleClose} statusBarTranslucent>
+      <Animated.View style={[styles.container, { transform: [{ translateY: modalTranslateY }] }]}>
+        <LinearGradient
+          colors={[COLORS.background, COLORS.card]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
         <SafeAreaView style={styles.header}>
           <View style={styles.ratioList}>
@@ -383,7 +418,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
                   setCurrentRatio(item.value);
                 }}
               >
-                <MaterialIcons name={item.icon} size={16} color={currentRatio === item.value ? '#000' : '#FFF'} />
+                <MaterialIcons name={item.icon} size={16} color={currentRatio === item.value ? COLORS.textOnAccent : COLORS.textPrimary} />
                 <Text style={[styles.ratioText, currentRatio === item.value && styles.ratioTextActive]}>
                   {item.label}
                 </Text>
@@ -425,22 +460,15 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
           </View>
 
           {/* LAYER 2: DIMMED OVERLAY BLOCKS */}
-          {/* These blocks cover everything OUTSIDE the maskRect */}
           <View style={styles.overlayLayer} pointerEvents="none">
-            {/* Top Block */}
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: maskRect.y, backgroundColor: COLORS.overlay }} />
-            {/* Bottom Block */}
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, top: maskRect.y + maskRect.height, backgroundColor: COLORS.overlay }} />
-            {/* Left Block */}
-            <View style={{ position: 'absolute', top: maskRect.y, left: 0, width: maskRect.x, height: maskRect.height, backgroundColor: COLORS.overlay }} />
-            {/* Right Block */}
-            <View style={{ position: 'absolute', top: maskRect.y, right: 0, width: SCREEN_WIDTH - maskRect.x - maskRect.width, height: maskRect.height, backgroundColor: COLORS.overlay }} />
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: maskRect.y, backgroundColor: COLORS.background + 'D9' }} />
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, top: maskRect.y + maskRect.height, backgroundColor: COLORS.background + 'D9' }} />
+            <View style={{ position: 'absolute', top: maskRect.y, left: 0, width: maskRect.x, height: maskRect.height, backgroundColor: COLORS.background + 'D9' }} />
+            <View style={{ position: 'absolute', top: maskRect.y, right: 0, width: SCREEN_WIDTH - maskRect.x - maskRect.width, height: maskRect.height, backgroundColor: COLORS.background + 'D9' }} />
           </View>
 
           {/* LAYER 3: INTERACTIVE HANDLES */}
           <View style={styles.interactionLayer} pointerEvents="box-none">
-
-            {/* The Border of the Crop Box */}
             <View
               style={[
                 styles.maskWindow,
@@ -451,14 +479,12 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
               <View style={styles.gridV} />
               <View style={styles.gridH} />
 
-              {/* Visual Corners (Always visible on the box) */}
               <View style={[styles.cornerVis, { top: -2, left: -2, borderBottomWidth: 0, borderRightWidth: 0 }]} />
               <View style={[styles.cornerVis, { top: -2, right: -2, borderBottomWidth: 0, borderLeftWidth: 0 }]} />
               <View style={[styles.cornerVis, { bottom: -2, left: -2, borderTopWidth: 0, borderRightWidth: 0 }]} />
               <View style={[styles.cornerVis, { bottom: -2, right: -2, borderTopWidth: 0, borderLeftWidth: 0 }]} />
             </View>
 
-            {/* The Touchable Handles - Only visible in Free mode */}
             {currentRatio === null && (
               <>
                 <View {...tlResponder.panHandlers} style={[styles.handleHitBox, { left: maskRect.x - 25, top: maskRect.y - 25 }]} />
@@ -471,7 +497,7 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
 
           {isProcessing && (
             <View style={styles.loading}>
-              <ActivityIndicator size="large" color={COLORS.accent} />
+              <ActivityIndicator size="large" color={COLORS.accentGreen} />
             </View>
           )}
         </View>
@@ -485,71 +511,71 @@ const ImageCropperModal = ({ isVisible, imageUri, onClose, onCropComplete }) => 
               minimumValue={1}
               maximumValue={4}
               value={scale}
-              minimumTrackTintColor={COLORS.accent}
-              maximumTrackTintColor="#333"
-              thumbTintColor={COLORS.text}
+              minimumTrackTintColor={COLORS.accentGreen}
+              maximumTrackTintColor={COLORS.border}
+              thumbTintColor={COLORS.textPrimary}
               onValueChange={(val) => { setScale(val); scaleAnim.setValue(val); }}
             />
             <Ionicons name="add" size={24} color={COLORS.textDim} />
           </View>
 
           <View style={styles.toolBar}>
-            <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+            <TouchableOpacity onPress={handleClose} style={styles.iconBtn}>
               <Ionicons name="close" size={28} color={COLORS.danger} />
             </TouchableOpacity>
 
             <View style={styles.editTools}>
               <TouchableOpacity onPress={() => handleFlip('H')} style={styles.toolBtn}>
-                <MaterialCommunityIcons name="flip-horizontal" size={24} color={isFlippedH ? COLORS.accent : COLORS.text} />
+                <MaterialCommunityIcons name="flip-horizontal" size={24} color={isFlippedH ? COLORS.accentGreen : COLORS.textPrimary} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleFlip('V')} style={styles.toolBtn}>
-                <MaterialCommunityIcons name="flip-vertical" size={24} color={isFlippedV ? COLORS.accent : COLORS.text} />
+                <MaterialCommunityIcons name="flip-vertical" size={24} color={isFlippedV ? COLORS.accentGreen : COLORS.textPrimary} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleRotate90} style={styles.toolBtn}>
-                <MaterialIcons name="rotate-right" size={24} color={COLORS.text} />
+                <MaterialIcons name="rotate-right" size={24} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity onPress={performCrop} style={styles.mainBtn}>
-              <Ionicons name="checkmark" size={32} color="#000" />
+              <Ionicons name="checkmark" size={32} color={COLORS.textOnAccent} />
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+const createStyles = (COLORS) => StyleSheet.create({
+  container: { flex: 1 },
   header: {
     height: HEADER_HEIGHT + (Platform.OS === 'android' ? 20 : 0),
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 15, backgroundColor: '#111', zIndex: 20
+    paddingHorizontal: 15, zIndex: 20
   },
   ratioList: { flexDirection: 'row', gap: 8 },
-  ratioBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, paddingHorizontal: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
-  ratioBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  ratioText: { color: COLORS.text, fontSize: 11, marginLeft: 4, fontWeight: '600' },
-  ratioTextActive: { color: '#000' },
+  ratioBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, paddingHorizontal: 8, borderRadius: 20, borderWidth: 0.5, borderColor: COLORS.border, backgroundColor: COLORS.card },
+  ratioBtnActive: { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen },
+  ratioText: { color: COLORS.textPrimary, fontSize: 11, marginLeft: 4, fontFamily: 'Tajawal-Bold' },
+  ratioTextActive: { color: COLORS.textOnAccent },
   resetBtn: { padding: 5 },
-  resetText: { color: COLORS.textDim, fontSize: 12, textTransform: 'uppercase' },
+  resetText: { color: COLORS.textDim, fontSize: 12, fontFamily: 'Tajawal-Bold', textTransform: 'uppercase' },
 
   // --- LAYOUT ---
   workspaceContainer: {
     width: SCREEN_WIDTH,
     height: WORKSPACE_HEIGHT,
-    backgroundColor: '#000',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center'
   },
   instructionContainer: {
     position: 'absolute', top: 20, zIndex: 50,
-    backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20
+    backgroundColor: COLORS.card + 'D9', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 0.5, borderColor: COLORS.border
   },
   instructionText: {
-    color: COLORS.accent, fontWeight: 'bold', fontSize: 16
+    color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 14
   },
 
   imageLayer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
@@ -558,7 +584,7 @@ const styles = StyleSheet.create({
 
   maskWindow: {
     position: 'absolute',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.5)',
   },
   handleHitBox: {
@@ -568,23 +594,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    // backgroundColor: 'rgba(255,0,0,0.3)' // Uncomment to see touch targets
   },
   cornerVis: {
     width: 20,
     height: 20,
-    borderColor: COLORS.accent,
+    borderColor: COLORS.accentGreen,
     borderWidth: 3,
     position: 'absolute'
   },
 
   gridV: { position: 'absolute', top: 0, bottom: 0, left: '33.33%', width: '33.33%', borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   gridH: { position: 'absolute', left: 0, right: 0, top: '33.33%', height: '33.33%', borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  loading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 99 },
+  loading: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.background + 'B3', justifyContent: 'center', alignItems: 'center', zIndex: 99 },
 
   footer: {
     height: FOOTER_HEIGHT,
-    backgroundColor: '#111',
+    backgroundColor: 'transparent',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -593,13 +618,13 @@ const styles = StyleSheet.create({
   sliderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   toolBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   editTools: { flexDirection: 'row', gap: 15 },
-  toolBtn: { padding: 10, backgroundColor: '#222', borderRadius: 12 },
-  iconBtn: { padding: 12, backgroundColor: '#222', borderRadius: 30 },
+  toolBtn: { padding: 10, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.border },
+  iconBtn: { padding: 12, backgroundColor: COLORS.card, borderRadius: 30, borderWidth: 0.5, borderColor: COLORS.border },
   mainBtn: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentGreen,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: COLORS.accent, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5
+    shadowColor: COLORS.accentGreen, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5
   }
 });
 

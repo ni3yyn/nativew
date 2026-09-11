@@ -311,8 +311,8 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
         if (visible) {
             Animated.spring(animState, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true,
             }).start();
         }
@@ -321,8 +321,8 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
     const handleClose = () => {
         Animated.timing(animState, {
             toValue: 0,
-            duration: 300,
-            easing: Easing.inOut(Easing.ease),
+            duration: 250,
+            easing: Easing.in(Easing.ease),
             useNativeDriver: true,
         }).start(() => {
             onClose();
@@ -548,7 +548,7 @@ export const VerifiedDetailModal = ({ visible, onClose, item }) => {
 
 const createStyles = (COLORS) => StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(5, 10, 15, 0.85)', justifyContent: 'flex-end' },
-    sheet: { backgroundColor: COLORS.background, height: height * 0.94, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+    sheet: { backgroundColor: COLORS.background, height: height * 0.94, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 0.5, borderColor: COLORS.border, overflow: 'hidden' },
     dragHandle: { width: 55, height: 6, backgroundColor: COLORS.textDim + '40', alignSelf: 'center', borderRadius: 10, marginVertical: 14 },
     scrollContent: { paddingHorizontal: 12 },
 
@@ -558,7 +558,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         alignItems: 'center',
         gap: 10,
         backgroundColor: '#FFB84C1A',
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: '#FFB84C55',
         borderRadius: 16,
         paddingHorizontal: 14,
@@ -590,7 +590,7 @@ const createStyles = (COLORS) => StyleSheet.create({
 
     // Stats Grid
     statsGrid: { flexDirection: 'row-reverse', gap: 10, marginBottom: 16 },
-    statGlassCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', padding: 14, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+    statGlassCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', padding: 14, borderRadius: 20, borderWidth: 0.5, borderColor: COLORS.border },
     statIconCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
     statLabel: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 12, marginBottom: 4 },
     statValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, marginBottom: 8 },
@@ -604,7 +604,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     reasonText: { fontFamily: 'Tajawal-Regular', color: COLORS.textPrimary, fontSize: 14, textAlign: 'right', flex: 1, lineHeight: 21 },
 
     // Sections General
-    sectionCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 24, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
+    sectionCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 24, padding: 16, marginBottom: 16, borderWidth: 0.5, borderColor: COLORS.border },
     sectionHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
     sectionTitle: { fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, fontSize: 17 },
     sectionSubtitle: { fontFamily: 'Tajawal-Regular', color: COLORS.textSecondary, fontSize: 12 },

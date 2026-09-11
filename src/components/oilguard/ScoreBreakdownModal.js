@@ -129,19 +129,19 @@ const ScoreBreakdownModal = ({ visible, onClose, data, analysis }) => {
 
     useEffect(() => {
         if (visible) {
-            Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
+            Animated.spring(animController, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }).start();
             Haptics.selectionAsync();
         }
     }, [visible]);
 
     const handleClose = () => {
-        Animated.timing(animController, { toValue: 0, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+        Animated.timing(animController, { toValue: 0, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true })
             .start(({ finished }) => { if (finished) onClose(); });
     };
 
     if (!data) return null;
 
-    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height + 150, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
     return (
@@ -187,7 +187,7 @@ const ScoreBreakdownModal = ({ visible, onClose, data, analysis }) => {
                                 return (
                                     <View key={index} style={[
                                         styles.itemRow,
-                                        style.border && { borderColor: style.color, borderWidth: 1, backgroundColor: 'transparent' }
+                                        style.border && { borderColor: style.color, borderWidth: 0.5, backgroundColor: 'transparent' }
                                     ]}>
 
                                         {/* Value (Left) */}
@@ -380,8 +380,8 @@ const ScoreBreakdownModal = ({ visible, onClose, data, analysis }) => {
 const createStyles = (COLORS) => StyleSheet.create({
     // --- Layout ---
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1 },
-    sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '82%', zIndex: 2 },
-    sheetContent: { flex: 1, backgroundColor: COLORS.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+    sheetContainer: { position: 'absolute', bottom: -150, left: 0, right: 0, height: height * 0.82 + 150, zIndex: 2 },
+    sheetContent: { flex: 1, backgroundColor: COLORS.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden', paddingBottom: 150 },
     sheetHandleBar: { alignItems: 'center', paddingVertical: 15, width: '100%', zIndex: 10, backgroundColor: COLORS.card },
     sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 10 },
     scrollContent: { paddingHorizontal: 24, paddingBottom: 50 },
@@ -389,12 +389,12 @@ const createStyles = (COLORS) => StyleSheet.create({
 
     // --- Header ---
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: COLORS.border },
     title: { fontFamily: 'Tajawal-Bold', fontSize: 20, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 4 },
     subtitle: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'right' },
 
     // --- Rows ---
-    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 12, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },
+    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 12, borderRadius: 16, marginBottom: 10, borderWidth: 0.5, borderColor: 'transparent' },
 
     // Icon (Right side in RTL)
     iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 12 },
@@ -418,14 +418,14 @@ const createStyles = (COLORS) => StyleSheet.create({
     // --- Detailed analysis cards ---
     sectionHeaderRow: { flexDirection: 'row-reverse', alignItems: 'center', marginTop: 20, marginBottom: 10 },
     sectionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: COLORS.textPrimary },
-    detailBox: { borderLeftWidth: 3, padding: 14, borderRadius: 16, borderStyle: 'solid', borderWidth: 1, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', backgroundColor: 'rgba(255, 255, 255, 0.03)' },
+    detailBox: { borderLeftWidth: 3, padding: 14, borderRadius: 16, borderStyle: 'solid', borderWidth: 0.5, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', backgroundColor: 'rgba(255, 255, 255, 0.03)' },
     detailHeading: { fontFamily: 'Tajawal-Bold', fontSize: 13 },
     scoreValue: { fontFamily: 'Tajawal-ExtraBold', fontSize: 15 },
     detailText: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textPrimary, textAlign: 'right', lineHeight: 20 },
     detailSubtext: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textDim, textAlign: 'right', lineHeight: 18 },
 
     synergyList: { gap: 10 },
-    synergyCard: { borderLeftWidth: 3, borderWidth: 1, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', padding: 12, borderRadius: 16, marginTop: 5 },
+    synergyCard: { borderLeftWidth: 3, borderWidth: 0.5, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', padding: 12, borderRadius: 16, marginTop: 5 },
     synergyName: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
     synergyExplanation: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'right', lineHeight: 18 },
 });

@@ -155,7 +155,7 @@ const StaggeredView = ({ children, index }) => {
     );
 };
 
-export default function CatalogDetailModal({ visible, onClose, product, onContribute }) {
+export default function CatalogDetailModal({ visible, onClose, product, onContribute, onSelectBrand }) {
   const { colors: C } = useTheme();
   const { user, userProfile, savedProducts } = useAppContext();
   const rtl = useRTL();
@@ -289,8 +289,8 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
     if (visible) {
       Animated.spring(animState, {
         toValue: 1,
-        friction: 8,
-        tension: 40,
+        friction: 9,
+        tension: 50,
         useNativeDriver: true,
       }).start();
     }
@@ -299,8 +299,8 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
   const handleClose = () => {
     Animated.timing(animState, {
       toValue: 0,
-      duration: 300,
-      easing: Easing.inOut(Easing.ease),
+      duration: 250,
+      easing: Easing.in(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
       onClose();
@@ -449,12 +449,16 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                       </Text>
                     </TouchableOpacity>
                     
-                    <View style={[styles.microChip, { backgroundColor: C.accentGreen + '1A', borderColor: C.accentGreen + '40', borderWidth: 1, flexDirection: rtl.flexDirection }]}>
+                    <TouchableOpacity 
+                      onPress={() => executeBounty('category')} 
+                      activeOpacity={0.8}
+                      style={[styles.microChip, { backgroundColor: C.accentGreen + '1A', borderColor: C.accentGreen + '40', borderWidth: 0.5, flexDirection: rtl.flexDirection }]}
+                    >
                       <Text style={[styles.microChipText, { color: C.accentGreen, textAlign: rtl.textAlign }]}>
-                        {product.category?.label}
+                        {product.category?.label || (typeof product.category === 'string' ? product.category : null) || t('bounty_title_category', lang)}
                       </Text>
                       <FontAwesome5 name={product.category?.icon || 'box'} size={12} color={C.accentGreen} />
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   <View style={[styles.titleReadout, { alignItems: rtl.isRTL ? 'flex-end' : 'flex-start' }]}>
@@ -464,12 +468,16 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                         if (!product.brand) return;
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         handleClose();
-                        setTimeout(() => {
-                          router.push({
-                            pathname: '/CatalogScreen',
-                            params: { search: product.brand }
-                          });
-                        }, 300);
+                        if (onSelectBrand) {
+                          onSelectBrand(product.brand);
+                        } else {
+                          setTimeout(() => {
+                            router.push({
+                              pathname: '/CatalogScreen',
+                              params: { search: product.brand }
+                            });
+                          }, 300);
+                        }
                       }}
                       style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, marginBottom: 4 }}
                     >
@@ -791,7 +799,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginTop: 10,
     elevation: 4,
     shadowColor: '#000',
@@ -842,7 +850,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 28,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginTop: -20,
     marginBottom: 15,
     zIndex: 5,
@@ -890,7 +898,7 @@ const styles = StyleSheet.create({
   statTile: {
     padding: 18,
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: 0.5,
     minHeight: 110,
     justifyContent: 'space-between',
   },
@@ -961,7 +969,7 @@ const styles = StyleSheet.create({
   unifiedClaimsBoard: {
     borderRadius: 32,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 15,
   },
   hrDivLine: {
@@ -982,7 +990,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -999,7 +1007,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     gap: 6,
   },
   coloredPillText: {
@@ -1010,7 +1018,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   stealthPillText: {
     fontFamily: 'Tajawal-Bold',
@@ -1021,7 +1029,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 16,
     borderStyle: 'dashed',
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   hollowTriggerText: {
     fontFamily: 'Tajawal-Bold',
@@ -1030,7 +1038,7 @@ const styles = StyleSheet.create({
   bentoLabCard: {
     padding: 20,
     borderRadius: 32,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 15,
   },
   scienceIndicator: {
@@ -1110,7 +1118,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   btnDisabledOutlines: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderStyle: 'dashed',
   },
   disabledOverlayFill: {

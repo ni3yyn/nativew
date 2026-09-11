@@ -15,37 +15,47 @@ import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 const { width, height } = Dimensions.get('window');
 
-// --- 1. DATA ---
-const SLIDES = [
+// --- 1. THEME-AWARE DATA GENERATOR ---
+const getSlides = (COLORS, isDark) => [
     {
         id: 'welcome',
         icon: "users",
-        color: DEFAULT_COLORS.primary,
-        bgGradient: ['#1A2D27', '#14532D']
+        color: COLORS.primary,
+        bgGradient: isDark
+            ? [COLORS.background, '#14532D']
+            : [COLORS.background, COLORS.surfaceGreen || '#DCEFE5']
     },
     {
         id: 'match',
         icon: "fingerprint",
-        color: DEFAULT_COLORS.blue,
-        bgGradient: ['#1A2D27', '#172554']
+        color: COLORS.blue || '#3F7FB8',
+        bgGradient: isDark
+            ? [COLORS.background, '#172554']
+            : [COLORS.background, '#E0ECF8']
     },
     {
         id: 'review',
         icon: "star",
-        color: DEFAULT_COLORS.accentGreen,
-        bgGradient: ['#1A2D27', '#064E3B']
+        color: COLORS.accentGreen,
+        bgGradient: isDark
+            ? [COLORS.background, '#064E3B']
+            : [COLORS.background, '#D8EFE4']
     },
     {
         id: 'journey',
         icon: "hourglass-half",
-        color: DEFAULT_COLORS.gold,
-        bgGradient: ['#1A2D27', '#451a03']
+        color: COLORS.gold || '#BF8F20',
+        bgGradient: isDark
+            ? [COLORS.background, '#451a03']
+            : [COLORS.background, '#F7F2E2']
     },
     {
         id: 'qa_routine',
         icon: "clipboard-check",
-        color: DEFAULT_COLORS.purple,
-        bgGradient: ['#1A2D27', '#2e1065']
+        color: COLORS.purple || '#6F58B8',
+        bgGradient: isDark
+            ? [COLORS.background, '#2e1065']
+            : [COLORS.background, '#ECE7F8']
     }
 ];
 
@@ -57,10 +67,10 @@ const getSlideContent = (id, language) => ({
 
 // --- 2. COMPONENTS ---
 
-const AnimatedBackground = ({ scrollX }) => {
+const AnimatedBackground = ({ scrollX, slides }) => {
     return (
         <View style={StyleSheet.absoluteFill}>
-            {SLIDES.map((slide, i) => {
+            {slides.map((slide, i) => {
                 const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
                 const opacity = scrollX.interpolate({
                     inputRange,
@@ -82,7 +92,7 @@ const AnimatedBackground = ({ scrollX }) => {
 };
 
 // Continuous Smooth Gesture Animation
-const SwipeHint = ({ language }) => {
+const SwipeHint = ({ language, colors }) => {
     const translateX = useRef(new Animated.Value(20)).current; // Start right
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -113,18 +123,22 @@ const SwipeHint = ({ language }) => {
     return (
         <View style={staticStyles.swipeHintContainer}>
             <Animated.View style={{ transform: [{ translateX }], opacity }}>
-                <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color="rgba(255,255,255,0.6)" />
+                <MaterialCommunityIcons name="gesture-swipe-horizontal" size={40} color={colors.textDim} />
             </Animated.View>
-            <Text style={staticStyles.swipeText}>{t('community_intro_swipe_next', language)}</Text>
+            <Text style={[staticStyles.swipeText, { color: colors.textDim }]}>{t('community_intro_swipe_next', language)}</Text>
         </View>
     );
 };
 
 // --- 3. MAIN COMPONENT ---
 const CommunityIntro = ({ visible, onClose }) => {
-    const { colors } = useTheme();
+    const { theme, colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const isDark = theme ? theme.isDark : false;
+
+    const styles = useMemo(() => createStyles(COLORS, isDark), [COLORS, isDark]);
+    const slides = useMemo(() => getSlides(COLORS, isDark), [COLORS, isDark]);
+
     const language = useCurrentLanguage();
     const scrollX = useRef(new Animated.Value(0)).current;
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -177,23 +191,45 @@ const CommunityIntro = ({ visible, onClose }) => {
                 {/* Central Visual */}
                 <View style={styles.visualContainer}>
                     {/* Orbit Rings */}
-                    <Animated.View style={[styles.orbitRing, { borderColor: 'rgba(255,255,255,0.08)', transform: [{ rotate: spin }, { scale }] }]}>
+                    <Animated.View style={[
+                        styles.orbitRing,
+                        {
+                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : COLORS.border,
+                            transform: [{ rotate: spin }, { scale }]
+                        }
+                    ]}>
                         <View style={[styles.orbitDot, { top: -4, backgroundColor: item.color }]} />
                         <View style={[styles.orbitDot, { bottom: -4, backgroundColor: item.color }]} />
                     </Animated.View>
-                    <Animated.View style={[styles.orbitRing, { width: 200, height: 200, borderRadius: 100, borderColor: 'rgba(255,255,255,0.15)', transform: [{ rotate: reverseSpin }, { scale }] }]}>
+                    <Animated.View style={[
+                        styles.orbitRing,
+                        {
+                            width: 200,
+                            height: 200,
+                            borderRadius: 100,
+                            borderColor: isDark ? 'rgba(255,255,255,0.15)' : COLORS.border,
+                            transform: [{ rotate: reverseSpin }, { scale }]
+                        }
+                    ]}>
                         <View style={[styles.orbitDot, { left: -4, backgroundColor: item.color }]} />
                     </Animated.View>
 
                     {/* Icon */}
-                    <Animated.View style={[styles.iconCore, { backgroundColor: item.color + '20', borderColor: item.color, transform: [{ scale }] }]}>
+                    <Animated.View style={[
+                        styles.iconCore,
+                        {
+                            backgroundColor: isDark ? item.color + '20' : COLORS.card,
+                            borderColor: item.color,
+                            transform: [{ scale }]
+                        }
+                    ]}>
                         <FontAwesome5 name={item.icon} size={50} color={item.color} />
                     </Animated.View>
                 </View>
 
                 {/* Text Content */}
                 <Animated.View style={[styles.textWrapper, { transform: [{ translateX }], opacity }]}>
-                    <View style={[styles.subtitleBadge, { borderColor: item.color + '50', backgroundColor: item.color + '10' }]}>
+                    <View style={[styles.subtitleBadge, { borderColor: item.color + '50', backgroundColor: item.color + '15' }]}>
                         <Text style={[styles.subtitle, { color: item.color }]}>{slideContent.subtitle}</Text>
                     </View>
 
@@ -206,7 +242,7 @@ const CommunityIntro = ({ visible, onClose }) => {
     };
 
     // Calculate opacity for the "Join" button based on scrolling to the last slide
-    const lastIndex = SLIDES.length - 1;
+    const lastIndex = slides.length - 1;
     const buttonOpacity = scrollX.interpolate({
         inputRange: [(lastIndex - 1) * width, lastIndex * width],
         outputRange: [0, 1],
@@ -239,13 +275,13 @@ const CommunityIntro = ({ visible, onClose }) => {
         >
             <View style={styles.container}>
                 <StatusBar
-                    barStyle="light-content"
-                    backgroundColor="rgba(0,0,0,0)" // Force absolute transparency
+                    barStyle={isDark ? "light-content" : "dark-content"}
+                    backgroundColor="transparent"
                     translucent={true}
                 />
 
                 {/* Background */}
-                <AnimatedBackground scrollX={scrollX} />
+                <AnimatedBackground scrollX={scrollX} slides={slides} />
 
                 <SafeAreaView style={{ flex: 1 }}>
                     {/* Header Skip */}
@@ -259,7 +295,7 @@ const CommunityIntro = ({ visible, onClose }) => {
                     <Animated.FlatList
                         horizontal
                         pagingEnabled
-                        data={SLIDES}
+                        data={slides}
                         keyExtractor={item => item.id}
                         renderItem={renderItem}
                         showsHorizontalScrollIndicator={false}
@@ -279,12 +315,11 @@ const CommunityIntro = ({ visible, onClose }) => {
                     {/* Footer */}
                     <View style={styles.footer}>
 
-                        {/* Pagination Dots (Fixed Width Error) */}
+                        {/* Pagination Dots */}
                         <View style={styles.pagination}>
-                            {SLIDES.map((_, index) => {
+                            {slides.map((_, index) => {
                                 const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
-                                // ✅ FIX: Use scaleX instead of width for Native Driver compatibility
                                 const dotScale = scrollX.interpolate({
                                     inputRange,
                                     outputRange: [1, 2.5, 1], // Expands the dot
@@ -314,7 +349,7 @@ const CommunityIntro = ({ visible, onClose }) => {
 
                             {/* 1. Swipe Hint (Fades Out) */}
                             <Animated.View style={[styles.absoluteCenter, { opacity: hintOpacity }]}>
-                                <SwipeHint language={language} />
+                                <SwipeHint language={language} colors={COLORS} />
                             </Animated.View>
 
                             {/* 2. Start Button (Fades In) */}
@@ -331,13 +366,18 @@ const CommunityIntro = ({ visible, onClose }) => {
                                     activeOpacity={0.9}
                                 >
                                     <LinearGradient
-                                        colors={['#FFF', '#E2E8F0']}
+                                        colors={isDark ? ['#FFFFFF', '#E2E8F0'] : [COLORS.primary, COLORS.accentGreen]}
                                         style={styles.startBtnGradient}
                                     >
                                         <Text style={styles.startBtnText}>{t('community_intro_join', language)}</Text>
-                                        <Ionicons name="checkmark-circle" size={24} color="#1A2D27" />
+                                        <Ionicons 
+                                            name="checkmark-circle" 
+                                            size={24} 
+                                            color={isDark ? '#1A2D27' : (COLORS.textOnAccent || '#FFFFFF')} 
+                                        />
                                     </LinearGradient>
                                 </TouchableOpacity>
+
                                 {/* Don't Show Again Toggle */}
                                 <TouchableOpacity
                                     style={styles.dontShowContainer}
@@ -350,7 +390,7 @@ const CommunityIntro = ({ visible, onClose }) => {
                                     <MaterialCommunityIcons
                                         name={dontShowAgain ? "checkbox-marked" : "checkbox-blank-outline"}
                                         size={20}
-                                        color="rgba(255,255,255,0.5)"
+                                        color={dontShowAgain ? COLORS.accentGreen : COLORS.textDim}
                                     />
                                     <Text style={styles.dontShowText}>{t('community_intro_dont_show', language)}</Text>
                                 </TouchableOpacity>
@@ -364,10 +404,10 @@ const CommunityIntro = ({ visible, onClose }) => {
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isDark) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
@@ -375,13 +415,21 @@ const createStyles = (COLORS) => StyleSheet.create({
         padding: 20,
     },
     skipBtn: {
-        padding: 10,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        backgroundColor: COLORS.card,
         borderRadius: 20,
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+        shadowColor: COLORS.textPrimary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: isDark ? 0.3 : 0.05,
+        shadowRadius: 3,
+        elevation: 1,
     },
     skipText: {
         fontFamily: 'Tajawal-Bold',
-        color: 'rgba(255,255,255,0.7)',
+        color: COLORS.textSecondary,
         fontSize: 14,
     },
 
@@ -397,7 +445,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         width: 280,
         height: 280,
         borderRadius: 140,
-        borderWidth: 1,
+        borderWidth: 0.5,
         justifyContent: 'center',
         alignItems: 'center',
         borderStyle: 'dashed'
@@ -407,10 +455,10 @@ const createStyles = (COLORS) => StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        shadowColor: "#FFF",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 10,
+        shadowColor: isDark ? "#FFF" : COLORS.textPrimary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: isDark ? 0.8 : 0.2,
+        shadowRadius: isDark ? 10 : 3,
     },
     iconCore: {
         width: 120,
@@ -419,11 +467,11 @@ const createStyles = (COLORS) => StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 30,
-        elevation: 20,
+        shadowColor: isDark ? "#000" : COLORS.accentGreen,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: isDark ? 0.5 : 0.15,
+        shadowRadius: isDark ? 30 : 15,
+        elevation: isDark ? 20 : 8,
     },
 
     // TEXT
@@ -437,7 +485,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         marginBottom: 20,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     subtitle: {
         fontFamily: 'Tajawal-Bold',
@@ -448,7 +496,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     title: {
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 30,
-        color: '#FFF',
+        color: COLORS.textPrimary,
         textAlign: 'center',
         marginBottom: 15,
         lineHeight: 40
@@ -456,14 +504,14 @@ const createStyles = (COLORS) => StyleSheet.create({
     divider: {
         width: 60,
         height: 4,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: COLORS.divider || COLORS.border,
         borderRadius: 2,
         marginBottom: 20,
     },
     desc: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 16,
-        color: 'rgba(255,255,255,0.85)',
+        color: COLORS.textSecondary,
         textAlign: 'center',
         lineHeight: 26,
     },
@@ -482,9 +530,9 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     dot: {
         height: 8,
-        width: 8, // Base width
+        width: 8,
         borderRadius: 4,
-        backgroundColor: '#FFF',
+        backgroundColor: isDark ? '#FFFFFF' : COLORS.accentGreen,
     },
     actionArea: {
         height: 60,
@@ -507,18 +555,18 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     swipeText: {
         fontFamily: 'Tajawal-Regular',
-        color: 'rgba(255,255,255,0.5)',
+        color: COLORS.textDim,
         fontSize: 12,
     },
 
     // Start Button
     startBtn: {
         borderRadius: 30,
-        shadowColor: "#000",
+        shadowColor: isDark ? "#000000" : COLORS.accentGreen,
         shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
+        shadowOpacity: isDark ? 0.3 : 0.25,
         shadowRadius: 10,
-        elevation: 10,
+        elevation: 8,
     },
     startBtnGradient: {
         flexDirection: 'row-reverse',
@@ -531,7 +579,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     startBtnText: {
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 18,
-        color: '#1A2D27'
+        color: isDark ? '#1A2D27' : (COLORS.textOnAccent || '#FFFFFF')
     },
     dontShowContainer: {
         flexDirection: 'row-reverse',
@@ -542,13 +590,11 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     dontShowText: {
         fontFamily: 'Tajawal-Regular',
-        color: 'rgba(255,255,255,0.5)',
+        color: COLORS.textDim,
         fontSize: 12,
     }
 });
 
-// Static styles for sub-components that render outside the main component
-// (always on a dark background, not theme-dependent)
 const staticStyles = StyleSheet.create({
     swipeHintContainer: {
         alignItems: 'center',
@@ -556,7 +602,6 @@ const staticStyles = StyleSheet.create({
     },
     swipeText: {
         fontFamily: 'Tajawal-Regular',
-        color: 'rgba(255,255,255,0.5)',
         fontSize: 12,
     },
 });

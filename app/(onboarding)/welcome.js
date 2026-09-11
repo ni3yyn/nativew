@@ -4,14 +4,17 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   Dimensions, KeyboardAvoidingView, Platform, ScrollView,
-  Animated, Easing, ImageBackground, StatusBar, Keyboard
+  Animated, Easing, StatusBar, Keyboard, Image
 } from 'react-native';
 
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import AppTextInput from '../../src/components/common/AppTextInput';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppContext } from '../../src/context/AppContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { AVATARS } from '../../src/constants/avatars';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,25 +27,24 @@ import {
   commonConditions,
   commonAllergies,
 } from '../../src/data/allergiesandconditions';
-
-// --- THEME CONSTANTS ---
-const COLORS = {
-  background: '#0f1914',
-  card: 'rgba(255, 255, 255, 0.04)',
-  cardSelected: 'rgba(90, 156, 132, 0.22)',
-  border: 'rgba(255, 255, 255, 0.12)',
-  borderSelected: '#5A9C84',
-  textDim: '#6B7C76',
-  accentGreen: '#5A9C84',
-  primary: '#A3E4D7',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#C5D3CE',
-  textOnAccent: '#1A2D27',
-  danger: '#F87171',
-};
+import { AvatarSelectionModal } from '../../src/components/profile/AvatarSelectionModal';
 
 const { width, height } = Dimensions.get('window');
-const BG_IMAGE = require('../../assets/lolo.jpg');
+
+// --- DEFAULT FALLBACK THEME ---
+const DEFAULT_COLORS = {
+  background: '#1A2D27',
+  card: '#253D34',
+  border: 'rgba(90, 156, 132, 0.25)',
+  textDim: '#82948E',
+  accentGreen: '#5A9C84',
+  primary: '#5A9C84',
+  textPrimary: '#F1F3F2',
+  textSecondary: '#A8B8B3',
+  textOnAccent: '#1A2D27',
+  danger: '#EF4444',
+  surfaceGreen: 'rgba(90, 156, 132, 0.22)',
+};
 
 // --- DATA CONSTANTS ---
 const SKIN_OPTIONS = basicSkinTypes.map((item) => ({
@@ -67,7 +69,6 @@ const GOALS_LIST = [
 const CONDITIONS_LIST = commonConditions;
 const ALLERGIES_LIST = commonAllergies;
 
-// FIXED: Syntax error in scalp subtitle ternary operator
 const getStepConfig = (gender, language) => {
   const isFemale = gender === 'أنثى';
   return [
@@ -83,7 +84,7 @@ const getStepConfig = (gender, language) => {
 };
 
 // --- COMPONENT: PARTICLES ---
-const Spore = ({ size, startX, duration, delay }) => {
+const Spore = ({ size, startX, duration, delay, color }) => {
   const animY = useRef(new Animated.Value(0)).current;
   const animX = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0)).current;
@@ -109,7 +110,7 @@ const Spore = ({ size, startX, duration, delay }) => {
           pointerEvents="none"
           style={{
               position: 'absolute', left: startX, width: size, height: size,
-              borderRadius: size / 2, backgroundColor: COLORS.accentGreen,
+              borderRadius: size / 2, backgroundColor: color,
               transform: [{ translateY }, { translateX }, { scale }],
               opacity: 0.35, zIndex: 0,
           }}
@@ -118,7 +119,7 @@ const Spore = ({ size, startX, duration, delay }) => {
 };
 
 // --- COMPONENT: SQUARE OPTION ---
-const SquareOption = ({ label, icon, selected, onPress, index }) => {
+const SquareOption = ({ label, icon, selected, onPress, index, COLORS, styles }) => {
     const scale = useRef(new Animated.Value(0)).current;
     useEffect(() => { Animated.spring(scale, { toValue: 1, friction: 8, delay: 60 + (index * 40), useNativeDriver: true }).start(); }, []);
 
@@ -146,7 +147,7 @@ const SquareOption = ({ label, icon, selected, onPress, index }) => {
 };
 
 // --- COMPONENT: ROW OPTION ---
-const RowOption = ({ label, selected, onPress, index, category, description, language }) => {
+const RowOption = ({ label, selected, onPress, index, category, description, language, COLORS, styles }) => {
     const slide = useRef(new Animated.Value(30)).current;
     const fade = useRef(new Animated.Value(0)).current;
 
@@ -205,6 +206,11 @@ const RowOption = ({ label, selected, onPress, index, category, description, lan
 // --- MAIN SCREEN ---
 export default function WelcomeScreen() {
   const { user } = useAppContext();
+  const { theme, colors } = useTheme();
+  const COLORS = colors || DEFAULT_COLORS;
+  const isDark = theme ? theme.isDark : true;
+  const styles = useMemo(() => createStyles(COLORS, isDark), [COLORS, isDark]);
+
   const language = useCurrentLanguage();
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -217,7 +223,8 @@ export default function WelcomeScreen() {
   const contentTransX = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // --- Error Animation State ---
+  // --- Modal & Error States ---
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showNameError, setShowNameError] = useState(false);
   const errorFadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -226,6 +233,7 @@ export default function WelcomeScreen() {
 
   const [formData, setFormData] = useState({
     name: '',
+    avatarId: '1',
     gender: '',
     skinType: '',
     scalpType: '',
@@ -243,6 +251,17 @@ export default function WelcomeScreen() {
     duration: 10000 + Math.random() * 8000,
     delay: Math.random() * 5000
   })), []);
+
+  const bgGradientColors = useMemo(() => {
+    if (isDark) {
+      return ['#172a22', COLORS.background, '#080d0a'];
+    }
+    return [
+      COLORS.background,
+      COLORS.surfaceGreen || '#DCEFE5',
+      COLORS.background,
+    ];
+  }, [isDark, COLORS]);
 
   useEffect(() => {
     if (params.reason === 'repair' && !hasShownAlert.current) {
@@ -340,49 +359,88 @@ export default function WelcomeScreen() {
       switch(currentStep) {
           case 0: return (
               <View style={styles.gridCenter}>
-                  <SquareOption index={0} label={t('onboarding_gender_female', language)} icon="venus" selected={formData.gender === 'أنثى'} onPress={() => handleSingleSelect('gender', 'أنثى')} />
-                  <SquareOption index={1} label={t('onboarding_gender_male', language)} icon="mars" selected={formData.gender === 'ذكر'} onPress={() => handleSingleSelect('gender', 'ذكر')} />
+                  <SquareOption index={0} label={t('onboarding_gender_female', language)} icon="venus" selected={formData.gender === 'أنثى'} onPress={() => handleSingleSelect('gender', 'أنثى')} COLORS={COLORS} styles={styles} />
+                  <SquareOption index={1} label={t('onboarding_gender_male', language)} icon="mars" selected={formData.gender === 'ذكر'} onPress={() => handleSingleSelect('gender', 'ذكر')} COLORS={COLORS} styles={styles} />
               </View>
           );
           case 1: return (
               <View style={styles.nameContainer}>
-                  <View style={styles.inputWrapper}>
-                      <TextInput
-                        style={[styles.bigInput, showNameError && { borderColor: COLORS.danger, color: COLORS.danger }]}
-                        placeholder={t('onboarding_name_placeholder', language)}
-                        placeholderTextColor={COLORS.textDim}
-                        value={formData.name}
-                        onChangeText={t => {
-                            setFormData({...formData, name: t});
-                            if (t.trim().length >= 4) setShowNameError(false);
-                        }}
-                        textAlign="center"
-                        autoFocus
-                        returnKeyType="done"
-                        onSubmitEditing={handleNextStep}
-                        selectionColor={COLORS.accentGreen}
-                      />
+                  {/* 🌟 HERO AVATAR SPOTLIGHT (TRANSPARENT BACKGROUND) 🌟 */}
+                  <View style={styles.heroAvatarContainer}>
+                      <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => {
+                              Keyboard.dismiss();
+                              Haptics.selectionAsync();
+                              setShowAvatarModal(true);
+                          }}
+                          style={styles.heroAvatarTouchable}
+                      >
+                          <View style={[styles.heroAvatarGlow, { borderColor: COLORS.accentGreen }]} />
+                          <View style={[styles.heroAvatarCircle, { borderColor: COLORS.accentGreen }]}>
+                              <Image
+                                  source={AVATARS[formData.avatarId] || AVATARS['1']}
+                                  style={styles.heroAvatarImg}
+                              />
+                          </View>
+                          <View style={[styles.heroAvatarBadge, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.background }]}>
+                              <FontAwesome5 name="pen" size={9} color={COLORS.textOnAccent} />
+                          </View>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                          onPress={() => {
+                              Keyboard.dismiss();
+                              setShowAvatarModal(true);
+                          }}
+                          hitSlop={8}
+                      >
+                          <Text style={[styles.avatarSectionLabel, { color: COLORS.textSecondary }]}>
+                              {t('onboarding_avatar_select', language)}
+                          </Text>
+                      </TouchableOpacity>
                   </View>
 
-                  <Animated.View style={{
-                      height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 26] }),
-                      opacity: errorFadeAnim,
-                      overflow: 'hidden',
-                      justifyContent: 'center',
-                  }}>
-                      <Text style={styles.errorText}>{t('onboarding_name_error', language)}</Text>
-                  </Animated.View>
-                  <Text style={styles.inputHint}>{t('onboarding_name_hint', language)}</Text>
+                  {/* Name Input Section */}
+                  <View style={styles.nameInputSection}>
+                      <View style={[styles.inputWrapper, showNameError && { borderColor: COLORS.danger }]}>
+                          <AppTextInput
+                            style={[styles.bigInput, showNameError && { color: COLORS.danger }]}
+                            placeholder={t('onboarding_name_placeholder', language)}
+                            placeholderTextColor={COLORS.textDim}
+                            value={formData.name}
+                            onChangeText={t => {
+                                setFormData({...formData, name: t});
+                                if (t.trim().length >= 4) setShowNameError(false);
+                            }}
+                            textAlign="center"
+                            autoFocus={false}
+                            returnKeyType="done"
+                            onSubmitEditing={handleNextStep}
+                            selectionColor={COLORS.accentGreen}
+                          />
+                      </View>
+
+                      <Animated.View style={{
+                          height: errorFadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 26] }),
+                          opacity: errorFadeAnim,
+                          overflow: 'hidden',
+                          justifyContent: 'center',
+                      }}>
+                          <Text style={styles.errorText}>{t('onboarding_name_error', language)}</Text>
+                      </Animated.View>
+                      <Text style={styles.inputHint}>{t('onboarding_name_hint', language)}</Text>
+                  </View>
               </View>
           );
           case 2: return (
               <View style={styles.gridContainer}>
-                  {SKIN_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.skinType === item.id} onPress={() => handleSingleSelect('skinType', item.id)} />)}
+                  {SKIN_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.skinType === item.id} onPress={() => handleSingleSelect('skinType', item.id)} COLORS={COLORS} styles={styles} />)}
               </View>
           );
           case 3: return (
               <View style={styles.gridContainer}>
-                  {SCALP_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.scalpType === item.id} onPress={() => handleSingleSelect('scalpType', item.id)} />)}
+                  {SCALP_OPTIONS.map((item, i) => <SquareOption index={i} key={item.id} label={getLocalizedValue(item.label, language)} icon={item.icon} selected={formData.scalpType === item.id} onPress={() => handleSingleSelect('scalpType', item.id)} COLORS={COLORS} styles={styles} />)}
               </View>
           );
           case 4: return (
@@ -396,18 +454,20 @@ export default function WelcomeScreen() {
                         selected={formData.goals.includes(g.id)}
                         onPress={() => toggleMulti('goals', g.id)}
                         language={language}
+                        COLORS={COLORS}
+                        styles={styles}
                       />
                   ))}
               </View>
           );
           case 5: return (
               <View style={styles.listContainer}>
-                  {CONDITIONS_LIST.map((c, i) => <RowOption index={i} key={c.id} label={getLocalizedValue(c.name, language)} category={c.category} selected={formData.conditions.includes(c.id)} onPress={() => toggleMulti('conditions', c.id)} language={language} />)}
+                  {CONDITIONS_LIST.map((c, i) => <RowOption index={i} key={c.id} label={getLocalizedValue(c.name, language)} category={c.category} selected={formData.conditions.includes(c.id)} onPress={() => toggleMulti('conditions', c.id)} language={language} COLORS={COLORS} styles={styles} />)}
               </View>
           );
           case 6: return (
               <View style={styles.listContainer}>
-                  {ALLERGIES_LIST.map((a, i) => <RowOption index={i} key={a.id} label={getLocalizedValue(a.name, language)} selected={formData.allergies.includes(a.id)} onPress={() => toggleMulti('allergies', a.id)} language={language} />)}
+                  {ALLERGIES_LIST.map((a, i) => <RowOption index={i} key={a.id} label={getLocalizedValue(a.name, language)} selected={formData.allergies.includes(a.id)} onPress={() => toggleMulti('allergies', a.id)} language={language} COLORS={COLORS} styles={styles} />)}
               </View>
           );
           case 7: return (
@@ -427,79 +487,82 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
-        <LinearGradient 
-          colors={['rgba(15, 25, 20, 0.6)', 'rgba(10, 15, 12, 0.98)']} 
-          style={StyleSheet.absoluteFill} 
-        />
-        {particles.map(p => <Spore key={p.id} {...p} />)}
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      
+      {/* Dynamic Theme Gradient */}
+      <LinearGradient 
+        colors={bgGradientColors} 
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+      {particles.map(p => <Spore key={p.id} {...p} color={COLORS.accentGreen} />)}
 
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-        >
-          <View style={[styles.safeArea, { paddingTop: 20 + insets.top, paddingBottom: 15 + insets.bottom }]}>
+      <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+      >
+        <View style={[styles.safeArea, { paddingTop: 20 + insets.top, paddingBottom: 15 + insets.bottom }]}>
 
-            {/* Static Progress Bar */}
-            <View style={styles.progressContainer}>
-              <Text style={[styles.stepCounter, { textAlign: isRTL ? 'right' : 'left' }]}>
-                {interpolate(t('onboarding_step_counter', language), { current: currentStep + 1, total: STEPS.length })}
-              </Text>
-              <View style={styles.track}>
-                <Animated.View style={[styles.fill, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
-              </View>
+          {/* Static Progress Bar */}
+          <View style={styles.progressContainer}>
+            <Text style={[styles.stepCounter, { textAlign: isRTL ? 'right' : 'left' }]}>
+              {interpolate(t('onboarding_step_counter', language), { current: currentStep + 1, total: STEPS.length })}
+            </Text>
+            <View style={styles.track}>
+              <Animated.View style={[styles.fill, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
             </View>
+          </View>
 
-            {/* Scrollable Frameless Content */}
-            <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
-                <ScrollView
-                    key={currentStep}
-                    contentContainerStyle={{
-                        flexGrow: 1,
-                        paddingBottom: 20,
-                        justifyContent: currentStep === 1 || currentStep === 7 ? 'center' : 'flex-start'
-                    }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="always"
-                >
-                    {/* Header Text moving with Content */}
-                    <View style={styles.headerTextContainer}>
-                        <Text style={styles.title}>{STEPS[currentStep]?.title}</Text>
-                        <Text style={styles.subtitle}>{STEPS[currentStep]?.subtitle}</Text>
-                    </View>
+          {/* Scrollable Content */}
+          <Animated.View style={{ flex: 1, opacity: contentOpacity, transform: [{ translateX: contentTransX }] }}>
+              <ScrollView
+                  key={currentStep}
+                  contentContainerStyle={{
+                      flexGrow: 1,
+                      paddingBottom: 20,
+                      justifyContent: currentStep === 1 || currentStep === 7 ? 'center' : 'flex-start'
+                  }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+              >
+                  {/* Header Text */}
+                  <View style={styles.headerTextContainer}>
+                      <Text style={styles.title}>{STEPS[currentStep]?.title}</Text>
+                      <Text style={styles.subtitle}>{STEPS[currentStep]?.subtitle}</Text>
+                  </View>
 
-                    {renderContent()}
-                </ScrollView>
-            </Animated.View>
+                  {renderContent()}
+              </ScrollView>
+          </Animated.View>
 
-            {/* Fixed Footer Buttons */}
-            <View style={styles.fixedFooter}>
-                {currentStep > 0 ? (
-                    <TouchableOpacity 
-                        onPress={() => changeStep(-1)} 
-                        style={styles.backBtn}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons 
-                            name={isRTL ? "arrow-forward" : "arrow-back"} 
-                            size={24} 
-                            color={COLORS.textPrimary} 
-                        />
-                    </TouchableOpacity>
-                ) : <View style={{ width: 54 }} />}
+          {/* Fixed Footer Buttons */}
+          <View style={styles.fixedFooter}>
+              {currentStep > 0 ? (
+                  <TouchableOpacity 
+                      onPress={() => changeStep(-1)} 
+                      style={styles.backBtn}
+                      activeOpacity={0.7}
+                  >
+                      <Ionicons 
+                          name={isRTL ? "arrow-forward" : "arrow-back"} 
+                          size={24} 
+                          color={COLORS.textPrimary} 
+                      />
+                  </TouchableOpacity>
+              ) : <View style={{ width: 54 }} />}
 
-                {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
-                    <TouchableOpacity
-                        onPress={handleNextStep}
-                        disabled={!isNextEnabled() || loading}
-                        style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
-                        activeOpacity={0.8}
-                    >
-                        {loading ? (
-                            <Text style={styles.btnText}>{t('onboarding_saving', language)}</Text>
-                        ) : (
-                            <View style={styles.btnContent}>
+              {!['gender', 'skin', 'scalp'].includes(STEPS[currentStep]?.id) && (
+                  <TouchableOpacity
+                      onPress={handleNextStep}
+                      disabled={!isNextEnabled() || loading}
+                      style={[styles.nextBtn, (!isNextEnabled() || loading) && { opacity: 0.5 }]}
+                      activeOpacity={0.8}
+                  >
+                      {loading ? (
+                          <Text style={styles.btnText}>{t('onboarding_saving', language)}</Text>
+                      ) : (
+                          <View style={styles.btnContent}>
                             <Text style={styles.btnText}>
                                 {currentStep === 7 
                                 ? (formData.gender === 'أنثى' ? t('onboarding_start_female', language) : t('onboarding_start_male', language)) 
@@ -507,39 +570,55 @@ export default function WelcomeScreen() {
                             </Text>
                             {currentStep !== 7 && (
                                 <Ionicons 
-                                name={isRTL ? "arrow-back" : "arrow-forward"} 
-                                size={20} 
-                                color={COLORS.textOnAccent} 
-                                style={{ marginHorizontal: 8 }} 
+                                  name={isRTL ? "arrow-back" : "arrow-forward"} 
+                                  size={20} 
+                                  color={COLORS.textOnAccent} 
+                                  style={{ marginHorizontal: 8 }} 
                                 />
                             )}
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                )}
-            </View>
-
+                          </View>
+                      )}
+                  </TouchableOpacity>
+              )}
           </View>
-        </KeyboardAvoidingView>
-      </ImageBackground>
+
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Full Avatar Selection Bottom Sheet Modal */}
+      <AvatarSelectionModal
+          visible={showAvatarModal}
+          onClose={() => setShowAvatarModal(false)}
+          currentId={formData.avatarId}
+          onSelect={(id) => {
+              setFormData((prev) => ({ ...prev, avatarId: id }));
+              setShowAvatarModal(false);
+          }}
+          language={language}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1914' },
+const createStyles = (COLORS, isDark) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
   safeArea: { flex: 1, paddingHorizontal: 16 },
 
   // Progress Bar
   progressContainer: { marginBottom: 20, paddingHorizontal: 4 },
   stepCounter: { color: COLORS.textSecondary, fontFamily: 'Tajawal-Bold', fontSize: 13, marginBottom: 6 },
-  track: { height: 5, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 99, overflow: 'hidden' },
+  track: { 
+    height: 5, 
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : COLORS.border, 
+    borderRadius: 99, 
+    overflow: 'hidden' 
+  },
   fill: { height: '100%', backgroundColor: COLORS.accentGreen, borderRadius: 99 },
 
   // Frameless Header Text
   headerTextContainer: { 
     alignItems: 'center', 
-    marginBottom: 24, 
+    marginBottom: 20, 
     paddingHorizontal: 10 
   },
   title: { 
@@ -548,7 +627,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary, 
     textAlign: 'center', 
     marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)', 
+    textShadowColor: isDark ? 'rgba(0, 0, 0, 0.5)' : 'transparent', 
     textShadowOffset: { width: 0, height: 2 }, 
     textShadowRadius: 10 
   },
@@ -560,7 +639,7 @@ const styles = StyleSheet.create({
     lineHeight: 22 
   },
 
-  // Square Option Grid (High Contrast)
+  // Square Option Grid
   gridCenter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'center' },
   
@@ -569,14 +648,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: COLORS.card,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: COLORS.border,
     padding: 16,
   },
   cardSelected: {
     borderColor: COLORS.accentGreen,
-    backgroundColor: COLORS.cardSelected,
+    backgroundColor: isDark ? 'rgba(90, 156, 132, 0.22)' : (COLORS.surfaceGreen || 'rgba(61, 146, 117, 0.18)'),
     shadowColor: COLORS.accentGreen,
     shadowOpacity: 0.25,
     shadowRadius: 15,
@@ -585,7 +664,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(39, 103, 81, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -604,7 +683,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center' 
   },
 
-  // Row Option List (High Contrast)
+  // Row Option List
   listContainer: { width: '100%' },
   rowInner: {
     flexDirection: 'row',
@@ -612,20 +691,20 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: COLORS.card,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: COLORS.border,
   },
   rowSelected: {
     borderColor: COLORS.accentGreen,
-    backgroundColor: COLORS.cardSelected,
+    backgroundColor: isDark ? 'rgba(90, 156, 132, 0.22)' : (COLORS.surfaceGreen || 'rgba(61, 146, 117, 0.18)'),
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -642,14 +721,67 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // Name Input Container
+  // --- Step 1: Clean Spotlight Avatar Styles (Transparent Background) ---
+  heroAvatarContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+    marginTop: 10,
+  },
+  heroAvatarTouchable: {
+    position: 'relative',
+    width: 96,
+    height: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroAvatarGlow: {
+    position: 'absolute',
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    borderWidth: 1.5,
+    opacity: 0.25,
+  },
+  heroAvatarCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    overflow: 'hidden',
+    borderWidth: 2.5,
+    backgroundColor: 'transparent', // 👈 Transparent, no white background
+  },
+  heroAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  heroAvatarBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    elevation: 5,
+  },
+  avatarSectionLabel: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13.5,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+
+  // Name Input Section
   nameContainer: { width: '100%', alignItems: 'center' },
+  nameInputSection: { width: '100%', alignItems: 'center' },
   inputWrapper: {
     width: '100%',
     borderRadius: 99,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : COLORS.card,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: COLORS.border,
     paddingHorizontal: 20,
     height: 60,
     justifyContent: 'center',
@@ -657,7 +789,8 @@ const styles = StyleSheet.create({
   bigInput: {
     width: '100%',
     fontSize: 22,
-    fontFamily: 'Tajawal-Bold',
+    fontFamily: 'Tajawal-Regular',
+    fontWeight: 'normal',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
@@ -675,7 +808,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     marginBottom: 24,
     shadowColor: COLORS.accentGreen,
-    shadowOpacity: 0.5,
+    shadowOpacity: isDark ? 0.5 : 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -691,9 +824,9 @@ const styles = StyleSheet.create({
     width: 54, 
     height: 54, 
     borderRadius: 27, 
-    backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : COLORS.card, 
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: COLORS.border,
     alignItems: 'center', 
     justifyContent: 'center' 
   },
@@ -706,7 +839,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: COLORS.accentGreen,
-    shadowOpacity: 0.35,
+    shadowOpacity: isDark ? 0.35 : 0.2,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 6 },
   },

@@ -97,7 +97,7 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
         padding: 20,
         borderRadius: 24,
         marginBottom: 20,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border || 'rgba(255,255,255,0.1)',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },

@@ -12,94 +12,95 @@ import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 
 // ============================================================================
-// --- GOAL INSIGHT ENGINE (Client-Side, No API Needed) ---
+// --- GOAL INSIGHT ENGINE (Client-Side, Localized) ---
 // Generates carousel cards from userProfile.settings.goals when shelf is empty.
 // ============================================================================
-const GOAL_DEFINITIONS = {
+const getGoalDefinitions = (language) => ({
     brightening: {
-        title: 'مسار: تفتيح وتوحيد اللون',
-        short_summary: 'أضفي منتجاتكِ لنحلل مدى توافقها مع هدفكِ في التفتيح',
+        title: t('goal_brightening_track_title', language),
+        short_summary: t('goal_brightening_track_summary', language),
         severity: 'info',
         icon: 'star',
         heroIngredients: ['niacinamide', 'vitamin-c', 'alpha-arbutin', 'kojic-acid', 'tranexamic-acid'],
         routineTips: [
-            'نياسيناميد — السيروم أو التونر صباحاً ومساءً',
-            'فيتامين C — صباحاً قبل واقي الشمس',
-            'واقي شمس SPF 50 — ضروري يومياً',
+            t('goal_brightening_tip_1', language),
+            t('goal_brightening_tip_2', language),
+            t('goal_brightening_tip_3', language),
         ],
-        ctaHint: 'ابحثي عن سيروم يحتوي على نياسيناميد أو فيتامين C لبدء مساركِ',
+        ctaHint: t('goal_brightening_cta', language),
     },
     acne: {
-        title: 'مسار: مكافحة حب الشباب',
-        short_summary: 'أضفي روتينكِ لنكتشف نقاط القوة والفجوات في مكافحة البكتيريا',
+        title: t('goal_acne_track_title', language),
+        short_summary: t('goal_acne_track_summary', language),
         severity: 'info',
         icon: 'shield-alt',
         heroIngredients: ['salicylic-acid', 'benzoyl-peroxide', 'niacinamide', 'tea-tree-oil', 'zinc'],
         routineTips: [
-            'حمض الساليسيليك — تونر أو غسول مساءً',
-            'نياسيناميد — يقلل الاحمرار صباحاً ومساءً',
-            'مرطب خفيف غير دهني — لا تتخطاي الترطيب',
+            t('goal_acne_tip_1', language),
+            t('goal_acne_tip_2', language),
+            t('goal_acne_tip_3', language),
         ],
-        ctaHint: 'ابدأي بتنظيف حامض خفيف مع سيروم نياسيناميد',
+        ctaHint: t('goal_acne_cta', language),
     },
     hydration: {
-        title: 'مسار: الترطيب وترميم الحاجز',
-        short_summary: 'حللي منتجاتكِ لمعرفة مدى دعمها لحاجز بشرتكِ',
+        title: t('goal_hydration_track_title', language),
+        short_summary: t('goal_hydration_track_summary', language),
         severity: 'info',
         icon: 'tint',
         heroIngredients: ['hyaluronic-acid', 'ceramides', 'glycerin', 'panthenol', 'squalane'],
         routineTips: [
-            'حمض الهيالورونيك — سيروم على بشرة رطبة صباحاً ومساءً',
-            'سيراميد — يرمم الحاجز مساءً',
-            'غليسيرين — موجود في معظم المرطبات الجيدة',
+            t('goal_hydration_tip_1', language),
+            t('goal_hydration_tip_2', language),
+            t('goal_hydration_tip_3', language),
         ],
-        ctaHint: 'أضيفي سيروم حمض هيالورونيك + مرطب يحتوي سيراميد',
+        ctaHint: t('goal_hydration_cta', language),
     },
     anti_aging: {
-        title: 'مسار: مكافحة الشيخوخة',
-        short_summary: 'أضفي كريمات وسيرومات العناية لتقييم مساركِ العلاجي',
+        title: t('goal_anti_aging_track_title', language),
+        short_summary: t('goal_anti_aging_track_summary', language),
         severity: 'info',
         icon: 'clock',
         heroIngredients: ['retinol', 'peptides', 'vitamin-c', 'niacinamide', 'coenzyme-q10'],
         routineTips: [
-            'ريتينول — فقط مساءً مرة أو ثلاث بالأسبوع للمبتدئات',
-            'بيبتيد — صباحاً تحت واقي الشمس',
-            'فيتامين C — حماية مع تفتيح صباحي',
+            t('goal_anti_aging_tip_1', language),
+            t('goal_anti_aging_tip_2', language),
+            t('goal_anti_aging_tip_3', language),
         ],
-        ctaHint: 'ابدئي بسيروم بيبتيد صباحاً وريتينول خفيف مساءً',
+        ctaHint: t('goal_anti_aging_cta', language),
     },
     texture_pores: {
-        title: 'مسار: تحسين المسام والملمس',
-        short_summary: 'أضفي منتجات التقشير والتنظيم لتحليل فعاليتها',
+        title: t('goal_texture_pores_track_title', language),
+        short_summary: t('goal_texture_pores_track_summary', language),
         severity: 'info',
         icon: 'adjust',
         heroIngredients: ['aha-bha', 'salicylic-acid', 'niacinamide', 'retinol', 'clay'],
         routineTips: [
-            'حمض AHA/BHA — تقشير كيميائي مرتين بالأسبوع',
-            'نياسيناميد — يضيق المسام يومياً',
-            'طين بنتونيت / كاولين — ماسك أسبوعياً',
+            t('goal_texture_pores_tip_1', language),
+            t('goal_texture_pores_tip_2', language),
+            t('goal_texture_pores_tip_3', language),
         ],
-        ctaHint: 'ابدئي بتونر AHA/BHA وسيروم نياسيناميد',
+        ctaHint: t('goal_texture_pores_cta', language),
     },
-};
+});
 
-const buildGoalInsights = (goals = []) => {
+const buildGoalInsights = (goals = [], language) => {
+    const goalDefs = getGoalDefinitions(language);
     return goals
-        .filter(g => GOAL_DEFINITIONS[g])
+        .filter(g => goalDefs[g])
         .map((goalId) => ({
             id: `goal-insight-${goalId}`,
-            title: GOAL_DEFINITIONS[goalId].title,
-            short_summary: GOAL_DEFINITIONS[goalId].short_summary,
+            title: goalDefs[goalId].title,
+            short_summary: goalDefs[goalId].short_summary,
             severity: 'info',
             type: 'goal_analysis',
             customData: {
                 type: 'goal_analysis',
                 goalId,
-                goalLabel: GOAL_DEFINITIONS[goalId].title,
+                goalLabel: goalDefs[goalId].title,
                 isEmptyState: true,              // signals the modal to show roadmap, NOT product dashboard
-                heroIngredients: GOAL_DEFINITIONS[goalId].heroIngredients,
-                routineTips: GOAL_DEFINITIONS[goalId].routineTips,
-                ctaHint: GOAL_DEFINITIONS[goalId].ctaHint,
+                heroIngredients: goalDefs[goalId].heroIngredients,
+                routineTips: goalDefs[goalId].routineTips,
+                ctaHint: goalDefs[goalId].ctaHint,
             },
         }));
 };
@@ -167,7 +168,7 @@ export const AnalysisSection = ({
 
             // 1. Goal insight cards from user's saved goals (if any)
             const goals = userProfile?.settings?.goals || [];
-            const goalInsights = buildGoalInsights(goals);
+            const goalInsights = buildGoalInsights(goals, language);
 
             // 2. Universal teaser cards — always shown to fill the carousel.
             //    Shows what the user will UNLOCK once they add products.
@@ -176,62 +177,62 @@ export const AnalysisSection = ({
             const TEASERS = [
                 {
                     id: 'teaser-barrier',
-                    title: 'صحة حاجزك الجلدي',
-                    short_summary: 'أضيفيمنتجاتك لتعرف حال حاجزك — وأين تقع الثغرات',
+                    title: t('teaser_barrier_title', language),
+                    short_summary: t('teaser_barrier_summary', language),
                     severity: 'info',
                     type: 'goal_analysis',
                     customData: {
                         type: 'goal_analysis',
-                        goalLabel: 'تحليل صحة الحاجز الجلدي',
+                        goalLabel: t('teaser_barrier_label', language),
                         isEmptyState: true,
                         heroIngredients: ['ceramides', 'niacinamide', 'hyaluronic-acid', 'panthenol', 'fatty-acids'],
                         routineTips: [
-                            'سيراميد — يرمم الحاجز ويوقف فقدان الماء',
-                            'نياسيناميد — يعزز إنتاج الدهون الطبيعية',
-                            'تجنبي المقشرات القوية يومياً — تُضعف الحاجز',
+                            t('teaser_barrier_tip_1', language),
+                            t('teaser_barrier_tip_2', language),
+                            t('teaser_barrier_tip_3', language),
                         ],
-                        ctaHint: 'ابدئي بمرطب يحتوي سيراميد + نياسيناميد لتقوية الحاجز',
+                        ctaHint: t('teaser_barrier_cta', language),
                     },
                 },
                 !coveredGoalIds.has('hydration') && {
                     id: 'teaser-hydration',
-                    title: 'مسار الترطيب',
-                    short_summary: 'هل منتجاتك تُرطب بشرتك فعلاً؟ أضفها لنكتشف',
+                    title: t('teaser_hydration_title', language),
+                    short_summary: t('teaser_hydration_summary', language),
                     severity: 'info',
                     type: 'goal_analysis',
                     customData: {
                         type: 'goal_analysis',
-                        goalLabel: 'مسار: الترطيب وترميم الحاجز',
+                        goalLabel: t('goal_hydration_track_title', language),
                         isEmptyState: true,
                         heroIngredients: ['hyaluronic-acid', 'ceramides', 'glycerin', 'panthenol', 'squalane'],
                         routineTips: [
-                            'حمض الهيالورونيك — سيروم على بشرة رطبة صباحاً ومساءً',
-                            'سيراميد — يرمم الحاجز مساءً',
-                            'غليسيرين — موجود في معظم المرطبات الجيدة',
+                            t('goal_hydration_tip_1', language),
+                            t('goal_hydration_tip_2', language),
+                            t('goal_hydration_tip_3', language),
                         ],
-                        ctaHint: 'أضيفي سيروم حمض هيالورونيك + مرطب يحتوي سيراميد',
+                        ctaHint: t('goal_hydration_cta', language),
                     },
                 },
                 !coveredGoalIds.has('brightening') && {
                     id: 'teaser-brightening',
-                    title: 'مسار التفتيح',
-                    short_summary: 'كم يدعم روتينك هدف التفتيح؟ أضيفيمنتجاتك',
+                    title: t('teaser_brightening_title', language),
+                    short_summary: t('teaser_brightening_summary', language),
                     severity: 'info',
                     type: 'goal_analysis',
                     customData: {
                         type: 'goal_analysis',
-                        goalLabel: 'مسار: تفتيح وتوحيد اللون',
+                        goalLabel: t('goal_brightening_track_title', language),
                         isEmptyState: true,
                         heroIngredients: ['niacinamide', 'vitamin-c', 'alpha-arbutin', 'kojic-acid', 'tranexamic-acid'],
                         routineTips: [
-                            'نياسيناميد — السيروم أو التونر صباحاً ومساءً',
-                            'فيتامين C — صباحاً قبل واقي الشمس',
-                            'واقي شمس SPF 50 — ضروري يومياً',
+                            t('goal_brightening_tip_1', language),
+                            t('goal_brightening_tip_2', language),
+                            t('goal_brightening_tip_3', language),
                         ],
-                        ctaHint: 'ابحثي عن سيروم يحتوي على نياسيناميد أو فيتامين C لبدء مساركِ',
+                        ctaHint: t('goal_brightening_cta', language),
                     },
                 },
-            ].filter(Boolean); // removes `false` entries from !coveredGoalIds checks
+            ].filter(Boolean);
 
             // Merge: user goals first, then teasers for gaps (cap at 5 total)
             const extraWeatherAlerts = (weatherResults && weatherResults.length > 1)

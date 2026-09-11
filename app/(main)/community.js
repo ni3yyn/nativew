@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
     View, StyleSheet, ScrollView, TouchableOpacity, Text,
-    ActivityIndicator, BackHandler, LayoutAnimation, Platform, UIManager, StatusBar, Animated
+    ActivityIndicator, BackHandler, LayoutAnimation, StatusBar, Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FontAwesome5, Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +21,9 @@ import { createPost, saveProductToShelf, deletePost, toggleLikePost } from '../.
 import { AlertService } from '../../src/services/alertService';
 import { setPostsCache, getPostsCache } from '../../src/services/cachingService';
 
+// 🌟 COLLAPSIBLE AUTHENTIC HEADER
+import AuthenticHeader, { getHeaderDimensions } from '../../src/utils/AuthenticHeader';
+
 import PostCard from '../../src/components/community/PostCard';
 import CreatePostModal from '../../src/components/community/CreatePostModal';
 import CommentModal from '../../src/components/community/CommentModal';
@@ -28,12 +31,15 @@ import ProductActionSheet from '../../src/components/community/ProductActionShee
 import SearchFilterBar from '../../src/components/community/SearchFilterBar';
 import FullImageViewer from '../../src/components/common/FullImageViewer';
 import UserProfileModal from '../../src/components/community/UserProfileModal';
+import LeaderboardModal from '../../src/components/community/LeaderboardModal';
 import CommunityRefreshHandler from '../../src/components/community/CommunityRefreshHandler';
 import SortTabs from '../../src/components/community/SortTabs';
 import CommunityIntro from '../../src/components/community/CommunityIntro';
 import { t } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import { useRTL } from '../../src/hooks/useRTL';
 
+const FILTER_BAR_HEIGHT = 110;
 
 const NewPostsToast = ({ visible, onPress, COLORS, styles }) => {
     const language = useCurrentLanguage();
@@ -52,14 +58,34 @@ const NewPostsToast = ({ visible, onPress, COLORS, styles }) => {
 };
 
 export default function CommunityScreen() {
-    const { user, userProfile, savedProducts } = useAppContext();
-    const { colors } = useTheme();
+    const { user, userProfile, savedProducts, appConfig } = useAppContext();
+    const { colors, activeThemeId } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const isLightTheme = activeThemeId === 'light';
+    const language = useCurrentLanguage();
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, isLightTheme, rtl), [COLORS, isLightTheme, rtl]);
+    
     const insets = useSafeAreaInsets();
     const { openPostId } = useLocalSearchParams();
     const router = useRouter();
-    const language = useCurrentLanguage();
+
+    // 🌟 HEADER COLLAPSE DIMENSIONS
+    const { maxHeight, scrollDistance } = useMemo(
+        () => getHeaderDimensions(insets.top),
+        [insets.top]
+    );
+
+    // 🌟 SEPARATE SCROLL VALUES FOR ZERO-GLITCH VIEW SWITCHING
+    const menuScrollY = useRef(new Animated.Value(0)).current;
+    const feedScrollY = useRef(new Animated.Value(0)).current;
+
+    // Filter Bar Sticky Translation in Feed View
+    const filterTranslateY = feedScrollY.interpolate({
+        inputRange: [0, scrollDistance],
+        outputRange: [0, -scrollDistance],
+        extrapolate: 'clamp',
+    });
 
     // --- STATE ---
     const [viewMode, setViewMode] = useState('menu');
@@ -71,8 +97,7 @@ export default function CommunityScreen() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const loadingMoreRef = useRef(false);
-    const ADMIN_UID = "Nlek1lx0lqUKD5zgWqUdcqacleX2";
-    const isAdmin = user?.uid === ADMIN_UID;
+    const isAdmin = !!(user && appConfig?.adminUid && user.uid === appConfig.adminUid);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -89,43 +114,88 @@ export default function CommunityScreen() {
     const [commentingPost, setCommentingPost] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
     const [viewingUserProfile, setViewingUserProfile] = useState(null);
+    const [isLeaderboardVisible, setLeaderboardVisible] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 400);
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    useEffect(() => {
-        if (openPostId && allPosts.length > 0) {
-            // 1. Find the post in the current list
-            const targetPost = allPosts.find(p => p.id === openPostId);
+    // 🌟 FULLY FIXED DEEP LINKING (NO INFINITE LOOPS, FETCHES OLD POSTS)
+    const processedPostId = useRef(null); // Hardware lock to prevent infinite re-renders
 
+    useEffect(() => {
+        const handleDeepLinkPost = async () => {
+            if (!openPostId || openPostId === processedPostId.current) return;
+            
+            // 1. Lock immediately to prevent loops
+            processedPostId.current = openPostId;
+            
+            // 2. Check if it's already in memory
+            let targetPost = allPosts.find(p => p.id === openPostId);
+            
+            // 3. If it's an old post not in the first 15 loaded, fetch it directly
+            if (!targetPost) {
+                try {
+                    const { data, error } = await supabase
+                        .from('posts')
+                        .select('*')
+                        .eq('id', openPostId)
+                        .single();
+                        
+                    if (data && !error) {
+                        targetPost = {
+                            id: data.id,
+                            userId: data.firebase_user_id,
+                            userName: data.author_snapshot?.name || t('community_default_user', language),
+                            authorSettings: data.author_snapshot || {},
+                            type: data.type,
+                            title: data.title || null,
+                            content: data.content,
+                            imageUrl: data.image_url || null,
+                            createdAt: data.created_at,
+                            duration: data.duration || null,
+                            audio_url: data.audio_url || null,
+                            taggedProduct: !Array.isArray(data.product_snapshot) ? data.product_snapshot : null,
+                            journeyProducts: Array.isArray(data.product_snapshot) ? data.product_snapshot : [],
+                            routineSnapshot: data.routine_snapshot || null,
+                            milestones: data.milestones_snapshot || [],
+                            likesCount: data.likes_count || 0,
+                            commentsCount: data.comments_count || 0,
+                            likes: []
+                        };
+                        
+                        // Silently prepend to feed
+                        setAllPosts(prev => {
+                            if (prev.some(p => p.id === targetPost.id)) return prev;
+                            return [targetPost, ...prev];
+                        });
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch deep-linked post:", err);
+                }
+            }
+
+            // 4. Open the modal securely
             if (targetPost) {
-                // 2. Force the view to 'feed' mode so the user sees the context
                 if (viewMode === 'menu') {
                     const cat = CATEGORIES.find(c => c.id === targetPost.type);
                     if (cat) setSelectedCategory(cat);
                     setViewMode('feed');
                 }
-
-                // 3. Open the comments modal
                 setCommentingPost(targetPost);
-
-                // 4. Clear the parameter from the URL so it doesn't open again
-                router.setParams({ openPostId: undefined });
-
-                console.log("✅ Successfully deep-linked to post:", openPostId);
-            } else {
-                // If not found in the initial 20 posts, you could fetch it specifically
-                // but usually, recent notifications are for recent posts.
-                console.log("⚠️ Post from notification not found in current list");
+                
+                // Clear the param safely so a regular page refresh doesn't trigger it again
+                router.setParams({ openPostId: '' });
             }
-        }
-    }, [openPostId, allPosts, viewMode]);
+        };
 
-    // --- 🟢 DATA LOADING & REALTIME SUBSCRIPTION ---
+        handleDeepLinkPost();
+    }, [openPostId, allPosts, viewMode, language]);
+
+
+    // --- DATA LOADING & REALTIME SUBSCRIPTION ---
     useEffect(() => {
-        // Only run this logic if User is logged in
         if (!user) return;
 
         const loadInitialFeed = async () => {
@@ -133,7 +203,6 @@ export default function CommunityScreen() {
             if (cachedPosts && cachedPosts.length > 0) {
                 setAllPosts(cachedPosts);
                 setLoading(false);
-                // Background fetch to sync
                 loadNewPosts(false, 'recent', true);
             } else {
                 await loadNewPosts(true);
@@ -150,27 +219,16 @@ export default function CommunityScreen() {
         loadInitialFeed();
         checkIntro();
 
-        // 🚀 REALTIME SUBSCRIPTION START
-        console.log("🔌 Subscribing to public:posts");
         const channel = supabase.channel('public:posts')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'posts' },
                 (payload) => {
-                    // 1. Handle INSERT (New Post)
                     if (payload.eventType === 'INSERT') {
-                        console.log("🔥 NEW POST DETECTED:", payload.new.id);
-
-                        // Strict check: Only show toast if I didn't write it
                         if (user && payload.new.firebase_user_id !== user.uid) {
-                            console.log("🔔 Incrementing toast count for new post");
                             setNewPostsCount(prev => prev + 1);
-                        } else {
-                            console.log("🚫 Ignoring my own post for toast");
                         }
                     }
-
-                    // 2. Handle UPDATE (Likes/Comments Count changing live)
                     if (payload.eventType === 'UPDATE') {
                         setAllPosts(currentPosts =>
                             currentPosts.map(post => {
@@ -185,8 +243,6 @@ export default function CommunityScreen() {
                             })
                         );
                     }
-
-                    // 3. Handle DELETE
                     if (payload.eventType === 'DELETE') {
                         setAllPosts(currentPosts =>
                             currentPosts.filter(post => post.id !== payload.old.id)
@@ -199,13 +255,10 @@ export default function CommunityScreen() {
         return () => {
             supabase.removeChannel(channel);
         };
-        // 🚀 REALTIME SUBSCRIPTION END
 
-    }, [user]); // 🟢 FIX: Added [user] dependency to prevent null crash and ensure auth context
+    }, [user]);
 
-    // --- MAIN FETCH FUNCTION (SUPABASE) ---
     const loadNewPosts = async (isInitialFetch = false, customSortMode = null, isBackground = false, isLoadMore = false) => {
-        // 🟢 FIX: Safeguard against null user during initial boot
         if (!user) return;
 
         const mode = customSortMode || sortBy;
@@ -218,11 +271,10 @@ export default function CommunityScreen() {
             setLoadingMore(true);
         } else {
             if (!isInitialFetch && !isBackground) setLoading(true);
-            setHasMore(true); // Reset hasMore when reloading/refreshing
+            setHasMore(true);
         }
 
         try {
-            // 1. Fetch Posts
             let query = supabase.from('posts').select('*');
 
             if (selectedCategory) {
@@ -244,7 +296,6 @@ export default function CommunityScreen() {
 
             let myLikedPostIds = new Set();
             if (postsData && postsData.length > 0) {
-                // 2. Fetch "My Likes"
                 const postIds = postsData.map(p => p.id);
                 const { data: myLikesData } = await supabase
                     .from('likes')
@@ -255,10 +306,8 @@ export default function CommunityScreen() {
                 myLikedPostIds = new Set(myLikesData?.map(l => l.post_id));
             }
 
-            // 3. Normalize & Merge
             const normalizedPosts = (postsData || []).map(post => {
                 const safeProduct = post.product_snapshot;
-
                 const isLikedByMe = myLikedPostIds.has(post.id);
 
                 return {
@@ -266,24 +315,19 @@ export default function CommunityScreen() {
                     userId: post.firebase_user_id,
                     userName: post.author_snapshot?.name || t('community_default_user', language),
                     authorSettings: post.author_snapshot || {},
-
                     type: post.type,
                     title: post.title || null,
                     content: post.content,
                     imageUrl: post.image_url || null,
                     createdAt: post.created_at,
                     duration: post.duration || null,
-                    audio_url: post.audio_url || null, 
-
-
+                    audio_url: post.audio_url || null,
                     taggedProduct: !Array.isArray(safeProduct) ? safeProduct : null,
                     journeyProducts: Array.isArray(safeProduct) ? safeProduct : [],
                     routineSnapshot: post.routine_snapshot || null,
                     milestones: post.milestones_snapshot || [],
-
                     likesCount: post.likes_count || 0,
                     commentsCount: post.comments_count || 0,
-
                     likes: isLikedByMe ? [user.uid] : []
                 };
             });
@@ -333,7 +377,7 @@ export default function CommunityScreen() {
         loadNewPosts(true, newMode);
     };
 
-    // --- NAVIGATION ---
+    // --- NAVIGATION (Native Back Handling) ---
     useEffect(() => {
         const backAction = () => {
             if (viewMode === 'feed') { goBackToMenu(); return true; }
@@ -349,6 +393,8 @@ export default function CommunityScreen() {
         setSelectedCategory(null);
         setSearchQuery('');
         setIsBioFilterActive(false);
+        menuScrollY.setValue(0);
+        feedScrollY.setValue(0);
     };
 
     const navigateToFeed = (cat) => {
@@ -357,6 +403,16 @@ export default function CommunityScreen() {
         setSelectedCategory(cat);
         setViewMode('feed');
         setHasMore(true);
+        menuScrollY.setValue(0);
+        feedScrollY.setValue(0);
+    };
+
+    const handleCategoryPress = (cat) => {
+        if (cat.id === 'leaderboard' || cat.isAction) {
+            setLeaderboardVisible(true);
+            return;
+        }
+        navigateToFeed(cat);
     };
 
     // --- FILTERING ---
@@ -397,13 +453,12 @@ export default function CommunityScreen() {
         } catch (e) { console.error(e); }
     };
 
-    const handleInteract = async (postId) => {
+    const handleInteract = useCallback(async (postId) => {
         const post = allPosts.find(p => p.id === postId);
-        if (!post) return;
+        if (!post || !user) return;
 
         const isLiked = post.likes.includes(user.uid);
 
-        // Optimistic UI Update
         setAllPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 return {
@@ -416,9 +471,9 @@ export default function CommunityScreen() {
         }));
 
         await toggleLikePost(postId, user.uid, isLiked);
-    };
+    }, [allPosts, user]);
 
-    const handleDeleteWrapper = (postId) => {
+    const handleDeleteWrapper = useCallback((postId) => {
         AlertService.delete(
             t('community_delete_post_title', language),
             t('community_delete_post_confirm', language),
@@ -428,7 +483,7 @@ export default function CommunityScreen() {
                 AlertService.success(t('community_deleted_title', language), t('community_deleted_message', language));
             }
         );
-    };
+    }, [language]);
 
     const handleSaveWrapper = async (product) => {
         const productExists = savedProducts.some(
@@ -457,169 +512,205 @@ export default function CommunityScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
-    if (viewMode === 'menu') {
-        return (
-            <View style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-                <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 25 }]}>
-                    <View>
-                        <Text style={styles.headerTitle}>{t('community_title', language)}</Text>
-                        <Text style={styles.headerSubtitle}>{t('community_subtitle', language)}</Text>
-                    </View>
-                    <View style={styles.headerIconBtn}>
-                        <FontAwesome5 name="users" size={20} color={COLORS.textPrimary} />
-                    </View>
-                </View>
-                <ScrollView contentContainerStyle={styles.menuContainer}>
-    {CATEGORIES.map((item) => {
-        const catColor = COLORS[item.colorKey] || COLORS.primary;
-        return (
-            <TouchableOpacity key={item.id} style={styles.categoryCard} onPress={() => navigateToFeed(item)} activeOpacity={0.9}>
-                <LinearGradient
-                    colors={[String(COLORS.card), String(COLORS.card) + 'CC']}
-                    style={StyleSheet.absoluteFill}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                />
-                <View style={[styles.catIconBox, { backgroundColor: catColor + '20' }]}>
-                    <FontAwesome5 name={item.icon} size={24} color={catColor} />
-                </View>
-                <View style={{ flex: 1 }}>
-                    {/* Use t() with the translation keys */}
-                    <Text style={styles.catTitle}>
-                        {t(item.labelKey, language)}
-                    </Text>
-                    <Text style={styles.catDesc}>
-                        {t(item.descKey, language)}
-                    </Text>
-                </View>
-                <FontAwesome5 name="chevron-left" size={16} color={COLORS.textDim} />
-            </TouchableOpacity>
-        );
-    })}
-</ScrollView>
-                <CommunityIntro visible={showIntro} onClose={() => setShowIntro(false)} />
-            </View>
-        );
-    }
+    const getCategoryLabel = useCallback(() => {
+        if (!selectedCategory) return '';
+        if (selectedCategory.label) return selectedCategory.label;
+        if (selectedCategory.labelKey) return t(selectedCategory.labelKey, language);
+        return selectedCategory.id || '';
+    }, [selectedCategory, language]);
 
-    return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+    // 🌟 STABLE PERFORMANCE REFERENCES
+    const currentUserObj = useMemo(() => (
+        userProfile ? { ...userProfile, uid: user?.uid } : { uid: user?.uid }
+    ), [userProfile, user?.uid]);
 
-            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
-                    <TouchableOpacity onPress={goBackToMenu} style={styles.backBtn}>
-                        <Ionicons name="arrow-forward" size={28} color={COLORS.textPrimary} />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={styles.headerTitle}>{selectedCategory.label}</Text>
-                        <Text style={styles.headerSubtitle}>{t('community_latest_posts', language)}</Text>
-                    </View>
-                </View>
-                <View style={[styles.catIconBoxSmall, { backgroundColor: (COLORS[selectedCategory?.colorKey] || COLORS.primary) + '20' }]}>
-                    <FontAwesome5 name={selectedCategory.icon} size={16} color={COLORS[selectedCategory.colorKey] || COLORS.primary} />
-                </View>
-            </View>
+    const handleProfilePress = useCallback((userId, authorSettings) => {
+        setViewingUserProfile({ id: userId, data: authorSettings });
+    }, []);
 
-            <View style={{ zIndex: 20, elevation: 20, backgroundColor: COLORS.background }}>
-                <SearchFilterBar
-                    searchQuery={searchQuery}
-                    onSearchChange={(text) => setSearchQuery(text)}
-                    isBioFilterActive={isBioFilterActive}
-                    onToggleBioFilter={() => { Haptics.selectionAsync(); LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setIsBioFilterActive(!isBioFilterActive); }}
-                    userSkinType={userProfile?.settings?.skinType}
-                />
-                <SortTabs currentSort={sortBy} onSelect={handleSortChange} />
-            </View>
-
-            {loading && allPosts.length === 0 ? (
-                <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: 50 }} />
+    const renderContent = () => (
+        <>
+            {viewMode === 'menu' ? (
+                <>
+                    {/* 🌟 COLLAPSIBLE HEADER (MENU VIEW) */}
+                    <AuthenticHeader
+                        scrollY={menuScrollY}
+                        activeTab="community"
+                        title={t('community_title', language)}
+                        subtitle={t('community_subtitle', language)}
+                    />
+                    <Animated.ScrollView 
+                        contentContainerStyle={[
+                            styles.menuContainer, 
+                            { paddingTop: maxHeight + 16, paddingBottom: 100 }
+                        ]}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: menuScrollY } } }],
+                            { useNativeDriver: false } // Avoids VirtualizedList driver mismatch
+                        )}
+                        scrollEventThrottle={16}
+                    >
+                        {CATEGORIES.map((item) => {
+                            const catColor = COLORS[item.colorKey] || COLORS.primary;
+                            return (
+                                <TouchableOpacity 
+                                    key={item.id} 
+                                    style={styles.categoryCard} 
+                                    onPress={() => handleCategoryPress(item)} 
+                                    activeOpacity={0.9}
+                                >
+                                    <View style={[styles.catIconBox, { backgroundColor: catColor + '20' }]}>
+                                        <FontAwesome5 name={item.icon} size={24} color={catColor} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.catTitle}>
+                                            {t(item.labelKey, language)}
+                                        </Text>
+                                        <Text style={styles.catDesc}>
+                                            {t(item.descKey, language)}
+                                        </Text>
+                                    </View>
+                                    <FontAwesome5 name={rtl.isRTL ? "chevron-left" : "chevron-right"} size={16} color={COLORS.textDim} />
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </Animated.ScrollView>
+                </>
             ) : (
-                <CommunityRefreshHandler
-                    flatListRef={flatListRef}
-                    data={filteredPosts}
-                    onRefresh={handleRefresh}
-                    loading={loading}
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={{ paddingBottom: 120, paddingTop: 10 }}
-                    initialNumToRender={5}
-                    maxToRenderPerBatch={5}
-                    windowSize={5}
-                    removeClippedSubviews={true}
-                    renderItem={({ item }) => (
-                        <PostCard
-                            post={item}
-                            currentUser={userProfile ? { ...userProfile, uid: user.uid } : { uid: user.uid }}
-                            onInteract={(postId) => handleInteract(postId)}
-                            onDelete={handleDeleteWrapper}
-                            onViewProduct={setViewingProduct}
-                            onOpenComments={setCommentingPost}
-                            onImagePress={setViewingImage}
-                            onProfilePress={(userId, authorSettings) => setViewingUserProfile({ id: userId, data: authorSettings })}
+                <>
+                    {/* 🌟 COLLAPSIBLE HEADER (FEED VIEW) */}
+                    <AuthenticHeader
+                        scrollY={feedScrollY}
+                        activeTab="community"
+                        title={getCategoryLabel()}
+                        subtitle={t('community_latest_posts', language)}
+                    />
+                    
+                    {/* 🌟 STICKY FILTER BAR */}
+                    <Animated.View 
+                        style={[
+                            styles.filterWrapper, 
+                            { 
+                                top: maxHeight, 
+                                transform: [{ translateY: filterTranslateY }] 
+                            }
+                        ]}
+                    >
+                        <SearchFilterBar
+                            searchQuery={searchQuery}
+                            onSearchChange={(text) => setSearchQuery(text)}
+                            isBioFilterActive={isBioFilterActive}
+                            onToggleBioFilter={() => { 
+                                Haptics.selectionAsync(); 
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); 
+                                setIsBioFilterActive(!isBioFilterActive); 
+                            }}
+                            userSkinType={userProfile?.settings?.skinType}
+                        />
+                        <SortTabs currentSort={sortBy} onSelect={handleSortChange} />
+                    </Animated.View>
+
+                    {loading && allPosts.length === 0 ? (
+                        <ActivityIndicator size="large" color={COLORS.accentGreen} style={{ marginTop: maxHeight + FILTER_BAR_HEIGHT + 40 }} />
+                    ) : (
+                        <CommunityRefreshHandler
+                            flatListRef={flatListRef}
+                            data={filteredPosts}
+                            onRefresh={handleRefresh}
+                            loading={loading}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={{ 
+                                paddingBottom: 120, 
+                                paddingTop: maxHeight + FILTER_BAR_HEIGHT + 24 
+                            }}
+                            onScroll={Animated.event(
+                                [{ nativeEvent: { contentOffset: { y: feedScrollY } } }],
+                                { useNativeDriver: false } // Resolves VirtualizedList invariant violation
+                            )}
+                            scrollEventThrottle={16}
+                            initialNumToRender={5}
+                            maxToRenderPerBatch={5}
+                            windowSize={5}
+                            removeClippedSubviews={true}
+                            renderItem={({ item }) => (
+                                <PostCard
+                                    post={item}
+                                    currentUser={currentUserObj}
+                                    onInteract={handleInteract}
+                                    onDelete={handleDeleteWrapper}
+                                    onViewProduct={setViewingProduct}
+                                    onOpenComments={setCommentingPost}
+                                    onImagePress={setViewingImage}
+                                    onProfilePress={handleProfilePress}
+                                />
+                            )}
+                            onEndReached={() => {
+                                loadNewPosts(false, null, false, true);
+                            }}
+                            onEndReachedThreshold={0.5}
+                            ListFooterComponent={
+                                loadingMore ? (
+                                    <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 20 }} />
+                                ) : null
+                            }
+                            ListEmptyComponent={
+                                <View style={styles.emptyState}>
+                                    <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
+                                    <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? t('community_no_search_results', language) : t('community_empty_section', language)}</Text>
+                                    {(!searchQuery && !isBioFilterActive && (selectedCategory?.id !== 'tips' || isAdmin)) && (
+                                        <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
+                                            <Text style={styles.emptyActionText}>{t('community_be_first', language)}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            }
                         />
                     )}
-                    onEndReached={() => {
-                        loadNewPosts(false, null, false, true);
-                    }}
-                    onEndReachedThreshold={0.5}
-                    ListFooterComponent={
-                        loadingMore ? (
-                            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 20 }} />
-                        ) : null
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
-                            <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? t('community_no_search_results', language) : t('community_empty_section', language)}</Text>
-                            {(!searchQuery && !isBioFilterActive && (selectedCategory.id !== 'tips' || isAdmin)) && (
-                                <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
-                                    <Text style={styles.emptyActionText}>{t('community_be_first', language)}</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    }
-                />
+
+                    <NewPostsToast visible={newPostsCount > 0} onPress={() => loadNewPosts(false)} COLORS={COLORS} styles={styles} />
+
+                    {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                        <TouchableOpacity 
+                            style={[
+                                styles.fab, 
+                                { 
+                                    backgroundColor: COLORS[selectedCategory?.colorKey] || COLORS.accentGreen,
+                                    left: rtl.isRTL ? 20 : undefined,
+                                    right: !rtl.isRTL ? 20 : undefined,
+                                }
+                            ]} 
+                            onPress={() => setCreateModalVisible(true)} 
+                            activeOpacity={0.8}
+                        >
+                            <Feather name="plus" size={24} color={COLORS.textOnAccent} />
+                        </TouchableOpacity>
+                    )}
+
+                    {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                        <CreatePostModal 
+                            visible={isCreateModalVisible} 
+                            onClose={() => setCreateModalVisible(false)} 
+                            onSubmit={handleCreateWrapper} 
+                            savedProducts={savedProducts} 
+                            userRoutines={userProfile?.routines} 
+                            defaultType={selectedCategory?.id}
+                            isAdmin={isAdmin}
+                        />
+                    )}
+                </>
             )}
 
-            <NewPostsToast visible={newPostsCount > 0} onPress={() => loadNewPosts(false)} COLORS={COLORS} styles={styles} />
-
-            {/* FAB - Only show for non-tips categories OR if user is admin in tips category */}
-            {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
-                <TouchableOpacity style={styles.fab} onPress={() => setCreateModalVisible(true)} activeOpacity={0.8}>
-                    <LinearGradient
-                        colors={[COLORS[selectedCategory?.colorKey] || COLORS.accentGreen, COLORS.card]}
-                        style={styles.fabGradient}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    >
-                        <Feather name="plus" size={24} color={COLORS.textOnAccent} />
-                    </LinearGradient>
-                </TouchableOpacity>
-            )}
-
-            {/* Create Post Modal - Only render for non-tips categories OR if user is admin in tips category */}
-            {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
-                <CreatePostModal 
-                    visible={isCreateModalVisible} 
-                    onClose={() => setCreateModalVisible(false)} 
-                    onSubmit={handleCreateWrapper} 
-                    savedProducts={savedProducts} 
-                    userRoutines={userProfile?.routines} 
-                    defaultType={selectedCategory?.id}
-                    isAdmin={isAdmin}
-                />
-            )}
-   
             <ProductActionSheet product={viewingProduct} visible={!!viewingProduct} onClose={() => setViewingProduct(null)} onSave={handleSaveWrapper} />
             
             <CommentModal
                 visible={!!commentingPost}
                 onClose={() => {
                     setCommentingPost(null);
-                    // Ensure parameters are cleared when closing manually too
-                    router.setParams({ openPostId: undefined });
+                    router.setParams({ openPostId: '' }); // 🌟 SAFE RESET (NO LOOPS)
                 }}
                 post={commentingPost}
-                currentUser={userProfile ? { ...userProfile, uid: user.uid } : { uid: user.uid }}
+                currentUser={currentUserObj}
                 onProfilePress={(userId) => setViewingUserProfile({ id: userId })}
             />
             
@@ -630,35 +721,148 @@ export default function CommunityScreen() {
                 onClose={() => setViewingUserProfile(null)}
                 targetUserId={viewingUserProfile?.id}
                 initialData={viewingUserProfile?.data}
-                currentUser={userProfile ? { ...userProfile, uid: user.uid } : { uid: user.uid }}
+                currentUser={currentUserObj}
                 onProductSelect={setViewingProduct}
             />
 
+            <LeaderboardModal
+                visible={isLeaderboardVisible}
+                onClose={() => setLeaderboardVisible(false)}
+                currentUser={currentUserObj}
+                onUserPress={(userId, userData) => setViewingUserProfile({ id: userId, data: userData })}
+                adminUid={appConfig?.adminUid || null}
+            />
+
             <CommunityIntro visible={showIntro} onClose={() => setShowIntro(false)} />
+        </>
+    );
+
+    if (isLightTheme) {
+        return (
+            <LinearGradient
+                colors={[
+                    COLORS.background,
+                    COLORS.gradientStart || COLORS.background,
+                    COLORS.gradientMid || COLORS.accentGreen + '15',
+                    COLORS.gradientEnd || COLORS.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
+                <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+                {renderContent()}
+            </LinearGradient>
+        );
+    }
+
+    return (
+        <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            {renderContent()}
         </View>
     );
 }
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, isLightTheme, rtl) => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
-    header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15, backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-    headerTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 22, color: COLORS.textPrimary, textAlign: 'right' },
-    headerSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
-    headerIconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-    backBtn: { padding: 5 },
-    menuContainer: { padding: 20, gap: 15 },
-    categoryCard: { flexDirection: 'row-reverse', alignItems: 'center', height: 100, borderRadius: 24, padding: 20, gap: 15, position: 'relative', overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-    catIconBox: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-    catIconBoxSmall: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    catTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'right', marginBottom: 4 },
-    catDesc: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
+    
+    // --- FILTER WRAPPER ---
+    filterWrapper: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        zIndex: 9,
+        backgroundColor: COLORS.background,
+        paddingBottom: 6,
+    },
+    
+    // --- MENU ---
+    menuContainer: { paddingHorizontal: 20, gap: 15 },
+    categoryCard: { 
+        flexDirection: rtl.flexDirection, 
+        alignItems: 'center', 
+        height: 100, 
+        borderRadius: 24, 
+        padding: 20, 
+        gap: 15, 
+        borderWidth: 0.5, 
+        borderColor: COLORS.border,
+        backgroundColor: 'transparent',
+    },
+    catIconBox: { 
+        width: 50, 
+        height: 50, 
+        borderRadius: 16, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+    },
+    catTitle: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 18, 
+        color: COLORS.textPrimary, 
+        textAlign: rtl.textAlign, 
+        marginBottom: 4 
+    },
+    catDesc: { 
+        fontFamily: 'Tajawal-Regular', 
+        fontSize: 12, 
+        color: COLORS.textSecondary, 
+        textAlign: rtl.textAlign 
+    },
+    
+    // --- EMPTY STATE ---
     emptyState: { alignItems: 'center', marginTop: 50, opacity: 0.5 },
     emptyText: { color: COLORS.textDim, fontFamily: 'Tajawal-Regular', marginTop: 10 },
-    emptyActionBtn: { marginTop: 15, backgroundColor: COLORS.accentGreen, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+    emptyActionBtn: { 
+        marginTop: 15, 
+        backgroundColor: COLORS.accentGreen, 
+        paddingHorizontal: 20, 
+        paddingVertical: 10, 
+        borderRadius: 10 
+    },
     emptyActionText: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' },
-    fab: { position: 'absolute', bottom: 90, left: 20, zIndex: 100 },
-    fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-    toastContainer: { position: 'absolute', top: 60, alignSelf: 'center', zIndex: 1000, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
-    toastButton: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: COLORS.card, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: COLORS.accentGreen },
-    toastText: { fontFamily: 'Tajawal-Bold', color: COLORS.accentGreen, fontSize: 14, marginLeft: 8 },
+    
+    // --- SOLID FAB ---
+    fab: { 
+        position: 'absolute', 
+        bottom: 90, 
+        width: 54,
+        height: 54,
+        borderRadius: 27,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+    },
+    
+    // --- TOAST ---
+    toastContainer: { 
+        position: 'absolute', 
+        top: 60, 
+        alignSelf: 'center', 
+        zIndex: 1000, 
+    },
+    toastButton: { 
+        flexDirection: rtl.flexDirection, 
+        alignItems: 'center', 
+        backgroundColor: COLORS.card, 
+        paddingHorizontal: 20, 
+        paddingVertical: 10, 
+        borderRadius: 20, 
+        borderWidth: 0.5, 
+        borderColor: COLORS.accentGreen 
+    },
+    toastText: { 
+        fontFamily: 'Tajawal-Bold', 
+        color: COLORS.accentGreen, 
+        fontSize: 14, 
+        marginLeft: 8 
+    },
 });

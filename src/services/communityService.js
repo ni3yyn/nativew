@@ -9,6 +9,26 @@ import { AlertService } from './alertService';
 import { supabase } from '../config/supabase';
 import { t } from '../i18n';
 
+// --- COMMUNITY GAMIFICATION REWARDS ---
+export const COMMUNITY_POINTS = {
+    CREATE_POST: 30,
+    ADD_COMMENT: 10,
+    LIKE_POST: 2,
+};
+
+export const awardInstantPoints = async (userId, pointsAmount) => {
+    if (!userId || !pointsAmount || pointsAmount <= 0) return;
+    try {
+        const userRef = doc(db, 'profiles', userId);
+        await updateDoc(userRef, {
+            points: increment(pointsAmount)
+        });
+        console.log(`🏆 [Gamification] Awarded +${pointsAmount} points to user: ${userId}`);
+    } catch (error) {
+        console.warn('⚠️ [Gamification] Award instant points error:', error);
+    }
+};
+
 // --- POSTS (SUPABASE) ---
 
 export const createPost = async (payload, firebaseUid, userName, userSettings) => {
@@ -16,6 +36,7 @@ export const createPost = async (payload, firebaseUid, userName, userSettings) =
       // 1. Prepare Author Snapshot
       const authorSnapshot = {
           name: userName || t('brand_wathiq_user'),
+          avatarId: userSettings?.avatarId || null,
           skinType: userSettings?.skinType || null,
           scalpType: userSettings?.scalpType || null,
           allergies: userSettings?.allergies || [],
@@ -111,6 +132,10 @@ export const createPost = async (payload, firebaseUid, userName, userSettings) =
           .single();
 
       if (error) throw error;
+
+      // 5. Award Instant Gamification Points (+30)
+      awardInstantPoints(firebaseUid, COMMUNITY_POINTS.CREATE_POST);
+
       return data;
 
   } catch (error) {
@@ -134,10 +159,11 @@ export const toggleLikePost = async (postId, userId, isLiked) => {
     try {
         if (isLiked) {
             await supabase.from('likes').delete().match({ post_id: postId, firebase_user_id: userId });
-            await supabase.rpc('decrement_likes_count', { row_id: postId });
+            // ❌ Remove: await supabase.rpc('decrement_likes_count', { row_id: postId });
         } else {
             await supabase.from('likes').insert([{ post_id: postId, firebase_user_id: userId }]);
-            await supabase.rpc('increment_likes_count', { row_id: postId });
+            // ❌ Remove: await supabase.rpc('increment_likes_count', { row_id: postId });
+            awardInstantPoints(userId, COMMUNITY_POINTS.LIKE_POST);
         }
     } catch (error) {
         console.error("Like Error:", error);

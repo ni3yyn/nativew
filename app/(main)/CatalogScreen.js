@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +12,10 @@ import { t, interpolate } from '../../src/i18n/index';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 import { useRTL } from '../../src/hooks/useRTL';
 import { useAppContext } from '../../src/context/AppContext';
+import { LinearGradient } from 'expo-linear-gradient';
+
+// 🌟 UNIFIED AUTHENTIC HEADER
+import AuthenticHeader, { getHeaderDimensions } from '../../src/utils/AuthenticHeader';
 
 import ProductCard from '../../src/components/catalog/ProductCard';
 import CatalogDetailModal from '../../src/components/catalog/CatalogDetailModal';
@@ -22,6 +25,7 @@ import BountyModal from '../../src/components/catalog/BountyModal';
 import FilterModal from '../../src/components/catalog/FilterModal';
 import AddProductModal from '../../src/components/catalog/AddProductModal';
 import CatalogIntro from '../../src/components/catalog/CatalogIntro'; 
+import AppTextInput from '../../src/components/common/AppTextInput'; 
 
 import { submitBounty, submitNewProduct } from '../../src/services/bountyService'; 
 import { AlertService } from '../../src/services/alertService';
@@ -29,8 +33,11 @@ import { CatalogService } from '../../src/services/catalogService';
 
 // Storage keys & Pagination
 const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
-const DEV_MODE_KEY = '@dev_mode_enabled'; // For testing
-const ITEMS_PER_PAGE = 8; // Lazy loading batch size
+const DEV_MODE_KEY = '@dev_mode_enabled';
+const ITEMS_PER_PAGE = 8;
+
+// 🌟 FIXED CONTROLS HEIGHT: Eliminates layout thrashing and continuous re-renders
+const CONTROLS_HEIGHT = 150;
 
 const getPriceValue = (price) => {
     if (!price) return null;
@@ -61,7 +68,7 @@ const isAlgerianProduct = (product) => {
 };
 
 export default function CatalogScreen() {
-  const { colors: C } = useTheme();
+  const { colors: C, activeThemeId } = useTheme();
   const insets = useSafeAreaInsets();
   const { userProfile } = useAppContext(); 
   
@@ -74,7 +81,22 @@ export default function CatalogScreen() {
   const params = useLocalSearchParams();
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [selectedCompareIds, setSelectedCompareIds] = useState([]);
-  const [scrollY] = useState(new Animated.Value(0));
+  
+  // 🌟 NATIVE GPU-DRIVEN SCROLL
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // 🌟 HEADER COLLAPSE DIMENSIONS
+  const { maxHeight, scrollDistance } = useMemo(
+    () => getHeaderDimensions(insets.top),
+    [insets.top]
+  );
+
+  // 🌟 NATIVE TRANSFORM FOR CONTROLS (Zero JS thread lag)
+  const controlsTranslateY = scrollY.interpolate({
+    inputRange: [0, scrollDistance],
+    outputRange: [0, -scrollDistance],
+    extrapolate: 'clamp',
+  });
   
   // App States
   const [loading, setLoading] = useState(true);
@@ -83,6 +105,7 @@ export default function CatalogScreen() {
   
   // Filter States
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCat, setActiveCat] = useState('all');
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({ bountiesOnly: false, brand: 'all', sort: 'default' });
@@ -108,6 +131,44 @@ export default function CatalogScreen() {
   const plusScaleAnim = useRef(new Animated.Value(1)).current;
   const plusPulseAnim = useRef(new Animated.Value(1)).current;
   const inputRef = useRef(null);
+
+  // Smart Debounce: updates debouncedSearch 500ms after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Immediate search trigger on keyboard enter / search button
+  const handleSearchSubmit = useCallback(() => {
+    setDebouncedSearch(search);
+  }, [search]);
+
+  // Immediate clear trigger
+  const handleClearSearch = useCallback(() => {
+    setSearch('');
+    setDebouncedSearch('');
+  }, []);
+
+  // Sync incoming navigation params (e.g. from Home/Profile)
+  useEffect(() => {
+    if (params?.search) {
+      setSearch(params.search);
+      setDebouncedSearch(params.search);
+    }
+  }, [params?.search]);
+
+  // Quick brand filter trigger
+  const handleSelectBrand = useCallback((brandName) => {
+    if (!brandName) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSearch(brandName);
+    
+    setTimeout(() => {
+        setDebouncedSearch(brandName);
+    }, 50);
+  }, []);
 
   // 1. Check if intro should be shown
   useEffect(() => {
@@ -229,9 +290,6 @@ export default function CatalogScreen() {
       return ['all', ...Array.from(brands).sort()];
   }, [products]);
 
-  // Optimized Filter Logic
-  // Inside CatalogScreen.js -> update filteredData definition:
-
   // Alias maps for fuzzy matching skin types & claims
   const SKIN_TYPE_ALIASES = {
       'بشرة دهنية': ['بشرة دهنية', 'دهنية', 'oily'],
@@ -284,29 +342,61 @@ export default function CatalogScreen() {
       return types.map(t => String(t)).filter(Boolean);
   };
 
+  const getRelevanceScore = (query, product) => {
+    if (!query) return 100;
+    if (!product) return 0;
+    
+    query = query.toLowerCase().trim();
+    const searchString = `${product.name || ''} ${product.name_ar || ''} ${product.brand || ''} ${product.brand_ar || ''} ${product.category?.name || ''}`.toLowerCase();
+    
+    if ((product.name && product.name.toLowerCase() === query) || 
+        (product.brand && product.brand.toLowerCase() === query)) {
+        return 100;
+    }
+    
+    if (searchString.includes(query)) {
+       if (searchString.startsWith(query)) return 90;
+       return 80;
+    }
+    
+    const queryWords = query.split(/\s+/);
+    if (queryWords.length > 1) {
+        const allWordsMatch = queryWords.every(word => searchString.includes(word));
+        if (allWordsMatch) return 60;
+    }
+    
+    if (query.length > 3) {
+        let qIdx = 0;
+        for (let i = 0; i < searchString.length; i++) {
+          if (searchString[i] === query[qIdx]) {
+            qIdx++;
+            if (qIdx === query.length) {
+                return 30 + (query.length / searchString.length) * 10;
+            }
+          }
+        }
+    }
+    
+    return 0;
+  };
+
   const filteredData = useMemo(() => {
     if (!products || !Array.isArray(products) || products.length === 0) {
       return [];
     }
     
-    const searchLower = search.toLowerCase();
+    const searchTrimmed = debouncedSearch.trim();
+    const isSearching = searchTrimmed.length > 0;
     
     let result = products.filter(p => {
-      // 1. Search Query Match
-      const matchSearch = searchLower === '' || 
-                          (p.name || "").toLowerCase().includes(searchLower) || 
-                          (p.brand || "").toLowerCase().includes(searchLower);
-      
-      // 2. Category Filter
+      if (isSearching) {
+         p._searchScore = getRelevanceScore(searchTrimmed, p);
+         if (p._searchScore === 0) return false;
+      }
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
-      
-      // 3. Brand Filter
       const matchBrand = advancedFilters.brand === 'all' || p.brand === advancedFilters.brand;
-      
-      // 4. Algerian Local Filter
       const matchLocal = advancedFilters.localOnly ? isAlgerianProduct(p) : true;
 
-      // 5. Granular Missing Fields (Bounties) Filter
       let matchMissing = true;
       if (advancedFilters.missingFields && advancedFilters.missingFields.length > 0) {
         matchMissing = advancedFilters.missingFields.some(fieldKey => {
@@ -319,7 +409,6 @@ export default function CatalogScreen() {
         });
       }
 
-      // 6. Target Skin Types Filter (Fuzzy Alias Match)
       let matchSkinType = true;
       if (advancedFilters.skinTypes && advancedFilters.skinTypes.length > 0) {
         const prodTypes = getProductTargetSkinTypes(p);
@@ -332,7 +421,6 @@ export default function CatalogScreen() {
         });
       }
 
-      // 7. Claims Filter (Fuzzy Alias Match)
       let matchClaims = true;
       if (advancedFilters.claims && advancedFilters.claims.length > 0) {
         const prodClaims = getProductClaims(p);
@@ -345,15 +433,16 @@ export default function CatalogScreen() {
         });
       }
 
-      return matchSearch && matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
+      return matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
     });
 
-    // Sorting
     if (advancedFilters.sort === 'price_asc') {
         result.sort((a, b) => (getPriceValue(a.price) || 999999) - (getPriceValue(b.price) || 999999));
     } else if (advancedFilters.sort === 'price_desc') {
         result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
-    } else {
+    } else if (isSearching) {
+        result.sort((a, b) => (b._searchScore || 0) - (a._searchScore || 0));
+    } else if (!isSearching) {
         result.sort((a, b) => {
             const aIsAlg = isAlgerianProduct(a);
             const bIsAlg = isAlgerianProduct(b);
@@ -364,7 +453,7 @@ export default function CatalogScreen() {
     }
 
     return result;
-  }, [search, activeCat, products, advancedFilters]);
+  }, [debouncedSearch, activeCat, products, advancedFilters]);
 
   // Pulse animation for plus button when empty state
   useEffect(() => {
@@ -404,7 +493,7 @@ export default function CatalogScreen() {
 
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [search, activeCat, advancedFilters, products]);
+  }, [debouncedSearch, activeCat, advancedFilters, products]);
 
   const visibleData = useMemo(() => {
     if (!Array.isArray(filteredData)) {
@@ -520,7 +609,6 @@ export default function CatalogScreen() {
     }
   }, [language]);
 
-  // Modal and interactions close actions
   const closeProductDetail = useCallback(() => setSelectedProduct(null), []);
   const closeBountyModal = useCallback(() => setBountyState(prev => ({ ...prev, visible: false })), []);
   const closeFilterModal = useCallback(() => setFilterModalVisible(false), []);
@@ -563,7 +651,6 @@ export default function CatalogScreen() {
     setAddProductVisible(true);
   }, [plusScaleAnim]);
 
-  // FlatList performance extractions
   const keyExtractor = useCallback(item => item.id?.toString() || Math.random().toString(), []);
   
   const renderProduct = useCallback(({ item, index }) => (
@@ -572,13 +659,14 @@ export default function CatalogScreen() {
           index={index % ITEMS_PER_PAGE} 
           onPress={handleProductPress} 
           onPressBounty={handleContribute}
+          onSelectBrand={handleSelectBrand}
           isCompareMode={isCompareMode}
           isSelected={selectedCompareIds.includes(item.id)}
       />
-  ), [handleProductPress, handleContribute, isCompareMode, selectedCompareIds]);
+  ), [handleProductPress, handleContribute, handleSelectBrand, isCompareMode, selectedCompareIds]);
 
   const ListEmptyComponent = useMemo(() => {
-    const hasSearchTerm = search.length > 0;
+    const hasSearchTerm = search.length > 0 || debouncedSearch.length > 0;
     const hasActiveFilter = advancedFilters.brand !== 'all' || advancedFilters.bountiesOnly || advancedFilters.sort !== 'default';
     
     return (
@@ -617,199 +705,249 @@ export default function CatalogScreen() {
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
-  // ---------------- UI RENDERS ----------------
+    if (checkingIntro) {
+        return (
+            <View style={[styles.center, { backgroundColor: C.background }]}>
+                <ActivityIndicator size="large" color={C.accentGreen} />
+            </View>
+        );
+    }
 
-  if (checkingIntro) {
-    return (
-      <View style={[styles.center, { backgroundColor: C.background }]}>
-        <ActivityIndicator size="large" color={C.accentGreen} />
-      </View>
-    );
-  }
+    if (showIntro) {
+        return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
+    }
 
-  if (showIntro) {
-    return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
-  }
+    if (loading) {
+        return (
+            <View style={[styles.center, { backgroundColor: C.background }]}>
+                <ActivityIndicator size="large" color={C.accentGreen} />
+            </View>
+        );
+    }
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: C.background }]}>
-        <ActivityIndicator size="large" color={C.accentGreen} />
-      </View>
-    );
-  }
+    const isLightTheme = activeThemeId === 'light';
 
-  return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
-      <TouchableOpacity 
-        style={styles.devModeToggle}
-        onLongPress={toggleDevMode}
-        activeOpacity={0.7}
-      >
-        <View style={{ height: 1, width: 1, opacity: 0 }} />
-      </TouchableOpacity>
-      
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.topRow}>
-          <TouchableOpacity onLongPress={toggleDevMode} activeOpacity={0.7}>
-            <Text style={[styles.title, { color: C.textPrimary }]}>{t('catalog_title', language)}</Text>
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-            <TouchableOpacity onPress={refreshData} disabled={syncing}>
-              {syncing ? <ActivityIndicator size="small" color={C.gold} /> : <Feather name="refresh-cw" size={20} color={C.textDim} />}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <RewardsBanner 
-          currentPoints={userPoints} 
-          scrollY={scrollY}
-        />
-
-        {/* 🌟 IDENTICAL SEARCH BAR (MATCHES SHELF SEARCH BAR) 🌟 */}
-        <View style={[
-          styles.searchContainer, 
-          { 
-            backgroundColor: C.card, 
-            borderColor: C.accentGreen + '40',
-            shadowColor: C.accentGreen
-          }
-        ]}>
-          {/* TAPPING ANYWHERE IN THIS ENTIRE ZONE FOCUSES THE INPUT */}
-          <TouchableOpacity 
-            style={styles.searchSide}
-            activeOpacity={1}
-            onPress={() => inputRef.current?.focus()}
-          >
-            <FontAwesome5 name="search" size={16} color={C.textSecondary} />
-            <TextInput 
-              ref={inputRef}
-              style={[styles.input, { color: C.textPrimary }]} 
-              value={search} 
-              onChangeText={setSearch} 
-              textAlign={rtl.textAlign}
-              textAlignVertical="center"
-              paddingVertical={0}
-              paddingHorizontal={0}
-              height="100%"
-              includeFontPadding={false}
-            />
-          </TouchableOpacity>
-
-          <View style={[styles.divider, { backgroundColor: C.border }]} />
-
-          <TouchableOpacity 
-            onPress={handleFilterOpen} 
-            style={[
-              styles.filterBtn, 
-              { backgroundColor: C.accentGreen + '1A' }
-            ]}
-            activeOpacity={0.7}
-          >
-            <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textSecondary} />
-            {hasActiveFilters && <View style={[styles.activeFilterDot, { backgroundColor: C.accentGreen, borderColor: C.card }]} />}
-          </TouchableOpacity>
-        </View>
-        
-        <CategoryFilter activeCategory={activeCat} onSelect={setActiveCat} />
-      </View>
-
-      <FlatList 
-        data={visibleData} 
-        keyExtractor={keyExtractor} 
-        showsVerticalScrollIndicator={false}
-        renderItem={renderProduct}
-        contentContainerStyle={[
-          styles.list,
-          (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
-        ]}
-        refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshData} tintColor={C.gold} />}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5} 
-        ListEmptyComponent={ListEmptyComponent}
-        ListFooterComponent={ListFooterComponent}
-        initialNumToRender={ITEMS_PER_PAGE}
-        maxToRenderPerBatch={ITEMS_PER_PAGE}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-      />
-
-      <View style={styles.fabStack}>
-        <TouchableOpacity
-          style={[
-            styles.fabSecondary,
-            rtl.flexDirection === 'row-reverse' ? { left: 20 } : { right: 20 }
-          ]}
-          activeOpacity={0.8}
-          onPress={handleToggleCompareMode}
-        >
-          <LinearGradient
-            colors={[C.accentGreen, C.card]}
-            style={[styles.fabGradient, isCompareMode && styles.fabGradientActive]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          >
-            <MaterialCommunityIcons
-              name="compare"
-              size={24}
-              color={C.textOnAccent}
-            />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <Animated.View
-          style={{
-            transform: [
-              { scale: plusPulseAnim }
-            ]
-          }}
-        >
-          <TouchableOpacity 
-            style={[
-              styles.fab, 
-              rtl.flexDirection === 'row-reverse' ? { left: 20 } : { right: 20 }
-            ]} 
-            activeOpacity={0.8}
-            onPress={handleOpenAddProduct}
-          >
-            <LinearGradient
-              colors={[C.accentGreen, C.card]}
-              style={styles.fabGradient}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+    const renderContent = () => (
+        <View style={styles.container}>
+            <TouchableOpacity 
+                style={styles.devModeToggle}
+                onLongPress={toggleDevMode}
+                activeOpacity={0.7}
             >
-              <Feather name="plus" size={24} color={C.textOnAccent} />
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+                <View style={{ height: 1, width: 1, opacity: 0 }} />
+            </TouchableOpacity>
+            
+            {/* 🌟 UNIFIED AUTHENTIC HEADER */}
+            <AuthenticHeader
+                scrollY={scrollY}
+                activeTab="catalog"
+                title={t('catalog_title', language)}
+                subtitle={interpolate(t('catalog_header_desc', language) || '%{count} منتج تجميلي موثّق', { count: products.length })}
+            />
 
-      <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={closeProductDetail} onContribute={handleContribute} />
-      <BountyModal visible={bountyState.visible} product={bountyState.product} field={bountyState.field} onClose={closeBountyModal} onSubmit={handleBountySubmit} />
-      <FilterModal visible={isFilterModalVisible} onClose={closeFilterModal} onApply={setAdvancedFilters} currentFilters={advancedFilters} availableBrands={availableBrands} />
-      <AddProductModal visible={isAddProductVisible} onClose={closeAddProductModal} onSubmit={handleNewProductSubmit} />
-    </View>
-  );
+            {/* 🌟 STICKY/COLLAPSIBLE CONTROLS (Native Transform) */}
+            <Animated.View 
+                style={[
+                    styles.controlsContainer, 
+                    { 
+                        top: maxHeight - 8,
+                        transform: [{ translateY: controlsTranslateY }]
+                    }
+                ]}
+            >
+                {/* 🌟 REWARDS BANNER (Stable, zero layout reflows) */}
+                <RewardsBanner 
+                    currentPoints={userPoints} 
+                    language={language}
+                />
+
+                {/* SEARCH BAR */}
+                <View style={[
+                    styles.searchContainer, 
+                    { 
+                        backgroundColor: C.card, 
+                        borderColor: C.accentGreen + '40',
+                        shadowColor: C.accentGreen
+                    }
+                ]}>
+                    <TouchableOpacity 
+                        style={styles.searchSide}
+                        activeOpacity={1}
+                        onPress={() => inputRef.current?.focus()}
+                    >
+                        <FontAwesome5 name="search" size={16} color={C.textSecondary} />
+                        <AppTextInput 
+                            ref={inputRef}
+                            style={[styles.input, { color: C.textPrimary }]} 
+                            value={search} 
+                            onChangeText={setSearch} 
+                            onSubmitEditing={handleSearchSubmit}
+                            returnKeyType="search"
+                            placeholder={t('catalog_search_placeholder', language)}
+                            placeholderTextColor={C.textDim}
+                            textAlign={rtl.textAlign}
+                            textAlignVertical="center"
+                            paddingVertical={0}
+                            paddingHorizontal={0}
+                            height="100%"
+                            includeFontPadding={false}
+                        />
+                        {search.length > 0 && (
+                            <TouchableOpacity 
+                                onPress={handleClearSearch} 
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={{ paddingHorizontal: 6 }}
+                            >
+                                <Feather name="x-circle" size={16} color={C.textDim} />
+                            </TouchableOpacity>
+                        )}
+                    </TouchableOpacity>
+
+                    <View style={[styles.divider, { backgroundColor: C.border }]} />
+
+                    <TouchableOpacity 
+                        onPress={handleFilterOpen} 
+                        style={[
+                            styles.filterBtn, 
+                            { backgroundColor: C.accentGreen + '1A' }
+                        ]}
+                        activeOpacity={0.7}
+                    >
+                        <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textSecondary} />
+                        {hasActiveFilters && <View style={[styles.activeFilterDot, { backgroundColor: C.accentGreen, borderColor: C.card }]} />}
+                    </TouchableOpacity>
+                </View>
+                
+                <CategoryFilter activeCategory={activeCat} onSelect={setActiveCat} />
+            </Animated.View>
+
+            {/* 🌟 100% NATIVE GPU-DRIVEN ANIMATED FLATLIST */}
+            <Animated.FlatList 
+                data={visibleData} 
+                keyExtractor={keyExtractor} 
+                showsVerticalScrollIndicator={false}
+                renderItem={renderProduct}
+                contentContainerStyle={[
+                    styles.list,
+                    { paddingTop: maxHeight + CONTROLS_HEIGHT + 14 },
+                    (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
+                ]}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={syncing} 
+                        onRefresh={refreshData} 
+                        tintColor={C.gold} 
+                        progressViewOffset={maxHeight + CONTROLS_HEIGHT}
+                    />
+                }
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5} 
+                ListEmptyComponent={ListEmptyComponent}
+                ListFooterComponent={ListFooterComponent}
+                initialNumToRender={ITEMS_PER_PAGE}
+                maxToRenderPerBatch={ITEMS_PER_PAGE}
+                windowSize={5}
+                removeClippedSubviews={Platform.OS === 'android'}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true } // 👈 NATIVE DRIVER (Zero JS lag)
+                )}
+                scrollEventThrottle={16}
+            />
+
+            {/* 🌟 1. Anchor the absolute parent container based on language */}
+<View 
+  style={[
+    styles.fabStack, 
+    rtl.isRTL ? { left: 20 } : { right: 20 } // 👈 Moves the whole stack to the correct screen edge
+  ]}
+>
+  {/* Secondary Compare FAB (Solid) */}
+  <TouchableOpacity
+    style={[
+      styles.fabSolid, 
+      { backgroundColor: isCompareMode ? C.card : C.accentGreen },
+      isCompareMode && styles.fabSolidActive
+    ]}
+    activeOpacity={0.8}
+    onPress={handleToggleCompareMode}
+  >
+    <MaterialCommunityIcons
+      name="compare"
+      size={24}
+      color={isCompareMode ? C.accentGreen : C.textOnAccent}
+    />
+  </TouchableOpacity>
+
+  {/* Main Add Product FAB (Solid) */}
+  <Animated.View style={{ transform: [{ scale: plusPulseAnim }] }}>
+    <TouchableOpacity 
+      style={[styles.fabSolid, { backgroundColor: C.accentGreen }]} 
+      activeOpacity={0.8}
+      onPress={handleOpenAddProduct}
+    >
+      <Feather name="plus" size={24} color={C.textOnAccent} />
+    </TouchableOpacity>
+  </Animated.View>
+</View>
+
+            <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={closeProductDetail} onContribute={handleContribute} onSelectBrand={handleSelectBrand} />
+            <BountyModal visible={bountyState.visible} product={bountyState.product} field={bountyState.field} onClose={closeBountyModal} onSubmit={handleBountySubmit} />
+            <FilterModal visible={isFilterModalVisible} onClose={closeFilterModal} onApply={setAdvancedFilters} currentFilters={advancedFilters} availableBrands={availableBrands} />
+            <AddProductModal visible={isAddProductVisible} onClose={closeAddProductModal} onSubmit={handleNewProductSubmit} />
+        </View>
+    );
+
+    if (isLightTheme) {
+        return (
+            <LinearGradient
+                colors={[
+                    C.background,
+                    C.gradientStart || C.background,
+                    C.gradientMid || C.accentGreen + '15',
+                    C.gradientEnd || C.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
+                {renderContent()}
+            </LinearGradient>
+        );
+    }
+
+    return (
+        <View style={{ flex: 1, backgroundColor: C.background }}>
+            {renderContent()}
+        </View>
+    );
 }
 
 const createStyles = (C, rtl, isEn) => StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: 'transparent' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: 20, paddingBottom: 10 },
-  topRow: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  title: { fontFamily: 'Tajawal-ExtraBold', fontSize: isEn ? 26 : 24 },
   
-  /* IDENTICAL SEARCH BAR STYLES (MATCHES SHELF SEARCH BAR) */
+  // 🌟 PINNED CONTROLS: Rigid height, zero layout thrashing
+  controlsContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: CONTROLS_HEIGHT,
+    zIndex: 9,
+    paddingHorizontal: 20,
+    backgroundColor: C.background,
+  },
+
   searchContainer: { 
     flexDirection: rtl.flexDirection, 
     height: 56, 
     borderRadius: 20, 
     alignItems: 'center', 
-    borderWidth: 1, 
+    borderWidth: 0.5, 
     marginBottom: 10, 
-    marginTop: 5,
+    marginTop: -9,
     paddingHorizontal: 8,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -818,21 +956,18 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
   },
   searchSide: {
     flex: 1,
-    height: '100%',     // 🌟 Maximize touch height
+    height: '100%',
     flexDirection: rtl.flexDirection,
     alignItems: 'center',
     paddingRight: 12,
     paddingLeft: 6,
     gap: 10,
   },
-  searchIcon: { 
-    // marginEnd removed — 'gap' in searchSide handles spacing cleanly
-  },
   input: { 
     flex: 1, 
-    height: '100%',     // 🌟 Fills entire search side for instant tap response
+    height: '100%',
     fontFamily: 'Tajawal-Regular', 
-    fontSize: isEn ? 20 : 20, 
+    fontSize: isEn ? 16 : 16, 
     textAlign: rtl.textAlign,
     textAlignVertical: 'center',
     paddingVertical: 0,
@@ -864,7 +999,7 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     borderWidth: 2 
   },
   
-  list: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 1 },
+  list: { paddingHorizontal: 20, paddingBottom: 120 },
   emptyContainer: {
     flex: 1,
     minHeight: 320,
@@ -894,17 +1029,30 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   emptyAddButtonText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: isEn ? 15 : 14,
   },
-  fabStack: { position: 'absolute', bottom: 90, zIndex: 100, gap: 10 },
-  fab: { position: 'relative', zIndex: 100 },
-  fabSecondary: { position: 'relative', zIndex: 100 },
-  fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  fabGradientActive: { borderWidth: 2, borderColor: C.textOnAccent, shadowOpacity: 0.45, shadowRadius: 10, transform: [{ scale: 1.03 }] },
+  fabStack: { 
+  position: 'absolute', 
+  bottom: 90, 
+  zIndex: 100, 
+  gap: 10,
+  alignItems: 'center',
+},
+fabSolid: { 
+  width: 54, 
+  height: 54, 
+  borderRadius: 27, 
+  alignItems: 'center', 
+  justifyContent: 'center'
+},
+fabSolidActive: { 
+  borderWidth: 2, 
+  borderColor: C.accentGreen,
+},
   devModeToggle: { position: 'absolute', top: 0, left: 0, width: 50, height: 50, zIndex: 999 },
   emptyList: {
     flexGrow: 1,

@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 20, // Modern squircle look
-        borderWidth: 1,
+        borderWidth: 0.5,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',

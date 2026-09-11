@@ -33,7 +33,7 @@ export default function Index() {
     <View
       style={{
         flex: 1,
-        backgroundColor: '#1A2D27' // Matches your app theme to avoid white flashes
+        backgroundColor: '#F0F5F0' // Matches your app theme to avoid white flashes
       }}
     >
     </View>

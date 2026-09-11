@@ -9,6 +9,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { COLORS as DEFAULT_COLORS } from './oilguard.styles';
 import { useTheme } from '../../context/ThemeContext';
+import AppTextInput from '../common/AppTextInput';
+
+// 🌟 i18n + RTL
+import { t } from '../../i18n';
+import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useRTL } from '../../hooks/useRTL';
 
 // --- THEME CONFIG ---
 const { height } = Dimensions.get('window');
@@ -22,10 +28,12 @@ const getTextDirection = (text) => {
 export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const language = useCurrentLanguage();
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(COLORS, rtl), [COLORS, rtl]);
 
     const [text, setText] = useState('');
-    const [inputDirection, setInputDirection] = useState('right');
+    const [inputDirection, setInputDirection] = useState(rtl.textAlign);
     const animController = useRef(new Animated.Value(0)).current;
     const inputRef = useRef(null);
 
@@ -51,8 +59,8 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     useEffect(() => {
         if (visible) {
             setText('');
-            setInputDirection('right');
-            Animated.spring(animController, { toValue: 1, damping: 15, stiffness: 100, useNativeDriver: true }).start();
+            setInputDirection(rtl.textAlign);
+            Animated.spring(animController, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }).start();
             Haptics.selectionAsync();
             setTimeout(() => inputRef.current?.focus(), 400);
         }
@@ -68,7 +76,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
         Animated.timing(animController, {
             toValue: 0,
             duration: 250,
-            easing: Easing.out(Easing.cubic),
+            easing: Easing.in(Easing.ease),
             useNativeDriver: true
         }).start(({ finished }) => {
             if (finished) onClose();
@@ -128,8 +136,8 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                     <FontAwesome5 name="search" size={18} color={COLORS.accentGreen} />
                                 </View>
                                 <View style={styles.headerTexts}>
-                                    <Text style={styles.headerTitle}>إدخال المكونات يدويا</Text>
-                                    <Text style={styles.headerSub}>تحليل فوري عبر النص</Text>
+                                    <Text style={styles.headerTitle}>{t('manual_input_title', language)}</Text>
+                                    <Text style={styles.headerSub}>{t('manual_input_subtitle', language)}</Text>
                                 </View>
                                 <TouchableOpacity onPress={closeSheet} style={styles.closeBtn}>
                                     <Ionicons name="close" size={24} color={COLORS.textSecondary} />
@@ -139,29 +147,29 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                             <View style={styles.instructionsContainer}>
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="pen" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>اكتب المكونات</Text>
+                                    <Text style={styles.instructionText}>{t('manual_input_step_write', language)}</Text>
                                 </View>
                                 <View style={styles.verticalLine} />
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="comma" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>افصل بفواصل</Text>
+                                    <Text style={styles.instructionText}>{t('manual_input_step_separate', language)}</Text>
                                 </View>
                                 <View style={styles.verticalLine} />
                                 <View style={styles.instructionItem}>
                                     <MaterialCommunityIcons name="translate" size={16} color={COLORS.accentGreen} />
-                                    <Text style={styles.instructionText}>بأي لغة</Text>
+                                    <Text style={styles.instructionText}>{t('manual_input_step_any_lang', language)}</Text>
                                 </View>
                             </View>
 
                             <View style={styles.inputWrapper}>
-                                <TextInput
+                                <AppTextInput
                                     ref={inputRef}
                                     style={[
                                         styles.textInput,
                                         { textAlign: inputDirection }
                                     ]}
                                     multiline
-                                    placeholder="مثال: Water, Glycerin, Niacinamide..."
+                                    placeholder={t('manual_input_placeholder', language)}
                                     placeholderTextColor={COLORS.textSecondary}
                                     value={text}
                                     onChangeText={handleTextChange}
@@ -178,7 +186,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                     style={styles.gradientBtn}
                                 >
-                                    <Text style={styles.submitBtnText}>تحليل المكونات</Text>
+                                    <Text style={styles.submitBtnText}>{t('manual_input_submit', language)}</Text>
                                     <FontAwesome5 name="flask" size={16} color={COLORS.textOnAccent} />
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -191,7 +199,7 @@ export default function ManualInputSheet({ visible, onClose, onSubmit }) {
     );
 }
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, rtl) => StyleSheet.create({
     modalContainer: {
         flex: 1,
     },
@@ -208,13 +216,14 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     sheetContainer: {
         width: '100%',
+        marginBottom: -150,
         backgroundColor: COLORS.card || COLORS.background,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
     },
     sheetContent: {
         width: '100%',
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+        paddingBottom: Platform.OS === 'ios' ? 180 : 160,
         paddingHorizontal: 24,
     },
     sheetHandleBar: {
@@ -229,7 +238,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 10
     },
     header: {
-        flexDirection: 'row-reverse',
+        flexDirection: rtl.flexDirection,
         alignItems: 'center',
         marginBottom: 20,
         justifyContent: 'space-between'
@@ -241,25 +250,25 @@ const createStyles = (COLORS) => StyleSheet.create({
         backgroundColor: COLORS.accentGreen + '1A',
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 12,
-        borderWidth: 1,
+        marginStart: 12,
+        borderWidth: 0.5,
         borderColor: COLORS.border
     },
     headerTexts: {
         flex: 1,
-        alignItems: 'flex-end'
+        alignItems: rtl.alignItems === 'flex-start' ? 'flex-start' : 'flex-end'
     },
     headerTitle: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 18,
         color: COLORS.textPrimary,
-        textAlign: 'right'
+        textAlign: rtl.textAlign
     },
     headerSub: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 13,
         color: COLORS.textSecondary,
-        textAlign: 'right'
+        textAlign: rtl.textAlign
     },
     closeBtn: {
         padding: 5,
@@ -267,18 +276,18 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 20
     },
     instructionsContainer: {
-        flexDirection: 'row-reverse',
+        flexDirection: rtl.flexDirection,
         justifyContent: 'space-between',
         backgroundColor: COLORS.background + '80',
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 15,
         marginBottom: 20,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border
     },
     instructionItem: {
-        flexDirection: 'row-reverse',
+        flexDirection: rtl.flexDirection,
         alignItems: 'center',
         gap: 6
     },
@@ -295,7 +304,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     inputWrapper: {
         backgroundColor: COLORS.background,
         borderRadius: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border,
         marginBottom: 20,
         overflow: 'hidden'
@@ -303,6 +312,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     textInput: {
         color: COLORS.textPrimary,
         fontFamily: 'Tajawal-Regular',
+        fontWeight: 'normal', // Force normal weight on Android for placeholder font to apply
         fontSize: 15,
         paddingHorizontal: 15,
         paddingTop: 15,
@@ -323,7 +333,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     gradientBtn: {
         flex: 1,
-        flexDirection: 'row-reverse',
+        flexDirection: rtl.flexDirection,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10

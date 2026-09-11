@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, Pressable, Animated, Dimensions, Easing, PanResponder, TouchableOpacity } from 'react-native';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { ContentCard, PressableScale, StaggeredItem } from './AnalysisShared';
+import { ContentCard, PressableScale, StaggeredItem, LockedComponentOverlay } from './AnalysisShared';
 import { useTheme } from '../../../context/ThemeContext';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
@@ -26,38 +26,16 @@ const MiniScoreRing = ({ score, color, label }) => {
     );
 };
 
-// --- LOCK OVERLAY FOR CIRCADIAN (Glassmorphic) ---
+// --- LOCK OVERLAY FOR CIRCADIAN ---
 const LockedCircadianOverlay = ({ router }) => {
-    const { colors: C } = useTheme();
     const { isRTL } = useRTL();
     return (
-        <View style={circadianLockedStyles.overlay}>
-            <View style={circadianLockedStyles.glass}>
-                <View style={[circadianLockedStyles.iconCircle, { backgroundColor: C.accentGreen + '22', borderColor: C.accentGreen + '44' }]}>
-                    <FontAwesome5 name="lock" size={22} color={C.accentGreen} />
-                </View>
-                <Text style={[circadianLockedStyles.lockTitle, { color: C.textPrimary }]}>
-                    {isRTL ? 'أضيفيمنتجاتك' : 'Add Your Products'}
-                </Text>
-                <Text style={[circadianLockedStyles.lockSubtitle, { color: C.textSecondary }]}>
-                    {isRTL
-                        ? 'لفتح تحليل التفاعلات الكيميائية'
-                        : 'to unlock Chemical Interaction Analysis'}
-                </Text>
-                <Pressable
-                    onPress={() => router?.push('/CatalogScreen')}
-                    style={({ pressed }) => [
-                        circadianLockedStyles.ctaButton,
-                        { backgroundColor: C.accentGreen, opacity: pressed ? 0.8 : 1 }
-                    ]}
-                >
-                    <FontAwesome5 name="plus" size={12} color="#fff" style={{ marginRight: 6 }} />
-                    <Text style={circadianLockedStyles.ctaText}>
-                        {isRTL ? 'أضيفيمنتجاً الآن' : 'Add a Product'}
-                    </Text>
-                </Pressable>
-            </View>
-        </View>
+        <LockedComponentOverlay
+            title={isRTL ? 'أضيفي منتجاتك' : 'Add Your Products'}
+            subtitle={isRTL ? 'لفتح تحليل التفاعلات الكيميائية والدورة البيولوجية' : 'to unlock Chemical Interaction & Circadian Analysis'}
+            onPress={() => router?.push('/CatalogScreen')}
+            borderRadius={24}
+        />
     );
 };
 
@@ -83,13 +61,21 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress, isLocked 
         negative: [],
     };
 
-    const displayCircadian = isLocked ? PLACEHOLDER_CIRCADIAN : circadian;
-    const displaySynergy   = isLocked ? PLACEHOLDER_SYNERGY   : synergy;
+    const DEFAULT_CIRCADIAN = {
+        overallScore: 100,
+        amScore: 100,
+        pmScore: 100,
+        misplacements: [],
+        whyExplanations: [],
+    };
+    const DEFAULT_SYNERGY = {
+        netScore: 0,
+        positive: [],
+        negative: [],
+    };
 
-    // Original guard: skip render when no real data AND not locked
-    if (!isLocked && !circadian && (!synergy || (synergy.positive?.length === 0 && synergy.negative?.length === 0))) {
-        return null;
-    }
+    const displayCircadian = isLocked ? PLACEHOLDER_CIRCADIAN : (circadian || DEFAULT_CIRCADIAN);
+    const displaySynergy   = isLocked ? PLACEHOLDER_SYNERGY   : (synergy || DEFAULT_SYNERGY);
 
     const circadianScore = displayCircadian?.overallScore ?? 100;
     const netSynergy = displaySynergy?.netScore ?? 0;
@@ -158,7 +144,7 @@ export const CircadianAndSynergyCard = ({ circadian, synergy, onPress, isLocked 
                                         </View>
                                         <View style={styles.metricRow}>
                                             <View style={{ alignItems: 'center', gap: 6 }}>
-                                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: synergyColor + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: synergyColor }}>
+                                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: synergyColor + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: synergyColor }}>
                                                     <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 13, color: synergyColor }}>
                                                         {netSynergy >= 0 ? `+${netSynergy}` : netSynergy}
                                                     </Text>
@@ -289,13 +275,13 @@ export const CircadianAndSynergyDetailsModal = ({ visible, onClose, circadian, s
     useEffect(() => {
 
         if (visible) {
-            Animated.spring(slideAnim, { toValue: 0, damping: 18, stiffness: 120, useNativeDriver: true }).start();
+            Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }).start();
             Haptics.selectionAsync();
         }
     }, [visible]);
 
     const handleClose = () => {
-        Animated.timing(slideAnim, { toValue: height, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => onClose());
+        Animated.timing(slideAnim, { toValue: height, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }).start(() => onClose());
     };
 
     if (!visible) return null;
@@ -569,7 +555,7 @@ const createStyles = (C, isRTL) => StyleSheet.create({
         marginVertical: 15,
         borderRadius: 16,
         padding: 5,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: C.border + '20'
     },
     tabButton: {
@@ -583,7 +569,7 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     },
     tabActiveButton: {
         backgroundColor: C.card,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: C.border,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 3 },
@@ -595,7 +581,7 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     scrollContent: { paddingHorizontal: 20, paddingBottom: 50 },
 
     // Details Hero Card
-    detailsHeroCard: { backgroundColor: C.background, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.border + '33', alignItems: 'center' },
+    detailsHeroCard: { backgroundColor: C.background, borderRadius: 20, padding: 18, borderWidth: 0.5, borderColor: C.border + '33', alignItems: 'center' },
     heroTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: C.textPrimary, marginBottom: 2, textAlign: 'right' },
     heroSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textSecondary, textAlign: 'right' },
 
@@ -607,11 +593,11 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     explanationText: { fontFamily: 'Tajawal-Regular', fontSize: 15, lineHeight: 24, textAlign: 'right', flex: 1 },
 
     // Alert details
-    alertDetailBox: { borderWidth: 1, padding: 14, borderRadius: 16, gap: 4 },
+    alertDetailBox: { borderWidth: 0.5, padding: 14, borderRadius: 16, gap: 4 },
     alertDetailText: { fontFamily: 'Tajawal-Regular', fontSize: 14, textAlign: isRTL ? 'right' : 'left', lineHeight: 22 },
 
     // Synergy Graph specific
-    synergyEdgeCard: { borderLeftWidth: 3, borderWidth: 1, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', padding: 14, borderRadius: 16, gap: 6 },
+    synergyEdgeCard: { borderLeftWidth: 3, borderWidth: 0.5, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderRightColor: 'transparent', padding: 14, borderRadius: 16, gap: 6 },
     synergyEdgeHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' },
     synergyPairContainer: { flex: 1, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' },
     synergyPairName: { fontFamily: 'Tajawal-Bold', fontSize: 13 },
@@ -620,7 +606,7 @@ const createStyles = (C, isRTL) => StyleSheet.create({
     emptyText: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textDim, textAlign: 'center', marginVertical: 15 },
 
     // Info Boxes
-    infoBox: { backgroundColor: C.background, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: C.border + '20', gap: 6 },
+    infoBox: { backgroundColor: C.background, padding: 16, borderRadius: 18, borderWidth: 0.5, borderColor: C.border + '20', gap: 6 },
     infoTitle: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: C.textPrimary, textAlign: isRTL ? 'right' : 'left' },
     infoText: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: C.textSecondary, lineHeight: 20, textAlign: isRTL ? 'right' : 'left' },
 
@@ -653,7 +639,7 @@ const circadianLockedStyles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
+        borderWidth: 0.5,
         marginBottom: 6,
     },
     lockTitle: {

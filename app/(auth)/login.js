@@ -1,9 +1,8 @@
-// --- START OF FILE LoginScreen.js ---
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     StyleSheet, View, Text, TextInput, TouchableOpacity,
     Dimensions, KeyboardAvoidingView, Platform, ScrollView,
-    Animated, Easing, ImageBackground, StatusBar, Linking,
+    Animated, Easing, StatusBar, Linking,
     LayoutAnimation, ActivityIndicator, Image
 } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -15,41 +14,33 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { t } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import { useTheme } from '../../src/context/ThemeContext';
 
-// --- THEME CONSTANTS (UNTOUCHED) ---
-const COLORS = {
-    background: '#1A2D27',
-    card: '#253D34',
-    border: 'rgba(90, 156, 132, 0.25)',
-    textDim: '#6B7C76',
-    accentGreen: '#5A9C84',
-    primary: '#A3E4D7',
-    textPrimary: '#F1F3F2',
-    textSecondary: '#A3B1AC',
-    textOnAccent: '#1A2D27',
-    danger: '#ef4444',
-    gold: '#fbbf24',
-    inputBg: 'rgba(0, 0, 0, 0.3)',
-    inputBgActive: 'rgba(90, 156, 132, 0.1)',
-};
-
-const BG_IMAGE = require('../../assets/lolo.jpg');
 const { width, height } = Dimensions.get('window');
 
-// --- COMPACT LOGO ---
-const AppLogo = () => (
+const THEME_OPTIONS = [
+    { id: 'original', icon: 'tree', color: '#5A9C84' },
+    { id: 'light', icon: 'sun', color: '#3D9275' },
+    { id: 'baby_pink', icon: 'heart', color: '#C83F70' },
+    { id: 'clinical_blue', icon: 'moon', color: '#6CB4EE' },
+];
+
+// --- COMPACT WATHIQ LOGO ---
+const AppLogo = ({ COLORS, isDark, styles }) => (
     <View style={styles.logoWrapper}>
-        <Image
-            source={require('../../assets/logo.png')}
-            style={{ width: 70, height: 70, borderRadius: 18 }}
-            resizeMode="contain"
-        />
-        <View style={styles.logoGlow} />
+        <View style={[styles.logoGlow, { backgroundColor: COLORS.accentGreen }]} />
+        <View style={[styles.logoBox, { borderColor: COLORS.border }]}>
+            <Image
+                source={require('../../assets/logo.png')}
+                style={{ width: 66, height: 66, borderRadius: 18 }}
+                resizeMode="contain"
+            />
+        </View>
     </View>
 );
 
-// --- COMPONENT: HIGH-CONTRAST FLOATING TOAST ---
-const FloatingToast = ({ visible, title, message, type, lang }) => {
+// --- HIGH-CONTRAST FLOATING TOAST ---
+const FloatingToast = ({ visible, title, message, type, lang, COLORS, isDark, styles }) => {
     const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -69,15 +60,22 @@ const FloatingToast = ({ visible, title, message, type, lang }) => {
     const isError = type === 'error';
     const isRTL = lang === 'ar';
 
-    // High Contrast Colors for Maximum Visibility
-    const toastBg = isError ? '#230F12' : '#142520';
-    const toastBorder = isError ? '#EF4444' : COLORS.accentGreen;
+    const toastBg = isError 
+        ? (isDark ? '#261215' : '#FEE2E2') 
+        : (isDark ? '#142822' : '#DCFCE7');
+    const toastBorder = isError ? COLORS.danger : COLORS.accentGreen;
     const iconName = isError ? 'exclamation-circle' : 'check-circle';
-    const iconColor = isError ? '#F87171' : COLORS.accentGreen;
-    const messageColor = isError ? '#FECACA' : '#D1D5DB';
+    const iconColor = isError ? COLORS.danger : COLORS.accentGreen;
+    const titleColor = isError 
+        ? (isDark ? '#FFFFFF' : '#991B1B') 
+        : (isDark ? '#FFFFFF' : '#166534');
+    const messageColor = isError 
+        ? (isDark ? '#FECACA' : '#7F1D1D') 
+        : (isDark ? '#D1D5DB' : '#14532D');
 
     return (
         <Animated.View 
+            pointerEvents={visible ? 'auto' : 'none'}
             style={[
                 styles.toastContainer, 
                 { 
@@ -85,19 +83,18 @@ const FloatingToast = ({ visible, title, message, type, lang }) => {
                     transform: [{ translateY }], 
                     backgroundColor: toastBg,
                     borderColor: toastBorder,
-                    borderWidth: 1.5,
                     flexDirection: isRTL ? 'row-reverse' : 'row'
                 }
             ]}
         >
             <FontAwesome5 
                 name={iconName} 
-                size={24} 
+                size={20} 
                 color={iconColor} 
-                style={isRTL ? { marginLeft: 14 } : { marginRight: 14 }} 
+                style={isRTL ? { marginLeft: 12 } : { marginRight: 12 }} 
             />
             <View style={styles.toastContent}>
-                <Text style={[styles.toastTitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+                <Text style={[styles.toastTitle, { color: titleColor, textAlign: isRTL ? 'right' : 'left' }]}>
                     {title}
                 </Text>
                 <Text style={[styles.toastMessage, { color: messageColor, textAlign: isRTL ? 'right' : 'left' }]}>
@@ -108,52 +105,67 @@ const FloatingToast = ({ visible, title, message, type, lang }) => {
     );
 };
 
-// --- COMPONENT: SLEEK BIO INPUT ---
-const BioInput = ({ icon, ...props }) => {
+// --- DIRECT CANVAS BIO INPUT ---
+const BioInput = ({ icon, COLORS, isDark, styles, placeholder, value, ...props }) => {
     const [focused, setFocused] = useState(false);
-    const focusAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.timing(focusAnim, {
-            toValue: focused ? 1 : 0,
-            duration: 250,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: false
-        }).start();
-    }, [focused]);
-
-    const borderColor = focusAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['rgba(255,255,255,0.1)', COLORS.accentGreen]
-    });
-
-    const backgroundColor = focusAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['rgba(0, 0, 0, 0.4)', 'rgba(90, 156, 132, 0.15)']
-    });
 
     return (
-        <Animated.View style={[
+        <View style={[
             styles.inputContainer, 
-            { backgroundColor, borderColor }
+            { 
+                borderColor: focused ? COLORS.accentGreen : COLORS.border,
+                backgroundColor: focused 
+                    ? (isDark ? 'rgba(61, 146, 117, 0.16)' : 'rgba(61, 146, 117, 0.10)')
+                    : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.65)')
+            }
         ]}>
-            <View style={styles.inputIconBox}>
+            <View style={[
+                styles.inputIconBox,
+                focused && { backgroundColor: COLORS.accentGreen + '20' }
+            ]}>
                 <Ionicons name={icon} size={18} color={focused ? COLORS.accentGreen : COLORS.textDim} />
             </View>
-            <TextInput
-                placeholderTextColor={COLORS.textDim}
-                style={styles.textInput}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                selectionColor={COLORS.accentGreen}
-                {...props}
-            />
-        </Animated.View>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+                {/* Fake placeholder with Tajawal font — Android ignores fontFamily on native placeholders */}
+                {!value && !focused && (
+                    <Text
+                        pointerEvents="none"
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            fontFamily: 'Tajawal-Regular',
+                            fontWeight: 'normal',
+                            fontSize: 14,
+                            color: COLORS.textDim,
+                            paddingHorizontal: 12,
+                            textAlign: 'right',
+                            writingDirection: 'rtl',
+                        }}
+                    >
+                        {placeholder}
+                    </Text>
+                )}
+                <TextInput
+                    placeholder=""
+                    value={value}
+                    style={[
+                        styles.textInput,
+                        { color: COLORS.textPrimary, fontFamily: 'Tajawal-Regular', fontWeight: 'normal' }
+                    ]}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    selectionColor={COLORS.accentGreen}
+                    underlineColorAndroid="transparent"
+                    {...props}
+                />
+            </View>
+        </View>
     );
 };
 
-// --- COMPONENT: RESTORED PARTICLES (SPORE) ---
-const Spore = ({ size, startX, duration, delay }) => {
+// --- AMBIENT BOTANICAL SPORES ---
+const Spore = ({ size, startX, duration, delay, color }) => {
     const animY = useRef(new Animated.Value(0)).current;
     const animX = useRef(new Animated.Value(0)).current;
     const scale = useRef(new Animated.Value(0)).current;
@@ -171,16 +183,22 @@ const Spore = ({ size, startX, duration, delay }) => {
         return () => { clearTimeout(timeout); floatLoop.stop(); driftLoop.stop(); };
     }, []);
 
-    const translateY = animY.interpolate({ inputRange: [0, 1], outputRange:[height + 50, -100] });
+    const translateY = animY.interpolate({ inputRange: [0, 1], outputRange: [height + 50, -100] });
     const translateX = animX.interpolate({ inputRange: [-1, 1], outputRange: [-30, 30] });
 
     return (
         <Animated.View
+            pointerEvents="none"
             style={{
-                position: 'absolute', left: startX, width: size, height: size,
-                borderRadius: size / 2, backgroundColor: COLORS.accentGreen,
+                position: 'absolute', 
+                left: startX, 
+                width: size, 
+                height: size,
+                borderRadius: size / 2, 
+                backgroundColor: color,
                 transform: [{ translateY }, { translateX }, { scale }],
-                opacity: 0.3, zIndex: 0,
+                opacity: 0.22, 
+                zIndex: 0,
             }}
         />
     );
@@ -196,6 +214,13 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info' });
+
+    // Dynamic Theme Hook
+    const { theme, colors, activeThemeId, changeTheme } = useTheme();
+    const COLORS = colors;
+    const isDark = theme?.isDark ?? true;
+    const isLightTheme = activeThemeId === 'light';
+    const styles = useMemo(() => createLoginStyles(COLORS, isDark), [COLORS, isDark]);
 
     useEffect(() => {
         if (currentLanguage) {
@@ -219,8 +244,12 @@ export default function LoginScreen() {
 
     const router = useRouter();
 
-    const particles = useMemo(() => [...Array(20)].map((_, i) => ({
-        id: i, size: Math.random() * 6 + 2, startX: Math.random() * width, duration: 10000 + Math.random() * 8000, delay: Math.random() * 5000
+    const particles = useMemo(() => [...Array(18)].map((_, i) => ({
+        id: i, 
+        size: Math.random() * 5 + 3, 
+        startX: Math.random() * width, 
+        duration: 10000 + Math.random() * 8000, 
+        delay: Math.random() * 5000
     })), []);
 
     useEffect(() => {
@@ -228,21 +257,21 @@ export default function LoginScreen() {
             Animated.timing(containerOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
             Animated.spring(contentTranslateY, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
         ]).start();
-    },[]);
+    }, []);
 
     const switchMode = () => {
         Animated.parallel([
-            Animated.timing(formOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
-            Animated.timing(formSlide, { toValue: 10, duration: 150, useNativeDriver: true })
+            Animated.timing(formOpacity, { toValue: 0, duration: 140, useNativeDriver: true }),
+            Animated.timing(formSlide, { toValue: 10, duration: 140, useNativeDriver: true })
         ]).start(() => {
             if (Platform.OS !== 'web') {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             }
             setIsLogin(!isLogin);
-            setAlertConfig({ ...alertConfig, visible: false });
+            setAlertConfig(prev => ({ ...prev, visible: false }));
             formSlide.setValue(-10);
             Animated.parallel([
-                Animated.timing(formOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+                Animated.timing(formOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
                 Animated.spring(formSlide, { toValue: 0, friction: 6, useNativeDriver: true })
             ]).start();
         });
@@ -281,9 +310,9 @@ export default function LoginScreen() {
                         language: language,
                         goals: [],
                         conditions: [],
-                        allergies:[]
+                        allergies: []
                     },
-                    routines: { am: [], pm:[] }
+                    routines: { am: [], pm: [] }
                 });
 
                 router.replace('/(onboarding)/welcome');
@@ -322,292 +351,482 @@ export default function LoginScreen() {
         }
     };
 
-    return (
+    const renderContent = () => (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <StatusBar 
+                barStyle={isDark ? "light-content" : "dark-content"} 
+                translucent 
+                backgroundColor="transparent" 
+            />
 
-            <ImageBackground source={BG_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover">
-                <LinearGradient
-                    colors={['rgba(15, 25, 20, 0.5)', 'rgba(10, 15, 12, 0.95)']}
-                    style={StyleSheet.absoluteFill}
-                />
+            {particles.map((p) => <Spore key={p.id} {...p} color={COLORS.accentGreen} />)}
 
-                {particles.map((p) => <Spore key={p.id} {...p} />)}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+                style={styles.keyboardContainer}
+            >
+                <ScrollView 
+                    style={styles.scrollWrapper}
+                    contentContainerStyle={styles.scrollContent} 
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <Animated.View style={{ opacity: containerOpacity, transform: [{ translateY: contentTranslateY }], width: '100%', alignItems: 'center' }}>
 
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                        {/* Wathiq Header */}
+                        <View style={styles.brandContainer}>
+                            <AppLogo COLORS={COLORS} isDark={isDark} styles={styles} />
+                            <Text style={[styles.brandTitle, { color: COLORS.textPrimary }]}>
+                                {t('auth_brand_title', language)}
+                            </Text>
+                            <Text style={[styles.brandSubtitle, { color: COLORS.textSecondary }]}>
+                                {t('auth_brand_subtitle', language)}
+                            </Text>
+                        </View>
 
-                        <Animated.View style={{ opacity: containerOpacity, transform: [{ translateY: contentTranslateY }], width: '100%', alignItems: 'center' }}>
+                        {/* Frameless Form Container (Directly on Canvas) */}
+                        <Animated.View style={[styles.formContainer, { opacity: formOpacity, transform: [{ translateY: formSlide }] }]}>
 
-                            {/* Compact Header */}
-                            <View style={styles.brandContainer}>
-                                <AppLogo />
-                                <Text style={styles.brandTitle}>{t('auth_brand_title', language)}</Text>
-                                <Text style={styles.brandSubtitle}>{t('auth_brand_subtitle', language)}</Text>
-                            </View>
+                            <Text style={[styles.formTitle, { color: COLORS.textPrimary }]}>
+                                {isLogin ? t('auth_welcome_back', language) : t('auth_join_family', language)}
+                            </Text>
+                            <Text style={[styles.formSub, { color: COLORS.textSecondary }]}>
+                                {isLogin ? t('auth_login_subtitle', language) : t('auth_signup_subtitle', language)}
+                            </Text>
 
-                            {/* Compact Card */}
-                            <View style={styles.sleekCard}>
-                                <Animated.View style={{ opacity: formOpacity, transform:[{ translateY: formSlide }], paddingHorizontal: 18, paddingVertical: 20 }}>
+                            <BioInput
+                                icon="mail-outline"
+                                placeholder={t('auth_email_placeholder', language)}
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                textAlign={rtl.textAlign}
+                                COLORS={COLORS}
+                                isDark={isDark}
+                                styles={styles}
+                            />
 
-                                    <Text style={styles.formTitle}>
-                                        {isLogin ? t('auth_welcome_back', language) : t('auth_join_family', language)}
-                                    </Text>
-                                    <Text style={styles.formSub}>
-                                        {isLogin ? t('auth_login_subtitle', language) : t('auth_signup_subtitle', language)}
-                                    </Text>
+                            <BioInput
+                                icon="lock-closed-outline"
+                                placeholder={t('auth_password_placeholder', language)}
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry
+                                textAlign={rtl.textAlign}
+                                COLORS={COLORS}
+                                isDark={isDark}
+                                styles={styles}
+                            />
 
-                                    <BioInput
-                                        icon="mail-outline"
-                                        placeholder={t('auth_email_placeholder', language)}
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        textAlign={rtl.textAlign}
-                                    />
-
-                                    <BioInput
-                                        icon="lock-closed-outline"
-                                        placeholder={t('auth_password_placeholder', language)}
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        secureTextEntry
-                                        textAlign={rtl.textAlign}
-                                    />
-
-                                    {isLogin && (
-                                        <TouchableOpacity 
-                                            style={[styles.forgotPasswordBtn, { alignSelf: rtl.flexStart }]} 
-                                            onPress={handleForgotPassword} 
-                                            disabled={resetLoading}
-                                        >
-                                            {resetLoading ? (
-                                                <ActivityIndicator size="small" color={COLORS.accentGreen} />
-                                            ) : (
-                                                <Text style={styles.forgotPasswordText}>{t('auth_forgot_password', language)}</Text>
-                                            )}
-                                        </TouchableOpacity>
-                                    )}
-
-                                    {!isLogin && (
-                                        <View style={styles.privacyContainer}>
-                                            <Text style={[styles.privacyText, { textAlign: rtl.textAlign }]}>
-                                                {t('auth_privacy_agree_prefix', language)}
-                                                <Text
-                                                    style={styles.privacyLink}
-                                                    onPress={() => Linking.openURL('https://wathiq.web.app/privacy')}
-                                                >
-                                                    {t('auth_privacy_policy', language)}
-                                                </Text>
-                                            </Text>
-                                        </View>
-                                    )}
-
-                                    <TouchableOpacity
-                                        style={[styles.mainBtn, loading && { opacity: 0.7 }]}
-                                        onPress={handleAuth}
-                                        disabled={loading}
-                                        activeOpacity={0.8}
-                                    >
-                                        {loading ? (
-                                            <ActivityIndicator color={COLORS.textOnAccent} />
-                                        ) : (
-                                            <Text style={styles.btnText}>{isLogin ? t('auth_button_login', language) : t('auth_button_signup', language)}</Text>
-                                        )}
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity style={styles.switchBtn} onPress={switchMode} activeOpacity={0.6}>
-                                        <Text style={styles.switchText}>
-                                            {isLogin ? t('auth_no_account_prefix', language) : t('auth_have_account_prefix', language)}
-                                            <Text style={styles.linkText}>{isLogin ? t('auth_create_account', language) : t('auth_sign_in', language)}</Text>
+                            {isLogin && (
+                                <TouchableOpacity 
+                                    style={[styles.forgotPasswordBtn, { alignSelf: rtl.flexStart }]} 
+                                    onPress={handleForgotPassword} 
+                                    disabled={resetLoading}
+                                    activeOpacity={0.7}
+                                >
+                                    {resetLoading ? (
+                                        <ActivityIndicator size="small" color={COLORS.accentGreen} />
+                                    ) : (
+                                        <Text style={[styles.forgotPasswordText, { color: COLORS.textSecondary }]}>
+                                            {t('auth_forgot_password', language)}
                                         </Text>
-                                    </TouchableOpacity>
+                                    )}
+                                </TouchableOpacity>
+                            )}
 
-                                </Animated.View>
-                            </View>
-
-                            {/* Clean Visible Bottom Controls */}
-                            <View style={styles.bottomControls}>
-                                <View style={styles.languagePill}>
-                                    <TouchableOpacity 
-                                        style={styles.langBtn}
-                                        onPress={() => { Haptics.selectionAsync(); setLanguage('ar'); }}
-                                    >
-                                        <Text style={[styles.langText, language === 'ar' && styles.langTextActive]}>ARA</Text>
-                                    </TouchableOpacity>
-                                    <View style={styles.langDivider} />
-                                    <TouchableOpacity 
-                                        style={styles.langBtn}
-                                        onPress={() => { Haptics.selectionAsync(); setLanguage('en'); }}
-                                    >
-                                        <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>ENG</Text>
-                                    </TouchableOpacity>
+                            {!isLogin && (
+                                <View style={styles.privacyContainer}>
+                                    <Text style={[styles.privacyText, { color: COLORS.textSecondary, textAlign: rtl.textAlign }]}>
+                                        {t('auth_privacy_agree_prefix', language)}
+                                        <Text
+                                            style={[styles.privacyLink, { color: COLORS.accentGreen }]}
+                                            onPress={() => Linking.openURL('https://wathiq.web.app/privacy')}
+                                        >
+                                            {t('auth_privacy_policy', language)}
+                                        </Text>
+                                    </Text>
                                 </View>
-                                <Text style={styles.copyright}>{t('auth_copyright', language)}</Text>
-                            </View>
+                            )}
+
+                            {/* Primary Botanical Button */}
+                            <TouchableOpacity
+                                style={[styles.mainBtnWrapper, loading && { opacity: 0.7 }]}
+                                onPress={handleAuth}
+                                disabled={loading}
+                                activeOpacity={0.85}
+                            >
+                                <LinearGradient
+                                    colors={[COLORS.accentGreen, COLORS.primary || '#3F8F78']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.mainBtnGradient}
+                                >
+                                    <View style={styles.btnSpecularLine} />
+                                    {loading ? (
+                                        <ActivityIndicator color={COLORS.textOnAccent} size="small" />
+                                    ) : (
+                                        <Text style={[styles.btnText, { color: COLORS.textOnAccent }]}>
+                                            {isLogin ? t('auth_button_login', language) : t('auth_button_signup', language)}
+                                        </Text>
+                                    )}
+                                </LinearGradient>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.switchBtn} onPress={switchMode} activeOpacity={0.6}>
+                                <Text style={[styles.switchText, { color: COLORS.textDim }]}>
+                                    {isLogin ? t('auth_no_account_prefix', language) : t('auth_have_account_prefix', language)}
+                                    <Text style={[styles.linkText, { color: COLORS.accentGreen }]}>
+                                        {isLogin ? t('auth_create_account', language) : t('auth_sign_in', language)}
+                                    </Text>
+                                </Text>
+                            </TouchableOpacity>
 
                         </Animated.View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
 
-                {/* High Contrast Toast Layered On Top */}
-                <FloatingToast visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} lang={language} />
+                        {/* Minimalist Theme & Language Switchers */}
+                        <View style={styles.bottomControls}>
+                            {/* 🎨 Quick Theme Selector Pill */}
+                            <View style={[styles.themePill, { borderColor: COLORS.border, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.6)' }]}>
+                                {THEME_OPTIONS.map((item) => {
+                                    const isSelected = activeThemeId === item.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={item.id}
+                                            activeOpacity={0.7}
+                                            onPress={() => {
+                                                Haptics.selectionAsync();
+                                                changeTheme(item.id);
+                                            }}
+                                            style={[
+                                                styles.themeBtn,
+                                                isSelected && { backgroundColor: item.color + '25', borderColor: item.color, borderWidth: 1 }
+                                            ]}
+                                        >
+                                            <FontAwesome5 
+                                                name={item.icon} 
+                                                size={12} 
+                                                color={isSelected ? item.color : COLORS.textDim} 
+                                            />
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
 
-            </ImageBackground>
+                            {/* Language Switcher */}
+                            <View style={[styles.languagePill, { borderColor: COLORS.border, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.6)' }]}>
+                                <TouchableOpacity 
+                                    style={styles.langBtn}
+                                    onPress={() => { Haptics.selectionAsync(); setLanguage('ar'); }}
+                                >
+                                    <Text style={[styles.langText, language === 'ar' && { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' }]}>
+                                        العربية
+                                    </Text>
+                                </TouchableOpacity>
+                                <View style={[styles.langDivider, { backgroundColor: COLORS.border }]} />
+                                <TouchableOpacity 
+                                    style={styles.langBtn}
+                                    onPress={() => { Haptics.selectionAsync(); setLanguage('en'); }}
+                                >
+                                    <Text style={[styles.langText, language === 'en' && { color: COLORS.accentGreen, fontFamily: 'Tajawal-Bold' }]}>
+                                        English
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={[styles.copyright, { color: COLORS.textDim }]}>
+                                {t('auth_copyright', language)}
+                            </Text>
+                        </View>
+
+                    </Animated.View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* High-Contrast Toast */}
+            <FloatingToast 
+                visible={alertConfig.visible} 
+                title={alertConfig.title} 
+                message={alertConfig.message} 
+                type={alertConfig.type} 
+                lang={language} 
+                COLORS={COLORS}
+                isDark={isDark}
+                styles={styles}
+            />
+        </View>
+    );
+
+    if (isLightTheme) {
+        return (
+            <LinearGradient
+                colors={[
+                    COLORS.background,
+                    COLORS.gradientStart || COLORS.background,
+                    COLORS.gradientMid || COLORS.accentGreen + '15',
+                    COLORS.gradientEnd || COLORS.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
+                {renderContent()}
+            </LinearGradient>
+        );
+    }
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            {renderContent()}
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0f1914' },
-    scrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10 },
+const createLoginStyles = (COLORS, isDark) => StyleSheet.create({
+    container: { 
+        flex: 1, 
+        backgroundColor: 'transparent' 
+    },
+    keyboardContainer: {
+        flex: 1,
+        backgroundColor: 'transparent',
+    },
+    scrollWrapper: {
+        flex: 1,
+        backgroundColor: 'transparent',
+    },
+    scrollContent: { 
+        flexGrow: 1, 
+        justifyContent: 'center', 
+        paddingHorizontal: 22, 
+        paddingVertical: 18 
+    },
 
-    // Compact Header
-    brandContainer: { alignItems: 'center', marginBottom: 15, marginTop: 10 },
+    // Header & Logo
+    brandContainer: { 
+        alignItems: 'center', 
+        marginBottom: 20, 
+        marginTop: 6 
+    },
     logoWrapper: {
-        alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        marginBottom: 10,
+        position: 'relative',
+    },
+    logoBox: {
+        borderRadius: 20,
+        borderWidth: 1,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
     },
     logoGlow: {
-        position: 'absolute', width: 70, height: 70, borderRadius: 35,
-        backgroundColor: COLORS.accentGreen, opacity: 0.25, zIndex: -1,
-        shadowColor: COLORS.accentGreen, shadowRadius: 30, shadowOpacity: 0.8
+        position: 'absolute', 
+        width: 76, 
+        height: 76, 
+        borderRadius: 38,
+        opacity: isDark ? 0.25 : 0.15,
     },
     brandTitle: {
-        fontSize: 32, fontFamily: 'Tajawal-ExtraBold', color: COLORS.textPrimary, letterSpacing: 1, marginBottom: 2,
-        textShadowColor: 'rgba(90, 156, 132, 0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 15
+        fontSize: 32, 
+        fontFamily: 'Tajawal-ExtraBold', 
+        letterSpacing: 0.5, 
+        marginBottom: 2,
     },
-    brandSubtitle: { color: COLORS.textSecondary, fontSize: 13, fontFamily: 'Tajawal-Regular' },
+    brandSubtitle: { 
+        fontSize: 13, 
+        fontFamily: 'Tajawal-Regular' 
+    },
 
-    // Sleek Card
-    sleekCard: {
+    // Frameless Form
+    formContainer: {
         width: '100%',
-        borderRadius: 22,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 15
+        paddingHorizontal: 4,
+        marginBottom: 10,
     },
-    formTitle: { fontSize: 20, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 4, fontFamily: 'Tajawal-ExtraBold' },
-    formSub: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 16, fontFamily: 'Tajawal-Regular', lineHeight: 18 },
+    formTitle: { 
+        fontSize: 22, 
+        textAlign: 'center', 
+        marginBottom: 4, 
+        fontFamily: 'Tajawal-ExtraBold' 
+    },
+    formSub: { 
+        fontSize: 13, 
+        textAlign: 'center', 
+        marginBottom: 22, 
+        fontFamily: 'Tajawal-Regular', 
+        lineHeight: 19 
+    },
 
-    // Inputs (Sleek Pill Shape)
+    // Inputs (Sleek Canvas Pills)
     inputContainer: {
-        flexDirection: 'row', alignItems: 'center',
-        borderRadius: 99, marginBottom: 12,
-        height: 50, borderWidth: 1,
+        flexDirection: 'row', 
+        alignItems: 'center',
+        borderRadius: 16, 
+        marginBottom: 14,
+        height: 52, 
+        borderWidth: 1,
+        paddingHorizontal: 8,
     },
-    inputIconBox: { width: 44, alignItems: 'center', justifyContent: 'center', height: '100%' },
+    inputIconBox: { 
+        width: 38, 
+        height: 38,
+        borderRadius: 12,
+        alignItems: 'center', 
+        justifyContent: 'center',
+    },
     textInput: { 
         flex: 1, 
         height: '100%', 
-        color: COLORS.textPrimary, 
         fontSize: 14, 
         fontFamily: 'Tajawal-Regular',
-        paddingRight: 16, 
-        paddingLeft: 8 
+        fontWeight: 'normal',
+        paddingHorizontal: 12,
+        backgroundColor: 'transparent',
     },
 
     // Buttons
-    mainBtn: { 
-        marginTop: 8, 
-        borderRadius: 99, 
-        backgroundColor: COLORS.accentGreen,
+    mainBtnWrapper: { 
+        marginTop: 12, 
+        borderRadius: 16, 
+        overflow: 'hidden',
+    },
+    mainBtnGradient: {
         height: 50,
         alignItems: 'center', 
         justifyContent: 'center',
-        shadowColor: COLORS.accentGreen, 
-        shadowOpacity: 0.25, 
-        shadowRadius: 10, 
-        shadowOffset: { width: 0, height: 4 } 
+        borderRadius: 16,
+        position: 'relative',
     },
-    btnText: { color: COLORS.textOnAccent, fontSize: 15, fontFamily: 'Tajawal-Bold' },
+    btnSpecularLine: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    },
+    btnText: { 
+        fontSize: 16, 
+        fontFamily: 'Tajawal-Bold' 
+    },
 
-    switchBtn: { alignItems: 'center', marginTop: 14, padding: 6 },
-    switchText: { color: COLORS.textDim, fontSize: 13, fontFamily: 'Tajawal-Regular' },
-    linkText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' },
+    switchBtn: { 
+        alignItems: 'center', 
+        marginTop: 18, 
+        padding: 6 
+    },
+    switchText: { 
+        fontSize: 13, 
+        fontFamily: 'Tajawal-Regular' 
+    },
+    linkText: { 
+        fontFamily: 'Tajawal-Bold' 
+    },
     
     // Forgot Password
     forgotPasswordBtn: {
-        alignSelf: 'flex-start',
-        marginBottom: 10,
+        marginBottom: 12,
         marginTop: -2,
-        paddingHorizontal: 8,
+        paddingHorizontal: 4,
     },
     forgotPasswordText: {
-        color: COLORS.textSecondary,
         fontSize: 12,
         fontFamily: 'Tajawal-Regular',
     },
 
-    // Compact Bottom Controls
+    // Bottom Controls
     bottomControls: {
         alignItems: 'center',
-        marginTop: 15,
-        marginBottom: 8
+        marginTop: 20,
+        marginBottom: 8,
+    },
+    themePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 20,
+        paddingHorizontal: 4,
+        paddingVertical: 3,
+        marginBottom: 10,
+        gap: 4,
+    },
+    themeBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     languagePill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 99,
+        borderRadius: 20,
         paddingHorizontal: 6,
         paddingVertical: 3,
-        marginBottom: 8,
+        marginBottom: 10,
     },
     langBtn: {
-        paddingVertical: 5,
-        paddingHorizontal: 14,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
     },
     langText: {
-        fontFamily: 'Tajawal-Bold',
+        fontFamily: 'Tajawal-Regular',
         fontSize: 12,
         color: COLORS.textDim,
-        letterSpacing: 1,
-    },
-    langTextActive: {
-        color: COLORS.textPrimary,
     },
     langDivider: {
         width: 1,
         height: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
     },
     
-    copyright: { textAlign: 'center', color: COLORS.textDim, fontSize: 11, opacity: 0.7, fontFamily: 'Tajawal-Regular' },
+    copyright: { 
+        textAlign: 'center', 
+        fontSize: 11, 
+        opacity: 0.7, 
+        fontFamily: 'Tajawal-Regular' 
+    },
 
-    // Toast Container (Max Z-Index & Elevation)
+    // Toast
     toastContainer: {
-        position: 'absolute', top: 45, left: 16, right: 16,
-        zIndex: 99999, borderRadius: 16, overflow: 'hidden',
-        alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.6, shadowRadius: 20, elevation: 25
+        position: 'absolute', 
+        top: 45, 
+        left: 16, 
+        right: 16,
+        zIndex: 99999, 
+        borderRadius: 14, 
+        borderWidth: 1,
+        alignItems: 'center', 
+        paddingVertical: 12, 
+        paddingHorizontal: 16,
     },
     toastContent: { flex: 1 },
-    toastTitle: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Tajawal-Bold', marginBottom: 2 },
-    toastMessage: { fontSize: 12.5, fontFamily: 'Tajawal-Regular', lineHeight: 18 },
+    toastTitle: { 
+        fontSize: 14, 
+        fontFamily: 'Tajawal-Bold', 
+        marginBottom: 2 
+    },
+    toastMessage: { 
+        fontSize: 12.5, 
+        fontFamily: 'Tajawal-Regular', 
+        lineHeight: 18 
+    },
     
     privacyContainer: {
         marginTop: 2,
-        marginBottom: 10,
-        paddingHorizontal: 8,
+        marginBottom: 12,
+        paddingHorizontal: 4,
     },
     privacyText: {
-        color: COLORS.textSecondary,
         fontSize: 11,
         fontFamily: 'Tajawal-Regular',
         lineHeight: 16,
     },
     privacyLink: {
-        color: COLORS.textPrimary,
         fontFamily: 'Tajawal-Bold',
-        textDecorationLine: 'underline',
     },
 });
-// --- END OF FILE LoginScreen.js ---

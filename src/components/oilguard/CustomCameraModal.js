@@ -1,3 +1,5 @@
+// --- START OF FILE CustomCameraModal.js ---
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
@@ -16,19 +18,32 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'; 
+import { LinearGradient } from 'expo-linear-gradient';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
-const COLORS = {
-  background: '#000000',
-  accent: '#5A9C84',
-  text: '#F1F3F2',
-};
+import { useTheme } from '../../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 const FOOTER_HEIGHT = 180;
 const HEADER_HEIGHT = 60;
 
+const DEFAULT_COLORS = {
+  background: '#1A2D27',
+  card: '#253D34',
+  border: 'rgba(90, 156, 132, 0.25)',
+  accentGreen: '#5A9C84',
+  textPrimary: '#F1F3F2',
+  textSecondary: '#A8B8B3',
+  textDim: '#82948E',
+  danger: '#EF4444',
+  textOnAccent: '#1A2D27',
+};
+
 export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }) {
+  const { colors } = useTheme();
+  const COLORS = colors || DEFAULT_COLORS;
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -41,29 +56,49 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
   const [isCameraReady, setIsCameraReady] = useState(false);
 
   // --- ANIMATIONS ---
+  const modalAnim = useRef(new Animated.Value(0)).current;
   const laserPos = useRef(new Animated.Value(0)).current;
   const shutterScale = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
   const knobPan = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  // --- 1. CALCULATE DIMENSIONS (FIXED) ---
-  const cameraDimensions = useMemo(() => {
-    // Calculate vertical space available between Header and Footer
-    const availableHeight = height - FOOTER_HEIGHT - HEADER_HEIGHT - insets.top - insets.bottom;
-    const maxWidth = width * 0.95; // 95% width for margins
+  // --- MODAL PHYSICS ---
+  useEffect(() => {
+    if (isVisible) {
+      Animated.spring(modalAnim, {
+        toValue: 1,
+        friction: 9,
+        tension: 50,
+        useNativeDriver: true
+      }).start();
+    }
+  }, [isVisible]);
 
-    // Target Ratio: 4:3 (Standard Photo)
+  const handleClose = () => {
+    Animated.timing(modalAnim, {
+      toValue: 0,
+      duration: 250,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true
+    }).start(({ finished }) => {
+      if (finished) onClose();
+    });
+  };
+
+  // --- 1. CALCULATE DIMENSIONS ---
+  const cameraDimensions = useMemo(() => {
+    const availableHeight = height - FOOTER_HEIGHT - HEADER_HEIGHT - insets.top - insets.bottom;
+    const maxWidth = width * 0.95; 
+
     let finalWidth = maxWidth;
     let finalHeight = finalWidth * (4 / 3);
 
-    // If 4:3 exceeds vertical space, constrain by height instead
     if (finalHeight > availableHeight) {
       finalHeight = availableHeight;
       finalWidth = finalHeight * (3 / 4);
     }
 
-    // CRITICAL FIX: Round down to nearest integer to prevent sub-pixel rendering gaps (black lines)
     return {
       width: Math.floor(finalWidth),
       height: Math.floor(finalHeight)
@@ -84,14 +119,14 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
 
         let localX = touchX - startX;
 
-        // Clamp
         if (localX < 0) localX = 0;
         if (localX > sliderWidth) localX = sliderWidth;
 
         const percentage = localX / sliderWidth;
 
-        // Max digital zoom usually 0.5 (approx 5x) for smooth UX
-        setZoom(percentage * 0.5);
+        // FIXED: Using full 0 to 1 percentage range ensures zoom maps properly 
+        // to the hardware and eliminates the "starts zooming late" deadzone.
+        setZoom(percentage); 
         knobPan.setValue(localX);
       },
     })
@@ -143,7 +178,6 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setIsCapturing(true);
 
-    // Shutter & Flash Animation
     Animated.parallel([
       Animated.sequence([
         Animated.timing(shutterScale, { toValue: 0.9, duration: 50, useNativeDriver: true }),
@@ -162,42 +196,56 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
         skipProcessing: true,
       });
 
-      // Resize logic moved here for optimization
       const processed = await ImageManipulator.manipulateAsync(
         photo.uri,
-        [{ resize: { width: 1500 } }], // 1500px is safe for OCR
+        [{ resize: { width: 1500 } }], 
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      onPictureTaken(processed);
+      // Dismiss modal before sending picture
+      handleClose();
+      setTimeout(() => onPictureTaken(processed), 250);
     } catch (e) {
       console.error(e);
-    } finally {
       setIsCapturing(false);
     }
   };
 
-  if (!permission?.granted) return <View style={styles.blackBg} />;
+  if (!permission?.granted) return null;
 
   const laserTranslateY = laserPos.interpolate({
     inputRange: [0, 1],
     outputRange: [0, cameraDimensions.height]
   });
 
+  const modalTranslateY = modalAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [height, 0]
+  });
+
   return (
     <Modal
       visible={isVisible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
+      animationType="none"
+      transparent={true}
+      onRequestClose={handleClose}
+      statusBarTranslucent
     >
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="black" />
+      <Animated.View style={[styles.container, { transform: [{ translateY: modalTranslateY }] }]}>
+        {/* Dynamic Gradient Background */}
+        <LinearGradient
+          colors={[COLORS.background, COLORS.card]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+        
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
         {/* --- 1. TOP SECTION --- */}
         <SafeAreaView style={styles.topSection}>
           <View style={styles.instructionPill}>
-            <Ionicons name="scan-outline" size={16} color={COLORS.text} />
+            <Ionicons name="scan-outline" size={16} color={COLORS.textPrimary} />
             <Text style={styles.instructionText}>{t('oilguard_camera_instruction', language)}</Text>
           </View>
         </SafeAreaView>
@@ -211,8 +259,6 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
             <Animated.View style={{ flex: 1, opacity: opacityAnim }}>
               <CameraView
                 ref={cameraRef}
-                // FIX 2: Scale up slightly (1.03) to "bleed" over the edges.
-                // This ensures no black gaps appear due to pixel rounding.
                 style={[StyleSheet.absoluteFill, { transform: [{ scale: 1.03 }] }]}
                 facing="back"
                 mode="picture"
@@ -231,7 +277,7 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
               </View>
             )}
 
-            {/* Overlays (Laser, Corners) */}
+            {/* Overlays */}
             <View style={styles.overlayContainer} pointerEvents="none">
               <Animated.View style={[
                 styles.laserLine,
@@ -281,8 +327,8 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
           {/* Buttons Row */}
           <View style={styles.buttonsRow}>
             {/* Close */}
-            <TouchableOpacity onPress={onClose} style={styles.sideButton}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
+            <TouchableOpacity onPress={handleClose} style={styles.sideButton}>
+              <Ionicons name="close" size={24} color={COLORS.textPrimary} />
             </TouchableOpacity>
 
             {/* Shutter */}
@@ -310,25 +356,20 @@ export default function CustomCameraModal({ isVisible, onClose, onPictureTaken }
               <Ionicons
                 name={torch ? "flash" : "flash-off"}
                 size={24}
-                color={torch ? COLORS.accent : COLORS.text}
+                color={torch ? COLORS.accentGreen : COLORS.textPrimary}
               />
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
     flexDirection: 'column'
-  },
-  blackBg: {
-    flex: 1,
-    backgroundColor: 'black'
   },
 
   // SECTIONS
@@ -342,27 +383,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // No background color here to avoid flashing
   },
   footerSection: {
     height: FOOTER_HEIGHT,
     justifyContent: 'flex-end',
-    backgroundColor: 'black',
-    zIndex: 10
+    zIndex: 10,
+    backgroundColor: 'transparent'
   },
 
   // CAMERA FRAME
   roundedFrame: {
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
     position: 'relative'
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#111',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -370,7 +410,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentGreen,
     opacity: 0.2
   },
 
@@ -382,16 +422,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(30,30,30,0.8)',
+    backgroundColor: COLORS.card + 'D9', // translucent card color
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
     marginTop: 10
   },
   instructionText: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontSize: 14,
     fontFamily: 'Tajawal-Regular'
   },
@@ -401,8 +441,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: COLORS.accent,
-    shadowColor: COLORS.accent,
+    backgroundColor: COLORS.accentGreen,
+    shadowColor: COLORS.accentGreen,
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 5
@@ -413,7 +453,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 24,
     height: 24,
-    borderColor: COLORS.accent,
+    borderColor: COLORS.accentGreen,
     borderWidth: 3,
     borderRadius: 4,
     opacity: 0.8
@@ -430,9 +470,9 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   zoomLabel: {
-    color: COLORS.accent,
+    color: COLORS.accentGreen,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Tajawal-Bold',
     marginBottom: 8
   },
   zoomTrackArea: {
@@ -443,11 +483,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#333'
+    backgroundColor: COLORS.border
   },
   zoomTrackFill: {
     height: 4,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 2
   },
   zoomKnob: {
@@ -455,9 +495,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FFF',
+    backgroundColor: COLORS.textPrimary,
     left: -10,
-    elevation: 4
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
 
   // BUTTONS
@@ -472,7 +516,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.card,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -481,7 +527,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     borderWidth: 4,
-    borderColor: '#FFF',
+    borderColor: COLORS.textPrimary,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -489,6 +535,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.textPrimary
   },
 });

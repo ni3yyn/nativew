@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, Pressable, ActivityIndicator, 
   Modal, Animated, Platform, TextInput, ScrollView, Dimensions, 
-  Image, PanResponder, BackHandler
+  Image, PanResponder, BackHandler, Easing
 } from 'react-native';
 import ViewShot from "react-native-view-shot";
 import * as Sharing from 'expo-sharing';
@@ -15,6 +15,8 @@ import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import AppTextInput from '../common/AppTextInput';
+import { useTheme } from '../../context/ThemeContext';
 
 // --- REGISTRY IMPORT ---
 import { TEMPLATE_REGISTRY as ORIGINAL_REGISTRY } from './templates';
@@ -23,7 +25,7 @@ import { TEMPLATE_REGISTRY as ORIGINAL_REGISTRY } from './templates';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TEMPLATE_WIDTH = 600;
 const TEMPLATE_HEIGHT = 1066; 
-const PREVIEW_HEIGHT = SCREEN_HEIGHT * 0.45; 
+const PREVIEW_HEIGHT = SCREEN_HEIGHT * 0.40; // Slightly smaller to fit everything nicely
 const PREVIEW_WIDTH = PREVIEW_HEIGHT * (TEMPLATE_WIDTH / TEMPLATE_HEIGHT);
 const SCALE_FACTOR = PREVIEW_WIDTH / TEMPLATE_WIDTH;
 
@@ -37,6 +39,8 @@ const EXTENDED_REGISTRY = [
     { ...ORIGINAL_REGISTRY[5], id: '06', layout: { maskW: 510, maskH: 380, imgSize: 600, radius: 50, border: 1, type: 'solid' } },
 ];
 
+// NOTE: These internal themes dictate how the EXPORTED image looks. 
+// They intentionally do not use the app theme so the output remains consistent.
 const THEMES = {
     green: { id: 'green', primary: '#142B24', accent: '#D4AF37', text: '#E8F5E9', gradient: ['#1F3A33', '#142B24', '#08120F'], glass: 'rgba(255,255,255,0.05)', border: 'rgba(212, 175, 55, 0.3)', btn: ['#D4AF37', '#B8860B'], isDark: true },
     pink: { id: 'pink', primary: '#FFF0F5', accent: '#D81B60', text: '#880E4F', gradient: ['#FFF0F5', '#FCE4EC', '#F8BBD0'], glass: 'rgba(255, 255, 255, 0.7)', border: 'rgba(216, 27, 96, 0.2)', btn: ['#F06292', '#D81B60'], isDark: false },
@@ -45,7 +49,7 @@ const THEMES = {
     white: { id: 'white', primary: '#FFFFFF', accent: '#1A2D27', text: '#1A2D27', gradient: ['#FFFFFF', '#F5F5F5', '#E0E0E0'], glass: 'rgba(255, 255, 255, 0.8)', border: 'rgba(26, 45, 39, 0.1)', btn: ['#1A2D27', '#2F4F4F'], isDark: false }
 };
 
-// 🌟 NORMALIZE ANALYSIS DATA FOR TEMPLATE COMPATIBILITY (FIXES CLAIMS SHOWING AS FALSE)
+// 🌟 NORMALIZE ANALYSIS DATA FOR TEMPLATE COMPATIBILITY
 const normalizeAnalysisForShare = (analysis, product) => {
     if (!analysis) return { oilGuardScore: product?.score || 0, marketing_results: [], user_specific_alerts: [] };
 
@@ -58,7 +62,6 @@ const normalizeAnalysisForShare = (analysis, product) => {
         const claimText = typeof item === 'object' ? (item.claim || item.label || item.name || '') : String(item);
         const statusStr = typeof item === 'object' ? String(item.status || item.verdict || '').toLowerCase() : '';
 
-        // Check if claim is positive/supported according to logic.js
         const isVerified = statusStr.includes('محقق') || 
                            statusStr.includes('✅') || 
                            statusStr.includes('verified') || 
@@ -117,9 +120,15 @@ const PremiumShareButton = ({
     typeLabel, 
     customStyle, 
     iconSize = 18, 
-    textColor = '#E8F5E9' 
+    textColor 
 }) => {
     const language = useCurrentLanguage();
+    const { colors: COLORS } = useTheme(); 
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]); 
+    
+    // Default text color if none provided matches the active theme
+    const finalTextColor = textColor || COLORS.textPrimary;
+
     const viewShotRef = useRef();
 
     // 🌟 SMART DATA EXTRACTION & CLAIM NORMALIZATION
@@ -145,6 +154,9 @@ const PremiumShareButton = ({
     const scale = useRef(new Animated.Value(1)).current;
     const internalState = useRef({ x: 0, y: 0, scale: 1, lastDist: null });
     const pulseAnim = useRef(new Animated.Value(0)).current;
+    
+    // 🌟 EXACT 1:1 PIXEL TRACKING FOR DRAG-TO-CLOSE
+    const sheetPanY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
     // Validation
     const isNameValid = productName.trim().length > 0;
@@ -159,9 +171,17 @@ const PremiumShareButton = ({
         }
     }, [manualName, manualImage, product]);
 
+    // 🌟 MODAL PHYSICS (Entrance)
     useEffect(() => {
         let animation;
         if (modalVisible) {
+            Animated.spring(sheetPanY, { 
+                toValue: 0, 
+                friction: 9, 
+                tension: 50, 
+                useNativeDriver: true 
+            }).start();
+
             pulseAnim.setValue(0);
             animation = Animated.loop(
                 Animated.sequence([
@@ -172,7 +192,38 @@ const PremiumShareButton = ({
             animation.start();
         }
         return () => animation?.stop();
-    }, [modalVisible, pulseAnim]);
+    }, [modalVisible, pulseAnim, sheetPanY]);
+
+    const closeSheet = () => {
+        Animated.timing(sheetPanY, { 
+            toValue: SCREEN_HEIGHT, 
+            duration: 250, 
+            easing: Easing.in(Easing.ease), 
+            useNativeDriver: true 
+        }).start(({ finished }) => {
+            if (finished) setModalVisible(false);
+        });
+    };
+
+    // 🌟 TOP NOTCH DRAG-TO-CLOSE GESTURE (1:1 Tracking)
+    const panResponderSheet = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 10,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    sheetPanY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > SCREEN_HEIGHT * 0.2 || gestureState.vy > 0.8) {
+                    closeSheet();
+                } else {
+                    Animated.spring(sheetPanY, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }).start();
+                }
+            },
+        })
+    ).current;
 
     const activeTemplateConfig = EXTENDED_REGISTRY.find(t => t.id === selectedTemplateId) || EXTENDED_REGISTRY[0];
     const CurrentTemplate = activeTemplateConfig.component;
@@ -188,14 +239,15 @@ const PremiumShareButton = ({
     useEffect(() => {
         const backAction = () => {
             if (editorVisible) { setEditorVisible(false); return true; }
-            if (modalVisible) { setModalVisible(false); return true; }
+            if (modalVisible) { closeSheet(); return true; }
             return false;
         };
         const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
         return () => backHandler.remove();
     }, [editorVisible, modalVisible]);
 
-    const panResponder = useRef(
+    // PAN RESPONDER FOR IMAGE CROPPER
+    const panResponderCropper = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => true,
@@ -270,66 +322,103 @@ const PremiumShareButton = ({
         } catch (e) { console.log(e); } finally { setIsGenerating(false); }
     };
 
+    // Interpolations for Bottom Sheet
+    const backdropOpacity = sheetPanY.interpolate({ 
+        inputRange: [0, SCREEN_HEIGHT], 
+        outputRange: [0.85, 0], 
+        extrapolate: 'clamp' 
+    });
+
     return (
         <>
             <Pressable 
-                onPress={() => setModalVisible(true)} 
+                onPress={() => {
+                    setModalVisible(true);
+                    Haptics.selectionAsync();
+                }} 
                 style={({ pressed }) => [
                     styles.trig, 
                     customStyle,
-                    pressed && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }
+                    pressed && { backgroundColor: COLORS.card }
                 ]}
             >
-                <FontAwesome5 name="share-alt" color={textColor} size={iconSize} />
-                <Text style={[styles.trigText, { color: textColor }]}>{t('share_button_label', language)}</Text>
+                <FontAwesome5 name="share-alt" color={finalTextColor} size={iconSize} />
+                <Text style={[styles.trigText, { color: finalTextColor }]}>{t('share_button_label', language)}</Text>
             </Pressable>
 
-            <Modal visible={modalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setModalVisible(false)}>
-                <View style={styles.overlay}>
-                    <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
-                    <View style={styles.sheet}>
-                        <View style={styles.sheetHead}><Text style={styles.sheetTitle}>{t('share_modal_title', language)}</Text></View>
-                        <ScrollView contentContainerStyle={{ padding: 25, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+            {/* MAIN BOTTOM SHEET */}
+            <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
+                <View style={{ flex: 1 }} pointerEvents="box-none">
+                    {/* Dark Backdrop */}
+                    <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+                        <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
+                    </Animated.View>
+
+                    {/* Sheet Container */}
+                    <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetPanY }] }]}>
+                        {/* Drag Handle Bar */}
+                        <View style={styles.sheetHandleBar} {...panResponderSheet.panHandlers}>
+                            <View style={styles.sheetHandle} />
+                        </View>
+
+                        {/* Smaller Header */}
+                        <View style={styles.sheetHead}>
+                            <Text style={styles.sheetTitle}>{t('share_modal_title', language)}</Text>
+                        </View>
+
+                        {/* Scrollable Content Area */}
+                        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                             
+                            {/* Preview Frame */}
                             <View style={[styles.prevFrame, { borderColor: currentThemeData.accent }]}>
                                 <View style={styles.scaler}>
                                     <CurrentTemplate analysis={finalAnalysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
                                 </View>
                             </View>
 
+                            {/* 🌟 MOVED THEMES SWATCHES UNDER PREVIEW 🌟 */}
+                            <View style={styles.swatches}>
+                                {Object.keys(THEMES).map(k => (
+                                    <Pressable key={k} onPress={() => { setActiveTheme(k); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.swatch, activeTheme === k && { borderColor: THEMES[k].accent, transform: [{scale:1.1}] }]}>
+                                        <LinearGradient colors={THEMES[k].gradient} style={{flex:1, borderRadius:20}} />
+                                    </Pressable>
+                                ))}
+                            </View>
+
+                            {/* Action Row (Add/Remove Image) */}
                             <View style={styles.actionRow}>
                                 {!userImage ? (
                                     <Pressable 
                                         onPress={pickImage} 
                                         style={[
                                             styles.actionBtnFull, 
-                                            { backgroundColor: '#1A1A1A' },
-                                            (hasAttemptedShare && !isImageValid) && { borderWidth: 1, borderColor: '#FF4444', backgroundColor: '#2a1111' }
+                                            (hasAttemptedShare && !isImageValid) && { borderWidth: 0.5, borderColor: COLORS.danger, backgroundColor: COLORS.danger + '1A' }
                                         ]}
                                     >
-                                        <Feather name="image" size={18} color={(hasAttemptedShare && !isImageValid) ? "#FF4444" : currentThemeData.accent} />
-                                        <Text style={[styles.actionText, { color: (hasAttemptedShare && !isImageValid) ? "#FF4444" : '#FFF' }]}>
+                                        <Feather name="image" size={18} color={(hasAttemptedShare && !isImageValid) ? COLORS.danger : currentThemeData.accent} />
+                                        <Text style={[styles.actionText, { color: (hasAttemptedShare && !isImageValid) ? COLORS.danger : COLORS.textPrimary }]}>
                                             {(hasAttemptedShare && !isImageValid) ? t('share_error_image', language) : t('share_add_image', language)}
                                         </Text>
                                     </Pressable>
                                 ) : (
                                     <>
-                                        <Pressable onPress={removeImage} style={[styles.actionBtn, { backgroundColor: '#221010' }]}>
-                                            <FontAwesome5 name="trash" size={14} color="#FF4444" />
-                                            <Text style={[styles.actionText, { color: '#FF4444' }]}>{t('share_remove_image', language)}</Text>
+                                        <Pressable onPress={removeImage} style={[styles.actionBtn, { backgroundColor: COLORS.danger + '1A' }]}>
+                                            <FontAwesome5 name="trash" size={14} color={COLORS.danger} />
+                                            <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('share_remove_image', language)}</Text>
                                         </Pressable>
-                                        <Pressable onPress={openEditor} style={[styles.actionBtn, { backgroundColor: '#1A1A1A', flex: 1.5 }]}>
+                                        <Pressable onPress={openEditor} style={[styles.actionBtn, { flex: 1.5 }]}>
                                             <MaterialIcons name="crop" size={18} color={currentThemeData.accent} />
-                                            <Text style={[styles.actionText, { color: '#FFF' }]}>{t('share_crop_image', language)}</Text>
+                                            <Text style={[styles.actionText, { color: COLORS.textPrimary }]}>{t('share_crop_image', language)}</Text>
                                         </Pressable>
-                                        <Pressable onPress={pickImage} style={[styles.actionBtn, { backgroundColor: '#1A1A1A' }]}>
-                                            <Feather name="refresh-cw" size={16} color="#FFF" />
-                                            <Text style={[styles.actionText, { color: '#FFF' }]}>{t('share_change_image', language)}</Text>
+                                        <Pressable onPress={pickImage} style={[styles.actionBtn]}>
+                                            <Feather name="refresh-cw" size={16} color={COLORS.textPrimary} />
+                                            <Text style={[styles.actionText, { color: COLORS.textPrimary }]}>{t('share_change_image', language)}</Text>
                                         </Pressable>
                                     </>
                                 )}
                             </View>
 
+                            {/* Templates Row */}
                             <View style={styles.templatesWrapper}>
                                 <Animated.View 
                                     style={[
@@ -360,10 +449,10 @@ const PremiumShareButton = ({
                                                 <MaterialCommunityIcons 
                                                     name={template.icon} 
                                                     size={24} 
-                                                    color={selectedTemplateId === template.id ? currentThemeData.primary : '#666'} 
+                                                    color={selectedTemplateId === template.id ? currentThemeData.primary : COLORS.textSecondary} 
                                                 />
                                             </View>
-                                            <Text style={[styles.tempText, { color: selectedTemplateId === template.id ? currentThemeData.accent : '#666' }]}>
+                                            <Text style={[styles.tempText, { color: selectedTemplateId === template.id ? currentThemeData.accent : COLORS.textSecondary }]}>
                                                 {t(`template_${template.id}_name`, language)}
                                             </Text>
                                         </Pressable>
@@ -371,36 +460,33 @@ const PremiumShareButton = ({
                                 </ScrollView>
                             </View>
 
-                            <TextInput 
+                            {/* Product Name Input */}
+                            <AppTextInput 
                                 style={[
                                     styles.input, 
-                                    (hasAttemptedShare && !isNameValid) && { borderWidth: 1, borderColor: '#FF4444', color: '#FF4444' }
+                                    (hasAttemptedShare && !isNameValid) && { borderWidth: 0.5, borderColor: COLORS.danger, color: COLORS.danger }
                                 ]} 
                                 placeholder={ (hasAttemptedShare && !isNameValid) ? t('share_error_name', language) : t('share_placeholder_name', language)}
-                                placeholderTextColor={ (hasAttemptedShare && !isNameValid) ? "#FF4444" : "#666"} 
+                                placeholderTextColor={ (hasAttemptedShare && !isNameValid) ? COLORS.danger : COLORS.textDim} 
                                 value={productName} 
                                 onChangeText={setProductName} 
                                 textAlign="center" 
                             />
-                            
-                            <View style={styles.swatches}>
-                                {Object.keys(THEMES).map(k => (
-                                    <Pressable key={k} onPress={() => { setActiveTheme(k); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.swatch, activeTheme === k && { borderColor: THEMES[k].accent, transform: [{scale:1.1}] }]}>
-                                        <LinearGradient colors={THEMES[k].gradient} style={{flex:1, borderRadius:20}} />
-                                    </Pressable>
-                                ))}
-                            </View>
+                        </ScrollView>
 
-                            <Pressable onPress={handleShare} disabled={isGenerating} style={{width:'100%'}}>
+                        {/* 🌟 FIXED CTA BUTTON AT BOTTOM 🌟 */}
+                        <View style={styles.fixedFooter}>
+                            <Pressable onPress={handleShare} disabled={isGenerating} style={{ width: '100%' }}>
                                 <LinearGradient colors={currentThemeData.btn} style={styles.finalBtn}>
                                     {isGenerating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.finalBtnText}>{t('share_final_btn', language)}</Text>}
                                 </LinearGradient>
                             </Pressable>
-                        </ScrollView>
-                    </View>
+                        </View>
+                    </Animated.View>
                 </View>
             </Modal>
 
+            {/* FULL SCREEN CROPPER EDITOR */}
             <Modal visible={editorVisible} transparent animationType="fade" onRequestClose={() => setEditorVisible(false)}>
                 <View style={[styles.edContainer, { backgroundColor: currentThemeData.primary }]}>
                     <LinearGradient colors={currentThemeData.gradient} style={StyleSheet.absoluteFill} />
@@ -420,7 +506,7 @@ const PremiumShareButton = ({
                                  borderColor: currentThemeData.accent, 
                                  backgroundColor: currentThemeData.glass,
                              }
-                         ]} {...panResponder.panHandlers}>
+                         ]} {...panResponderCropper.panHandlers}>
                             <Image source={{ uri: userImage }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', opacity: 0.5 }]} resizeMode="cover" blurRadius={50} />
                             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
                             <Animated.View style={{ transform: [{translateX: pan.x}, {translateY: pan.y}, {scale: scale}], width: layout.imgSize * k, height: layout.imgSize * k }}>
@@ -450,6 +536,7 @@ const PremiumShareButton = ({
                 </View>
             </Modal>
 
+            {/* Hidden Offscreen ViewShot for Rendering */}
             <ViewShot ref={viewShotRef} options={{ format: "jpg", quality: 1.0 }} style={{ position: 'absolute', left: -5000 }}>
                 <CurrentTemplate analysis={finalAnalysis} typeLabel={typeLabel} productName={productName} imageUri={userImage} theme={currentThemeData} imgPos={imgPos} />
             </ViewShot>
@@ -457,28 +544,65 @@ const PremiumShareButton = ({
     );
 };
 
-const styles = StyleSheet.create({
+// --- DYNAMIC STYLES ---
+const createStyles = (COLORS) => StyleSheet.create({
     trig: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 15 },
     trigText: { fontFamily: 'Tajawal-Bold', fontSize: 14 },
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
-    sheet: { height: SCREEN_HEIGHT * 0.9, backgroundColor: '#0A0A0A', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
-    sheetHead: { padding: 20, borderBottomWidth: 1, borderColor: '#1A1A1A', alignItems: 'center' },
-    sheetTitle: { color: '#FFF', fontFamily: 'Tajawal-Bold' },
-    prevFrame: { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, borderRadius: 20, overflow: 'hidden', backgroundColor: '#111', borderWidth: 1, borderColor: '#333' },
+    
+    // Bottom Sheet Base
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1 },
+    sheet: { 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0, 
+        height: SCREEN_HEIGHT * 0.9, 
+        backgroundColor: COLORS.background, 
+        borderTopLeftRadius: 35, 
+        borderTopRightRadius: 35, 
+        borderWidth: 0.5, 
+        borderColor: COLORS.border, 
+        zIndex: 2, 
+    },
+    sheetHandleBar: { alignItems: 'center', paddingVertical: 10, width: '100%', zIndex: 10 },
+    sheetHandle: { width: 44, height: 4.5, borderRadius: 10, backgroundColor: COLORS.border },
+    sheetHead: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderColor: COLORS.border + '50', alignItems: 'center' },
+    sheetTitle: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 16 },
+    
+    // Scroll Area
+    scrollContent: { padding: 25, paddingBottom: 20, alignItems: 'center' },
+    
+    // Fixed CTA Footer
+    fixedFooter: {
+        padding: 10,
+        paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+        backgroundColor: COLORS.background,
+        
+    },
+
+    prevFrame: { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, borderRadius: 20, overflow: 'hidden', backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.border },
     scaler: { width: TEMPLATE_WIDTH, height: TEMPLATE_HEIGHT, transform: [{ scale: SCALE_FACTOR }], transformOrigin: 'top left' },
-    actionRow: { flexDirection: 'row-reverse', width: '100%', gap: 10, marginTop: 15 },
-    actionBtnFull: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, gap: 8 },
-    actionBtn: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, gap: 6 },
-    actionText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-    list: { marginVertical: 20, width: '100%' },
-    tempItem: { alignItems: 'center', marginRight: 25 },
-    tempIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
-    tempText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
-    swatches: { flexDirection: 'row', gap: 12, marginBottom: 25 },
+    
+    // Swatches (Moved right below preview)
+    swatches: { flexDirection: 'row', gap: 12, marginTop: 15, marginBottom: 5 },
     swatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', padding: 2 },
-    input: { width: '100%', backgroundColor: '#161616', color: '#FFF', padding: 18, borderRadius: 15, marginBottom: 20, fontFamily: 'Tajawal-Bold' },
-    finalBtn: { padding: 20, borderRadius: 15, alignItems: 'center' },
-    finalBtnText: { color: '#FFF', fontFamily: 'Tajawal-Bold', fontSize: 18 },
+    
+    actionRow: { flexDirection: 'row-reverse', width: '100%', gap: 10, marginTop: 10 },
+    actionBtnFull: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, gap: 8, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.border },
+    actionBtn: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, gap: 6, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.border },
+    actionText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    
+    list: { marginVertical: 10, width: '100%' },
+    tempItem: { alignItems: 'center', marginRight: 25 },
+    tempIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center', marginBottom: 5, borderWidth: 0.5, borderColor: COLORS.border },
+    tempText: { fontFamily: 'Tajawal-Bold', fontSize: 12 },
+    
+    input: { width: '100%', backgroundColor: COLORS.card, color: COLORS.textPrimary, padding: 18, borderRadius: 15, marginBottom: 10, fontFamily: 'Tajawal-Regular', borderWidth: 0.5, borderColor: COLORS.border },
+    
+    finalBtn: { padding: 18, borderRadius: 15, alignItems: 'center' },
+    finalBtnText: { color: '#FFF', fontFamily: 'Tajawal-Bold', fontSize: 16 },
+    
+    // Editor
     edContainer: { flex: 1 },
     edHeader: { height: 80, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 15 },
     edTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18 },
@@ -489,8 +613,8 @@ const styles = StyleSheet.create({
     edFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 30, paddingBottom: 50, gap: 15 },
     edFooterBtn: { flex: 1, padding: 18, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
     edBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 16 },
-    templatesWrapper: { width: '100%', position: 'relative', marginVertical: 10 },
-    scrollArrow: { position: 'absolute', right: 0, top: '25%', zIndex: 10, backgroundColor: 'rgba(10,10,10,0.8)', borderRadius: 20, padding: 2 },
+    templatesWrapper: { width: '100%', position: 'relative', marginVertical: 5 },
+    scrollArrow: { position: 'absolute', right: 0, top: '25%', zIndex: 10, backgroundColor: COLORS.card, borderRadius: 20, padding: 2 },
 });
 
 export default PremiumShareButton;

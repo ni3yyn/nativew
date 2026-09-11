@@ -433,7 +433,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '1.9.2';
+  const APP_VERSION = '2.0.0';
 
   // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
   console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');
@@ -669,7 +669,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#1A2D27' }}>
+    <View style={{ flex: 1, backgroundColor: '#F0F5F0' }}>
       <StatusBar style="light" translucent={true} />
 
 
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1A2D27',
+    backgroundColor: '#F0F5F0',
   },
   systemContent: { width: '80%', alignItems: 'center', padding: 20 },
   systemTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, color: '#F1F3F2', textAlign: 'center', marginBottom: 10 },

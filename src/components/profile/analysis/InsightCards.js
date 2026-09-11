@@ -151,11 +151,9 @@ export const AnalysisHero = ({ focusInsight, onSelect, onRetryWeather, onShowPer
     if (!focusInsight) return <AllClearState />;
     if (focusInsight.isPlaceholder) return <WeatherLoadingCard />;
 
-    // Check if it's the main weather dashboard
     const isWeather = focusInsight.customData?.type === 'weather_advice' || focusInsight.customData?.type === 'weather_dashboard';
     if (isWeather) return <WeatherCompactWidget insight={focusInsight} onPress={onSelect} onRetry={onRetryWeather} onPermissionBlocked={onShowPermissionAlert} />;
 
-    // Otherwise standard focus card (e.g. Critical Product Alert if no weather)
     return <FocusInsight insight={focusInsight} onSelect={onSelect} />;
 };
 
@@ -171,22 +169,22 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
             <View style={styles.carouselHeaderRow}>
                 <Text style={styles.carouselTitle}>{t('analysis_highlights', language)}</Text>
                 
-                {/* 🌟 UX HINT BADGE (Shown when > 2 insights) */}
+                {/* UX HINT BADGE */}
                 {insights.length > 2 && (
                     <View style={styles.swipeHintBadge}>
                         <Text style={styles.swipeHintText}>
-                            {isRTL ? 'اسحب لرؤية المزيد' : 'Swipe for more'}
+                            {t('carousel_swipe_more', language)}
                         </Text>
                         <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={10} color={COLORS.accentGreen} />
                     </View>
                 )}
             </View>
 
-            {/* HORIZONTAL CAROUSEL WITH PEEKING & SNAP SCROLLING */}
+            {/* HORIZONTAL CAROUSEL */}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                snapToInterval={142} // 132 (card width) + 10 (gap)
+                snapToInterval={142}
                 decelerationRate="fast"
                 contentContainerStyle={[
                     styles.carouselContentContainer,
@@ -194,16 +192,13 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
                 ]}
             >
                 {insights.map((insight, index) => {
-                    // Check for Weather Alerts
                     const isWeather = insight.customData?.type === 'weather_advice' || insight.customData?.type === 'weather_dashboard';
                     if (isWeather) return <WeatherMiniCard key={insight.id} insight={insight} onPress={onSelect} />;
 
-                    // Check for Night Prep
                     if (insight.id === 'night-prep-forecast') {
                         return <NightPrepMiniCard key={insight.id} insight={insight} onPress={onSelect} index={index} />;
                     }
 
-                    // Default Standard Card
                     return <StandardInsightCard key={insight.id} insight={insight} onPress={onSelect} index={index} />;
                 })}
             </ScrollView>
@@ -212,18 +207,17 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
 };
 
 const createStyles = (COLORS, isRTL) => StyleSheet.create({
-    focusInsightCard: { borderRadius: 24, padding: 25, marginBottom: 25, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    focusInsightCard: { borderRadius: 24, padding: 25, marginBottom: 25, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)' },
     focusInsightHeader: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 },
     focusInsightTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 18, color: COLORS.textPrimary, textAlign: isRTL ? 'right' : 'left' },
     focusInsightSummary: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: isRTL ? 'right' : 'left', marginTop: 12, lineHeight: 22 },
     focusInsightAction: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignSelf: isRTL ? 'flex-start' : 'flex-end', marginTop: 20 },
     focusInsightActionText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: COLORS.accentGreen },
     allClearContainer: { alignItems: 'center', padding: 30, marginBottom: 25 },
-    allClearIconWrapper: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.success + '1A', justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: COLORS.success + '33' },
+    allClearIconWrapper: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.success + '1A', justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 0.5, borderColor: COLORS.success + '33' },
     allClearTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: COLORS.textPrimary },
     allClearSummary: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 5, lineHeight: 20 },
 
-    /* CAROUSEL HEADER & SWIPE HINT */
     carouselHeaderRow: { 
         flexDirection: isRTL ? 'row-reverse' : 'row', 
         justifyContent: 'space-between', 
@@ -244,7 +238,7 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 10,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.accentGreen + '30',
     },
     swipeHintText: {
@@ -258,14 +252,13 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
         paddingBottom: 5 
     },
 
-    /* 🌟 COMPACT PEEKING CARDS (132px WIDTH ALLOWS NEXT CARD TO PEEK OUT) 🌟 */
     modernCardContainer: { 
         width: 132, 
         height: 132, 
         borderRadius: 20, 
         padding: 12, 
         justifyContent: 'space-between', 
-        borderWidth: 1, 
+        borderWidth: 0.5, 
         backgroundColor: COLORS.card, 
         overflow: 'hidden' 
     },

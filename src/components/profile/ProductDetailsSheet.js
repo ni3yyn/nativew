@@ -19,6 +19,7 @@ import { PRODUCT_TYPES } from '../../constants/productData';
 import { AlertService } from '../../services/alertService';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import PremiumShareButton from '../oilguard/ShareComponent';
+import AppTextInput from '../common/AppTextInput';
 
 const { height } = Dimensions.get('window');
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
@@ -407,15 +408,15 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
 
             Animated.spring(animController, {
                 toValue: 1,
-                damping: 18,
-                stiffness: 120,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true,
             }).start();
         } else if (!isVisible) {
             Animated.timing(animController, {
                 toValue: 0,
-                duration: 200,
-                easing: Easing.out(Easing.cubic),
+                duration: 250,
+                easing: Easing.in(Easing.ease),
                 useNativeDriver: true,
             }).start();
         }
@@ -427,8 +428,8 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         Animated.parallel([
             Animated.timing(animController, {
                 toValue: 0,
-                duration: 200,
-                easing: Easing.out(Easing.cubic),
+                duration: 250,
+                easing: Easing.in(Easing.ease),
                 useNativeDriver: true,
             }),
             Animated.timing(panY, {
@@ -545,7 +546,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
         }
     };
 
-    const entryTranslateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
+    const entryTranslateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height + 150, 0] });
     const combinedTranslateY = Animated.add(entryTranslateY, panY);
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.75] });
 
@@ -631,7 +632,7 @@ const ProductDetailsSheet = ({ product, isVisible, onClose, onDelete }) => {
                             <View style={styles.centerTitleWrap}>
                                 {isEditing ? (
                                     <View style={styles.editRow}>
-                                        <TextInput
+                                        <AppTextInput
                                             value={editedName}
                                             onChangeText={setEditedName}
                                             style={[styles.editInputBigger, { color: C.textPrimary, backgroundColor: C.inputBg, borderColor: C.accentGreen }]}
@@ -860,18 +861,19 @@ const styles = StyleSheet.create({
     },
     sheetContainer: {
         position: 'absolute',
-        bottom: 0,
+        bottom: -150,
         left: 0,
         right: 0,
-        height: height * 0.86,
+        height: height * 0.86 + 150,
         zIndex: 100,
         justifyContent: 'flex-end',
+        paddingBottom: 150,
     },
     sheetContent: {
         flex: 1,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderBottomWidth: 0,
         overflow: 'hidden',
         elevation: 25,
@@ -949,7 +951,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 6,
-        borderWidth: 1,
+        borderWidth: 0.5,
         textAlign: 'right',
     },
     saveBtn: {
@@ -986,7 +988,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     productIconFallbackBigger: {
         width: '100%',
@@ -1053,7 +1055,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 12,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     inlineDeleteText: {
         fontFamily: 'Tajawal-Bold',
@@ -1066,7 +1068,7 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingVertical: 10,
         borderRadius: 12,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
 
     /* SECTION BLOCK */
@@ -1106,7 +1108,7 @@ const styles = StyleSheet.create({
     /* CLAIMS ROW (NEW) */
     claimsContainer: {
         borderRadius: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         overflow: 'hidden',
     },
     claimRowWrapper: {
@@ -1157,7 +1159,7 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         paddingHorizontal: 10,
         borderRadius: 10,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     ingTextBigger: {
         fontFamily: 'Tajawal-Bold',
@@ -1192,7 +1194,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 14,
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: 0.5,
         marginTop: 4,
     },
     closeBottomText: {

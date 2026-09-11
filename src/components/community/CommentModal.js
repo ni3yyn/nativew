@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-    View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator,
+    View, Text, TouchableOpacity, Modal, ActivityIndicator,
     FlatList, KeyboardAvoidingView, Platform, StyleSheet,
-    Animated, LayoutAnimation, Pressable, Keyboard, Image
+    Animated, LayoutAnimation, Pressable, Keyboard, Image, Dimensions, Easing
 } from 'react-native';
+import AppTextInput from '../common/AppTextInput';
 import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
@@ -18,11 +19,12 @@ import { doc, getDoc } from 'firebase/firestore';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { AlertService } from '../../services/alertService';
-import { deleteComment } from '../../services/communityService';
+import { deleteComment, awardInstantPoints, COMMUNITY_POINTS } from '../../services/communityService';
 import { uploadImageToCloudinary } from '../../services/imageService';
 import FullImageViewer from '../common/FullImageViewer';
 import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { AVATARS } from '../../constants/avatars';
 // ... (Keep existing sendPushNotification & getRandomColor & getRandomPopColor helpers exactly as they are) ...
 
 const sendPushNotification = async (targetUserId, title, body, dataPayload) => {
@@ -146,17 +148,45 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
         <View style={[styles.rowContainer, isReply && styles.rowContainerReply]}>
             {isReply && <View style={styles.threadCurve} />}
             <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => onProfilePress && onProfilePress(item.userId, item.authorSettings)}
-                style={styles.avatarWrap}
+    activeOpacity={0.8}
+    onPress={() => onProfilePress && onProfilePress(item.userId, item.authorSettings)}
+    style={[styles.avatarWrap, isReply && styles.avatarWrapSmall]}
+>
+    <LinearGradient
+        colors={[getRandomColor(item.userName, C), C.card]}
+        style={[styles.avatar, isReply && styles.avatarSmall, { overflow: 'hidden' }]}
+    >
+        {(() => {
+    const isMe = currentUser?.uid && item.userId === currentUser.uid;
+    const liveAvatarId = currentUser?.settings?.avatarId || currentUser?.avatarId;
+    const avatarKey = isMe 
+        ? (liveAvatarId || item.authorSettings?.avatarId || item.userAvatarId || item.avatarId)
+        : (item.authorSettings?.avatarId || item.userAvatarId || item.avatarId);
+    
+    return AVATARS[avatarKey] ? (
+        <Image 
+            source={AVATARS[avatarKey]} 
+            style={{ width: '100%', height: '100%', borderRadius: isReply ? 14 : 19 }} 
+        />
+    ) : (
+        <Text style={[styles.avatarText, isReply && { fontSize: 12 }]}>{item.userName?.charAt(0).toUpperCase()}</Text>
+    );
+})()}
+    </LinearGradient>
+
+    {(item.authorSettings?.isFirstGen || item.isFirstGen || (item.userId === currentUser?.uid && currentUser?.isFirstGen)) && (
+        <View style={[styles.firstGenCommentPin, isReply && styles.firstGenCommentPinSmall, { borderColor: C.card }]}>
+            <LinearGradient
+                colors={['#FDE047', '#F59E0B', '#B45309']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.firstGenPinGradient}
             >
-                <LinearGradient
-                    colors={[getRandomColor(item.userName, C), C.card]}
-                    style={[styles.avatar, isReply && styles.avatarSmall]}
-                >
-                    <Text style={[styles.avatarText, isReply && { fontSize: 12 }]}>{item.userName?.charAt(0).toUpperCase()}</Text>
-                </LinearGradient>
-            </TouchableOpacity>
+                <Text style={[styles.firstGenCommentPinText, isReply && { fontSize: 6.5 }]}>1ج</Text>
+            </LinearGradient>
+        </View>
+    )}
+</TouchableOpacity>
 
             <View style={styles.contentContainer}>
                 <Pressable
@@ -213,11 +243,35 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
 // ==================================================================
 // 3. MAIN COMPONENT: COMMENT MODAL
 // ==================================================================
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) => {
     const { colors } = useTheme();
     const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const backdropAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) {
+            Animated.parallel([
+                Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            ]).start();
+        }
+    }, [visible]);
+
+    const handleClose = () => {
+        Keyboard.dismiss();
+        Animated.parallel([
+            Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+            Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]).start(({ finished }) => {
+            if (finished && onClose) onClose();
+        });
+    };
     const [comment, setComment] = useState('');
     const [commentsList, setCommentsList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -366,6 +420,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
 
         const authorSnapshot = {
             name: currentUser.settings?.name || currentUser.name || t('community_comment_default_user', language),
+            avatarId: currentUser.settings?.avatarId || null,
             skinType: currentUser.settings?.skinType || null
         };
         const tempId = Math.random().toString();
@@ -417,6 +472,11 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             // 6. Sync real data
             setCommentsList(prev => prev.map(c => c.id === tempId ? normalizeComment(data) : c));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // 🌟 Award Instant Gamification Points (+10)
+            if (currentUser?.uid) {
+                awardInstantPoints(currentUser.uid, COMMUNITY_POINTS.ADD_COMMENT);
+            }
 
             // 7. Send Notifications
             const notificationData = { postId: post.id, screen: 'PostDetails' };
@@ -473,21 +533,27 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     if (!post) return null;
 
     return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-                {/* HEADER */}
-                <View style={styles.header}>
-                    <View style={styles.grabber} />
-                    <View style={styles.headerContent}>
-                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                            <Text style={styles.title}>{t('community_comment_modal_title', language)}</Text>
-                            <View style={styles.badge}><Text style={styles.badgeText}>{commentsList.length}</Text></View>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: backdropAnim }]}>
+                    <Pressable style={{ flex: 1 }} onPress={handleClose} />
+                </Animated.View>
+
+                <Animated.View style={[{ height: '88%', backgroundColor: COLORS.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', transform: [{ translateY: slideAnim }], marginBottom: -150, paddingBottom: 150 }]}>
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+                        {/* HEADER */}
+                        <View style={styles.header}>
+                            <View style={styles.grabber} />
+                            <View style={styles.headerContent}>
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                                    <Text style={styles.title}>{t('community_comment_modal_title', language)}</Text>
+                                    <View style={styles.badge}><Text style={styles.badgeText}>{commentsList.length}</Text></View>
+                                </View>
+                                <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+                                    <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
 
                 {/* LIST */}
                 <View style={{ flex: 1 }}>
@@ -587,7 +653,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                             )}
                         </TouchableOpacity>
 
-                        <TextInput
+                        <AppTextInput
                             ref={inputRef}
                             style={styles.input}
                             placeholder={replyingTo ? t('community_comment_input_reply', language) : t('community_comment_input_add', language)}
@@ -605,8 +671,12 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         </TouchableOpacity>
 
                         {!replyingTo && !selectedImage && (
-                            <View style={styles.inputAvatar}>
-                                <Text style={styles.inputAvatarText}>{currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}</Text>
+                            <View style={[styles.inputAvatar, { overflow: 'hidden' }]}>
+                                {AVATARS[currentUser?.settings?.avatarId] ? (
+                                    <Image source={AVATARS[currentUser.settings.avatarId]} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
+                                ) : (
+                                    <Text style={styles.inputAvatarText}>{currentUser?.settings?.name?.charAt(0).toUpperCase() || 'U'}</Text>
+                                )}
                             </View>
                         )}
                     </View>
@@ -618,8 +688,9 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     imageUrl={viewingImage}
                     onClose={() => setViewingImage(null)}
                 />
-            </KeyboardAvoidingView>
-
+                    </KeyboardAvoidingView>
+                </Animated.View>
+            </View>
         </Modal>
     );
 };
@@ -630,19 +701,30 @@ const createStyles = (COLORS) => StyleSheet.create({
     grabber: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
     headerContent: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 },
     title: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: COLORS.textPrimary },
-    badge: { backgroundColor: COLORS.accentGreen + '26', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: COLORS.accentGreen + '33' },
+    badge: { backgroundColor: COLORS.accentGreen + '26', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 0.5, borderColor: COLORS.accentGreen + '33' },
     badgeText: { color: COLORS.accentGreen, fontSize: 12, fontFamily: 'Tajawal-Bold' },
     closeBtn: { padding: 6, backgroundColor: COLORS.background, borderRadius: 20 },
     listContainer: { padding: 20, paddingBottom: 40 },
     rowContainer: { flexDirection: 'row-reverse', marginBottom: 20, position: 'relative' },
     rowContainerReply: { marginRight: 40, marginTop: -5, marginBottom: 15 },
     threadCurve: { position: 'absolute', right: -28, top: -25, bottom: 25, width: 20, borderBottomWidth: 2, borderRightWidth: 2, borderColor: COLORS.border, borderBottomRightRadius: 16, zIndex: 0 },
-    avatarWrap: { marginLeft: 12, zIndex: 1 },
-    avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    avatarWrap: { 
+    marginLeft: 12, 
+    zIndex: 1,
+    alignSelf: 'flex-start', // 👈 KEY FIX: Prevents container from stretching to comment height
+    width: 38,
+    height: 38,
+    position: 'relative',
+},
+avatarWrapSmall: {
+    width: 28,
+    height: 28,
+},
+    avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: COLORS.border },
     avatarSmall: { width: 28, height: 28, borderRadius: 14 },
     avatarText: { fontFamily: 'Tajawal-Bold', color: '#fff', fontSize: 14 },
     contentContainer: { flex: 1 },
-    bubble: { backgroundColor: COLORS.card, borderRadius: 18, borderTopRightRadius: 2, padding: 12, borderWidth: 1, borderColor: COLORS.border },
+    bubble: { backgroundColor: COLORS.card, borderRadius: 18, borderTopRightRadius: 2, padding: 12, borderWidth: 0.5, borderColor: COLORS.border },
     bubbleReply: { backgroundColor: COLORS.background, borderColor: 'transparent' },
     bubbleHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4, gap: 6 },
     userName: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold', fontSize: 13 },
@@ -654,7 +736,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     commentImageContainer: { marginTop: 8, borderRadius: 12, overflow: 'hidden' },
     commentImage: { width: '100%', height: 180, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.2)' },
     imagePreviewContainer: { flexDirection: 'row-reverse', paddingHorizontal: 20, paddingBottom: 10, alignItems: 'center' },
-    imagePreview: { width: 60, height: 60, borderRadius: 8, marginRight: 10, borderWidth: 1, borderColor: COLORS.border },
+    imagePreview: { width: 60, height: 60, borderRadius: 8, marginRight: 10, borderWidth: 0.5, borderColor: COLORS.border },
     removeImageBtn: { position: 'absolute', top: -5, right: 15, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
     cameraBtn: { padding: 8, marginLeft: 4 },
 
@@ -663,16 +745,16 @@ const createStyles = (COLORS) => StyleSheet.create({
     actionBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
     actionText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'Tajawal-Bold' },
     footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: Platform.OS === 'ios' ? 40 : 15 },
-    replyBanner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.accentGreen + '14', paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: 12, marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.accentGreen + '33' },
+    replyBanner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.accentGreen + '14', paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: 12, marginTop: 12, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.accentGreen + '33' },
     replyBannerContent: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
     replyVerticalLine: { width: 2, height: 24, backgroundColor: COLORS.accentGreen, borderRadius: 2 },
     replyLabel: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold', textAlign: 'right' },
     replyName: { color: COLORS.textPrimary, fontSize: 12, fontFamily: 'Tajawal-Bold', textAlign: 'right' },
     replyClose: { padding: 4 },
     chipsContainer: { height: 40, marginVertical: 10 },
-    chip: { backgroundColor: COLORS.background, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' },
+    chip: { backgroundColor: COLORS.background, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 0.5, borderColor: COLORS.border, justifyContent: 'center' },
     chipText: { color: COLORS.textSecondary, fontFamily: 'Tajawal-Regular', fontSize: 12 },
-    inputBar: { flexDirection: 'row-reverse', alignItems: 'flex-end', backgroundColor: COLORS.background, marginHorizontal: 12, borderRadius: 24, padding: 6, gap: 10, borderWidth: 1, borderColor: COLORS.border },
+    inputBar: { flexDirection: 'row-reverse', alignItems: 'flex-end', backgroundColor: COLORS.background, marginHorizontal: 12, borderRadius: 24, padding: 6, gap: 10, borderWidth: 0.5, borderColor: COLORS.border },
     input: { flex: 1, color: COLORS.textPrimary, fontFamily: 'Tajawal-Regular', fontSize: 14, maxHeight: 100, minHeight: 36, textAlignVertical: 'center', paddingHorizontal: 5, paddingTop: 8, paddingBottom: 8 },
     inputAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.accentGreen, alignItems: 'center', justifyContent: 'center', marginLeft: 4, marginBottom: 2 },
     inputAvatarText: { color: '#000', fontFamily: 'Tajawal-Bold', fontSize: 12 },
@@ -684,6 +766,35 @@ const createStyles = (COLORS) => StyleSheet.create({
     emptyDesc: { color: COLORS.textDim, fontFamily: 'Tajawal-Regular', fontSize: 13 },
     popHeartContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
     popHeartShadow: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 5 },
+    firstGenCommentPin: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    borderWidth: 1.2,
+    overflow: 'hidden',
+},
+firstGenCommentPinSmall: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    bottom: -1,
+    right: -1,
+},
+firstGenPinGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+},
+firstGenCommentPinText: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 7.5,
+    color: '#FFF',
+},
 });
 
 export default CommentModal;

@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppContext } from '../../context/AppContext';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
-import { t } from '../../i18n';
+import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { usePendingContributions } from '../../hooks/usePendingContributions';
@@ -34,7 +34,7 @@ const formatPrice = (price) => {
     return price;
 };
 
-export default function ProductCard({ item, index, onPress, onPressBounty, isCompareMode = false, isSelected = false }) {
+export default function ProductCard({ item, index, onPress, onPressBounty, onSelectBrand, isCompareMode = false, isSelected = false }) {
     const { colors: C } = useTheme();
     const { user, userProfile, savedProducts } = useAppContext();
     const router = useRouter();
@@ -107,10 +107,10 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
 
         if (!user) {
             AlertService.show({
-                title: t('login_required', lang) || 'تسجيل الدخول مطلوب',
-                message: t('login_to_save_shelf', lang) || 'يرجى تسجيل الدخول لحفظ المنتجات في رفّك',
+                title: t('login_required', lang),
+                message: t('login_to_save_shelf', lang),
                 type: 'warning',
-                buttons: [{ text: t('announcement_ok', lang) || 'حسنا', style: 'primary' }],
+                buttons: [{ text: t('announcement_ok', lang), style: 'primary' }],
             });
             return;
         }
@@ -141,12 +141,12 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
             pendingDocIdRef.current = shelfDocId;
 
             if (!hasIngredients) {
-                AlertService.toast(`تمت إضافة ${item.name} إلى رفّك ✓`);
+                AlertService.toast(interpolate(t('toast_added_to_shelf', lang), { name: item.name }));
                 return;
             }
 
             if (hasClaims) {
-                AlertService.toast(`تم حفظ ${item.name}، وجاري التحليل 🧪`);
+                AlertService.toast(interpolate(t('toast_saved_analyzing', lang), { name: item.name }));
                 analyzeAndEnrichShelfProduct(
                     user.uid, shelfDocId, item, userProfile, item.marketingClaims
                 ).catch(err => console.warn('[BackgroundAnalysis] Error:', err));
@@ -165,11 +165,11 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
         const docId = pendingDocIdRef.current;
         if (!docId || !user) return;
 
-        AlertService.toast(`تم حفظ ${item.name}، وجاري التحليل 🧪`);
+        AlertService.toast(interpolate(t('toast_saved_analyzing', lang), { name: item.name }));
         analyzeAndEnrichShelfProduct(
             user.uid, docId, item, userProfile, selectedClaims
         ).catch(err => console.warn('[BackgroundAnalysis] Error:', err));
-    }, [user, userProfile, item]);
+    }, [user, userProfile, item, lang]);
 
     // Called when user dismisses the picker without confirming
     const handlePickerDismiss = useCallback(() => {
@@ -248,10 +248,14 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                                         e?.stopPropagation?.();
                                         if (!item.brand) return;
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        router.push({
-                                            pathname: '/CatalogScreen',
-                                            params: { search: item.brand }
-                                        });
+                                        if (onSelectBrand) {
+                                            onSelectBrand(item.brand);
+                                        } else {
+                                            router.push({
+                                                pathname: '/CatalogScreen',
+                                                params: { search: item.brand }
+                                            });
+                                        }
                                     }}
                                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                                     style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}
@@ -300,7 +304,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                                     )
                                 ) : (
                                     <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                        <Text style={[styles.priceText, { color: C.primary }]}>
+                                        <Text style={[styles.priceText, { color: C.accentGreen }]}>
                                             {displayPrice} {t('catalog_currency', lang)}
                                         </Text>
                                         {isMissingIngredients &&
@@ -346,7 +350,7 @@ export default function ProductCard({ item, index, onPress, onPressBounty, isCom
                                     fontSize: 14,
                                     color: isSaved ? C.accentGreen : C.textPrimary,
                                 }}>
-                                    {isSaved ? 'محفوظ ✓' : '+ حفظ'}
+                                    {isSaved ? t('catalog_saved_badge', lang) : t('catalog_save_action', lang)}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -385,7 +389,7 @@ const PendingBadge = ({ field, C, small, lang }) => (
 
 const styles = StyleSheet.create({
     cardContainer: {
-        borderRadius: 20, borderWidth: 1, marginBottom: 15, height: 130, overflow: 'hidden',
+        borderRadius: 20, borderWidth: 0.5, marginBottom: 15, height: 130, overflow: 'hidden',
     },
     touchableArea: {
         flexDirection: 'row-reverse', width: '100%', height: '100%', padding: 12, gap: 15,
@@ -407,7 +411,7 @@ const styles = StyleSheet.create({
     priceText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 15 },
     bountyButton: {
         flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
-        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed',
+        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 0.5, borderStyle: 'dashed',
     },
     bountyText: { fontFamily: 'Tajawal-Bold', fontSize: 11 },
     pointsPill: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
@@ -415,12 +419,12 @@ const styles = StyleSheet.create({
     priceAndBountyRow: { flexShrink: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
     microBounty: {
         flexDirection: 'row-reverse', alignItems: 'center', gap: 4,
-        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1,
+        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 0.5,
     },
     microBountyText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 10 },
     pendingBadge: {
         flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
-        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed',
+        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 0.5, borderStyle: 'dashed',
     },
     pendingText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
     compareCheckbox: {

@@ -16,33 +16,62 @@ import { getClaimData } from '../../utils/claimMapper';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
+import AppTextInput from '../common/AppTextInput';
 
 const { height } = Dimensions.get('window');
 
+// --- SAFE ICON RESOLVER (Prevents FontAwesome5 crashes) ---
+const getSafeIcon = (rawIcon) => {
+    if (!rawIcon) return 'check-circle';
+    const map = {
+        sparkles: 'magic',
+        sparkle: 'magic',
+        mirror: 'magic',
+        shield: 'shield-alt',
+        water: 'tint',
+        droplet: 'tint',
+        sun: 'sun',
+        moon: 'moon',
+    };
+    return map[rawIcon] || rawIcon;
+};
+
 // ─────────────────────────────────────────────────────────────
-// ClaimCard — Big, Spacious, Visual Claim Item
+// ClaimCard — Unified, Clean, Flat Brand Item
 // ─────────────────────────────────────────────────────────────
 const ClaimCard = memo(({ claim, selected, onToggle, C, isRTL }) => {
     const claimInfo = useMemo(() => getClaimData(claim), [claim]);
-    const activeColor = claimInfo.color || C.accentGreen;
+    const iconName = useMemo(() => getSafeIcon(claimInfo?.icon), [claimInfo]);
 
     return (
         <TouchableOpacity
             onPress={onToggle}
-            activeOpacity={0.8}
+            activeOpacity={0.75}
             style={[
                 styles.claimCard,
                 {
-                    backgroundColor: selected ? activeColor + '1F' : C.background,
-                    borderColor: selected ? activeColor : C.border,
-                    borderWidth: selected ? 1.5 : 1,
+                    backgroundColor: selected ? C.accentGreen + '14' : C.card,
+                    borderColor: selected ? C.accentGreen : C.border,
                     flexDirection: isRTL ? 'row-reverse' : 'row',
                 },
             ]}
         >
-            {/* Visual Icon Badge */}
-            <View style={[styles.claimIconCircle, { backgroundColor: activeColor + '20' }]}>
-                <FontAwesome5 name={claimInfo.icon || 'check-circle'} size={14} color={activeColor} />
+            {/* Unified Icon Badge */}
+            <View
+                style={[
+                    styles.claimIconCircle,
+                    {
+                        backgroundColor: selected
+                            ? C.accentGreen + '22'
+                            : (C.surfaceSoft || (C.accentGreen + '0D')),
+                    },
+                ]}
+            >
+                <FontAwesome5
+                    name={iconName}
+                    size={13}
+                    color={selected ? C.accentGreen : (C.textDim || C.textSecondary)}
+                />
             </View>
 
             {/* Big Bold Label */}
@@ -57,16 +86,16 @@ const ClaimCard = memo(({ claim, selected, onToggle, C, isRTL }) => {
                 ]}
                 numberOfLines={1}
             >
-                {claimInfo.label || claim}
+                {claimInfo?.label || claim}
             </Text>
 
-            {/* Animated Selection Checkbox */}
+            {/* Unified Selection Checkbox */}
             <View
                 style={[
                     styles.checkCircle,
                     {
-                        borderColor: selected ? activeColor : C.border,
-                        backgroundColor: selected ? activeColor : 'transparent',
+                        borderColor: selected ? C.accentGreen : C.border,
+                        backgroundColor: selected ? C.accentGreen : 'transparent',
                     },
                 ]}
             >
@@ -103,12 +132,12 @@ export default function ClaimsPickerModal({ visible, product, onConfirm, onDismi
             setSelected(product?.marketingClaims?.length > 0 ? [...product.marketingClaims] : []);
             setSearch('');
             Animated.spring(slideAnim, {
-                toValue: 0, damping: 22, stiffness: 140, useNativeDriver: true,
+                toValue: 0, friction: 9, tension: 50, useNativeDriver: true,
             }).start();
         } else {
             Animated.timing(slideAnim, {
                 toValue: height, duration: 220,
-                easing: Easing.out(Easing.cubic), useNativeDriver: true,
+                easing: Easing.in(Easing.ease), useNativeDriver: true,
             }).start();
         }
     }, [visible, product, slideAnim]);
@@ -178,7 +207,7 @@ export default function ClaimsPickerModal({ visible, product, onConfirm, onDismi
                         <View style={[styles.handle, { backgroundColor: C.border }]} />
                     </TouchableOpacity>
 
-                    {/* Frameless Header */}
+                    {/* Header */}
                     <View style={styles.header}>
                         <Text style={[styles.headerTitle, { color: C.textPrimary, textAlign: isRTL ? 'right' : 'left' }]}>
                             {t('product_claims_title', language) || "ادّعاءات المنتج"}
@@ -188,27 +217,63 @@ export default function ClaimsPickerModal({ visible, product, onConfirm, onDismi
                         </Text>
                     </View>
 
-                    {/* Search bar */}
-                    <View style={[styles.searchWrap, { backgroundColor: C.background, borderColor: C.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                        <FontAwesome5 name="search" size={14} color={C.textSecondary} />
-                        <TextInput
-                            style={[styles.searchInput, { color: C.textPrimary, textAlign: isRTL ? 'right' : 'left' }]}
-                            placeholder={isRTL ? "ابحثي عن ادّعاء..." : "Search claims..."}
-                            placeholderTextColor={C.textSecondary + '80'}
-                            value={search}
-                            onChangeText={setSearch}
-                        />
-                        {search.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                                <Ionicons name="close-circle" size={18} color={C.textSecondary} />
-                            </TouchableOpacity>
-                        )}
+                    {/* 🌟 SEARCH BAR (Redesigned to match ShelfSearchBar) 🌟 */}
+                    <View
+                        style={[
+                            styles.searchContainer,
+                            {
+                                backgroundColor: C.card,
+                                borderColor: C.accentGreen + '40',
+                                flexDirection: isRTL ? 'row-reverse' : 'row',
+                            },
+                        ]}
+                    >
+                        {/* Search Input Side */}
+                        <View style={[styles.searchSide, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <FontAwesome5 name="search" size={15} color={C.textSecondary} />
+                            <AppTextInput
+                                style={[
+                                    styles.searchInput,
+                                    {
+                                        color: C.textPrimary,
+                                        textAlign: isRTL ? 'right' : 'left',
+                                    },
+                                ]}
+                                placeholder={isRTL ? "ابحثي عن ادّعاء معين..." : "Search claims..."}
+                                placeholderTextColor={C.textDim}
+                                value={search}
+                                onChangeText={setSearch}
+                                selectionColor={C.accentGreen}
+                            />
+                        </View>
+
+                        {/* Divider */}
+                        <View style={[styles.searchDivider, { backgroundColor: C.border }]} />
+
+                        {/* Action Side Button (Clear or Active Search Icon) */}
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => setSearch('')}
+                            disabled={search.length === 0}
+                            style={[
+                                styles.searchActionButton,
+                                {
+                                    backgroundColor: search.length > 0 ? C.accentGreen + '1A' : C.surfaceSoft || (C.accentGreen + '0D'),
+                                },
+                            ]}
+                        >
+                            <FontAwesome5
+                                name={search.length > 0 ? "times" : "sliders-h"}
+                                size={14}
+                                color={search.length > 0 ? C.accentGreen : C.textDim}
+                            />
+                        </TouchableOpacity>
                     </View>
 
                     {/* Selection Counter & Clear All */}
                     {selected.length > 0 && (
                         <View style={[styles.counterRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                            <View style={[styles.counterBadge, { backgroundColor: C.accentGreen + '20', borderColor: C.accentGreen + '40', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={[styles.counterBadge, { backgroundColor: C.accentGreen + '1A', borderColor: C.accentGreen + '33', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                                 <FontAwesome5 name="check-circle" size={12} color={C.accentGreen} />
                                 <Text style={[styles.counterText, { color: C.accentGreen }]}>
                                     {selected.length} {isRTL ? 'ادّعاء مختار' : 'selected'}
@@ -236,7 +301,7 @@ export default function ClaimsPickerModal({ visible, product, onConfirm, onDismi
                         windowSize={5}
                         ListEmptyComponent={
                             <View style={styles.emptyWrap}>
-                                <FontAwesome5 name="search-minus" size={28} color={C.textSecondary} style={{ opacity: 0.5, marginBottom: 8 }} />
+                                <FontAwesome5 name="search-minus" size={26} color={C.textSecondary} style={{ opacity: 0.5, marginBottom: 8 }} />
                                 <Text style={[styles.emptyText, { color: C.textSecondary }]}>
                                     {isRTL ? 'لا توجد نتائج تطابق بحثك' : 'No matching claims'}
                                 </Text>
@@ -275,7 +340,7 @@ const styles = StyleSheet.create({
     root: { flex: 1 },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
     },
     sheet: {
         position: 'absolute', 
@@ -283,27 +348,27 @@ const styles = StyleSheet.create({
         left: 0, 
         right: 0,
         height: '84%',
-        borderTopLeftRadius: 32, 
-        borderTopRightRadius: 32,
-        borderWidth: 1,
+        borderTopLeftRadius: 28, 
+        borderTopRightRadius: 28,
+        borderWidth: 0.5,
         borderBottomWidth: 0,
         overflow: 'hidden',
     },
     handleWrap: { 
         alignItems: 'center', 
         paddingTop: 12, 
-        paddingBottom: 8,
+        paddingBottom: 6,
         width: '100%',
     },
     handle: { 
-        width: 46, 
-        height: 5, 
-        borderRadius: 10,
-        opacity: 0.6,
+        width: 42, 
+        height: 4, 
+        borderRadius: 2,
     },
     header: {
         paddingHorizontal: 20, 
-        paddingVertical: 10,
+        paddingTop: 8,
+        paddingBottom: 4,
     },
     headerTitle: {
         fontFamily: 'Tajawal-ExtraBold', 
@@ -315,36 +380,60 @@ const styles = StyleSheet.create({
         fontSize: 13, 
         lineHeight: 20,
     },
-    searchWrap: {
-        alignItems: 'center', 
+
+    /* 🌟 SHELF SEARCH BAR CLONE (Flat, 0.5 border) 🌟 */
+    searchContainer: {
+        alignItems: 'center',
+        borderRadius: 20,
+        paddingHorizontal: 8,
+        height: 54,
+        marginHorizontal: 18,
+        marginTop: 8,
+        marginBottom: 12,
+        borderWidth: 0.5,
+    },
+    searchSide: {
+        flex: 1,
+        alignItems: 'center',
+        paddingRight: 10,
+        paddingLeft: 4,
         gap: 10,
-        marginHorizontal: 16, 
-        marginVertical: 10,
-        paddingHorizontal: 14, 
-        paddingVertical: 8,
-        borderRadius: 16, 
-        borderWidth: 1,
     },
     searchInput: {
-        flex: 1, 
-        fontFamily: 'Tajawal-Regular', 
+        flex: 1,
+        fontFamily: 'Tajawal-Regular',
         fontSize: 14,
         paddingVertical: 0,
         margin: 0,
+        includeFontPadding: false,
     },
+    searchDivider: {
+        width: 1,
+        height: 26,
+        marginHorizontal: 6,
+        opacity: 0.5,
+    },
+    searchActionButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
     counterRow: {
         justifyContent: 'space-between', 
         alignItems: 'center',
         paddingHorizontal: 20, 
-        marginBottom: 10,
+        marginBottom: 8,
     },
     counterBadge: {
         alignItems: 'center',
         gap: 6,
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 10,
-        borderWidth: 1,
+        borderRadius: 8,
+        borderWidth: 0.5,
     },
     counterText: { 
         fontFamily: 'Tajawal-Bold', 
@@ -355,23 +444,24 @@ const styles = StyleSheet.create({
         fontSize: 12 
     },
     listContent: { 
-        paddingHorizontal: 16, 
+        paddingHorizontal: 18, 
         paddingBottom: 130, 
         paddingTop: 4 
     },
     
-    /* SPACIOUS CLAIM CARD */
+    /* SPACIOUS FLAT CLAIM CARD */
     claimCard: {
         alignItems: 'center',
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderRadius: 16,
-        marginBottom: 10,
+        marginBottom: 8,
         gap: 12,
+        borderWidth: 0.5,
     },
     claimIconCircle: {
-        width: 34,
-        height: 34,
+        width: 36,
+        height: 36,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
@@ -380,12 +470,13 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         lineHeight: 22,
+        includeFontPadding: false,
     },
     checkCircle: {
         width: 22,
         height: 22,
         borderRadius: 11,
-        borderWidth: 1.5,
+        borderWidth: 0.5,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -393,7 +484,7 @@ const styles = StyleSheet.create({
     emptyWrap: {
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 40,
+        marginTop: 45,
     },
     emptyText: {
         fontFamily: 'Tajawal-Regular', 
@@ -406,9 +497,9 @@ const styles = StyleSheet.create({
         bottom: 0, 
         left: 0, 
         right: 0,
-        padding: 16, 
-        paddingBottom: Platform.OS === 'ios' ? 28 : 16,
-        borderTopWidth: 1,
+        padding: 18, 
+        paddingBottom: Platform.OS === 'ios' ? 30 : 18,
+        borderTopWidth: 0.5,
     },
     ctaBtn: {
         alignItems: 'center', 
@@ -423,7 +514,7 @@ const styles = StyleSheet.create({
     },
     skipBtn: { 
         alignItems: 'center', 
-        paddingTop: 10, 
+        paddingTop: 12, 
         paddingBottom: 4 
     },
     skipText: { 

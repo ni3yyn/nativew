@@ -57,8 +57,8 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // --------------------------------------------------------------------------
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
+    backgroundColor: 'transparent',
+},
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
@@ -75,7 +75,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   cardBase: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
     width: '100%',
   },
@@ -150,335 +150,312 @@ export const createStyles = (COLORS) => StyleSheet.create({
   },
 
   // --------------------------------------------------------------------------
-  // 3. STEP 0: INPUT & HERO (Scanning, Camera, Deck)
-  // --------------------------------------------------------------------------
-  inputStepContainer: {
+// STEP 0 — REDESIGN (single scrollable body, RTL-aware)
+// --------------------------------------------------------------------------
+inputStepContainer: {
     flex: 1,
-    justifyContent: 'space-between',
     width: '100%',
-    paddingBottom: 20,
-  },
-  heroVisualContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+},
 
-  // Scanning Laser Animation
-  scanFrame: {
-    width: 200,
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanLaser: {
-    position: 'absolute',
-    top: 30,
-    width: '120%',
-    height: 2,
-    shadowColor: COLORS.accentGreen,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  scanCorner: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: COLORS.accentGreen,
-    opacity: 0.6,
-  },
-  scanCornerTL: { top: 0, left: 0, borderTopWidth: 2, borderLeftWidth: 2, borderTopLeftRadius: 10 },
-  scanCornerTR: { top: 0, right: 0, borderTopWidth: 2, borderRightWidth: 2, borderTopRightRadius: 10 },
-  scanCornerBL: { bottom: 0, left: 0, borderBottomWidth: 2, borderLeftWidth: 2, borderBottomLeftRadius: 10 },
-  scanCornerBR: { bottom: 0, right: 0, borderBottomWidth: 2, borderRightWidth: 2, borderBottomRightRadius: 10 },
+stepScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    // paddingBottom is passed dynamically via insets in JSX
+},
 
-  // Bottom Action Deck
-  bottomDeck: {
-    width: '100%',
-    top: 23,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    overflow: 'hidden',
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  bottomDeckGradient: {
-    padding: 25,
-    paddingBottom: 40,
-  },
-  deckHeader: {
-    alignItems: 'flex-end',
-    marginBottom: 25,
-  },
-  deckTitle: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 24,
-    color: COLORS.textPrimary,
-    marginBottom: 5,
-  },
-
-  // Primary Action Button (Camera)
-  primaryActionBtn: {
-    width: '100%',
-    borderRadius: 20,
-    marginBottom: 20,
-    ...Platform.select({
-      default: { elevation: 8, shadowColor: COLORS.accentGreen, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } }
-    })
-  },
-  primaryActionGradient: {
-    flexDirection: 'row-reverse',
+// ---- Quick Guide Card ----
+guideCard: {
+    backgroundColor: 'transparent',
+    padding: 0,
+    marginBottom: 28,
+},
+guideCardHeader: {
+    // flexDirection dynamic
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 20,
-    gap: 15,
-  },
-  iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.textPrimary + '33',
+    gap: 10,
+    marginBottom: 14,
+},
+guideBulbCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.accentGreen + '1F',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  primaryActionTitle: {
+},
+guideCardTitle: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 18,
-    color: COLORS.background,
-    textAlign: 'right',
-  },
-  primaryActionSub: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 12,
-    color: COLORS.background + 'CC',
-    textAlign: 'right',
-  },
-
-  // Secondary Actions (Gallery/Search)
-  secondaryActionsRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  secondaryBtn: {
+    color: COLORS.textPrimary,
+    // textAlign dynamic
+},
+guideSection: {
+    // flexDirection dynamic
+    gap: 12,
+},
+guideColumn: {
     flex: 1,
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
+},
+guideImageWrapper: {
+    width: '100%',
+    aspectRatio: 1.0,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 10,
+},
+guideImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+},
+guideBadge: {
+    position: 'absolute',
+    top: 8,
+    // left / right dynamic
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    paddingVertical: 15,
-    gap: 8,
-    backgroundColor: COLORS.textPrimary + '0D',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: COLORS.textPrimary + '1A',
-  },
-  secondaryBtnText: {
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+},
+guidePill: {
+    // alignSelf dynamic
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+},
+guidePillText: {
     fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+},
+guideColumnTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 17,
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+    // textAlign dynamic
+},
+guideBullets: {
+    gap: 5,
+},
+guideBullet: {
+    fontFamily: 'Tajawal-Regular',
     fontSize: 14,
     color: COLORS.textSecondary,
-  },
-  verticalDivider: {
-    width: 15,
-  },
+    lineHeight: 21,
+    // textAlign dynamic
+},
 
-  // Legacy Hero Styles (Kept for compatibility)
-  heroSection: { alignItems: 'center', marginBottom: 30, paddingHorizontal: 20 },
-  heroIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  heroTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 28, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 8 },
-  heroSubContainer: { minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
-  heroSub: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, minHeight: 22 },
-
+// ---- Action Zone ----
+actionZone: {
+    marginTop: 4,
+},
+sectionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    marginBottom: 18,
+},
+actionStack: {
+    gap: 12,
+},
+actionCard: {
+    // flexDirection dynamic
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: COLORS.accentGreen + '14',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+},
+actionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.accentGreen + '1F',
+    alignItems: 'center',
+    justifyContent: 'center',
+},
+actionTextCol: {
+    flex: 1,
+},
+actionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    marginBottom: 3,
+    // textAlign dynamic
+},
+actionSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    // textAlign dynamic
+},
   // --------------------------------------------------------------------------
   // 4. STEP 1: PREDICTION REVIEW
   // --------------------------------------------------------------------------
   rs_Container: {
     flex: 1,
     width: '100%',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    gap: 20,
-  },
-  rs_CenterContent: {
-    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     justifyContent: 'center',
   },
-  rs_Title: {
-    fontFamily: 'Tajawal-ExtraBold',
-    fontSize: 28,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  rs_Subtitle: {
-    fontFamily: 'Tajawal-Regular',
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  rs_HeroWrapper: {
+
+  // ── Hero block (icon + label + toggle) ───────────────
+  rs_HeroBlock: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
-  },
-  rs_VisualCircleContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 140,
-    height: 140,
-  },
-  rs_GlowRing: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: `${COLORS.accentGreen}20`,
-  },
-  rs_GlassCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.textPrimary + '0D',
-    borderWidth: 1,
-    borderColor: COLORS.accentGreen + '4D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backdropFilter: 'blur(10px)',
-  },
-  rs_LabelContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-    gap: 12,
+    paddingVertical: 16,
+    gap: 10,
   },
   rs_LabelText: {
     fontFamily: 'Tajawal-Bold',
-    fontSize: 18,
+    fontSize: 19,
     color: COLORS.textPrimary,
     textAlign: 'center',
+    marginTop: 2,
   },
-  rs_EditBtn: {
-    flexDirection: 'row-reverse', // RTL alignment
+
+  // ── Change-category toggle button ────────────────────
+  rs_ToggleBtn: {
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: COLORS.accentGreen + '1A',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.accentGreen,
+    backgroundColor: COLORS.accentGreen + '16',
+    borderWidth: 0.5,
+    borderColor: COLORS.accentGreen + '40',
   },
-  rs_EditBtnText: {
+  rs_ToggleBtnText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: 13,
     color: COLORS.accentGreen,
   },
-  rs_GridWrapper: {
-    backgroundColor: COLORS.textPrimary + '08',
-    borderRadius: 20,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: COLORS.textPrimary + '1A',
-    marginTop: 10,
-    // Remove fixed height, will be animated
-  },
-  rs_ChipGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  rs_TypeChip: {
-    flexDirection: 'row-reverse', // Icon on LEFT, text on RIGHT (RTL)
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: COLORS.textPrimary + '0D',
-    borderWidth: 1,
-    borderColor: COLORS.textPrimary + '1A',
-    gap: 8,
-  },
-  rs_TypeChipActive: {
-    backgroundColor: COLORS.accentGreen,
-    borderColor: COLORS.accentGreen,
-  },
-  rs_TypeChipText: {
-    fontFamily: 'Tajawal-Bold',
-    fontSize: 13,
-    color: COLORS.textPrimary,
-  },
-  rs_TypeChipTextActive: {
-    color: COLORS.textOnAccent,
-  },
-  rs_CloseGridBtn: {
-    alignItems: 'center',
-    marginTop: 15,
-    paddingVertical: 8,
-  },
-  rs_Footer: {
-    marginTop: 30,
-    paddingHorizontal: 20,
-  },
+
+  // ── Confirm button ───────────────────────────────────
   rs_ConfirmBtn: {
-    width: '100%',
-    // REMOVED: elevation, shadows, overflow, and borderRadius from here.
-    // This container is now purely for layout, preventing the Android transparency glitch.
-    backgroundColor: 'transparent',
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
   rs_ConfirmGradient: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 12,
-    minHeight: 56,
-
-    // MOVED VISUAL STYLES HERE:
-    borderRadius: 16,
-    overflow: 'hidden',
-
-    // Shadow/Elevation now lives on the visual element, not the touchable container
-    elevation: 5,
-    shadowColor: COLORS.accentGreen,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    gap: 10,
   },
   rs_ConfirmText: {
     fontFamily: 'Tajawal-Bold',
-    fontSize: 16,
-    color: COLORS.background,
-  },
-  rs_GridWrapperAnimated: {
-    backgroundColor: COLORS.textPrimary + '08',
-    borderRadius: 20,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: COLORS.textPrimary + '1A',
-    marginTop: 10,
+    fontSize: 15,
+    color: COLORS.textOnAccent,
   },
 
-  // For the checkmark animation
-  rs_CheckIcon: {
-    opacity: 0,
-    transform: [{ scale: 0.5 }],
+  // ── Organized Category List & Card Styles ──────────────
+  rs_GridWrapper: {
+    marginHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
-
-  // Smooth transition for the hero section
-  rs_HeroWrapperAnimated: {
+  rs_ChipGrid: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    gap: 16,
+  },
+  rs_ScrollHintContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
-    transform: [{ translateY: 0 }], // Will be animated
+    paddingVertical: 4,
+    opacity: 0.75,
   },
+  rs_SectionWrapper: {
+    gap: 8,
+  },
+  rs_SectionHeader: {
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    gap: 6,
+    marginBottom: 2,
+  },
+  rs_SectionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.accentGreen,
+  },
+  rs_SectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  rs_CategoryCard: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: COLORS.textPrimary + '06',
+    borderWidth: 0.5,
+    borderColor: COLORS.textPrimary + '12',
+    minWidth: '47%',
+    flex: 1,
+  },
+  rs_CategoryCardActive: {
+    backgroundColor: COLORS.accentGreen + '18',
+    borderColor: COLORS.accentGreen,
+  },
+  rs_CategoryCardContent: {
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  rs_CategoryCardText: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    flexShrink: 1,
+  },
+  rs_CategoryCardTextActive: {
+    color: COLORS.accentGreen,
+  },
+
+  // Legacy stubs (kept for safety)
+  rs_ScrollContent: { flexGrow: 1 },
+  rs_CenterContent: { alignItems: 'center' },
+  rs_HeroWrapper: { alignItems: 'center' },
+  rs_VisualCircleContainer: { alignItems: 'center' },
+  rs_LabelContainer: { alignItems: 'center', gap: 10 },
+  rs_Header: { alignItems: 'center', paddingHorizontal: 16 },
+  rs_Title: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 22,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  rs_Subtitle: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  rs_CategoryRow: { alignItems: 'center', paddingHorizontal: 14 },
+  rs_SelectedPill: { alignItems: 'center', padding: 8 },
+  rs_SelectedPillText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: COLORS.textPrimary },
+  rs_EditBtn: { alignItems: 'center', padding: 10 },
+  rs_EditBtnText: { fontFamily: 'Tajawal-Bold', fontSize: 13, color: COLORS.accentGreen },
+  rs_CloseGridBtn: { alignItems: 'center', paddingVertical: 8 },
+  rs_Footer: { marginTop: 16, paddingHorizontal: 8 },
+  rs_GridWrapperAnimated: { borderRadius: 20, padding: 15 },
+  rs_CheckIcon: { opacity: 0 },
+  rs_HeroWrapperAnimated: { alignItems: 'center' },
   // --------------------------------------------------------------------------
   // 5. STEP 2: CLAIMS SELECTION & SEARCH
   // --------------------------------------------------------------------------
@@ -496,7 +473,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.card,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
     paddingHorizontal: 15,
   },
@@ -516,7 +493,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
     gap: 15,
@@ -620,7 +597,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   // Personal Match Card
   personalMatchCard: {
     padding: 15,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 20,
     backgroundColor: COLORS.card,
   },
@@ -647,7 +624,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     padding: 20,
     backgroundColor: COLORS.card,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
   },
   verdictText: {
@@ -699,7 +676,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 16,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
   },
   truthTrigger: {
@@ -773,7 +750,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.textPrimary + '08',
     padding: 15,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1F',
   },
   ingHeader: { alignItems: 'flex-end' },
@@ -825,7 +802,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     backgroundColor: COLORS.textPrimary + '14',
     height: 50,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1A',
     gap: 8,
   },
@@ -841,7 +818,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.textPrimary + '0D',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '0D',
   },
 
@@ -860,7 +837,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 24,
     padding: 25,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1A',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
@@ -889,7 +866,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.accentGreen,
     borderStyle: 'dashed',
     overflow: 'visible'
@@ -943,7 +920,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     color: COLORS.textPrimary,
     fontFamily: 'Tajawal-Bold',
     fontSize: 15,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1A',
   },
   modalSaveButton: {
@@ -1068,7 +1045,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     width: '100%',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '26',
     marginBottom: 20,
     position: 'relative',
@@ -1096,7 +1073,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: COLORS.textPrimary + '08',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1A',
     maxWidth: 100, // Prevents it from taking more than half the header
     alignSelf: 'center',
@@ -1315,7 +1292,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     marginBottom: 20,
     borderRadius: 20,
     paddingVertical: 10,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '1F',
   },
 
@@ -1350,7 +1327,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.textPrimary + '0D',
   },
   honestyScore: {
@@ -1462,7 +1439,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.info + '33',
     marginBottom: 4,
   },
@@ -1474,13 +1451,12 @@ export const createStyles = (COLORS) => StyleSheet.create({
   },
   guideSection: {
     width: '100%',
-    paddingHorizontal: 10,
-    marginBottom: 2,
+    flex: 1,                    // ← grows to fill available space
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'stretch', // Ensures both cards match height
+    alignItems: 'center',       // ← centers cards vertically
     gap: 12,
-  },
+},
 
   // --- THE GLASS CARD (Base) ---
   opticalCard: {
@@ -1489,7 +1465,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    borderWidth: 1,
+    borderWidth: 0.5,
 
     // Modern Shadow
     shadowColor: '#000',
@@ -1530,7 +1506,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     alignItems: 'center',
   },
   errorGlitchBox: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 8,
     borderColor: COLORS.danger,
     paddingHorizontal: 10,
@@ -1641,7 +1617,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   chipPrimary: {
     backgroundColor: COLORS.info + '26', // Blue tint
     borderColor: COLORS.info + '4D',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -1662,7 +1638,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
   chipTrace: {
     backgroundColor: COLORS.warning + '1A',
     borderColor: COLORS.warning + '4D',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -1701,7 +1677,7 @@ export const createStyles = (COLORS) => StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 5,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.accentGreen + '26',
     gap: 0
   },

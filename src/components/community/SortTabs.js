@@ -103,7 +103,7 @@ const SortTabs = ({ currentSort, onSelect }) => {
 const createStyles = (COLORS) => StyleSheet.create({
     outerContainer: {
         paddingHorizontal: 20,
-        paddingBottom: 10,
+        paddingBottom: 0,
         backgroundColor: COLORS.background,
         zIndex: 10,
     },
@@ -114,7 +114,7 @@ const createStyles = (COLORS) => StyleSheet.create({
         borderRadius: 12,
         position: 'relative', // For absolute indicator
         padding: 2, // Internal padding for the indicator
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: COLORS.border,
     },
     indicator: {

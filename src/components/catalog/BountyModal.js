@@ -20,9 +20,10 @@ import {
 import { FontAwesome5, Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
-import { COUNTRIES } from '../../constants/productData';
+import { COUNTRIES, PRODUCT_TYPES } from '../../constants/productData';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { t } from '../../i18n';
+import AppTextInput from '../common/AppTextInput';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 import { AlertService } from '../../services/alertService';
@@ -118,8 +119,8 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
         if (visible) {
             Animated.spring(animState, {
                 toValue: 1,
-                friction: 8,
-                tension: 40,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true,
             }).start();
         }
@@ -146,8 +147,8 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
     const handleClose = () => {
         Animated.timing(animState, {
             toValue: 0,
-            duration: 300,
-            easing: Easing.inOut(Easing.ease),
+            duration: 250,
+            easing: Easing.in(Easing.ease),
             useNativeDriver: true,
         }).start(() => {
             onClose();
@@ -266,7 +267,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                             { backgroundColor: C.card, borderColor: C.gold },
                         ]}
                     >
-                        <TextInput
+                        <AppTextInput
                             style={[styles.input, { color: C.textPrimary, textAlign: rtl.textAlign }]}
                             placeholder="0.00"
                             placeholderTextColor={C.textDim}
@@ -304,7 +305,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                                 {textValue.length} {t('bounty_chars_count', language)}
                             </Text>
                         </View>
-                        <TextInput
+                        <AppTextInput
                             style={[styles.areaInput, { color: C.textPrimary, textAlign: rtl.textAlign }]}
                             placeholder={t('bounty_ingredients_placeholder', language)}
                             placeholderTextColor={C.textDim}
@@ -354,6 +355,68 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                                             ]}
                                         >
                                             {item.label}
+                                        </Text>
+                                        {isSelected && (
+                                            <Ionicons
+                                                name="checkmark-circle"
+                                                size={14}
+                                                color="#FFF"
+                                                style={{ marginStart: 4 }}
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                );
+
+            case 'category':
+            case 'productType':
+                return (
+                    <View style={styles.tagGridContainer}>
+                        <Text style={[styles.subLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                            {t('select_category', language)}:
+                        </Text>
+                        <ScrollView
+                            contentContainerStyle={[styles.tagScroll, { flexDirection: rtl.flexDirection }]}
+                            showsVerticalScrollIndicator={true}
+                            nestedScrollEnabled={true}
+                            style={{ maxHeight: 250 }}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {PRODUCT_TYPES.map((item) => {
+                                const isSelected = textValue === item.id;
+                                const label = t(item.labelKey, language);
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        onPress={() => setTextValue(item.id)}
+                                        style={[
+                                            styles.tagChip,
+                                            {
+                                                backgroundColor: isSelected ? C.accentGreen : C.card,
+                                                borderColor: isSelected ? C.accentGreen : C.border,
+                                                flexDirection: rtl.flexDirection,
+                                                gap: 6,
+                                            },
+                                        ]}
+                                        activeOpacity={0.7}
+                                    >
+                                        <FontAwesome5
+                                            name={item.icon || 'box'}
+                                            size={14}
+                                            color={isSelected ? '#FFF' : C.accentGreen}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.tagText,
+                                                {
+                                                    color: isSelected ? '#FFF' : C.textSecondary,
+                                                },
+                                            ]}
+                                        >
+                                            {label}
                                         </Text>
                                         {isSelected && (
                                             <Ionicons
@@ -433,7 +496,7 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
                             { backgroundColor: C.card, borderColor: C.border },
                         ]}
                     >
-                        <TextInput
+                        <AppTextInput
                             style={[styles.input, { color: C.textPrimary, textAlign: rtl.textAlign }]}
                             placeholder={t('bounty_generic_placeholder', language)}
                             placeholderTextColor={C.textDim}
@@ -454,6 +517,8 @@ export default function BountyModal({ visible, onClose, onSubmit, product, field
             marketingClaims: t('bounty_title_claims', language),
             targetTypes: t('bounty_title_targets', language),
             country: t('bounty_title_country', language),
+            category: t('bounty_title_category', language),
+            productType: t('bounty_title_productType', language),
         };
         return titles[field] || t('bounty_title_default', language);
     };
@@ -624,7 +689,7 @@ const styles = StyleSheet.create({
     glassCard: {
         borderRadius: 20,
         padding: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         marginBottom: 16,
     },
     sectionHeaderSimple: {
@@ -648,7 +713,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         height: 65,
         borderRadius: 18,
-        borderWidth: 1,
+        borderWidth: 0.5,
         paddingHorizontal: 20,
     },
     input: {
@@ -663,7 +728,7 @@ const styles = StyleSheet.create({
     },
     areaWrapper: {
         borderRadius: 18,
-        borderWidth: 1,
+        borderWidth: 0.5,
         padding: 15,
         minHeight: 180,
     },
@@ -708,7 +773,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 14,
-        borderWidth: 1,
+        borderWidth: 0.5,
     },
     tagText: {
         fontFamily: 'Tajawal-Bold',

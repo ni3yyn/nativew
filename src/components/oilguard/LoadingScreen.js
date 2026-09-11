@@ -277,7 +277,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.accentGreen + '33',
     zIndex: -1,
   },

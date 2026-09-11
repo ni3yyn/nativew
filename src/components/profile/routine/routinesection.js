@@ -1,14 +1,15 @@
+// --- START OF FILE routinesection.js ---
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-    StyleSheet, View, Text, TextInput, TouchableOpacity, Pressable,
+    StyleSheet, View, Text, TextInput, Pressable,
     Dimensions, ScrollView, Animated, Modal, FlatList,
-    Platform, ActivityIndicator, KeyboardAvoidingView, Keyboard
+    Platform, ActivityIndicator, KeyboardAvoidingView, Keyboard, Image, Easing
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Svg, { Defs, Rect, Mask, Circle } from 'react-native-svg';
+
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase'; 
 import { useAppContext } from '../../../context/AppContext';
@@ -16,44 +17,63 @@ import { useTheme } from '../../../context/ThemeContext';
 import { AlertService } from '../../../services/alertService';
 import { RoutineEmptyState } from '../EmptyStates';
 import { RoutineLogViewer } from './RoutineLogViewer';
-import { PressableScale, StaggeredItem } from '../analysis/AnalysisShared';
+import { PressableScale } from '../analysis/AnalysisShared';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+import RoutineSegmentedControl from './RoutineSegmentedControl';
+import AppTextInput from '../../common/AppTextInput';
 
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 const { width, height } = Dimensions.get('window');
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-/// --- HELPER 1: Add Step Modal (Fixed Z-Index Layering) ---
+
+/// --- HELPER 1: Add Step Modal ---
 export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
     const [stepName, setStepName] = useState('');
+    const [isMounted, setIsMounted] = useState(false);
     const inputRef = useRef(null);
 
     useEffect(() => {
         if (isVisible) {
             setStepName('');
-            // 1. Start Animation
+            setIsMounted(true);
             Animated.spring(animController, {
                 toValue: 1,
-                damping: 15,
-                stiffness: 100,
+                friction: 9,
+                tension: 50,
                 useNativeDriver: true
             }).start();
 
-            // 2. Focus Delay
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 inputRef.current?.focus();
-            }, 300);
+            }, 180);
+            return () => clearTimeout(timer);
+        } else if (isMounted) {
+            Animated.timing(animController, {
+                toValue: 0,
+                duration: 250,
+                easing: Easing.in(Easing.ease),
+                useNativeDriver: true
+            }).start(() => {
+                setIsMounted(false);
+            });
         }
     }, [isVisible]);
 
     const handleClose = () => {
         Keyboard.dismiss();
-        Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => onClose());
+        Animated.timing(animController, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true
+        }).start(() => {
+            setIsMounted(false);
+            onClose();
+        });
     };
 
     const handleAdd = () => {
@@ -65,21 +85,18 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
     };
 
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange:[0, 0.6] });
+    const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
-    if (!isVisible) return null;
+    if (!isVisible && !isMounted) return null;
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-
-            {/* LAYER 1: The Dark Overlay (Z-Index: 1) */}
-            <Animated.View style={[styles.backdrop, { opacity: backdropOpacity, zIndex: 1 }]} >
+            <Animated.View style={[styles.backdrop, { opacity: backdropOpacity, zIndex: 1 }]}>
                 <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
             </Animated.View>
 
-            {/* LAYER 2: The Content (Z-Index: 100 - MUST BE HIGHER) */}
             <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "padding"}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }}
                 pointerEvents="box-none"
             >
@@ -87,21 +104,23 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                     style={{
                         transform: [{ translateY }],
                         width: '100%',
+                        marginBottom: -150,
                         backgroundColor: C.card,
-                        borderTopLeftRadius: 32,
-                        borderTopRightRadius: 32,
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: -5 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 10,
+                        borderTopLeftRadius: 28,
+                        borderTopRightRadius: 28,
+                        borderWidth: 0.5,
+                        borderColor: C.border,
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: -8 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 16,
                         elevation: 20,
                     }}
                 >
                     <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
 
-                    <View style={{ padding: 25, paddingBottom: 40 }}>
-
-                        {/* Header */}
+                    <View style={{ padding: 25, paddingBottom: 170 }}>
                         <View style={{ alignItems: 'center', marginBottom: 20 }}>
                             <View style={{
                                 width: 60, height: 60, borderRadius: 30,
@@ -116,15 +135,14 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                             </Text>
                         </View>
 
-                        {/* Input */}
                         <View style={styles.inputWrapper}>
-                            <TextInput
+                            <AppTextInput
                                 ref={inputRef}
                                 placeholder={t('routine_step_name_placeholder', language)}
                                 placeholderTextColor={C.textDim}
                                 style={[
                                     styles.enhancedInput,
-                                    { fontFamily: stepName.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular' }
+                                    { fontFamily: stepName.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular', fontWeight: 'normal' }
                                 ]}
                                 value={stepName}
                                 onChangeText={setStepName}
@@ -135,7 +153,6 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                             </View>
                         </View>
 
-                        {/* Buttons */}
                         <View style={styles.promptButtonRow}>
                             <PressableScale style={[styles.promptButton, styles.promptButtonSecondary]} onPress={handleClose}>
                                 <Text style={styles.promptButtonTextSecondary}>{t('alert_cancel', language)}</Text>
@@ -155,137 +172,10 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
     );
 };
 
-// --- HELPER 2: The Interactive Onboarding Guide ---
-const RoutineOnboardingGuide = ({ onDismiss }) => {
-    const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
-    const insets = useSafeAreaInsets();
-    const language = useCurrentLanguage();
-    const [step, setStep] = useState(0);
 
-    // Animation Controllers
-    const animX = useRef(new Animated.Value(width / 2)).current;
-    const animY = useRef(new Animated.Value(height / 2)).current;
-    const animR = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    // --- TARGET CONFIGURATION ---
-    const TARGETS = [
-        {
-            id: 'switcher',
-            title: t('routine_guide_switcher_title', language),
-            text: t('routine_guide_switcher_text', language),
-            x: width / 2,
-            y: insets.top + 145,
-            radius: 80
-        },
-        {
-            id: 'auto_build',
-            title: t('routine_guide_auto_title', language),
-            text: t('routine_guide_auto_text', language),
-            x: 45,
-            y: insets.top + 145,
-            radius: 35
-        },
-        {
-            id: 'add_step',
-            title: t('routine_guide_add_title', language),
-            text: t('routine_guide_add_text', language),
-            x: width - 52,
-            y: height - 162,
-            radius: 40
-        }
-    ];
-
-    const currentTarget = TARGETS[step];
-
-    useEffect(() => {
-        if (step === 0) {
-            Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-        }
-
-        Animated.parallel([
-            Animated.spring(animX, { toValue: currentTarget.x, friction: 6, tension: 50, useNativeDriver: true }),
-            Animated.spring(animY, { toValue: currentTarget.y, friction: 6, tension: 50, useNativeDriver: true }),
-            Animated.spring(animR, { toValue: currentTarget.radius, friction: 6, tension: 50, useNativeDriver: true })
-        ]).start();
-
-    }, [step]);
-
-    const handleNext = () => {
-        if (step < TARGETS.length - 1) {
-            setStep(s => s + 1);
-        } else {
-            Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onDismiss);
-        }
-    };
-
-    return (
-        <Modal transparent visible={true} animationType="none">
-            <View style={styles.guideOverlay}>
-                <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
-                    <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
-                        <Defs>
-                            <Mask id="mask" x="0" y="0" height="100%" width="100%">
-                                <Rect height="100%" width="100%" fill="#fff" />
-                                <AnimatedCircle
-                                    cx={animX}
-                                    cy={animY}
-                                    r={animR}
-                                    fill="black"
-                                />
-                            </Mask>
-                        </Defs>
-                        <Rect
-                            height="100%"
-                            width="100%"
-                            fill="rgba(0, 0, 0, 0.85)"
-                            mask="url(#mask)"
-                        />
-                        <AnimatedCircle
-                            cx={animX}
-                            cy={animY}
-                            r={animR}
-                            stroke={C.accentGreen}
-                            strokeWidth="3"
-                            fill="transparent"
-                            strokeDasharray="10, 5"
-                        />
-                    </Svg>
-                </Animated.View>
-
-                <View style={styles.guideCardWrapper}>
-                    <Animated.View style={[styles.guideCard, { opacity: fadeAnim }]}>
-                        <View style={styles.guideHeader}>
-                            <View style={styles.guideIconBox}>
-                                <FontAwesome5 name="lightbulb" size={20} color={C.gold} />
-                            </View>
-                            <Text style={styles.guideTitle}>{currentTarget.title}</Text>
-                        </View>
-
-                        <Text style={styles.guideText}>{currentTarget.text}</Text>
-
-                        <View style={styles.guideFooter}>
-                            <TouchableOpacity onPress={onDismiss}>
-                                <Text style={styles.guideSkip}>{t('action_finish', language)}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={handleNext} style={styles.guideNextBtn}>
-                                <Text style={styles.guideNextText}>
-                                    {step === TARGETS.length - 1 ? t('action_got_it', language) : t('common_next', language)}
-                                </Text>
-                                <FontAwesome5 name={step === TARGETS.length - 1 ? "check" : "arrow-left"} size={14} color="#1A2D27" />
-                            </TouchableOpacity>
-                        </View>
-                    </Animated.View>
-                </View>
-            </View>
-        </Modal>
-    );
-};
-
-// --- HELPER 3: The Card for Each Step in the Timeline ---
-const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
+// --- HELPER 3: Ultra-Clean Timeline Step Card ---
+const RoutineStepCard = ({ step, index, onManage, onDelete, products, isLast }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const language = useCurrentLanguage();
@@ -293,204 +183,403 @@ const RoutineStepCard = ({ step, index, onManage, onDelete, products }) => {
     const isStepFilled = productList.length > 0;
 
     return (
-        <TouchableOpacity
-            activeOpacity={0.9}
+        <Pressable 
             onPress={onManage}
-            style={styles.stepCardContainer}
+            style={({ pressed }) => [
+                styles.stepTimelineContainer,
+                { opacity: pressed ? 0.6 : 1 } 
+            ]}
         >
-            <View style={styles.stepHeaderRow}>
-                <View style={styles.stepTitleGroup}>
-                    <LinearGradient
-                        colors={isStepFilled ?[C.accentGreen, C.accentGreen] : [C.card, C.border]}
-                        style={styles.stepNumberBadge}
-                    >
-                        <Text style={[styles.stepNumberText, !isStepFilled && { color: C.textSecondary }]}>
-                            {index + 1}
-                        </Text>
-                    </LinearGradient>
-
-                    <View>
-                        <Text style={styles.stepName}>{step.name}</Text>
-                        <Text style={styles.stepSubText}>
-                            {isStepFilled ? `${productList.length} ${t('routine_step_filled', language)}` : t('routine_step_empty', language)}
-                        </Text>
-                    </View>
+            {/* Timeline Column */}
+            <View style={styles.timelineIndicatorColumn}>
+                <View style={[styles.timelineDot, isStepFilled ? styles.timelineDotFilled : styles.timelineDotEmpty]}>
+                    <Text style={[styles.timelineDotText, isStepFilled ? { color: C.textOnAccent } : { color: C.textSecondary }]}>
+                        {index + 1}
+                    </Text>
                 </View>
-
-                <TouchableOpacity
-                    onPress={onDelete}
-                    style={styles.deleteIconButton}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                >
-                    <Feather name="trash-2" size={18} color={C.textSecondary} />
-                </TouchableOpacity>
+                {!isLast && <View style={styles.timelineLine} />}
             </View>
 
-            <View style={styles.stepBody}>
+            {/* Content Column */}
+            <View style={styles.timelineContentColumn}>
                 
-                {/* --- NEW: WAIT TIME ALERT (pH Compatibility) --- */}
-                {step.waitTime && (
-                    <View style={styles.waitTimeBox}>
-                        <View style={styles.alertIconWrapperWarning}>
-                            <Feather name="clock" size={12} color={C.warning} />
-                        </View>
-                        <Text style={styles.waitTimeText}>{step.waitTime}</Text>
-                    </View>
-                )}
-
-                {/* --- NEW: BIOLOGICAL NOTE (Circadian Rhythm) --- */}
-                {step.routineNote && (
-                    <View style={styles.routineNoteBox}>
-                        <View style={styles.alertIconWrapperInfo}>
-                            <Feather name="info" size={12} color={C.accentGreen} />
-                        </View>
-                        <Text style={styles.routineNoteText}>{step.routineNote}</Text>
-                    </View>
-                )}
-
-                {isStepFilled ? (
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.stepProductsScroll}
+                {/* Step Header */}
+                <View style={styles.stepHeaderClean}>
+                    <Text style={styles.stepNameClean}>{step.name}</Text>
+                    <Pressable
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        hitSlop={15}
+                        style={styles.deleteBtnClean}
                     >
+                        <Feather name="trash-2" size={16} color={C.textDim} />
+                    </Pressable>
+                </View>
+
+                {/* VISIBILITY FIX: Tinted Alert Bubbles */}
+                {step.waitTime && (
+                    <View style={[styles.alertBoxClean, { backgroundColor: C.warning + '15', borderColor: C.warning + '30' }]}>
+                        <Feather name="clock" size={14} color={C.warning} style={{ marginTop: 2 }} />
+                        <Text style={styles.alertTextClean}>{step.waitTime}</Text>
+                    </View>
+                )}
+
+                {step.routineNote && (
+                    <View style={[styles.alertBoxClean, { backgroundColor: C.accentGreen + '10', borderColor: C.accentGreen + '25' }]}>
+                        <Feather name="info" size={14} color={C.accentGreen} style={{ marginTop: 2 }} />
+                        <Text style={styles.alertTextClean}>{step.routineNote}</Text>
+                    </View>
+                )}
+
+                {/* Grouped Product List */}
+                {isStepFilled ? (
+                    <View style={{ gap: 8, marginTop: 10 }}>
                         {productList.map((p) => {
-                            const isSunscreen = p.analysisData?.product_type === 'sunscreen';
-                            const iconColor = isSunscreen ? C.gold : C.accentGreen;
-                            const bgTint = isSunscreen ? C.gold + '20' : C.accentGreen + '20';
+                            const imageUri = p.productImage || p.imageUrl || p.image;
 
                             return (
-                                <View key={p.id} style={styles.stepProductChip}>
-                                    <View style={[styles.chipIconBox, { backgroundColor: bgTint }]}>
-                                        <FontAwesome5
-                                            name={isSunscreen ? 'sun' : 'pump-soap'}
-                                            size={12}
-                                            color={iconColor}
-                                        />
+                                <View key={p.id} style={styles.shelfRowCard}>
+                                    <View style={styles.shelfRowImageWrapper}>
+                                        {imageUri ? (
+                                            <Image source={{ uri: imageUri }} style={styles.shelfRowImage} resizeMode="cover" />
+                                        ) : (
+                                            <View style={styles.shelfRowPlaceholder}>
+                                                <FontAwesome5 name="wine-bottle" size={18} color={C.textDim} />
+                                            </View>
+                                        )}
                                     </View>
-                                    <Text style={styles.stepProductText} numberOfLines={1}>
-                                        {p.productName}
-                                    </Text>
+                                    <View style={styles.shelfRowContent}>
+                                        <Text style={styles.shelfRowName} numberOfLines={2}>
+                                            {p.productName}
+                                        </Text>
+                                    </View>
                                 </View>
                             );
                         })}
-                    </ScrollView>
-                ) : (
-                    <View style={styles.stepEmptyState}>
-                        <Text style={styles.stepEmptyLabel}>{t('routine_tap_to_add', language)}</Text>
-                        <Feather name="plus-circle" size={16} color={C.accentGreen} />
                     </View>
+                ) : (
+                    <Text style={styles.emptyStepTextClean}>{t('routine_tap_to_add', language)}</Text>
                 )}
             </View>
-
-            <View style={styles.editIndicator}>
-                <Feather name="more-horizontal" size={16} color={C.border} />
-            </View>
-
-        </TouchableOpacity>
+        </Pressable>
     );
 };
 
-// --- HELPER 4: Product Selection Modal (Nested inside StepEditor) ---
-const ProductSelectionModal = ({ visible, products, onSelect, onClose }) => {
+// --- HELPER 4: Product Selection Modal ---
+const ProductSelectionModal = ({ visible, products, selectedProductIds = [], onSelect, onClose }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
     const language = useCurrentLanguage();
     const [search, setSearch] = useState('');
-    const scaleAnim = useRef(new Animated.Value(0.9)).current;
-    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    const slideAnim = useRef(new Animated.Value(height)).current;
+    const backdropAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) {
             setSearch('');
             Animated.parallel([
-                Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
-                Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true })
+                Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
             ]).start();
-        } else {
-            Animated.timing(opacityAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start();
         }
     }, [visible]);
 
+    const handleClose = () => {
+        Keyboard.dismiss();
+        Animated.parallel([
+            Animated.timing(slideAnim, { toValue: height, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+            Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]).start(({ finished }) => {
+            if (finished && onClose) onClose();
+        });
+    };
+
     if (!visible) return null;
 
-    const safeProducts = Array.isArray(products) ? products :[];
-
-    const filtered = safeProducts.filter(p =>
-        p.productName.toLowerCase().includes(search.toLowerCase())
-    );
+    const safeProducts = Array.isArray(products) ? products : [];
+    const filtered = safeProducts.filter(p => {
+        const query = search.trim().toLowerCase();
+        if (!query) return true;
+        const nameMatch = p.productName?.toLowerCase().includes(query) || p.name?.toLowerCase().includes(query);
+        const brandMatch = p.brand?.toLowerCase().includes(query) || p.productType?.toLowerCase().includes(query);
+        return nameMatch || brandMatch;
+    });
 
     return (
-        <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-            <View style={styles.centeredModalOverlay}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Modal transparent visible={visible} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                {/* Backdrop */}
+                <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.6)', opacity: backdropAnim, zIndex: 1 }]}>
+                    <Pressable style={{ flex: 1 }} onPress={handleClose} />
+                </Animated.View>
 
-                <Animated.View style={[
-                    styles.selectionCard,
-                    { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }
-                ]}>
-                    <View style={styles.selectionHeader}>
-                        <Text style={styles.selectionTitle}>{t('routine_select_product', language)}</Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeIconBtn}>
-                            <FontAwesome5 name="times" size={16} color={C.textDim} />
-                        </TouchableOpacity>
-                    </View>
+                {/* Animated Sheet Container */}
+                <Animated.View
+                    style={{
+                        zIndex: 2,
+                        width: '100%',
+                        height: height * 0.82,
+                        backgroundColor: C.card,
+                        borderTopLeftRadius: 28,
+                        borderTopRightRadius: 28,
+                        borderWidth: 0.5,
+                        borderColor: C.border,
+                        transform: [{ translateY: slideAnim }],
+                        marginBottom: -150,
+                        paddingBottom: 150,
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: -8 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 16,
+                        elevation: 20,
+                    }}
+                >
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ flex: 1 }}
+                    >
+                        {/* Grabber Bar */}
+                        <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
+                            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: C.border }} />
+                        </View>
 
-                    <View style={styles.modalSearchBar}>
-                        <TextInput
-                            style={styles.modalSearchInput}
-                            placeholder={t('common_search_placeholder', language)}
-                            placeholderTextColor={C.textDim}
-                            value={search}
-                            onChangeText={setSearch}
-                        />
-                        <FontAwesome5 name="search" size={12} color={C.textDim} />
-                    </View>
-
-                    <FlatList
-                        data={filtered}
-                        keyExtractor={i => i.id}
-                        style={{ maxHeight: 400 }}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                        renderItem={({ item }) => (
-                            <PressableScale
-                                onPress={() => onSelect(item.id)}
-                                style={styles.selectionCardWrapper}
-                            >
-                                <View style={styles.selectionRow}>
-                                    <View style={styles.selectionIconBox}>
-                                        <FontAwesome5
-                                            name={item.analysisData?.product_type === 'sunscreen' ? 'sun' : 'wine-bottle'}
-                                            size={14}
-                                            color={C.accentGreen}
-                                        />
-                                    </View>
-                                    <Text style={styles.selectionItemText} numberOfLines={1}>
-                                        {item.productName}
-                                    </Text>
-                                    <View style={styles.selectionActionBtn}>
-                                        <FontAwesome5 name="plus" size={12} color={C.textSecondary} />
-                                    </View>
+                        {/* Modal Header */}
+                        <View style={{
+                            flexDirection: 'row-reverse',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingHorizontal: 20,
+                            paddingBottom: 12,
+                            borderBottomWidth: 0.5,
+                            borderBottomColor: C.border + '50'
+                        }}>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 14,
+                                    backgroundColor: C.accentGreen + '18',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderWidth: 0.5,
+                                    borderColor: C.accentGreen + '35'
+                                }}>
+                                    <FontAwesome5 name="plus-circle" size={18} color={C.accentGreen} />
                                 </View>
-                            </PressableScale>
-                        )}
-                        ListEmptyComponent={
-                            <View style={{ alignItems: 'center', marginTop: 30 }}>
-                                <FontAwesome5 name="search-minus" size={24} color={C.textDim} />
-                                <Text style={{ color: C.textDim, marginTop: 10, fontFamily: 'Tajawal-Regular' }}>
-                                    {t('catalog_no_results', language)}
-                                </Text>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 17, color: C.textPrimary, textAlign: 'right' }}>
+                                        {t('routine_select_product', language)}
+                                    </Text>
+                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textSecondary, textAlign: 'right' }}>
+                                        {safeProducts.length} {t('routine_products_available', language) || 'منتج في رفك'}
+                                    </Text>
+                                </View>
                             </View>
-                        }
-                    />
+
+                            <PressableScale
+                                onPress={handleClose}
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 16,
+                                    backgroundColor: C.background,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderWidth: 0.5,
+                                    borderColor: C.border
+                                }}
+                            >
+                                <FontAwesome5 name="times" size={13} color={C.textSecondary} />
+                            </PressableScale>
+                        </View>
+
+                        {/* Search Bar */}
+                        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 }}>
+                            <View style={{
+                                flexDirection: 'row-reverse',
+                                alignItems: 'center',
+                                backgroundColor: C.background,
+                                borderRadius: 16,
+                                paddingHorizontal: 14,
+                                height: 46,
+                                borderWidth: 0.5,
+                                borderColor: C.border
+                            }}>
+                                <Feather name="search" size={16} color={C.textDim} />
+                                <AppTextInput
+                                    style={{
+                                        flex: 1,
+                                        fontFamily: 'Tajawal-Regular',
+                                        fontSize: 14,
+                                        color: C.textPrimary,
+                                        textAlign: 'right',
+                                        paddingHorizontal: 10
+                                    }}
+                                    placeholder={t('common_search_placeholder', language)}
+                                    placeholderTextColor={C.textDim}
+                                    value={search}
+                                    onChangeText={setSearch}
+                                />
+                                {search.length > 0 && (
+                                    <Pressable onPress={() => setSearch('')} style={{ padding: 4 }}>
+                                        <FontAwesome5 name="times-circle" size={14} color={C.textDim} />
+                                    </Pressable>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* List of Shelf Products */}
+                        <FlatList
+                            data={filtered}
+                            keyExtractor={item => item.id || item.docId || Math.random().toString()}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30, paddingTop: 4 }}
+                            renderItem={({ item }) => {
+                                const imageUri = item.productImage || item.imageUrl || item.image;
+                                const name = item.productName || item.name || '';
+                                const isAdded = selectedProductIds.includes(item.id);
+
+                                return (
+                                    <View
+                                        style={{
+                                            flexDirection: 'row-reverse',
+                                            alignItems: 'center',
+                                            backgroundColor: C.background,
+                                            borderRadius: 18,
+                                            padding: 12,
+                                            marginBottom: 10,
+                                            borderWidth: 0.5,
+                                            borderColor: isAdded ? C.accentGreen + '50' : C.border,
+                                        }}
+                                    >
+                                        {/* Product Thumbnail */}
+                                        <View style={{
+                                            width: 52,
+                                            height: 52,
+                                            borderRadius: 14,
+                                            backgroundColor: C.card,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderWidth: 0.5,
+                                            borderColor: C.border,
+                                            overflow: 'hidden',
+                                            marginLeft: 12
+                                        }}>
+                                            {imageUri ? (
+                                                <Image source={{ uri: imageUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                                            ) : (
+                                                <FontAwesome5 name="wine-bottle" size={20} color={C.accentGreen} />
+                                            )}
+                                        </View>
+
+                                        {/* Product Name & Brand */}
+                                        <View style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
+                                            <Text numberOfLines={1} style={{ fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary, textAlign: 'right', marginBottom: 3 }}>
+                                                {name}
+                                            </Text>
+                                            {item.brand ? (
+                                                <Text numberOfLines={1} style={{ fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textSecondary, textAlign: 'right' }}>
+                                                    {item.brand}
+                                                </Text>
+                                            ) : item.productType ? (
+                                                <View style={{ backgroundColor: C.accentGreen + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                                                    <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.accentGreen }}>
+                                                        {item.productType}
+                                                    </Text>
+                                                </View>
+                                            ) : null}
+                                        </View>
+
+                                        {/* Select Action Button */}
+                                        {isAdded ? (
+                                            <View style={{
+                                                flexDirection: 'row-reverse',
+                                                alignItems: 'center',
+                                                gap: 5,
+                                                backgroundColor: C.accentGreen + '20',
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 7,
+                                                borderRadius: 12,
+                                                borderWidth: 0.5,
+                                                borderColor: C.accentGreen + '40'
+                                            }}>
+                                                <FontAwesome5 name="check" size={11} color={C.accentGreen} />
+                                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.accentGreen }}>
+                                                    {t('routine_step_added', language) || 'مضاف'}
+                                                </Text>
+                                            </View>
+                                        ) : (
+                                            <PressableScale
+                                                onPress={() => {
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                                    onSelect(item.id);
+                                                }}
+                                                style={{
+                                                    flexDirection: 'row-reverse',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                    backgroundColor: C.accentGreen,
+                                                    paddingHorizontal: 14,
+                                                    paddingVertical: 8,
+                                                    borderRadius: 12,
+                                                    shadowColor: C.accentGreen,
+                                                    shadowOffset: { width: 0, height: 2 },
+                                                    shadowOpacity: 0.25,
+                                                    shadowRadius: 4,
+                                                    elevation: 3
+                                                }}
+                                            >
+                                                <FontAwesome5 name="plus" size={11} color={C.textOnAccent} />
+                                                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.textOnAccent }}>
+                                                    {t('action_add', language)}
+                                                </Text>
+                                            </PressableScale>
+                                        )}
+                                    </View>
+                                );
+                            }}
+                            ListEmptyComponent={
+                                safeProducts.length === 0 ? (
+                                    <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 45, gap: 12 }}>
+                                        <View style={{
+                                            width: 64,
+                                            height: 64,
+                                            borderRadius: 32,
+                                            backgroundColor: C.accentGreen + '15',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <FontAwesome5 name="box-open" size={26} color={C.accentGreen} />
+                                        </View>
+                                        <Text style={{ fontFamily: 'Tajawal-ExtraBold', fontSize: 16, color: C.textPrimary, textAlign: 'center' }}>
+                                            {t('routine_no_shelf_products_title', language) || 'رفك خالي من المنتجات'}
+                                        </Text>
+                                        <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 13, color: C.textSecondary, textAlign: 'center', maxWidth: 250, lineHeight: 20 }}>
+                                            {t('routine_no_shelf_products_desc', language) || 'أضف منتجات إلى رفك لتتمكن من اختيارها وإضافتها إلى خطوات روتينك اليومي.'}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40, gap: 10 }}>
+                                        <FontAwesome5 name="search-minus" size={24} color={C.textDim} />
+                                        <Text style={{ color: C.textDim, fontFamily: 'Tajawal-Regular', fontSize: 14 }}>
+                                            {t('catalog_no_results', language)}
+                                        </Text>
+                                    </View>
+                                )
+                            }
+                        />
+                    </KeyboardAvoidingView>
                 </Animated.View>
             </View>
         </Modal>
     );
 };
 
-// --- HELPER 5: Enhanced Step Editor with Name Editing ---
+// --- HELPER 5: Step Editor Modal ---
 const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -500,17 +589,40 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     const [editedName, setEditedName] = useState('');
     const [currentProducts, setCurrentProducts] = useState([]);
     const [isAddModalVisible, setAddModalVisible] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         if (isVisible && step) {
             setEditedName(step.name);
             setCurrentProducts(step.productIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean));
-            Animated.spring(animController, { toValue: 1, useNativeDriver: true }).start();
+            setIsMounted(true);
+            Animated.spring(animController, {
+                toValue: 1,
+                damping: 18,
+                stiffness: 120,
+                useNativeDriver: true
+            }).start();
+        } else if (isMounted) {
+            Animated.timing(animController, {
+                toValue: 0,
+                duration: 220,
+                useNativeDriver: true
+            }).start(() => {
+                setIsMounted(false);
+            });
         }
     }, [isVisible, step]);
 
     const handleClose = () => {
-        Animated.timing(animController, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => onClose());
+        Keyboard.dismiss();
+        Animated.timing(animController, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true
+        }).start(() => {
+            setIsMounted(false);
+            onClose();
+        });
     };
 
     const handleRemove = (productId) => {
@@ -536,7 +648,8 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
 
-    if (!step) return null;
+    if (!isVisible && !isMounted) return null;
+    if (!step && !isMounted) return null;
 
     return (
         <Modal transparent visible={true} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
@@ -555,7 +668,7 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
                                     <Feather name="edit-3" size={14} color={C.accentGreen} />
                                     <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.textSecondary }}>{t('routine_edit_step_name', language)}</Text>
                                 </View>
-                                <TextInput
+                                <AppTextInput
                                     style={[styles.stepModalTitle, { textAlign: 'right', borderBottomWidth: 1, borderBottomColor: C.accentGreen + '40', paddingBottom: 5 }]}
                                     value={editedName}
                                     onChangeText={setEditedName}
@@ -579,37 +692,34 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
                             data={currentProducts}
                             keyExtractor={item => item.id}
                             showsVerticalScrollIndicator={false}
-                            renderItem={({ item }) => (
-                                <Animated.View style={styles.reorderItem}>
-                                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', flex: 1 }}>
-                                        <View style={[styles.chipIconBox, { backgroundColor: C.card, borderWidth: 1, borderColor: C.border }]}>
-                                            <FontAwesome5
-                                                name={item.analysisData?.product_type === 'sunscreen' ? 'sun' : 'wine-bottle'}
-                                                size={14}
-                                                color={item.analysisData?.product_type === 'sunscreen' ? C.gold : C.accentGreen}
-                                            />
+                            renderItem={({ item }) => {
+                                const imageUri = item.productImage || item.imageUrl || item.image;
+
+                                return (
+                                    <View style={styles.shelfRowCard}>
+                                        <View style={styles.shelfRowImageWrapper}>
+                                            {imageUri ? (
+                                                <Image source={{ uri: imageUri }} style={styles.shelfRowImage} resizeMode="cover" />
+                                            ) : (
+                                                <View style={styles.shelfRowPlaceholder}>
+                                                    <FontAwesome5 name="wine-bottle" size={18} color={C.textDim} />
+                                                </View>
+                                            )}
                                         </View>
-                                        <View style={{ marginRight: 10, flex: 1 }}>
-                                            <Text style={[styles.reorderItemText, { marginHorizontal: 0 }]} numberOfLines={1}>
+                                        <View style={styles.shelfRowContent}>
+                                            <Text style={styles.shelfRowName} numberOfLines={1}>
                                                 {item.productName}
                                             </Text>
-                                            <Text style={{ fontFamily: 'Tajawal-Regular', fontSize: 10, color: C.textDim, textAlign: 'right' }}>
-                                                {item.analysisData?.product_type === 'sunscreen' ? t('category_sunscreen', language) : t('common_care', language)}
-                                            </Text>
                                         </View>
+                                        <Pressable onPress={() => handleRemove(item.id)} style={styles.shelfRowDeleteBtn}>
+                                            <FontAwesome5 name="trash-alt" size={14} color={C.danger} />
+                                        </Pressable>
                                     </View>
-
-                                    <TouchableOpacity
-                                        onPress={() => handleRemove(item.id)}
-                                        style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.danger + '15', alignItems: 'center', justifyContent: 'center' }}
-                                    >
-                                        <FontAwesome5 name="trash-alt" size={14} color={C.danger} />
-                                    </TouchableOpacity>
-                                </Animated.View>
-                            )}
+                                );
+                            }}
                             ListEmptyComponent={
                                 <View style={styles.stepModalEmpty}>
-                                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
+                                    <View style={styles.emptyBoxIcon}>
                                         <FontAwesome5 name="box-open" size={24} color={C.textDim} />
                                     </View>
                                     <Text style={styles.stepModalEmptyText}>{t('routine_no_products_yet', language)}</Text>
@@ -633,6 +743,7 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
             <ProductSelectionModal
                 visible={isAddModalVisible}
                 products={allProducts}
+                selectedProductIds={currentProducts.map(p => p.id)}
                 onSelect={handleAddProduct}
                 onClose={() => setAddModalVisible(false)}
             />
@@ -640,7 +751,7 @@ const StepEditorModal = ({ isVisible, onClose, step, onSave, allProducts }) => {
     );
 };
 
-// --- MAIN COMPONENT: ROUTINE SECTION (Modern Floating UX) ---
+// --- MAIN COMPONENT: ROUTINE SECTION ---
 export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
@@ -649,9 +760,9 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
     const [routines, setRoutines] = useState({ am: [], pm: [], weekly: [] });
     const [activePeriod, setActivePeriod] = useState('am');
     const [selectedStep, setSelectedStep] = useState(null);
-    const[showOnboarding, setShowOnboarding] = useState(false);
 
-    const[routineLogs, setRoutineLogs] = useState([]);
+
+    const [routineLogs, setRoutineLogs] = useState([]);
     const [isBuilding, setIsBuilding] = useState(false);
 
     useEffect(() => {
@@ -760,42 +871,30 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
     const currentSteps = routines[activePeriod] ||[];
 
     return (
-        <View style={{ flex: 1 }}>
-            <View style={styles.routineHeaderContainer}>
-                <View style={styles.routineSwitchContainer}>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('pm')} style={[styles.periodBtn, activePeriod === 'pm' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'pm' && styles.periodTextActive]}>{t('routine_period_evening', language)}</Text>
-                        <Feather name="moon" size={14} color={activePeriod === 'pm' ? C.textOnAccent : C.textSecondary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('am')} style={[styles.periodBtn, activePeriod === 'am' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'am' && styles.periodTextActive]}>{t('routine_period_morning', language)}</Text>
-                        <Feather name="sun" size={14} color={activePeriod === 'am' ? C.textOnAccent : C.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => switchPeriod('weekly')} style={[styles.periodBtn, activePeriod === 'weekly' && styles.periodBtnActive]}>
-                        <Text style={[styles.periodText, activePeriod === 'weekly' && styles.periodTextActive]}>{t('routine_period_weekly', language)}</Text>
-                        <Feather name="calendar" size={14} color={activePeriod === 'weekly' ? C.textOnAccent : C.textSecondary} />
-                    </TouchableOpacity>
-
-                </View>
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <View style={{ marginBottom: 15 }}>
+                <RoutineSegmentedControl 
+                    activePeriod={activePeriod} 
+                    onPeriodChange={(newPeriod) => switchPeriod(newPeriod)} 
+                />
             </View>
 
             <View style={{ paddingBottom: 220, paddingTop: 10 }}>
-                <View style={{ marginBottom: 10 }}>
+                <View style={{ marginBottom: 15 }}>
                     <RoutineLogViewer logs={routineLogs} />
                 </View>
 
                 {currentSteps.length > 0 ? (
                     currentSteps.map((item, index) => (
-                        <StaggeredItem index={index} key={item.id}>
-                            <RoutineStepCard
-                                step={item}
-                                index={index}
-                                onManage={() => setSelectedStep(item)}
-                                onDelete={() => handleDeleteStep(item.id)}
-                                products={savedProducts}
-                            />
-                        </StaggeredItem>
+                        <RoutineStepCard
+                            key={item.id}
+                            step={item}
+                            index={index}
+                            isLast={index === currentSteps.length - 1}
+                            onManage={() => setSelectedStep(item)}
+                            onDelete={() => handleDeleteStep(item.id)}
+                            products={savedProducts}
+                        />
                     ))
                 ) : (
                     <RoutineEmptyState onPress={handleAutoBuildRoutine} />
@@ -804,8 +903,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 
             <View style={styles.floatingControlsContainer}>
                 <View style={styles.floatingCapsule}>
-
-                    <TouchableOpacity
+                    <Pressable
                         style={styles.fabItem}
                         onPress={handleAutoBuildRoutine}
                         disabled={isBuilding}
@@ -818,11 +916,11 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                                 <Text style={styles.fabText}>{t('routine_auto_build', language)}</Text>
                             </View>
                         )}
-                    </TouchableOpacity>
+                    </Pressable>
 
                     <View style={styles.fabDivider} />
 
-                    <TouchableOpacity
+                    <Pressable
                         style={styles.fabItem}
                         onPress={() => onOpenAddStepModal(handleAddStep)}
                     >
@@ -830,8 +928,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                             <Feather name="plus" size={18} color={C.accentGreen} />
                             <Text style={styles.fabText}>{t('routine_add_step', language)}</Text>
                         </View>
-                    </TouchableOpacity>
-
+                    </Pressable>
                 </View>
             </View>
 
@@ -844,7 +941,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                     allProducts={savedProducts}
                 />
             )}
-            {showOnboarding && <RoutineOnboardingGuide onDismiss={() => setShowOnboarding(false)} />}
+
         </View>
     );
 };
@@ -854,96 +951,243 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 // ============================================================================
 const getStylesContent = (C) => ({
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 99 },
-    sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.85, zIndex: 100, justifyContent: 'flex-end' },
-    sheetContent: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 25 },
+
+    // --- ULTRA-CLEAN TIMELINE STYLES ---
+    stepTimelineContainer: {
+        flexDirection: 'row-reverse',
+        paddingHorizontal: 5,
+        backgroundColor: 'transparent',
+    },
+    timelineIndicatorColumn: {
+        width: 40,
+        alignItems: 'center',
+    },
+    timelineDot: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    timelineDotFilled: {
+        backgroundColor: C.accentGreen,
+    },
+    timelineDotEmpty: {
+        backgroundColor: C.background,
+        borderWidth: 1.5,
+        borderColor: C.border,
+    },
+    timelineDotText: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 12,
+    },
+    timelineLine: {
+        width: 2,
+        flex: 1,
+        backgroundColor: C.border,
+        marginTop: 4,
+        marginBottom: -25, // Reaches well down to the next dot
+    },
+    timelineContentColumn: {
+        flex: 1,
+        paddingRight: 12,
+        paddingBottom: 25, // Generous spacing before the next step begins
+    },
+    
+    // Header
+    stepHeaderClean: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    stepNameClean: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 18,
+        color: C.textPrimary,
+        textAlign: 'right',
+        flex: 1,
+    },
+    deleteBtnClean: {
+        padding: 5,
+        opacity: 0.6,
+    },
+
+    // Texts / Alerts
+    emptyStepTextClean: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: C.textDim,
+        textAlign: 'right',
+        marginTop: 4,
+    },
+    alertRowClean: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+    },
+    alertBoxClean: {
+        flexDirection: 'row-reverse',
+        alignItems: 'flex-start',
+        padding: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 8,
+        marginTop: 8,
+        marginBottom: 4,
+    },
+     alertTextClean: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 13,
+        color: C.textPrimary, // Forces high contrast text instead of colored text
+        textAlign: 'right',
+        flex: 1,
+        lineHeight: 20, // Better line height for readability
+    },
+
+    // Grouped Product List (iOS Settings style)
+    productListGroup: {
+        marginTop: 12,
+        backgroundColor: 'rgba(255,255,255,0.02)', // Super subtle grouped background
+        borderRadius: 16,
+        borderWidth: 0.5,
+        borderColor: C.border, // Very thin outline holds it together cleanly
+        overflow: 'hidden',
+    },
+    productRowClean: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+    },
+    productRowBorder: {
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.03)', // Barely visible separator inside the group
+    },
+    // Shelf Row Card Design (Matching Profile Shelf Items)
+    shelfRowCard: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        backgroundColor: C.card,
+        borderRadius: 22,
+        borderWidth: 0.5,
+        borderColor: C.border,
+        overflow: 'hidden',
+        minHeight: 74,
+        marginBottom: 8,
+        paddingRight: 0,
+        paddingLeft: 14,
+        paddingVertical: 0,
+    },
+    shelfRowImageWrapper: {
+        width: 74,
+        height: 74,
+        alignSelf: 'stretch',
+        backgroundColor: C.background,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    shelfRowImage: {
+        width: 74,
+        height: 74,
+    },
+    shelfRowPlaceholder: {
+        width: 74,
+        height: 74,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: C.background,
+    },
+    shelfRowContent: {
+        flex: 1,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+    },
+    shelfRowName: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 15,
+        color: C.textPrimary,
+        textAlign: 'right',
+        lineHeight: 22,
+    },
+    shelfRowActionBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: C.accentGreen + '15',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+    shelfRowDeleteBtn: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: C.danger + '15',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+
+    // Modals / Editor Sheets
+    sheetContainer: { position: 'absolute', bottom: -150, left: 0, right: 0, height: height * 0.85 + 150, zIndex: 100, justifyContent: 'flex-end', paddingBottom: 150 },
+    sheetContent: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0.5, borderColor: C.border, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 25 },
     sheetHandleBar: { alignItems: 'center', paddingVertical: 15, width: '100%', backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.02)' },
     sheetHandle: { width: 48, height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10 },
     modalTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 20, color: C.textPrimary, textAlign: 'center', marginBottom: 15 },
     modalDescription: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: C.textSecondary, textAlign: 'right', lineHeight: 24, marginBottom: 20 },
     inputWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, position: 'relative' },
-    enhancedInput: { flex: 1, backgroundColor: C.background, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 15, paddingRight: 45, color: C.textPrimary, fontSize: 16, textAlign: 'right' },
+    enhancedInput: { flex: 1, backgroundColor: C.background, borderWidth: 0.5, borderColor: C.border, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 15, paddingRight: 45, color: C.textPrimary, fontSize: 16, textAlign: 'right' },
     inputIcon: { position: 'absolute', right: 15, zIndex: 1 },
     promptButtonRow: { flexDirection: 'row-reverse', gap: 10, marginHorizontal: 20 },
     promptButton: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
     promptButtonPrimary: { backgroundColor: C.accentGreen },
-    promptButtonSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: C.border },
+    promptButtonSecondary: { backgroundColor: 'transparent', borderWidth: 0.5, borderColor: C.border },
     promptButtonTextPrimary: { color: C.textOnAccent, fontFamily: 'Tajawal-Bold' },
     promptButtonTextSecondary: { color: C.textSecondary, fontFamily: 'Tajawal-Bold' },
 
-    guideOverlay: { flex: 1, zIndex: 9999 },
-    guideCardWrapper: { position: 'absolute', bottom: height * 0.12, width: '100%', alignItems: 'center', zIndex: 100, paddingHorizontal: 20 },
-    guideCard: { width: '100%', backgroundColor: C.card, borderRadius: 28, padding: 24, borderWidth: 1, borderColor: C.border, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20 },
-    guideHeader: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 15, gap: 12 },
-    guideIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(251, 191, 36, 0.12)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.2)' },
-    guideTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 19, color: C.textPrimary, textAlign: 'right' },
-    guideText: { fontFamily: 'Tajawal-Regular', fontSize: 15, color: C.textSecondary, textAlign: 'right', lineHeight: 24, marginBottom: 25 },
-    guideFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
-    guideNextBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: C.accentGreen, paddingVertical: 12, paddingHorizontal: 26, borderRadius: 16, shadowColor: C.accentGreen, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-    guideNextText: { fontFamily: 'Tajawal-Bold', color: C.textOnAccent, fontSize: 15 },
-    guideSkip: { fontFamily: 'Tajawal-Bold', color: C.textDim, fontSize: 14, paddingVertical: 10, paddingHorizontal: 15 },
 
-    stepCardContainer: { backgroundColor: C.card, borderRadius: 18, marginBottom: 12, borderWidth: 1, borderColor: C.border, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-    stepHeaderRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 12, paddingBottom: 0 },
-    stepTitleGroup: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
-    stepNumberBadge: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    stepNumberText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 16, color: C.textOnAccent },
-    stepName: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: C.textPrimary, textAlign: 'right' },
-    stepSubText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary, textAlign: 'right' },
-    deleteIconButton: { padding: 8, opacity: 0.7 },
-    stepBody: { padding: 12, paddingTop: 10 },
-    stepProductsScroll: { flexDirection: 'row-reverse', gap: 8, paddingRight: 4 },
-    stepProductChip: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', minWidth: 100, maxWidth: 160 },
-    chipIconBox: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 10 },
-    stepProductText: { fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textPrimary, flexShrink: 1, textAlign: 'right', lineHeight: 18 },
-    stepEmptyState: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderWidth: 1, borderColor: C.border, borderStyle: 'dashed', borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.1)' },
-    stepEmptyLabel: { fontFamily: 'Tajawal-Regular', fontSize: 12, color: C.textDim },
-    editIndicator: { position: 'absolute', bottom: 6, left: 12, opacity: 0.5 },
 
+    // Selection Modal
     centeredModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 2000 },
-    selectionCard: { width: '85%', backgroundColor: C.card, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 20 },
+    selectionCard: { width: '85%', backgroundColor: C.card, borderRadius: 24, padding: 20, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)', shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 20 },
     selectionHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
     selectionTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: C.textPrimary },
     closeIconBtn: { padding: 5, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
-    modalSearchBar: { flexDirection: 'row-reverse', backgroundColor: C.background, borderRadius: 12, paddingHorizontal: 12, height: 40, alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: C.border },
+    modalSearchBar: { flexDirection: 'row-reverse', backgroundColor: C.background, borderRadius: 12, paddingHorizontal: 12, height: 40, alignItems: 'center', marginBottom: 15, borderWidth: 0.5, borderColor: C.border },
     modalSearchInput: { flex: 1, fontFamily: 'Tajawal-Regular', color: C.textPrimary, fontSize: 13, textAlign: 'right', paddingRight: 8 },
-    selectionCardWrapper: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
-    selectionRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 12, width: '100%' },
-    selectionIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.accentGreen + '20', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.accentGreen + '40' },
+    selectionCardWrapper: { backgroundColor: 'transparent', borderRadius: 12, marginBottom: 8, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+    selectionRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 12, width: '100%', backgroundColor: 'rgba(255,255,255,0.02)' },
+    selectionIconBox: { width: 50, height: 50, borderRadius: 14, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: C.border, overflow: 'hidden' },
     selectionItemText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary, textAlign: 'right', marginHorizontal: 15 },
     selectionActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
 
+    // Step Editor Modal
     stepModalHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     stepModalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: C.textPrimary },
     addProductButton: { flexDirection: 'row-reverse', gap: 6, backgroundColor: C.accentGreen, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
     addProductButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 12, color: C.textOnAccent },
-    divider: { height: 1, backgroundColor: C.border, marginVertical: 12 },
-    reorderItem: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.background, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 15, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+    reorderItem: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.background, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 15, marginBottom: 10, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)' },
+    reorderIconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: C.border, overflow: 'hidden' },
     reorderItemText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary, textAlign: 'right', marginHorizontal: 10 },
+    reorderDeleteBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.danger + '15', alignItems: 'center', justifyContent: 'center' },
     stepModalEmpty: { alignItems: 'center', paddingVertical: 40, opacity: 0.6, gap: 10 },
+    emptyBoxIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
     stepModalEmptyText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: C.textDim },
     saveStepButton: { flexDirection: 'row-reverse', gap: 10, backgroundColor: C.accentGreen, padding: 16, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, shadowColor: C.accentGreen, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
     saveStepButtonText: { fontFamily: 'Tajawal-Bold', fontSize: 16, color: C.textOnAccent },
 
-    routineHeaderContainer: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 },
-    routineSwitchContainer: { flex: 1, flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: C.border },
-    periodBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingVertical: 10, borderRadius: 12 },
-    periodBtnActive: { backgroundColor: C.accentGreen },
-    periodText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textSecondary, paddingBottom: 2 },
-    periodTextActive: { color: C.textOnAccent },
+    // Floating Controls
     floatingControlsContainer: { position: 'absolute', bottom: 125, left: 0, right: 0, alignItems: 'center', zIndex: 50 },
-    floatingCapsule: { flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 100, paddingHorizontal: 4, paddingVertical: 6, borderWidth: 1, borderColor: C.accentGreen + '66', shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 0, width: width * 0.85 },
-    fabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
+    floatingCapsule: { flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 100, paddingHorizontal: 4, paddingVertical: 6, borderWidth: 0.5, borderColor: C.accentGreen + '66', shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 0, width: width * 0.85 },
+    fabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, backgroundColor: 'transparent' },
     fabInner: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
     fabText: { fontFamily: 'Tajawal-Bold', fontSize: 14, color: C.textPrimary },
     fabDivider: { width: 1, height: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', alignSelf: 'center' },
-
-    // --- NEW ALERTS STYLES ---
-    waitTimeBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', backgroundColor: C.warning + '15', padding: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: C.warning + '30' },
-    waitTimeText: { flex: 1, fontFamily: 'Tajawal-Bold', fontSize: 11, color: C.textPrimary, textAlign: 'right', marginRight: 8, lineHeight: 18 },
-    routineNoteBox: { flexDirection: 'row-reverse', alignItems: 'flex-start', backgroundColor: C.accentGreen + '10', padding: 10, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: C.accentGreen + '20' },
-    routineNoteText: { flex: 1, fontFamily: 'Tajawal-Regular', fontSize: 11, color: C.textSecondary, textAlign: 'right', marginRight: 8, lineHeight: 18 },
-    alertIconWrapperWarning: { width: 22, height: 22, borderRadius: 6, backgroundColor: C.warning + '25', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-    alertIconWrapperInfo: { width: 22, height: 22, borderRadius: 6, backgroundColor: C.accentGreen + '25', alignItems: 'center', justifyContent: 'center', marginTop: 2 }
 });
 
 const createStyles = (c) => StyleSheet.create(getStylesContent(c));

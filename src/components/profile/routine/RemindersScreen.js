@@ -11,6 +11,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useRemindersStore } from '../useRemindersStore';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+import AppTextInput from '../../common/AppTextInput';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,11 +35,11 @@ export const RemindersScreen = () => {
 
   useEffect(() => {
     if (isModalVisible) {
-        Animated.spring(animController, {
-            toValue: 1,
-            damping: 15,
-            stiffness: 100,
-            useNativeDriver: true
+            Animated.spring(animController, {
+                toValue: 1,
+                friction: 9,
+                tension: 50,
+                useNativeDriver: true
         }).start();
     }
   }, [isModalVisible]);
@@ -47,7 +48,7 @@ export const RemindersScreen = () => {
     Animated.timing(animController, { 
         toValue: 0, 
         duration: 250, 
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.in(Easing.ease),
         useNativeDriver: true 
     }).start(() => setModalVisible(false));
   };
@@ -220,7 +221,7 @@ export const RemindersScreen = () => {
 
                     {/* Input */}
                     <View style={styles.inputWrapper}>
-                        <TextInput
+                        <AppTextInput
                             style={[styles.input, { fontFamily: title.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular' }]}
                             placeholder={t('reminders_placeholder', language)}
                             placeholderTextColor={C.textDim}
@@ -323,7 +324,7 @@ const createStyles = (C) => StyleSheet.create({
   emptySubText: { fontFamily: 'Tajawal-Regular', fontSize: 14, color: C.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 40, lineHeight: 22 },
 
   // Cards
-  card: { backgroundColor: C.card, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
+  card: { backgroundColor: C.card, borderRadius: 20, padding: 18, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
   cardInactive: { opacity: 0.5 },
   cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   timeWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
@@ -339,16 +340,16 @@ const createStyles = (C) => StyleSheet.create({
 
   // Floating Action Capsule
   floatingControlsContainer: { position: 'absolute', bottom: 30, left: 0, right: 0, alignItems: 'center', zIndex: 50 },
-  floatingCapsule: { flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 100, paddingHorizontal: 24, paddingVertical: 14, borderWidth: 1, borderColor: C.primary + '40', shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 10, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  floatingCapsule: { flexDirection: 'row-reverse', backgroundColor: C.card, borderRadius: 100, paddingHorizontal: 24, paddingVertical: 14, borderWidth: 0.5, borderColor: C.primary + '40', shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 10, alignItems: 'center', justifyContent: 'center', gap: 10 },
   fabText: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: C.textPrimary },
 
   // Fluid Modal Layering
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 1 },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', zIndex: 100 },
-  sheetContainer: { width: '100%', backgroundColor: C.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, shadowColor: "#000", shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 20 },
+  sheetContainer: { width: '100%', marginBottom: -80, backgroundColor: C.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, shadowColor: "#000", shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 20 },
   sheetHandleBar: { alignItems: 'center', paddingVertical: 15, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.02)' },
   sheetHandle: { width: 48, height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10 },
-  modalContent: { padding: 25, paddingBottom: 40 },
+  modalContent: { padding: 25, paddingBottom: 120 },
 
   // Modal Inside Content
   modalHeaderRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 15, marginBottom: 25 },

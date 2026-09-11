@@ -20,9 +20,11 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Defs, Rect, Mask, Circle, LinearGradient as SvgGradient, Stop, Path } from 'react-native-svg';
 import * as Location from 'expo-location';
 import { generateFingerprint } from '../../src/utils/cacheHelpers';
-import AuthenticHeader from '../../src/utils/AuthenticHeader';
+import AuthenticHeader, { getHeaderDimensions } from '../../src/utils/AuthenticHeader';
 import { t, getLocalizedValue } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
+import AppTextInput from '../../src/components/common/AppTextInput';
+import AvatarSelectionModal from '../../src/components/profile/AvatarSelectionModal';
 import {
     commonAllergies,
     commonConditions,
@@ -30,12 +32,14 @@ import {
     basicScalpTypes
 } from '../../src/data/allergiesandconditions';
 import { PRODUCT_TYPES } from '../../src/constants/productData';
+import { AVATARS } from '../../src/constants/avatars';
 import { AlertService } from '../../src/services/alertService';
 import WathiqScoreBadge from '../../src/components/common/WathiqScoreBadge';
 import { analyzeAndEnrichShelfProduct, markShelfProductNeedsClaims } from '../../src/services/communityService';
 import ClaimsPickerModal from '../../src/components/catalog/ClaimsPickerModal';
 import ShelfSearchBar from '../../src/components/profile/ShelfSearchBar';
 import ProductDetailsSheet from '../../src/components/profile/ProductDetailsSheet';
+import ShelfSegmentedControl from '../../src/components/profile/ShelfSegmentedControl';
 import {
     ShelfEmptyState,
     AnalysisEmptyState,
@@ -87,18 +91,6 @@ try {
 // --- 2. THEME & ASSETS ---
 import { useTheme, THEMES } from '../../src/context/ThemeContext';
 
-const getHeaderTitle = (key, language) => {
-    const titles = {
-        shelf: { title: t('profile_header_shelf', language), icon: 'list' },
-        routine: { title: t('profile_header_routine', language), icon: 'calendar-check' },
-        analysis: { title: t('profile_header_analysis', language), icon: 'chart-pie' },
-        migration: { title: t('profile_header_migration', language), icon: 'exchange-alt' },
-        ingredients: { title: t('profile_header_ingredients', language), icon: 'flask' },
-        settings: { title: t('profile_header_settings', language), icon: 'cog' },
-        reminders: { title: t('profile_header_reminders', language), icon: 'clock' },
-    };
-    return titles[key] || { title: t('profile_title_fallback', language), icon: 'user' };
-};
 
 const HEALTH_OPTS = [
     { id: 'acne_prone', label: t('health_opt_acne', 'ar') },
@@ -389,7 +381,7 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
     });
 
     return (
-        <ContentCard style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
+        <ContentCard style={{ padding: 0, overflow: 'hidden', marginBottom: 5 }}>
             <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.accordionHeader}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
                     <View style={styles.iconBoxSm}>
@@ -654,7 +646,7 @@ const GlobalInput = (props) => {
     };
 
     return (
-        <TextInput
+        <AppTextInput
             {...props}
             placeholderTextColor={props.placeholderTextColor || C.textDim}
             style={[
@@ -668,15 +660,8 @@ const GlobalInput = (props) => {
 const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProfile }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
-    const [refreshing, setRefreshing] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const { user, setSavedProducts } = useAppContext();
-
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await onRefresh?.();
-        setRefreshing(false);
-    };
 
     const handleProductDelete = (productId) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -724,9 +709,6 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProf
                     scrollEnabled={false}
                     contentContainerStyle={{ paddingBottom: 120 }}
                     showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.accentGreen} colors={[C.accentGreen]} />
-                    }
                 />
             )}
 
@@ -908,7 +890,7 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.searchBar}>
-                <TextInput
+                <AppTextInput
                     placeholder={t('search_ingredients_placeholder', language)}
                     placeholderTextColor={C.textDim}
                     style={styles.searchInput}
@@ -1382,6 +1364,7 @@ const SettingsSection = ({ profile, onLogout }) => {
                         title={t('settings_theme_pick', language)}
                         options={[
                             { id: 'original', label: { ar: t('settings_theme_original', 'ar'), en: t('settings_theme_original', 'en') }, icon: 'tree' },
+                            { id: 'light', label: { ar: t('settings_theme_light', 'ar'), en: t('settings_theme_light', 'en') }, icon: 'sun' },
                             { id: 'baby_pink', label: { ar: t('settings_theme_pink', 'ar'), en: t('settings_theme_pink', 'en') }, icon: 'heart' },
                             { id: 'clinical_blue', label: { ar: t('settings_theme_blue', 'ar'), en: t('settings_theme_blue', 'en') }, icon: 'moon' }
                         ]}
@@ -1822,25 +1805,42 @@ const AnimatedScoreRing = React.memo(({ score, color, radius = 28, strokeWidth =
 //                       MAIN PROFILE CONTROLLER
 // ============================================================================
 
+
 export default function ProfileScreen() {
     // ========================================================================
     // --- 1. HOOKS, CONTEXT & NAVIGATION ---
     // ========================================================================
-    const { user, userProfile, savedProducts, setSavedProducts, loading, logout } = useAppContext();
+    const { user, userProfile, savedProducts, setSavedProducts, loading, logout, appConfig } = useAppContext();
+    const isAdmin = !!(user && appConfig?.adminUid && user.uid === appConfig.adminUid);
     const language = useCurrentLanguage();
-    const { colors: C, activeThemeId, changeTheme } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const { colors: COLORS, activeThemeId, changeTheme } = useTheme();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+
     const router = useRouter();
     const insets = useSafeAreaInsets();
+
+    // SAFE ACCESS
+    const { maxHeight: headerMaxHeight } = useMemo(
+        () => getHeaderDimensions(insets?.top ?? 0), 
+        [insets?.top]
+    );
     const [debugSpf, setDebugSpf] = useState(true);
+
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const handleAvatarSelect = async (id) => {
+        if (!user) return;
+        try {
+            await updateDoc(doc(db, "profiles", user.uid), { "settings.avatarId": id });
+            setShowAvatarModal(false);
+        } catch (e) {
+            console.error("Avatar update error", e);
+        }
+    };
 
     // ========================================================================
     // --- 2. CONSTANTS & UI CONFIG ---
     // ========================================================================
-    const HEADER_BASE_HEIGHT = 120;
-    const headerMaxHeight = HEADER_BASE_HEIGHT + insets.top;
-    const headerMinHeight = (Platform.OS === 'ios' ? 90 : 80) + insets.top;
-    const scrollDistance = headerMaxHeight - headerMinHeight;
 
     const TABS = [
         { id: 'shelf', label: t('profile_tab_shelf', language), icon: 'list' },
@@ -1856,6 +1856,16 @@ export default function ProfileScreen() {
     // --- 3. STATE MANAGEMENT ---
     // ========================================================================
     const [activeTab, setActiveTab] = useState('shelf');
+    const [shelfView, setShelfView] = useState('products'); 
+    const [hasMountedRoutine, setHasMountedRoutine] = useState(false); // Track if user ever opened Routine
+
+const handleShelfViewChange = (newView) => {
+    // If opening Routine for the first time, allow it to mount
+    if (newView === 'routine' && !hasMountedRoutine) {
+        setHasMountedRoutine(true);
+    }
+    setShelfView(newView);
+};
     const [isAddStepModalVisible, setAddStepModalVisible] = useState(false);
     const [addStepHandler, setAddStepHandler] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
@@ -1936,17 +1946,12 @@ export default function ProfileScreen() {
     // ========================================================================
     const runWeatherAnalysis = useCallback(async () => {
         // NOTE: Weather analysis runs independently of products — always execute
-
         setIsAnalyzingWeather(true);
         setWeatherErrorType(null);
 
         try {
+            // 1. Check if the app has permission
             let { status } = await Location.getForegroundPermissionsAsync();
-            if (status === 'undetermined') {
-                const req = await Location.requestForegroundPermissionsAsync();
-                status = req.status;
-            }
-
             setLocationPermission(status);
 
             if (status !== 'granted') {
@@ -1955,7 +1960,23 @@ export default function ProfileScreen() {
                 return;
             }
 
-            let loc = await Location.getCurrentPositionAsync({});
+            let servicesEnabled = await Location.hasServicesEnabledAsync();
+            if (!servicesEnabled) {
+                setWeatherErrorType('permission');
+                setIsAnalyzingWeather(false);
+                return;
+            }
+
+            // 3. Try to get location safely and quickly
+            // getLastKnownPositionAsync gets cached location instantly and NEVER triggers popups
+            let loc = await Location.getLastKnownPositionAsync({});
+            
+            // If there's no cache, gently request it using Balanced accuracy
+            if (!loc) {
+                loc = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced 
+                });
+            }
 
             let cityName = t('location_my_position', language);
             try {
@@ -2084,73 +2105,36 @@ export default function ProfileScreen() {
             setActiveTab(tab);
         }
     };
-
-    const headerHeight = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [headerMaxHeight, headerMinHeight], extrapolate: 'clamp' });
-    const expandedHeaderOpacity = scrollY.interpolate({ inputRange: [0, scrollDistance / 2], outputRange: [1, 0], extrapolate: 'clamp' });
-    const expandedHeaderTranslate = scrollY.interpolate({ inputRange: [0, scrollDistance], outputRange: [0, -20], extrapolate: 'clamp' });
-    const collapsedHeaderOpacity = scrollY.interpolate({ inputRange: [scrollDistance / 2, scrollDistance], outputRange: [0, 1], extrapolate: 'clamp' });
-
-    // ========================================================================
+    
+       // ========================================================================
     // --- 9. RENDER ---
     // ========================================================================
-    return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-            {particles.map((p) => <Spore key={p.id} {...p} />)}
+    const isLightTheme = activeThemeId === 'light';
 
-            <Animated.View style={[styles.header, { height: headerHeight }]}>
-                <LinearGradient
-                    colors={[C.background, C.background + 'F2', C.background + '00']}
-                    style={StyleSheet.absoluteFill}
-                    start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                />
-
-                <Animated.View style={[
-                    styles.headerContentExpanded,
-                    { opacity: expandedHeaderOpacity, transform: [{ translateY: expandedHeaderTranslate }] }
-                ]}>
-                    <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={styles.welcomeText}>
-                            {t('welcome_back_prefix', language)}، {userProfile?.settings?.name?.split(' ')[0] || t('welcome_back_fallback', language)}
-                        </Text>
-                        <AuthenticHeader
-                            productCount={savedProducts.length}
-                            userName={userProfile?.settings?.name}
-                        />
-                    </View>
-                    <View style={styles.avatar}><Text style={{ fontSize: 28 }}>🧖‍♀️</Text></View>
-                </Animated.View>
-
-                <Animated.View style={[
-                    styles.headerContentCollapsed,
-                    { opacity: collapsedHeaderOpacity, height: headerMinHeight - insets.top }
-                ]}>
-                    <View style={styles.collapsedContainer}>
-                        <View style={{ width: 32 }} />
-                        <View style={styles.collapsedTitleRow}>
-                            <Text style={styles.collapsedTitle}>
-                                {getHeaderTitle(activeTab, language).title}
-                            </Text>
-                            <FontAwesome5
-                                name={getHeaderTitle(activeTab, language).icon}
-                                size={12}
-                                color={C.textSecondary}
-                            />
-                        </View>
-                        <Pressable onPress={() => Haptics.selectionAsync()}>
-                            <View style={styles.collapsedAvatar}>
-                                <Text style={{ fontSize: 16 }}>🧖‍♀️</Text>
-                            </View>
-                        </Pressable>
-                    </View>
-                </Animated.View>
-            </Animated.View>
+    // Main content that's shared between both themes
+    const renderContent = () => (
+        <>
+            {/* Native GPU Accelerated Header */}
+            <AuthenticHeader
+                scrollY={scrollY}
+                insets={insets}
+                userProfile={userProfile}
+                productCount={savedProducts.length}
+                activeTab={activeTab}
+                onAvatarPress={() => {
+                    Haptics.selectionAsync();
+                    setShowAvatarModal(true);
+                }}
+            />
 
             <Animated.ScrollView
-                contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 100 }}
+                contentContainerStyle={{ paddingHorizontal: 15, paddingTop: headerMaxHeight + 20, paddingBottom: 140 }}
                 scrollEventThrottle={16}
-                onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                )}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 keyboardShouldPersistTaps="handled"
@@ -2158,25 +2142,47 @@ export default function ProfileScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={() => runFullAnalysis(true)}
-                        tintColor={C.accentGreen}
-                        colors={[C.accentGreen]}
+                        tintColor={COLORS.accentGreen}
+                        colors={[COLORS.accentGreen]}
                     />
                 }
             >
                 <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslate }], minHeight: 400 }}>
-
                     {activeTab === 'shelf' && (
-                        <ShelfSection
-                            products={savedProducts}
-                            loading={loading}
-                            onDelete={handleDelete}
-                            onRefresh={() => runFullAnalysis(true)}
-                            router={router}
-                            userProfile={userProfile}
-                        />
-                    )}
-                    {activeTab === 'reminders' && <RemindersScreen />}
+    <View style={{ flex: 1, minHeight: 400 }}>
+        
+        {/* Pass the optimized handler */}
+        <ShelfSegmentedControl 
+            activeView={shelfView} 
+            onViewChange={handleShelfViewChange} 
+        />
 
+        {/* 1. Shelf is always available immediately */}
+        <View style={{ display: shelfView === 'products' ? 'flex' : 'none' }}>
+            <ShelfSection
+                products={savedProducts}
+                loading={loading}
+                onDelete={handleDelete}
+                onRefresh={() => runFullAnalysis(true)}
+                router={router}
+                userProfile={userProfile}
+            />
+        </View>
+
+        {/* 2. Routine is only mounted WHEN FIRST REQUESTED, then cached */}
+        {hasMountedRoutine && (
+            <View style={{ display: shelfView === 'routine' ? 'flex' : 'none' }}>
+                <RoutineSection
+                    savedProducts={savedProducts}
+                    userProfile={userProfile}
+                    onOpenAddStepModal={openAddStepModal}
+                />
+            </View>
+        )}
+
+    </View>
+)}
+                    {activeTab === 'reminders' && <RemindersScreen />}
                     {activeTab === 'routine' && (
                         <RoutineSection
                             savedProducts={savedProducts}
@@ -2184,7 +2190,6 @@ export default function ProfileScreen() {
                             onOpenAddStepModal={openAddStepModal}
                         />
                     )}
-
                     {activeTab === 'analysis' && (
                         <AnalysisSection
                             loadingProfile={isAnalyzingProfile}
@@ -2202,7 +2207,6 @@ export default function ProfileScreen() {
                             router={router}
                         />
                     )}
-
                     {activeTab === 'ingredients' && (
                         <IngredientsSection
                             products={savedProducts}
@@ -2210,22 +2214,18 @@ export default function ProfileScreen() {
                             cacheRef={ingredientsCache}
                         />
                     )}
-
                     {activeTab === 'migration' && (
                         <MigrationSection products={savedProducts} />
                     )}
-
                     {activeTab === 'settings' && (
                         <SettingsSection
                             profile={userProfile}
                             onLogout={() => { logout(); router.replace('/login'); }}
                         />
                     )}
-
                     {activeTab === 'community' && (
                         <View style={{ padding: 20 }}><Text style={{ color: 'white' }}>{t('tab_community_placeholder', language)}</Text></View>
                     )}
-
                 </Animated.View>
             </Animated.ScrollView>
 
@@ -2242,118 +2242,69 @@ export default function ProfileScreen() {
 
             <LocationPermissionModal
                 visible={isPermissionModalVisible}
-                onClose={() => setPermissionModalVisible(false)}
+                onClose={() => {
+                    setPermissionModalVisible(false);
+                    // PRODUCTION FIX: Automatically fetch weather if they just granted permission in the modal
+                    if (locationPermission !== 'granted') {
+                        runWeatherAnalysis(); 
+                    }
+                }}
             />
+            <AvatarSelectionModal
+                visible={showAvatarModal}
+                onClose={() => setShowAvatarModal(false)}
+                currentId={userProfile?.settings?.avatarId}
+                onSelect={handleAvatarSelect}
+                language={language}
+                isAdmin={isAdmin}
+            />
+        </>
+    );
+
+    // Light theme with gradient
+    if (isLightTheme) {
+        return (
+            <LinearGradient
+                colors={[
+                    COLORS.background,
+                    COLORS.gradientStart || COLORS.background,
+                    COLORS.gradientMid || COLORS.accentGreen + '15',
+                    COLORS.gradientEnd || COLORS.accentGreen + '25',
+                    'rgba(61, 146, 117, 0.30)'
+                ]}
+                locations={[0, 0.4, 0.65, 0.85, 1]}
+                style={{ flex: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
+                <View style={styles.container}>
+                    <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+                    {particles.map((p) => <Spore key={p.id} {...p} />)}
+                    {renderContent()}
+                </View>
+            </LinearGradient>
+        );
+    }
+
+    // Non-light themes: solid background
+    return (
+        <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            {particles.map((p) => <Spore key={p.id} {...p} />)}
+            {renderContent()}
         </View>
     );
 }
 
 const getStylesContent = (C) => ({
     container: {
-        flex: 1,
-        backgroundColor: C.background
-    },
+    flex: 1,
+    backgroundColor: 'transparent'
+},
     divider: {
         height: 1,
         backgroundColor: C.border,
         marginVertical: 12
-    },
-    header: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1,
-        backgroundColor: C.background,
-        borderBottomWidth: 1,
-        borderBottomColor: C.border,
-        overflow: 'hidden',
-    },
-    headerContentExpanded: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 25,
-        paddingBottom: 15,
-    },
-    headerContentCollapsed: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 20,
-        paddingBottom: 10,
-    },
-    collapsedContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-        height: '100%',
-        paddingTop: 5,
-    },
-    collapsedTitleRow: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: 'rgba(0,0,0,0.1)',
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    collapsedTitle: {
-        fontFamily: 'Tajawal-Bold',
-        fontSize: 14,
-        color: C.textPrimary,
-    },
-    collapsedAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: C.card,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: C.border,
-    },
-    collapsedBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: C.accentGreen + '20',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: C.accentGreen + '40',
-    },
-    welcomeText: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 26,
-        color: C.textPrimary,
-        textAlign: 'right',
-    },
-    subWelcome: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
-        color: C.textSecondary,
-        textAlign: 'right',
-        marginTop: 2,
-    },
-    avatar: {
-        width: 55,
-        height: 55,
-        borderRadius: 27.5,
-        backgroundColor: C.card,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: C.accentGreen
     },
     cardBase: {
         backgroundColor: C.card,
@@ -2406,8 +2357,13 @@ const getStylesContent = (C) => ({
         padding: 12,
         backgroundColor: C.card,
         borderRadius: 22,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: C.border,
+        overflow: 'hidden',          // <-- CLIPS image to the card's rounded corners
+        paddingVertical: 0,          // <-- ZERO top/bottom padding so image touches edges
+        paddingRight: 0,             // <-- ZERO right padding so image sticks to right edge
+        paddingLeft: 12,             // Padding on the score/left side
+        minHeight: 74,   
     },
     listItemScoreContainer: {
         width: 60,
@@ -2431,22 +2387,26 @@ const getStylesContent = (C) => ({
         color: C.textSecondary,
     },
     listImageWrapper: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
+        width: 74,                   // Width of the full-height image column
+        alignSelf: 'stretch',        // <-- STRETCHES image from top to bottom
         backgroundColor: C.background,
+        borderLeftWidth: 0,          // Subtle crisp divider between image & text
+        borderLeftColor: C.border,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     listProductImage: {
-        width: '100%',
-        height: '100%',
+        width: 74,
+        height: 74,
     },
     listImagePlaceholder: {
         flex: 1,
+        width: 74,
+        height: 74,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: C.background,
     },
     verdictContainer: {
         flexDirection: 'row-reverse',
@@ -3095,12 +3055,13 @@ const getStylesContent = (C) => ({
     },
     sheetContainer: {
         position: 'absolute',
-        bottom: 0,
+        bottom: -150,
         left: 0,
         right: 0,
-        height: height * 0.85,
+        height: height * 0.85 + 150,
         zIndex: 100,
         justifyContent: 'flex-end',
+        paddingBottom: 150,
     },
     sheetHandleBar: {
         alignItems: 'center',
@@ -3799,6 +3760,40 @@ const getStylesContent = (C) => ({
         fontFamily: 'Tajawal-Bold',
         fontSize: 12,
         color: C.gold,
+    },
+    subTabContainer: {
+        flexDirection: 'row-reverse',
+        backgroundColor: C.card,
+        borderRadius: 16,
+        padding: 5,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: C.border,
+    },
+    subTab: {
+        flex: 1,
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    subTabActive: {
+        backgroundColor: C.accentGreen,
+        shadowColor: C.accentGreen,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    subTabText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 14,
+        color: C.textSecondary,
+    },
+    subTabTextActive: {
+        color: C.textOnAccent,
     },
 });
 const styles = StyleSheet.create(getStylesContent(THEMES.original.colors));

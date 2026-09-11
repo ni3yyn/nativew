@@ -9,6 +9,8 @@ const FIELD_TO_ACTION_MAP = {
     targetTypes: 'ADD_TARGETS',
     quantity: 'ADD_QUANTITY',
     country: 'ADD_COUNTRY',
+    category: 'ADD_CATEGORY',
+    productType: 'ADD_PRODUCT_TYPE',
     new_product: 'ADD_NEW_PRODUCT',
 };
 

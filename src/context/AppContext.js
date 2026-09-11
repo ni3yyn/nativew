@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -61,7 +61,8 @@ export const AppProvider = ({ children }) => {
     latestVersion: '',       
     latestVersionUrl: '',
     maintenanceMessage: '',
-    changelog: [],                
+    changelog: [],
+    adminUid: null,  // Loaded from Firestore — never hardcoded in source
   });
   const [activeAnnouncement, setActiveAnnouncement] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -189,7 +190,7 @@ export const AppProvider = ({ children }) => {
           maintenanceMessage: data.maintenance_message || 'الصيانة جارية',
           changelog: data.android?.changelog || [],
           criticalMessage: data.android?.critical_message || 'تحديث ضروري لاستمرار عمل التطبيق',
-
+          adminUid: data.admin_uid || null,  // UID stored in Firestore, never in source code
         });
       }
     });
@@ -245,7 +246,14 @@ export const AppProvider = ({ children }) => {
           if (isHealthy) {
               isRepairing.current = false;
               
-              // ... existing healthy logic (setUserProfile, caching, notifications) ...
+              // 🤫 SILENT LEGACY MIGRATION: No loading screen, no extra reads.
+              // If an existing older user doesn't have the `isFirstGen` flag,
+              // immediately give it to them silently.
+              if (data.isFirstGen === undefined) {
+                  data.isFirstGen = true;
+                  setDoc(profileRef, { isFirstGen: true }, { merge: true }).catch(console.warn);
+              }
+
               setUserProfile(prev => {
                   if (JSON.stringify(prev) !== JSON.stringify(data)) {
                       console.log(`♻️ Profile Updated (${fromCache ? 'Local' : 'Server'})`);
@@ -290,6 +298,35 @@ export const AppProvider = ({ children }) => {
           console.log("🚨 Profile Unhealthy. Initiating Safe Repair...");
           isRepairing.current = true;
 
+          // 🏆 FIRST GEN GAMIFICATION LOGIC (First 1000 Users)
+          let userIsFirstGen = data?.isFirstGen;
+          
+          // ONLY trigger a global stats read if this is a genuinely missing/new 
+          // profile (meaning no `settings` object exists yet).
+          if (userIsFirstGen === undefined) {
+              if (!data?.settings) {
+                  try {
+                      const statsRef = doc(db, 'app_config', 'user_stats');
+                      await runTransaction(db, async (transaction) => {
+                          const statsDoc = await transaction.get(statsRef);
+                          let totalUsers = 0;
+                          if (statsDoc.exists()) {
+                              totalUsers = statsDoc.data().totalUsers || 0;
+                          }
+                          
+                          userIsFirstGen = totalUsers < 1000;
+                          transaction.set(statsRef, { totalUsers: totalUsers + 1 }, { merge: true });
+                      });
+                  } catch (e) {
+                      console.warn("Transaction failed for user stats:", e);
+                      userIsFirstGen = false; 
+                  }
+              } else {
+                  // Fallback: If it's a broken profile but clearly old (has settings), bypass transaction
+                  userIsFirstGen = true;
+              }
+          }
+
           // repair logic 
           const defaultSettings = {
              name: '',
@@ -307,6 +344,7 @@ export const AppProvider = ({ children }) => {
              createdAt: data?.createdAt || serverTimestamp(),
              onboardingComplete: data?.onboardingComplete || false, 
              notificationsEnabled: data?.notificationsEnabled || false,
+             isFirstGen: userIsFirstGen, // Safely assigned
              settings: { ...defaultSettings, ...(data?.settings || {}) },
              routines: data?.routines || { am: [], pm: [] }
           };
@@ -332,18 +370,31 @@ export const AppProvider = ({ children }) => {
         productsUnsubscribeRef.current = onSnapshot(
             query(collection(db, 'profiles', currentUser.uid, 'savedProducts'), orderBy('createdAt', 'desc')), 
           (snapshot) => {
+            const fromCache = snapshot.metadata.fromCache;
             const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Only update if changed
+            // 🛡️ OFFLINE GUARD: Never overwrite a good cache with empty data from
+            // a cached (offline) Firestore snapshot — Firestore may report 0 docs
+            // when offline if local persistence hasn't loaded yet.
+            if (fromCache && newProducts.length === 0) {
+                console.log('📡 Offline snapshot empty — keeping existing cache.');
+                setLoading(false);
+                return;
+            }
+
+            // Only update state + cache if data actually changed
             setSavedProducts(prev => {
                 if (JSON.stringify(newProducts) !== JSON.stringify(prev)) {
-                    setSavedProductsCache(newProducts); // Update Cache
+                    // Only persist to cache when we have real server data or
+                    // a non-empty local snapshot (avoids wiping cache offline)
+                    if (!fromCache || newProducts.length > 0) {
+                        setSavedProductsCache(newProducts);
+                    }
                     return newProducts;
                 }
                 return prev;
             });
             
-            // Ensure loading is disabled if we didn't have cache before
             setLoading(false);
           }, 
           (err) => {
@@ -369,9 +420,11 @@ export const AppProvider = ({ children }) => {
         setSavedProducts([]);
         setLoading(false);
 
-        // 3. Optional: Clear local user cache on logout for security
+        // 3. Clear profile cache on logout for security
+        // ⚠️ NOTE: We intentionally keep savedProducts cache so it's available
+        // when the user logs in again while offline.
         setSelfProfileCache(null);
-        setSavedProductsCache([]);
+        // setSavedProductsCache([]);  <-- REMOVED: wiped cache broke offline mode
       }
     });
 
@@ -395,9 +448,9 @@ export const AppProvider = ({ children }) => {
       setUserProfile(null);
       setSavedProducts([]);
       
-      // Clear cache references
+      // Clear profile cache only — keep products cache for offline access
       setSelfProfileCache(null);
-      setSavedProductsCache([]);
+      // setSavedProductsCache([]);  <-- REMOVED: breaks offline mode
     } catch (e) { console.error(e); }
   };
 
