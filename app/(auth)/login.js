@@ -390,9 +390,6 @@ export default function LoginScreen() {
                             <Text style={[styles.formTitle, { color: COLORS.textPrimary }]}>
                                 {isLogin ? t('auth_welcome_back', language) : t('auth_join_family', language)}
                             </Text>
-                            <Text style={[styles.formSub, { color: COLORS.textSecondary }]}>
-                                {isLogin ? t('auth_login_subtitle', language) : t('auth_signup_subtitle', language)}
-                            </Text>
 
                             <BioInput
                                 icon="mail-outline"
