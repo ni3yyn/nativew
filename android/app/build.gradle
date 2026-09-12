@@ -136,7 +136,6 @@ android {
         }
     }
 
-    // THIS IS THE BLOCK YOU WERE MISSING:
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
@@ -148,7 +147,8 @@ android {
             // Optimization settings for Play Store
             minifyEnabled = true
             shrinkResources = true
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // ✅ CHANGED: proguard-android-optimize.txt enables R8's full optimizer
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
