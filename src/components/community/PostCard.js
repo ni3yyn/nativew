@@ -1,42 +1,61 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Alert, Animated, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Linking, Alert, Animated, Pressable } from 'react-native';
 import { FontAwesome5, Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { File, Directory, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { formatRelativeTime } from '../../utils/formatters';
 import { calculateBioMatch } from '../../utils/matchCalculator';
-import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../config/supabase';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 import { AVATARS } from '../../constants/avatars';
 
-// --- GLOBAL AUDIO TRACKING ---
-let globalSound = null;
-let globalResetState = null;
+// ============================================================================
+// 🌟 GLOBAL AUDIO REGISTRY — ensures only one tips audio plays at a time
+// ============================================================================
+const _activeTipsPlayers = new Set();
 
-const stopGlobalAudio = async () => {
-    if (globalSound) {
+function _registerTipsPlayer(entry) {
+    _activeTipsPlayers.add(entry);
+    return () => _activeTipsPlayers.delete(entry);
+}
+
+function _stopAllTipsAudioExcept(myEntry) {
+    _activeTipsPlayers.forEach((entry) => {
+        if (entry === myEntry) return;
         try {
-            await globalSound.pauseAsync();
-            await globalSound.unloadAsync();
-            globalSound = null;
-        } catch (e) {}
+            // entry.getPlayer() always returns the CURRENT player instance
+            const p = entry.getPlayer?.();
+            if (p && typeof p.pause === 'function') {
+                p.pause();
+            }
+        } catch (e) {
+            console.warn('[TipsAudio] stop failed:', e);
+        }
+    });
+}
+
+// Chunked base64 encoder (avoids "Maximum call stack size exceeded")
+function _arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(
+            null,
+            bytes.subarray(i, Math.min(i + chunk, bytes.length))
+        );
     }
-    if (globalResetState) {
-        globalResetState();
-        globalResetState = null;
-    }
-};
+    return global.btoa(binary);
+}
 
 // ============================================================================
 // 🌟 HOISTED SUB-COMPONENTS
@@ -202,237 +221,368 @@ const RoutineRateContent = React.memo(({ post, onViewProduct, COLORS, rtl, style
     );
 });
 
-const TipsContent = React.memo(({ post, onImagePress, COLORS, rtl, styles, language }) => {
+// ============================================================================
+// 🌟 TIPS CONTENT (on-device ElevenLabs TTS + expo-audio playback)
+// ============================================================================
+const ELEVENLABS_API_KEY = 'sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589';
+const ELEVENLABS_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
+
+const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl, styles, language }) => {
+    const isRTL = rtl?.isRTL;
     const router = useRouter();
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [sound, setSound] = useState(null);
-    const isMounted = useRef(true);
-    const soundRef = useRef(null);
 
-    const [position, setPosition] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [isSeeking, setIsSeeking] = useState(false);
-    const [cloudAudioUrl, setCloudAudioUrl] = useState(post.audio_url || null);
+    const [isExpanded, setIsExpanded]     = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [resolvedUri, setResolvedUri]   = useState(null);
+    const [loadError, setLoadError]       = useState(null);
 
-    const ELEVENLABS_API_KEY = "sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589";
-    const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
-    const validTitle = post.title && post.title !== 'null' && post.title.trim() !== '' ? post.title : null;
+    // Pending play request — set to true when user taps before the audio is ready
+    const pendingPlayRef = useRef(false);
 
+    const validTitle = useMemo(() => {
+        if (!post?.title) return null;
+        const txt = String(post.title).trim();
+        if (!txt || txt === 'null') return null;
+        return txt;
+    }, [post?.title]);
+
+    // Cloud URL wins if it exists on the post
+    const cloudAudioUrl = useMemo(
+        () => post?.audioUrl || post?.audio_url || null,
+        [post?.audioUrl, post?.audio_url]
+    );
+
+    // ------------------------------------------------------------------
+    //  expo-audio player — null source until we resolve a URI
+    // ------------------------------------------------------------------
+    const player = useAudioPlayer(resolvedUri ? { uri: resolvedUri } : null);
+    const status = useAudioPlayerStatus(player);
+
+    const isPlaying = !!status?.playing;
+    const isLoaded  = status?.isLoaded ?? false;
+    const position  = (status?.currentTime ?? 0) * 1000;   // s → ms
+    const duration  = (status?.duration   ?? 0) * 1000;    // s → ms
+
+    // ------------------------------------------------------------------
+//  Registry entry — exposes the LIVE player via getPlayer()
+// ------------------------------------------------------------------
+const playerRef = useRef(player);
+useEffect(() => { playerRef.current = player; }, [player]);
+
+const entryRef = useRef(null);
+if (!entryRef.current) {
+    entryRef.current = {
+        getPlayer: () => playerRef.current,
+    };
+}
+
+useEffect(() => {
+    if (!entryRef.current) return;
+    const unregister = _registerTipsPlayer(entryRef.current);
+    return unregister;
+}, []);
+
+    // Global audio mode
     useEffect(() => {
-        isMounted.current = true;
-        return () => {
-            isMounted.current = false;
-            if (soundRef.current) {
-                soundRef.current.unloadAsync();
-                soundRef.current = null;
-            }
-            if (globalSound === soundRef.current) globalSound = null;
-        };
+        setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     }, []);
 
+    // Reset pending play flag if post changes or component unmounts
     useEffect(() => {
-        if (sound) {
-            const subscription = sound.setOnPlaybackStatusUpdate((status) => {
-                if (!isMounted.current) return;
-                if (status.isLoaded) {
-                    if (!isSeeking) setPosition(status.positionMillis);
-                    setDuration(status.durationMillis || 0);
-                    if (status.didJustFinish) {
-                        setIsPlaying(false);
-                        setPosition(0);
-                    }
-                }
-            });
-            return () => { if (sound) sound.setOnPlaybackStatusUpdate(null); };
-        }
-    }, [sound, isSeeking]);
+        return () => {
+            pendingPlayRef.current = false;
+        };
+    }, [post?.id]);
 
-    const onSlidingStart = () => setIsSeeking(true);
-    const onSlidingComplete = async (value) => {
-        if (sound) {
-            await sound.setPositionAsync(value);
-            if (isPlaying) await sound.playAsync();
-        }
-        if (isMounted.current) {
-            setPosition(value);
-            setIsSeeking(false);
-        }
-    };
-
-    const loadAndPlay = async (uri) => {
+    // ------------------------------------------------------------------
+    //  Cache helpers
+    // ------------------------------------------------------------------
+    const getCachedFile = useCallback(() => {
         try {
-            await stopGlobalAudio();
-            globalResetState = () => {
-                if (isMounted.current) {
-                    setIsPlaying(false);
-                    setPosition(0);
-                }
-            };
-
-            if (soundRef.current) await soundRef.current.unloadAsync();
-
-            const { sound: newSound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true }, null);
-            soundRef.current = newSound;
-            setSound(newSound);
-            globalSound = newSound;
-
-            if (isMounted.current) {
-                setIsPlaying(true);
-                setIsLoading(false);
-            }
-        } catch (err) {
-            if (isMounted.current) {
-                setIsLoading(false);
-                setIsPlaying(false);
-                Alert.alert(t('community_error_title', language), t('community_audio_play_failed', language));
-            }
+            const dir = new Directory(Paths.cache, 'audio_tips');
+            if (!dir.exists) dir.create();
+            return new File(dir, `tip_${post.id}.mp3`);
+        } catch (e) {
+            console.warn('[TipsContent] cache dir error:', e);
+            return null;
         }
-    };
+    }, [post?.id]);
 
-    const handleSpeech = async () => {
-        if (sound) {
-            if (isPlaying) {
-                await sound.pauseAsync();
-                if (isMounted.current) setIsPlaying(false);
-            } else {
-                if (globalSound && globalSound !== sound) {
-                    await stopGlobalAudio();
-                    globalSound = sound;
-                    globalResetState = () => isMounted.current && setIsPlaying(false);
+    // ------------------------------------------------------------------
+    //  Resolve URI: cloud → cache → ElevenLabs
+    // ------------------------------------------------------------------
+    const resolveAudioUri = useCallback(async () => {
+        setLoadError(null);
+
+        // 1. Cloud URL
+        if (cloudAudioUrl) return cloudAudioUrl;
+
+        // 2. Local cache
+        const cached = getCachedFile();
+        if (cached?.exists) return cached.uri;
+
+        // 3. ElevenLabs
+        if (!ELEVENLABS_API_KEY) {
+            setLoadError('missing_api_key');
+            return null;
+        }
+
+        setIsGenerating(true);
+        try {
+            const fullText = `${validTitle ? validTitle + '. ' : ''}${post.content || ''}`;
+            const safeText = fullText.substring(0, 2500);
+
+            const res = await fetch(
+                `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'xi-api-key': ELEVENLABS_API_KEY,
+                        Accept: 'audio/mpeg',
+                    },
+                    body: JSON.stringify({
+                        text: safeText,
+                        model_id: 'eleven_multilingual_v2',
+                        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+                    }),
                 }
-                const status = await sound.getStatusAsync();
-                if (status.isLoaded && status.positionMillis >= status.durationMillis) {
-                    await sound.setPositionAsync(0);
-                }
-                await sound.playAsync();
-                if (isMounted.current) setIsPlaying(true);
+            );
+
+            if (!res.ok) {
+                console.warn('[TipsContent] ElevenLabs HTTP', res.status);
+                setLoadError(`http_${res.status}`);
+                return null;
             }
+
+            const arrayBuffer = await res.arrayBuffer();
+            const base64 = _arrayBufferToBase64(arrayBuffer);
+
+            const file = getCachedFile();
+            if (!file) {
+                setLoadError('cache_error');
+                return null;
+            }
+            file.write(base64, { encoding: 'base64' });
+
+            return file.uri;
+        } catch (e) {
+            console.warn('[TipsContent] TTS generation failed:', e);
+            setLoadError(String(e?.message || e));
+            return null;
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [cloudAudioUrl, getCachedFile, validTitle, post?.content]);
+
+    // ------------------------------------------------------------------
+    //  Play / pause — with auto-play after URI resolves
+    // ------------------------------------------------------------------
+    const handleToggle = useCallback(async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+
+        // Case 1: No URI yet → resolve, mark pending play
+        if (!resolvedUri) {
+            pendingPlayRef.current = true;
+            const uri = await resolveAudioUri();
+            if (!uri) {
+                pendingPlayRef.current = false;
+                Alert.alert(
+                    t('community_error_title', language),
+                    t('community_audio_check_internet', language)
+                );
+                return;
+            }
+            setResolvedUri(uri);
+            return; // the auto-play effect below handles playback
+        }
+
+        // Case 2: URI exists but player not loaded yet → mark pending
+        if (!player || !isLoaded) {
+            pendingPlayRef.current = true;
             return;
         }
 
-        if (isMounted.current) setIsLoading(true);
-
-        try {
-            const audioDir = new Directory(Paths.cache, 'audio_tips');
-            if (!audioDir.exists) audioDir.create();
-            
-            const filename = `tip_${post.id}.mp3`;
-            const cachedFile = new File(audioDir, filename);
-
-            if (cachedFile.exists) {
-                await loadAndPlay(cachedFile.uri);
-                return;
-            }
-
-            if (cloudAudioUrl) {
-                await loadAndPlay(cloudAudioUrl);
-                return;
-            }
-
-            const fullText = `${validTitle ? validTitle + '. ' : ''}${post.content}`;
-            const safeText = fullText.substring(0, 2500);
-
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'xi-api-key': ELEVENLABS_API_KEY },
-                body: JSON.stringify({
-                    text: safeText,
-                    model_id: "eleven_multilingual_v2",
-                    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-                }),
-            });
-
-            if (!response.ok) throw new Error(`API_ERROR: ${response.status}`);
-
-            const blob = await response.blob();
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                try {
-                    const base64data = reader.result.split(',')[1];
-                    const binaryData = new Uint8Array(decode(base64data));
-                    cachedFile.write(binaryData);
-                    await loadAndPlay(cachedFile.uri);
-                } catch {
-                    if (isMounted.current) setIsLoading(false);
-                }
-            };
-            reader.readAsDataURL(blob);
-
-        } catch {
-            if (isMounted.current) {
-                setIsLoading(false);
-                setIsPlaying(false);
-                Alert.alert(t('community_error_title', language), t('community_audio_check_internet', language));
-            }
+        // Case 3: Ready → normal toggle
+        if (isPlaying) {
+            player.pause();
+        } else {
+            if (duration > 0 && position >= duration - 150) player.seekTo(0);
+            _stopAllTipsAudioExcept(entryRef.current);
+            player.play();
         }
-    };
+    }, [
+        resolvedUri, resolveAudioUri, player, isLoaded,
+        isPlaying, position, duration, language,
+    ]);
 
-    const formatTime = (millis) => {
-        if (!millis || millis < 0) return "0:00";
-        const totalSeconds = Math.floor(millis / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-    };
+    // ------------------------------------------------------------------
+    //  Auto-play once the player is loaded AND a play was requested
+    // ------------------------------------------------------------------
+    useEffect(() => {
+        if (!pendingPlayRef.current) return;
+        if (!player || !isLoaded) return;
 
+        pendingPlayRef.current = false;
+
+        if (duration > 0 && position >= duration - 150) {
+            player.seekTo(0);
+        }
+        _stopAllTipsAudioExcept(entryRef.current);
+        player.play();
+    }, [player, isLoaded, duration, position]);
+
+    // ------------------------------------------------------------------
+    //  Seeking
+    // ------------------------------------------------------------------
+    const handleSlidingComplete = useCallback((value) => {
+        if (!player || !isLoaded) return;
+        player.seekTo(value / 1000);
+    }, [player, isLoaded]);
+
+    const formatTime = useCallback((millis) => {
+        if (!millis || millis < 0) return '0:00';
+        const total = Math.floor(millis / 1000);
+        const m = Math.floor(total / 60);
+        const s = total % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }, []);
+
+    const showSpinner = isGenerating || (resolvedUri && !isLoaded && !loadError);
+    const hasCta = !!(post?.ctaLabel && post?.ctaLink);
+
+    // ------------------------------------------------------------------
+    //  Render
+    // ------------------------------------------------------------------
     return (
         <View style={{ marginBottom: 4 }}>
-            <View style={[{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 6, marginBottom: 8 }]}>
+            <View style={{
+                flexDirection: rtl.flexDirection,
+                alignItems: 'center',
+                gap: 6,
+                marginBottom: 8,
+            }}>
                 <FontAwesome5 name="check-circle" solid size={11} color={COLORS.info} />
-                <Text style={{ fontFamily: 'Tajawal-Bold', fontSize: 11, color: COLORS.info }}>{t('community_verified_admin_tip', language)}</Text>
+                <Text style={{
+                    fontFamily: 'Tajawal-Bold',
+                    fontSize: 11,
+                    color: COLORS.info,
+                }}>
+                    {t('community_verified_admin_tip', language)}
+                </Text>
             </View>
 
-            {validTitle && <Text style={styles.tipsExternalTitle}>{validTitle}</Text>}
+            {validTitle ? (
+                <Text style={styles.tipsExternalTitle}>{validTitle}</Text>
+            ) : null}
 
             <View style={styles.pillContainer}>
                 <View style={[styles.pillMain, { flexDirection: rtl.flexDirection }]}>
-                    <TouchableOpacity onPress={handleSpeech} disabled={isLoading} style={styles.playBtn} activeOpacity={0.8}>
-                        {isLoading ? (
+                    <TouchableOpacity
+                        onPress={handleToggle}
+                        disabled={showSpinner}
+                        style={styles.playBtn}
+                        activeOpacity={0.8}
+                    >
+                        {showSpinner ? (
                             <ActivityIndicator size="small" color="#FFF" />
                         ) : (
-                            <Ionicons name={isPlaying ? "pause" : "play"} size={18} color="#FFF" style={{ marginLeft: 2 }} />
+                            <Ionicons
+                                name={isPlaying ? 'pause' : 'play'}
+                                size={18}
+                                color="#FFF"
+                                style={{ marginLeft: 2 }}
+                            />
                         )}
                     </TouchableOpacity>
 
                     <View style={styles.pillInfo}>
-                        <View style={[{ flexDirection: rtl.flexDirection, justifyContent: 'space-between' }]}>
-                            <Text style={styles.timerText}>{formatTime(position)} / {formatTime(duration)}</Text>
+                        <View style={{
+                            flexDirection: rtl.flexDirection,
+                            justifyContent: 'space-between',
+                        }}>
+                            <Text style={styles.timerText}>
+                                {formatTime(position)} / {formatTime(duration)}
+                            </Text>
                         </View>
                         <Slider
                             style={{ width: '100%', height: 26 }}
                             minimumValue={0}
                             maximumValue={duration > 0 ? duration : 1}
                             value={position}
-                            onSlidingStart={onSlidingStart}
-                            onSlidingComplete={onSlidingComplete}
+                            onSlidingComplete={handleSlidingComplete}
                             minimumTrackTintColor={COLORS.info}
                             maximumTrackTintColor={COLORS.border}
                             thumbTintColor={COLORS.info}
-                            inverted={rtl.isRTL}
-                            disabled={!sound || isLoading}
+                            inverted={isRTL}
+                            disabled={!isLoaded}
                         />
                     </View>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => setIsExpanded(!isExpanded)}
-                        style={[styles.readToggle, isExpanded && { backgroundColor: COLORS.info + '15' }, { flexDirection: rtl.flexDirection }]}
+                        style={[
+                            styles.readToggle,
+                            isExpanded && { backgroundColor: COLORS.info + '15' },
+                            { flexDirection: rtl.flexDirection },
+                        ]}
                         activeOpacity={0.7}
                     >
-                        <Feather name={isExpanded ? "chevron-up" : "book-open"} size={14} color={COLORS.info} />
-                        <Text style={styles.readToggleText}>{isExpanded ? t('community_close', language) : t('community_read', language)}</Text>
+                        <Feather
+                            name={isExpanded ? 'chevron-up' : 'book-open'}
+                            size={14}
+                            color={COLORS.info}
+                        />
+                        <Text style={styles.readToggleText}>
+                            {isExpanded ? t('community_close', language) : t('community_read', language)}
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
                 {isExpanded && (
                     <View style={styles.expandedContent}>
-                        {post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.pillImage} resizeMode="cover" />}
+                        {post.imageUrl ? (
+                            <TouchableOpacity
+                                onPress={() => onImagePress && onImagePress(post.imageUrl)}
+                                activeOpacity={0.9}
+                            >
+                                <Image
+                                    source={{ uri: post.imageUrl }}
+                                    style={styles.pillImage}
+                                    resizeMode="cover"
+                                />
+                            </TouchableOpacity>
+                        ) : null}
+
                         <Text style={styles.pillDescription}>{post.content}</Text>
-                        <TouchableOpacity style={[styles.pillCta, { flexDirection: rtl.flexDirection }]} onPress={() => router.push('/oilguard')} activeOpacity={0.8}>
-                            <FontAwesome5 name="search" size={13} color="#FFF" />
-                            <Text style={styles.pillCtaText}>{t('community_scan_product_now', language)}</Text>
-                        </TouchableOpacity>
+
+                        {hasCta ? (
+                            <TouchableOpacity
+                                style={[styles.pillCta, { flexDirection: rtl.flexDirection }]}
+                                onPress={() => {
+                                    if (typeof onViewProduct === 'function') {
+                                        onViewProduct({ ctaLink: post.ctaLink, title: post.ctaLabel });
+                                    } else if (Linking?.openURL) {
+                                        Linking.openURL(post.ctaLink).catch(() => {});
+                                    }
+                                }}
+                                activeOpacity={0.85}
+                            >
+                                <FontAwesome5 name="search" size={13} color="#FFF" />
+                                <Text style={styles.pillCtaText}>{post.ctaLabel}</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={[styles.pillCta, { flexDirection: rtl.flexDirection }]}
+                                onPress={() => router.push('/oilguard')}
+                                activeOpacity={0.8}
+                            >
+                                <FontAwesome5 name="search" size={13} color="#FFF" />
+                                <Text style={styles.pillCtaText}>
+                                    {t('community_scan_product_now', language)}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             </View>
@@ -453,8 +603,11 @@ const PostCard = ({ post, currentUser, onInteract, onDelete, onViewProduct, onOp
 
     const likeScale = useRef(new Animated.Value(1)).current;
 
-    const isLiked = post.likes && post.likes.includes(currentUser?.uid);
-    const matchData = useMemo(() => {
+    const isMe = post.userId === currentUser?.uid;
+
+const isLiked = post.likes && post.likes.includes(currentUser?.uid);
+
+const matchData = useMemo(() => {
     // Don't show BioMatch with yourself
     if (isMe) return null;
 
@@ -489,7 +642,7 @@ const PostCard = ({ post, currentUser, onInteract, onDelete, onViewProduct, onOp
         onInteract(post.id, 'like');
     }, [post.id, onInteract, likeScale]);
 
-    const isMe = post.userId === currentUser?.uid;
+    
 const liveAvatarId = currentUser?.settings?.avatarId || currentUser?.avatarId;
 const resolvedAvatarId = isMe 
     ? (liveAvatarId || post.authorSettings?.avatarId || post.avatarId)
@@ -678,8 +831,16 @@ const resolvedAvatarId = isMe
 
                 {/* TIPS POST */}
                 {post.type === 'tips' && (
-                    <TipsContent post={post} onImagePress={onImagePress} COLORS={COLORS} rtl={rtl} styles={styles} language={language} />
-                )}
+    <TipsContent
+        post={post}
+        onImagePress={onImagePress}
+        onViewProduct={onViewProduct}
+        COLORS={COLORS}
+        rtl={rtl}
+        styles={styles}
+        language={language}
+    />
+)}
             </Pressable>
 
             {/* CARD FOOTER */}
@@ -951,6 +1112,31 @@ firstGenPinText: {
     fontFamily: 'Tajawal-ExtraBold',
     fontSize: 7.5,
     color: '#FFF',
+},
+audioControls: {
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingBottom: 8,
+    paddingTop: 2,
+},
+audioSlider: {
+    flex: 1,
+    height: 30,
+},
+audioTimeRow: {
+    alignItems: 'center',
+    gap: 5,
+},
+skipBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 0.8,
+    borderColor: COLORS.border,
 },
 });
 

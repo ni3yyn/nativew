@@ -103,3 +103,5 @@ export const COUNTRIES = [
     { id: 'USA', label: 'USA' },
     { id: 'Other', label: 'Other' }
 ];
+
+export const FALLBACK_PRODUCTS = [];

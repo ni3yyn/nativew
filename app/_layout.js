@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState, Platform, I18nManager } from 'react-native';
 import { Stack, useRouter } from "expo-router";
+
+// Disable native OS-level RTL mirroring so the layout is not double-inverted on Arabic devices
+try {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+} catch (e) {}
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { StatusBar } from "expo-status-bar";
@@ -21,6 +27,7 @@ import { db } from '../src/config/firebase';
 
 // Import Notification Helper
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
+import * as NavigationBar from 'expo-navigation-bar';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -433,7 +440,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '2.0.0';
+  const APP_VERSION = '2.0.1';
 
   // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
   console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');

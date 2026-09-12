@@ -6,9 +6,10 @@ import {
     ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions,
     Animated, Pressable, Easing, Image
 } from 'react-native';
-import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 
 // Context & Data
 import { useTheme } from '../../context/ThemeContext';
@@ -24,7 +25,7 @@ import AppTextInput from '../common/AppTextInput';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 🌟 ARABIC TARGET TYPES (IDs match Arabic labels for Firestore)
+// 🌟 ARABIC TARGET TYPES
 const TARGET_TYPES = [
     { id: 'بشرة دهنية', label: 'بشرة دهنية' },
     { id: 'بشرة عادية', label: 'بشرة عادية' },
@@ -38,7 +39,7 @@ const TARGET_TYPES = [
     { id: 'شعر مصبوغ', label: 'شعر مصبوغ' },
 ];
 
-// 🌟 SERVER ARABIC CLAIMS LIST (45 Claims)
+// 🌟 SERVER ARABIC CLAIMS LIST
 const SERVER_ARABIC_CLAIMS = [
     "مضاد لتساقط الشعر", "تعزيز النمو", "تكثيف الشعر", "مرطب للشعر",
     "مخصص للشعر الجاف", "مخصص للشعر الدهني", "مضاد للقشرة", "مكافحة التجعد",
@@ -223,7 +224,10 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     const animState = useRef(new Animated.Value(0)).current;
     const mainScrollViewRef = useRef(null);
 
-    // Form States
+    // TABS: 'photos' (Fast Mode) vs 'manual' (Detailed Form)
+    const [activeTab, setActiveTab] = useState('photos');
+
+    // Manual Form States
     const [brand, setBrand] = useState('');
     const [name, setName] = useState('');
     const [qtyValue, setQtyValue] = useState('');
@@ -234,11 +238,22 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     const [selectedCatId, setSelectedCatId] = useState(null);
     const [selectedTargets, setSelectedTargets] = useState([]);
     const [selectedClaims, setSelectedClaims] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imageUrl, setImageUrl] = useState('');
+    const [uploadingImage, setUploadingImage] = useState(false);
+
+    // Fast Mode States
+    const [quickFrontImage, setQuickFrontImage] = useState(null);
+    const [quickInciImage, setQuickInciImage] = useState(null);
+    const [uploadingFront, setUploadingFront] = useState(false);
+    const [uploadingInci, setUploadingInci] = useState(false);
+    const [quickBrand, setQuickBrand] = useState('');
+    const [quickName, setQuickName] = useState('');
+
+    // Shared Camera / Modal State
     const [cameraVisible, setCameraVisible] = useState(false);
+    const [cameraTarget, setCameraTarget] = useState('manual');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -263,8 +278,42 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         });
     };
 
+    // Camera Capture Dispatcher
     const handleImageCapture = async (photo) => {
         setCameraVisible(false);
+
+        if (cameraTarget === 'quick_front') {
+            setUploadingFront(true);
+            try {
+                const uploadedUrl = await uploadImageToCloudinary(photo.uri);
+                if (uploadedUrl) {
+                    setQuickFrontImage(uploadedUrl);
+                    AlertService.success(t('success', language), language === 'ar' ? 'تم رفع صورة الواجهة بنجاح' : 'Front photo uploaded');
+                }
+            } catch (error) {
+                AlertService.error(t('error', language), t('image_upload_failed', language));
+            } finally {
+                setUploadingFront(false);
+            }
+            return;
+        }
+
+        if (cameraTarget === 'quick_inci') {
+            setUploadingInci(true);
+            try {
+                const uploadedUrl = await uploadImageToCloudinary(photo.uri);
+                if (uploadedUrl) {
+                    setQuickInciImage(uploadedUrl);
+                    AlertService.success(t('success', language), language === 'ar' ? 'تم رفع صورة المكونات بنجاح' : 'INCI photo uploaded');
+                }
+            } catch (error) {
+                AlertService.error(t('error', language), t('image_upload_failed', language));
+            } finally {
+                setUploadingInci(false);
+            }
+            return;
+        }
+
         setUploadingImage(true);
         try {
             const uploadedUrl = await uploadImageToCloudinary(photo.uri);
@@ -276,14 +325,14 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                 AlertService.error(t('error', language), t('image_upload_failed', language));
             }
         } catch (error) {
-            console.error('Upload error:', error);
             AlertService.error(t('error', language), t('image_upload_failed', language));
         } finally {
             setUploadingImage(false);
         }
     };
 
-    const pickFromGallery = async () => {
+    // Gallery Picker Dispatcher (Fixed Deprecated MediaType)
+    const pickFromGallery = async (target = 'manual') => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
@@ -292,40 +341,65 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                mediaTypes: ['images'],
                 allowsEditing: false,
-                quality: 0.8,
+                quality: 0.85,
             });
 
-            if (!result.canceled) {
-                setUploadingImage(true);
+            if (!result.canceled && result.assets?.[0]?.uri) {
                 const compressedUri = await compressImage(result.assets[0].uri);
+
+                if (target === 'quick_front') {
+                    setUploadingFront(true);
+                    const uploadedUrl = await uploadImageToCloudinary(compressedUri);
+                    if (uploadedUrl) setQuickFrontImage(uploadedUrl);
+                    setUploadingFront(false);
+                    return;
+                }
+
+                if (target === 'quick_inci') {
+                    setUploadingInci(true);
+                    const uploadedUrl = await uploadImageToCloudinary(compressedUri);
+                    if (uploadedUrl) setQuickInciImage(uploadedUrl);
+                    setUploadingInci(false);
+                    return;
+                }
+
+                setUploadingImage(true);
                 const uploadedUrl = await uploadImageToCloudinary(compressedUri);
-                
                 if (uploadedUrl) {
                     setImageUrl(uploadedUrl);
                     setSelectedImage(uploadedUrl);
-                    AlertService.success(t('success', language), t('image_uploaded_success', language));
-                } else {
-                    AlertService.error(t('error', language), t('image_upload_failed', language));
                 }
                 setUploadingImage(false);
             }
         } catch (error) {
-            console.error('Error picking image:', error);
             AlertService.error(t('error', language), t('image_pick_error', language));
             setUploadingImage(false);
+            setUploadingFront(false);
+            setUploadingInci(false);
         }
     };
 
-    const showImageOptions = () => {
+    const showImageOptions = (target = 'manual') => {
         AlertService.show({
             title: t('add_product_image', language),
             message: t('choose_image_source', language),
             type: 'info',
             buttons: [
-                { text: t('camera', language), style: 'primary', onPress: () => setCameraVisible(true) },
-                { text: t('gallery', language), style: 'secondary', onPress: pickFromGallery },
+                { 
+                    text: t('camera', language), 
+                    style: 'primary', 
+                    onPress: () => {
+                        setCameraTarget(target);
+                        setCameraVisible(true);
+                    } 
+                },
+                { 
+                    text: t('gallery', language), 
+                    style: 'secondary', 
+                    onPress: () => pickFromGallery(target) 
+                },
                 { text: t('cancel', language), style: 'secondary' }
             ]
         });
@@ -339,17 +413,13 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         }));
     }, [language]);
 
-    // 🌟 FORMATTED ARABIC CLAIMS FOR DROPDOWN
     const formattedClaims = useMemo(() => {
-        // If a category is selected, try fetching category-specific claims
         if (selectedCatId) {
             const rawClaims = getClaimsForCategory(selectedCatId);
             if (rawClaims && rawClaims.length > 0) {
                 return rawClaims.map(claim => ({ id: claim, label: claim }));
             }
         }
-        
-        // Fallback: Show all general claims from SERVER_ARABIC_CLAIMS
         return SERVER_ARABIC_CLAIMS.map(claim => ({ id: claim, label: claim }));
     }, [selectedCatId]);
 
@@ -364,6 +434,49 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     };
 
     const handleSave = async () => {
+        // ── 1. FAST MODE (PHOTOS ONLY) ──────────────────────────────────
+        if (activeTab === 'photos') {
+            if (!quickFrontImage || !quickInciImage) {
+                AlertService.error(
+                    language === 'ar' ? 'صور ناقصة' : 'Missing Photos',
+                    language === 'ar'
+                        ? 'يرجى رفع صورة واجهة المنتج وصورة قائمة المكونات (INCI) معاً للمتابعة.'
+                        : 'Please provide both the front product photo and the INCI ingredients list photo.'
+                );
+                return;
+            }
+
+            setIsSubmitting(true);
+            const quickPayload = {
+                submissionType: 'photos_only',
+                frontImage: quickFrontImage,
+                inciImage: quickInciImage,
+                image: quickFrontImage,
+                brand: quickBrand.trim() || 'قيد المراجعة',
+                name: quickName.trim() || 'منتج جديد عبر الصور',
+                country: 'Unknown',
+                category: null,
+                status: 'pending',
+                source: 'quick_photos_submission',
+                createdAt: new Date().toISOString(),
+            };
+
+            try {
+                await onSubmit(quickPayload);
+                AlertService.success(
+                    t('product_submitted', language),
+                    t('product_review_pending', language)
+                );
+                handleClose();
+            } catch (error) {
+                AlertService.error(t('error', language), t('product_submit_error', language));
+            } finally {
+                setIsSubmitting(false);
+            }
+            return;
+        }
+
+        // ── 2. DETAILED MANUAL FORM ─────────────────────────────────────
         if (!brand.trim() || !name.trim() || !selectedCatId) {
             AlertService.error(
                 t('incomplete_data', language),
@@ -375,8 +488,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         setIsSubmitting(true);
         const catObj = PRODUCT_TYPES.find(c => c.id === selectedCatId);
 
-        // 🌟 FIRESTORE PAYLOAD SENDS ARABIC STRINGS DIRECTLY FOR TARGETS & CLAIMS
         const finalProduct = {
+            submissionType: 'manual_detailed',
             brand: brand.trim(),
             name: name.trim(),
             image: imageUrl || null,
@@ -385,8 +498,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             category: { id: catObj.id, label: t(catObj.labelKey, language), icon: catObj.icon },
             quantity: qtyValue ? `${qtyValue} ${qtyUnit}` : "null",
             price: { min: parseInt(priceMin) || null, max: null, currency: "DZD" },
-            targetTypes: selectedTargets,        // Pure Arabic text array e.g. ["بشرة دهنية"]
-            marketingClaims: selectedClaims      // Pure Arabic text array e.g. ["مرطب للبشرة"]
+            targetTypes: selectedTargets,
+            marketingClaims: selectedClaims
         };
 
         try {
@@ -397,7 +510,6 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             );
             handleClose();
         } catch (error) {
-            console.error(error);
             AlertService.error(
                 t('error', language),
                 t('product_submit_error', language)
@@ -419,8 +531,13 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         setSelectedTargets([]);
         setSelectedClaims([]);
         setCountry(null);
+        setQuickFrontImage(null);
+        setQuickInciImage(null);
+        setQuickBrand('');
+        setQuickName('');
     };
 
+    const isUploadingAny = uploadingImage || uploadingFront || uploadingInci;
     const overlayOpacity = animState.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
     const modalTranslateY = animState.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_HEIGHT, 0] });
 
@@ -445,6 +562,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 { backgroundColor: C.background, transform: [{ translateY: modalTranslateY }] }
                             ]}
                         >
+                            {/* Top Notch Badge */}
                             <View style={styles.topNotch}>
                                 <LinearGradient
                                     colors={[C.accentGreen, '#2E8062']}
@@ -461,240 +579,443 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 contentContainerStyle={styles.scrollContainer}
                                 keyboardShouldPersistTaps="handled"
                             >
+                                {/* Header */}
                                 <View style={styles.introHeader}>
                                     <Text style={[styles.mainTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
                                         {t('add_new_product', language)}
                                     </Text>
-                                    <Text style={[styles.mainSub, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                        {t('help_build_catalog', language)} 🇩🇿
-                                    </Text>
                                 </View>
 
-                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                        <MaterialCommunityIcons name="pencil-outline" size={18} color={C.accentGreen} />
-                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                            {t('basic_info', language)}
+                                {/* 🌟 CLEAN, MERGED FULL-WIDTH TAB BAR */}
+                                <View style={[styles.cleanTabBar, { flexDirection: rtl.flexDirection, borderBottomColor: C.border + '50' }]}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.cleanTabBtn,
+                                            activeTab === 'photos' && [styles.cleanTabBtnActive, { borderBottomColor: C.accentGreen }]
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync().catch(() => {});
+                                            setActiveTab('photos');
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Feather 
+                                            name="zap" 
+                                            size={14} 
+                                            color={activeTab === 'photos' ? C.accentGreen : C.textDim} 
+                                        />
+                                        <Text style={[
+                                            styles.cleanTabBtnText, 
+                                            { 
+                                                color: activeTab === 'photos' ? C.textPrimary : C.textDim,
+                                                fontFamily: activeTab === 'photos' ? 'Tajawal-ExtraBold' : 'Tajawal-Bold'
+                                            }
+                                        ]}>
+                                            {language === 'ar' ? 'الوضع السريع (صور)' : 'Fast Mode (Photos)'}
                                         </Text>
-                                    </View>
-                                    <AppTextInput
-                                        style={[styles.input, { color: C.textPrimary, borderBottomColor: C.border, textAlign: rtl.textAlign }]}
-                                        placeholder={t('brand_placeholder', language)}
-                                        placeholderTextColor={C.textDim}
-                                        value={brand}
-                                        onChangeText={setBrand}
-                                    />
-                                    <AppTextInput
-                                        style={[styles.input, { color: C.textPrimary, borderBottomColor: 'transparent', textAlign: rtl.textAlign }]}
-                                        placeholder={t('product_name_placeholder', language)}
-                                        placeholderTextColor={C.textDim}
-                                        value={name}
-                                        onChangeText={setName}
-                                    />
-                                </View>
+                                    </TouchableOpacity>
 
-                                <View style={styles.sectionMargin}>
-                                    <CustomDropdown
-                                        icon="earth"
-                                        title={t('manufacturing_country', language)}
-                                        items={COUNTRIES}
-                                        selectedItems={country}
-                                        multiSelect={false}
-                                        onSelect={(item) => setCountry(item.id)}
-                                        placeholder={t('select_country', language)}
-                                        C={C}
-                                        rtl={rtl}
-                                    />
-                                    <View style={{ height: 15 }} />
-                                    <CustomDropdown
-                                        icon="layers-outline"
-                                        title={t('product_category', language)}
-                                        items={formattedCategories}
-                                        selectedItems={selectedCatId}
-                                        multiSelect={false}
-                                        onSelect={handleCategorySelect}
-                                        placeholder={t('select_category', language)}
-                                        C={C}
-                                        rtl={rtl}
-                                    />
-                                </View>
-
-                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                        <MaterialCommunityIcons name="flask-outline" size={18} color={C.gold} />
-                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                            {t('specifications', language)}
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.cleanTabBtn,
+                                            activeTab === 'manual' && [styles.cleanTabBtnActive, { borderBottomColor: C.accentGreen }]
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync().catch(() => {});
+                                            setActiveTab('manual');
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Feather 
+                                            name="edit-3" 
+                                            size={14} 
+                                            color={activeTab === 'manual' ? C.accentGreen : C.textDim} 
+                                        />
+                                        <Text style={[
+                                            styles.cleanTabBtnText, 
+                                            { 
+                                                color: activeTab === 'manual' ? C.textPrimary : C.textDim,
+                                                fontFamily: activeTab === 'manual' ? 'Tajawal-ExtraBold' : 'Tajawal-Bold'
+                                            }
+                                        ]}>
+                                            {language === 'ar' ? 'إدخال يدوي مفصل' : 'Detailed Form'}
                                         </Text>
-                                    </View>
-                                    <View style={[styles.inputRow, { flexDirection: rtl.flexDirection }]}>
-                                        <View style={styles.flex1}>
-                                            <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                                {t('price_dzd', language)}
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* ─────────────────────────────────────────────────────────────
+                                    🌟 TAB 1: FAST MODE (SIDE-BY-SIDE SLOTS)
+                                ────────────────────────────────────────────────────────────── */}
+                                {activeTab === 'photos' && (
+                                    <View style={{ gap: 14 }}>
+                                        <View style={[styles.fastTipRow, { flexDirection: rtl.flexDirection }]}>
+                                            <Ionicons name="sparkles" size={15} color={C.accentGreen} />
+                                            <Text style={[styles.fastTipText, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
+                                                {language === 'ar'
+                                                    ? 'التقطي صورتين فقط: واجهة المنتج وقائمة المكونات، وسيتولى الذكاء الاصطناعي استخراج التفاصيل.'
+                                                    : 'Capture 2 photos: front label and ingredients list. AI extracts the rest.'}
                                             </Text>
+                                        </View>
+
+                                        {/* Dual Compact Photo Slots */}
+                                        <View style={[styles.dualSlotsRow, { flexDirection: rtl.flexDirection }]}>
+                                            {/* 1. FRONT PHOTO */}
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.slotCard,
+                                                    { 
+                                                        backgroundColor: C.card, 
+                                                        borderColor: quickFrontImage ? C.accentGreen : C.border,
+                                                        borderWidth: quickFrontImage ? 0.5 : 0.5,
+                                                    }
+                                                ]}
+                                                onPress={() => showImageOptions('quick_front')}
+                                                activeOpacity={0.8}
+                                            >
+                                                {uploadingFront ? (
+                                                    <View style={styles.slotLoading}>
+                                                        <ActivityIndicator size="small" color={C.accentGreen} />
+                                                        <Text style={[styles.slotLoadingText, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'جاري الرفع...' : 'Uploading...'}
+                                                        </Text>
+                                                    </View>
+                                                ) : quickFrontImage ? (
+                                                    <View style={styles.slotFilled}>
+                                                        <Image source={{ uri: quickFrontImage }} style={styles.slotImage} resizeMode="cover" />
+                                                        <View style={[styles.slotCheckBadge, { backgroundColor: C.accentGreen }]}>
+                                                            <Feather name="check" size={11} color="#FFF" />
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            style={styles.slotRemoveBtn}
+                                                            onPress={() => setQuickFrontImage(null)}
+                                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                        >
+                                                            <Ionicons name="close" size={13} color="#FFF" />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.slotEmpty}>
+                                                        <View style={[styles.slotIconCircle, { backgroundColor: C.accentGreen + '14' }]}>
+                                                            <Feather name="image" size={20} color={C.accentGreen} />
+                                                        </View>
+                                                        <Text style={[styles.slotTitle, { color: C.textPrimary }]}>
+                                                            {language === 'ar' ? '1. واجهة المنتج' : '1. Front Photo'} *
+                                                        </Text>
+                                                        <Text style={[styles.slotSub, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'الاسم والماركة' : 'Brand & Name'}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+
+                                            {/* 2. INCI PHOTO */}
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.slotCard,
+                                                    { 
+                                                        backgroundColor: C.card, 
+                                                        borderColor: quickInciImage ? (C.purple || '#8B5CF6') : C.border,
+                                                        borderWidth: quickInciImage ? 0.5 : 0.5,
+                                                    }
+                                                ]}
+                                                onPress={() => showImageOptions('quick_inci')}
+                                                activeOpacity={0.8}
+                                            >
+                                                {uploadingInci ? (
+                                                    <View style={styles.slotLoading}>
+                                                        <ActivityIndicator size="small" color={C.purple || '#8B5CF6'} />
+                                                        <Text style={[styles.slotLoadingText, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'جاري الرفع...' : 'Uploading...'}
+                                                        </Text>
+                                                    </View>
+                                                ) : quickInciImage ? (
+                                                    <View style={styles.slotFilled}>
+                                                        <Image source={{ uri: quickInciImage }} style={styles.slotImage} resizeMode="cover" />
+                                                        <View style={[styles.slotCheckBadge, { backgroundColor: C.purple || '#8B5CF6' }]}>
+                                                            <Feather name="check" size={11} color="#FFF" />
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            style={styles.slotRemoveBtn}
+                                                            onPress={() => setQuickInciImage(null)}
+                                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                        >
+                                                            <Ionicons name="close" size={13} color="#FFF" />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.slotEmpty}>
+                                                        <View style={[styles.slotIconCircle, { backgroundColor: (C.purple || '#8B5CF6') + '14' }]}>
+                                                            <MaterialCommunityIcons name="flask-outline" size={20} color={C.purple || '#8B5CF6'} />
+                                                        </View>
+                                                        <Text style={[styles.slotTitle, { color: C.textPrimary }]}>
+                                                            {language === 'ar' ? '2. قائمة المكونات' : '2. INCI Photo'} *
+                                                        </Text>
+                                                        <Text style={[styles.slotSub, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'نص المكونات كامل' : 'Ingredients text'}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        {/* Optional Info Row */}
+                                        <View style={[styles.fastHelperCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                            <Text style={[styles.fastHelperTitle, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                {language === 'ar' ? 'معلومات اختيارية لتسريع اعتماد النقاط:' : 'Optional info to speed up approval:'}
+                                            </Text>
+                                            <View style={[styles.fastHelperRow, { flexDirection: rtl.flexDirection }]}>
+                                                <AppTextInput
+                                                    style={[styles.fastHelperInput, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                                    placeholder={language === 'ar' ? 'الماركة (اختياري)' : 'Brand (optional)'}
+                                                    placeholderTextColor={C.textDim}
+                                                    value={quickBrand}
+                                                    onChangeText={setQuickBrand}
+                                                />
+                                                <AppTextInput
+                                                    style={[styles.fastHelperInput, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                                    placeholder={language === 'ar' ? 'اسم المنتج (اختياري)' : 'Product Name (optional)'}
+                                                    placeholderTextColor={C.textDim}
+                                                    value={quickName}
+                                                    onChangeText={setQuickName}
+                                                />
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* ─────────────────────────────────────────────────────────────
+                                    TAB 2: DETAILED MANUAL FORM
+                                ────────────────────────────────────────────────────────────── */}
+                                {activeTab === 'manual' && (
+                                    <>
+                                        <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                            <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                                <MaterialCommunityIcons name="pencil-outline" size={18} color={C.accentGreen} />
+                                                <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                                    {t('basic_info', language)}
+                                                </Text>
+                                            </View>
                                             <AppTextInput
-                                                style={[styles.rowInput, { color: C.textPrimary, textAlign: 'center' }]}
-                                                placeholder="00"
+                                                style={[styles.input, { color: C.textPrimary, borderBottomColor: C.border, textAlign: rtl.textAlign }]}
+                                                placeholder={t('brand_placeholder', language)}
                                                 placeholderTextColor={C.textDim}
-                                                keyboardType="numeric"
-                                                value={priceMin}
-                                                onChangeText={setPriceMin}
+                                                value={brand}
+                                                onChangeText={setBrand}
+                                            />
+                                            <AppTextInput
+                                                style={[styles.input, { color: C.textPrimary, borderBottomColor: 'transparent', textAlign: rtl.textAlign }]}
+                                                placeholder={t('product_name_placeholder', language)}
+                                                placeholderTextColor={C.textDim}
+                                                value={name}
+                                                onChangeText={setName}
                                             />
                                         </View>
-                                        <View style={[styles.dividerVertical, { backgroundColor: C.border }]} />
-                                        <View style={styles.flex2}>
-                                            <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                                {t('quantity_size', language)}
-                                            </Text>
-                                            <View style={[styles.quantityRow, { flexDirection: rtl.flexDirection }]}>
-                                                <AppTextInput
-                                                    style={[styles.quantityInput, { color: C.textPrimary, textAlign: 'center' }]}
-                                                    placeholder="200"
-                                                    placeholderTextColor={C.textDim}
-                                                    keyboardType="numeric"
-                                                    value={qtyValue}
-                                                    onChangeText={setQtyValue}
-                                                />
-                                                <View style={[styles.unitButtons, { flexDirection: rtl.flexDirection }]}>
-                                                    {['ml', 'g', 'L'].map(u => (
-                                                        <TouchableOpacity
-                                                            key={u}
-                                                            onPress={() => setQtyUnit(u)}
-                                                            style={[
-                                                                styles.unitBtn,
-                                                                {
-                                                                    backgroundColor: qtyUnit === u ? C.accentGreen : 'transparent',
-                                                                    borderColor: C.border
-                                                                }
-                                                            ]}
-                                                        >
-                                                            <Text style={{
-                                                                fontSize: 11,
-                                                                color: qtyUnit === u ? '#FFF' : C.textDim,
-                                                                fontWeight: 'bold'
-                                                            }}>
-                                                                {u}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    ))}
+
+                                        <View style={styles.sectionMargin}>
+                                            <CustomDropdown
+                                                icon="earth"
+                                                title={t('manufacturing_country', language)}
+                                                items={COUNTRIES}
+                                                selectedItems={country}
+                                                multiSelect={false}
+                                                onSelect={(item) => setCountry(item.id)}
+                                                placeholder={t('select_country', language)}
+                                                C={C}
+                                                rtl={rtl}
+                                            />
+                                            <View style={{ height: 12 }} />
+                                            <CustomDropdown
+                                                icon="layers-outline"
+                                                title={t('product_category', language)}
+                                                items={formattedCategories}
+                                                selectedItems={selectedCatId}
+                                                multiSelect={false}
+                                                onSelect={handleCategorySelect}
+                                                placeholder={t('select_category', language)}
+                                                C={C}
+                                                rtl={rtl}
+                                            />
+                                        </View>
+
+                                        <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                            <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                                <MaterialCommunityIcons name="flask-outline" size={18} color={C.gold} />
+                                                <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                                    {t('specifications', language)}
+                                                </Text>
+                                            </View>
+                                            <View style={[styles.inputRow, { flexDirection: rtl.flexDirection }]}>
+                                                <View style={styles.flex1}>
+                                                    <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                        {t('price_dzd', language)}
+                                                    </Text>
+                                                    <AppTextInput
+                                                        style={[styles.rowInput, { color: C.textPrimary, textAlign: 'center' }]}
+                                                        placeholder="00"
+                                                        placeholderTextColor={C.textDim}
+                                                        keyboardType="numeric"
+                                                        value={priceMin}
+                                                        onChangeText={setPriceMin}
+                                                    />
+                                                </View>
+                                                <View style={[styles.dividerVertical, { backgroundColor: C.border }]} />
+                                                <View style={styles.flex2}>
+                                                    <Text style={[styles.innerLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                        {t('quantity_size', language)}
+                                                    </Text>
+                                                    <View style={[styles.quantityRow, { flexDirection: rtl.flexDirection }]}>
+                                                        <AppTextInput
+                                                            style={[styles.quantityInput, { color: C.textPrimary, textAlign: 'center' }]}
+                                                            placeholder="200"
+                                                            placeholderTextColor={C.textDim}
+                                                            keyboardType="numeric"
+                                                            value={qtyValue}
+                                                            onChangeText={setQtyValue}
+                                                        />
+                                                        <View style={[styles.unitButtons, { flexDirection: rtl.flexDirection }]}>
+                                                            {['ml', 'g', 'L'].map(u => (
+                                                                <TouchableOpacity
+                                                                    key={u}
+                                                                    onPress={() => setQtyUnit(u)}
+                                                                    style={[
+                                                                        styles.unitBtn,
+                                                                        {
+                                                                            backgroundColor: qtyUnit === u ? C.accentGreen : 'transparent',
+                                                                            borderColor: C.border
+                                                                        }
+                                                                    ]}
+                                                                >
+                                                                    <Text style={{
+                                                                        fontSize: 11,
+                                                                        color: qtyUnit === u ? '#FFF' : C.textDim,
+                                                                        fontWeight: 'bold'
+                                                                    }}>
+                                                                        {u}
+                                                                    </Text>
+                                                                </TouchableOpacity>
+                                                            ))}
+                                                        </View>
+                                                    </View>
                                                 </View>
                                             </View>
                                         </View>
-                                    </View>
-                                </View>
 
-                                {/* TARGET AUDIENCE DROPDOWN */}
-                                <View style={styles.sectionMargin}>
-                                    <CustomDropdown
-                                        icon="account-star-outline"
-                                        title={t('target_audience', language)}
-                                        subtitle={t('skin_hair_type', language)}
-                                        items={TARGET_TYPES}
-                                        selectedItems={selectedTargets}
-                                        multiSelect={true}
-                                        onSelect={(item) => handleMultiSelect(item, selectedTargets, setSelectedTargets)}
-                                        placeholder={t('select_target', language)}
-                                        C={C}
-                                        rtl={rtl}
-                                    />
-                                </View>
+                                        {/* TARGET AUDIENCE DROPDOWN */}
+                                        <View style={styles.sectionMargin}>
+                                            <CustomDropdown
+                                                icon="account-star-outline"
+                                                title={t('target_audience', language)}
+                                                subtitle={t('skin_hair_type', language)}
+                                                items={TARGET_TYPES}
+                                                selectedItems={selectedTargets}
+                                                multiSelect={true}
+                                                onSelect={(item) => handleMultiSelect(item, selectedTargets, setSelectedTargets)}
+                                                placeholder={t('select_target', language)}
+                                                C={C}
+                                                rtl={rtl}
+                                            />
+                                        </View>
 
-                                {/* CLAIMS DROPDOWN */}
-                                <View style={styles.sectionMargin}>
-                                    <CustomDropdown
-                                        icon="check-decagram-outline"
-                                        title={t('product_claims', language)}
-                                        subtitle={t('benefits_claims', language)}
-                                        items={formattedClaims}
-                                        selectedItems={selectedClaims}
-                                        multiSelect={true}
-                                        onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
-                                        placeholder={t('select_claims', language)}
-                                        C={C}
-                                        rtl={rtl}
-                                    />
-                                </View>
+                                        {/* CLAIMS DROPDOWN */}
+                                        <View style={styles.sectionMargin}>
+                                            <CustomDropdown
+                                                icon="check-decagram-outline"
+                                                title={t('product_claims', language)}
+                                                subtitle={t('benefits_claims', language)}
+                                                items={formattedClaims}
+                                                selectedItems={selectedClaims}
+                                                multiSelect={true}
+                                                onSelect={(item) => handleMultiSelect(item, selectedClaims, setSelectedClaims)}
+                                                placeholder={t('select_claims', language)}
+                                                C={C}
+                                                rtl={rtl}
+                                            />
+                                        </View>
 
-                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                        <MaterialCommunityIcons name="text-box-search-outline" size={18} color="#8b5cf6" />
-                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                            {t('ingredients_list', language)}
-                                        </Text>
-                                    </View>
-                                    <View style={[styles.tipBox, { flexDirection: rtl.flexDirection }]}>
-                                        <MaterialCommunityIcons name="lightbulb-outline" size={16} color={C.accentGreen} />
-                                        <Text style={[styles.tipText, { color: C.textDim, textAlign: rtl.textAlign, flex: 1 }]}>
-                                            {t('ai_ingredient_tip', language)}
-                                        </Text>
-                                    </View>
-                                    <AppTextInput
-                                        style={[styles.textArea, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
-                                        placeholder={t('ingredients_placeholder', language)}
-                                        placeholderTextColor={C.textDim}
-                                        multiline
-                                        numberOfLines={4}
-                                        value={ingredients}
-                                        onChangeText={setIngredients}
-                                    />
-                                </View>
-
-                                <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                    <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                        <MaterialCommunityIcons name="image" size={18} color={C.accentGreen} />
-                                        <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                                            {t('product_image', language)}
-                                        </Text>
-                                    </View>
-                                    
-                                    <TouchableOpacity
-                                        onPress={showImageOptions}
-                                        disabled={uploadingImage}
-                                        style={[
-                                            styles.imageUploadArea,
-                                            { borderColor: C.border, backgroundColor: C.background }
-                                        ]}
-                                    >
-                                        {uploadingImage ? (
-                                            <View style={styles.uploadingContainer}>
-                                                <ActivityIndicator size="large" color={C.accentGreen} />
-                                                <Text style={[styles.uploadingText, { color: C.textDim }]}>
-                                                    {t('uploading_image', language)}
+                                        <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                            <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                                <MaterialCommunityIcons name="text-box-search-outline" size={18} color="#8b5cf6" />
+                                                <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                                    {t('ingredients_list', language)}
                                                 </Text>
                                             </View>
-                                        ) : selectedImage ? (
-                                            <View style={styles.selectedImageContainer}>
-                                                <Image 
-                                                    source={{ uri: selectedImage }} 
-                                                    style={styles.selectedImage}
-                                                    resizeMode="contain"
-                                                />
-                                                <TouchableOpacity
-                                                    style={styles.removeImageBtn}
-                                                    onPress={() => {
-                                                        setSelectedImage(null);
-                                                        setImageUrl('');
-                                                    }}
-                                                >
-                                                    <Feather name="x" size={20} color="#FFF" />
-                                                </TouchableOpacity>
-                                            </View>
-                                        ) : (
-                                            <View style={styles.uploadPlaceholder}>
-                                                <Feather name="camera" size={40} color={C.textDim} />
-                                                <Text style={[styles.uploadPlaceholderText, { color: C.textDim }]}>
-                                                    {t('tap_to_select_image', language)}
-                                                </Text>
-                                                <Text style={[styles.uploadHint, { color: C.textDim }]}>
-                                                    {t('image_format_hint', language)}
+                                            <View style={[styles.tipBox, { flexDirection: rtl.flexDirection }]}>
+                                                <MaterialCommunityIcons name="lightbulb-outline" size={16} color={C.accentGreen} />
+                                                <Text style={[styles.tipText, { color: C.textDim, textAlign: rtl.textAlign, flex: 1 }]}>
+                                                    {t('ai_ingredient_tip', language)}
                                                 </Text>
                                             </View>
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
+                                            <AppTextInput
+                                                style={[styles.textArea, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                                placeholder={t('ingredients_placeholder', language)}
+                                                placeholderTextColor={C.textDim}
+                                                multiline
+                                                numberOfLines={4}
+                                                value={ingredients}
+                                                onChangeText={setIngredients}
+                                            />
+                                        </View>
+
+                                        <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                                            <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
+                                                <MaterialCommunityIcons name="image" size={18} color={C.accentGreen} />
+                                                <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                                                    {t('product_image', language)}
+                                                </Text>
+                                            </View>
+                                            
+                                            <TouchableOpacity
+                                                onPress={() => showImageOptions('manual')}
+                                                disabled={uploadingImage}
+                                                style={[
+                                                    styles.imageUploadArea,
+                                                    { borderColor: C.border, backgroundColor: C.background }
+                                                ]}
+                                            >
+                                                {uploadingImage ? (
+                                                    <View style={styles.uploadingContainer}>
+                                                        <ActivityIndicator size="large" color={C.accentGreen} />
+                                                        <Text style={[styles.uploadingText, { color: C.textDim }]}>
+                                                            {t('uploading_image', language)}
+                                                        </Text>
+                                                    </View>
+                                                ) : selectedImage ? (
+                                                    <View style={styles.selectedImageContainer}>
+                                                        <Image 
+                                                            source={{ uri: selectedImage }} 
+                                                            style={styles.selectedImage}
+                                                            resizeMode="contain"
+                                                        />
+                                                        <TouchableOpacity
+                                                            style={styles.removeImageBtn}
+                                                            onPress={() => {
+                                                                setSelectedImage(null);
+                                                                setImageUrl('');
+                                                            }}
+                                                        >
+                                                            <Feather name="x" size={20} color="#FFF" />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.uploadPlaceholder}>
+                                                        <Feather name="camera" size={40} color={C.textDim} />
+                                                        <Text style={[styles.uploadPlaceholderText, { color: C.textDim }]}>
+                                                            {t('tap_to_select_image', language)}
+                                                        </Text>
+                                                        <Text style={[styles.uploadHint, { color: C.textDim }]}>
+                                                            {t('image_format_hint', language)}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
 
                                 <View style={{ height: 100 }} />
                             </ScrollView>
 
+                            {/* Fixed Bottom Footer */}
                             <View style={[styles.footer, { backgroundColor: C.background, borderTopColor: C.border, flexDirection: rtl.flexDirection }]}>
                                 <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
                                     <Text style={{ color: C.textDim, fontFamily: 'Tajawal-Bold', fontSize: 15 }}>
@@ -704,20 +1025,24 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 <TouchableOpacity
                                     style={[styles.submitBtnWrapper, rtl.isRTL && { marginLeft: 0, marginRight: 16 }]}
                                     onPress={handleSave}
-                                    disabled={isSubmitting || uploadingImage}
+                                    disabled={isSubmitting || isUploadingAny}
                                     activeOpacity={0.8}
                                 >
                                     <LinearGradient
                                         colors={[C.accentGreen, '#2E8062']}
                                         start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
                                         style={styles.submitGradient}
                                     >
                                         {isSubmitting ? (
                                             <ActivityIndicator color="#FFF" />
                                         ) : (
                                             <View style={[styles.submitInnerRow, { flexDirection: rtl.flexDirection }]}>
-                                                <Text style={styles.submitText}>{t('submit_for_review', language)}</Text>
+                                                <Text style={styles.submitText}>
+                                                    {activeTab === 'photos'
+                                                        ? (language === 'ar' ? 'إرسال الصور للمراجعة' : 'Submit Photos')
+                                                        : t('submit_for_review', language)}
+                                                </Text>
                                                 <Feather name="check" size={18} color="#FFF" />
                                             </View>
                                         )}
@@ -784,27 +1109,160 @@ const styles = StyleSheet.create({
     },
     introHeader: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 8,
     },
     mainTitle: {
         fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 24,
+        fontSize: 21,
     },
-    mainSub: {
+
+    // 🌟 CLEAN, BORDERLESS FULL-WIDTH TABS
+    cleanTabBar: {
+        width: '100%',
+        backgroundColor: 'transparent',
+        borderBottomWidth: 1,
+        marginBottom: 16,
+    },
+    cleanTabBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderBottomWidth: 2.5,
+        borderBottomColor: 'transparent',
+    },
+    cleanTabBtnActive: {
+        // dynamic borderBottomColor via prop
+    },
+    cleanTabBtnText: {
+        fontSize: 13,
+    },
+
+    // 🌟 FAST MODE (DUAL COMPACT SLOTS)
+    fastTipRow: {
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 4,
+        marginBottom: 2,
+    },
+    fastTipText: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 12,
-        marginTop: 4,
+        lineHeight: 18,
+        flex: 1,
     },
+    dualSlotsRow: {
+        gap: 12,
+        width: '100%',
+    },
+    slotCard: {
+        flex: 1,
+        height: 155,
+        borderRadius: 18,
+        overflow: 'hidden',
+        borderStyle: 'dashed',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    slotEmpty: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        padding: 8,
+    },
+    slotIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 2,
+    },
+    slotTitle: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 12.5,
+        textAlign: 'center',
+    },
+    slotSub: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 10.5,
+        textAlign: 'center',
+    },
+    slotFilled: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+    },
+    slotImage: {
+        width: '100%',
+        height: '100%',
+    },
+    slotCheckBadge: {
+        position: 'absolute',
+        bottom: 8,
+        left: 8,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 3,
+    },
+    slotRemoveBtn: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    slotLoading: {
+        alignItems: 'center',
+        gap: 8,
+    },
+    slotLoadingText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10.5,
+    },
+
+    fastHelperCard: {
+        borderRadius: 16,
+        padding: 12,
+        borderWidth: 0.5,
+        gap: 8,
+    },
+    fastHelperTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11,
+    },
+    fastHelperRow: {
+        gap: 8,
+    },
+    fastHelperInput: {
+        flex: 1,
+        height: 40,
+        borderRadius: 10,
+        borderWidth: 0.5,
+        paddingHorizontal: 10,
+        fontSize: 12,
+        fontFamily: 'Tajawal-Regular',
+    },
+
     glassCard: {
         borderRadius: 20,
         padding: 16,
         borderWidth: 0.5,
-        marginBottom: 16,
+        marginBottom: 14,
     },
     sectionHeaderSimple: {
         alignItems: 'center',
         gap: 10,
-        marginBottom: 16,
+        marginBottom: 14,
     },
     sectionIconBox: {
         width: 32,
@@ -815,7 +1273,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 15,
+        fontSize: 14.5,
     },
     dropdownContainer: {
         borderRadius: 18,
@@ -965,7 +1423,7 @@ const styles = StyleSheet.create({
         fontSize: 11,
     },
     sectionMargin: {
-        marginBottom: 16,
+        marginBottom: 14,
     },
     imageUploadArea: {
         borderWidth: 2,
@@ -974,11 +1432,11 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 180,
+        minHeight: 160,
     },
     uploadingContainer: {
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
     },
     uploadingText: {
         fontFamily: 'Tajawal-Regular',
@@ -991,17 +1449,17 @@ const styles = StyleSheet.create({
     },
     selectedImage: {
         width: '100%',
-        height: 200,
+        height: 160,
         borderRadius: 12,
     },
     removeImageBtn: {
         position: 'absolute',
-        top: -10,
-        right: -10,
+        top: -6,
+        right: -6,
         backgroundColor: '#ef4444',
-        borderRadius: 15,
-        width: 30,
-        height: 30,
+        borderRadius: 14,
+        width: 28,
+        height: 28,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
@@ -1009,11 +1467,11 @@ const styles = StyleSheet.create({
     },
     uploadPlaceholder: {
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
     },
     uploadPlaceholderText: {
         fontFamily: 'Tajawal-Bold',
-        fontSize: 14,
+        fontSize: 13.5,
     },
     uploadHint: {
         fontFamily: 'Tajawal-Regular',

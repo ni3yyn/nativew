@@ -695,21 +695,16 @@ const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProf
                     onSearchPress={() => router.push('/CatalogScreen')} 
                     onScanPress={() => router.push('/oilguard')} />
             ) : (
-                <FlatList
-                    data={products}
-                    renderItem={({ item }) => (
-                        <ProductListItem
-                            product={item}
-                            onPress={() => setSelectedProduct(item)}
-                            onDelete={() => handleProductDelete(item.id)}
-                        />
-                    )}
-                    keyExtractor={item => item.id}
-                    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-                    scrollEnabled={false}
-                    contentContainerStyle={{ paddingBottom: 120 }}
-                    showsVerticalScrollIndicator={false}
-                />
+                <View style={{ gap: 8, paddingBottom: 120 }}>
+    {products.map((item) => (
+        <ProductListItem
+            key={item.id}
+            product={item}
+            onPress={() => setSelectedProduct(item)}
+            onDelete={() => handleProductDelete(item.id)}
+        />
+    ))}
+</View>
             )}
 
             <ProductDetailsSheet
@@ -1894,7 +1889,7 @@ const handleShelfViewChange = (newView) => {
 
     const appState = useRef(AppState.currentState);
 
-    const particles = useMemo(() => [...Array(15)].map((_, i) => ({
+    const particles = useMemo(() => [...Array(3)].map((_, i) => ({
         id: i,
         size: Math.random() * 5 + 3,
         startX: Math.random() * width,

@@ -18,8 +18,7 @@ module.exports = function (api) {
         test: (filename) => {
           if (!filename) return false;
           return (
-            filename.includes('expo-camera') ||
-            filename.includes('expo-av')
+            filename.includes('expo-camera')
           );
         },
         plugins: [

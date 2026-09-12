@@ -547,11 +547,13 @@ export const WeatherDetailedSheet = ({ insight }) => {
 
         try {
             if (typeof requestPinWidget === 'function') {
-                const isPinned = await requestPinWidget({ widgetName: 'SpfTimer' }).catch(() => requestPinWidget('SpfTimer'));
-                if (isPinned) {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    return;
-                }
+                const isPinned = await requestPinWidget({ widgetName: 'SpfTimerWidget' })
+                .catch(() => requestPinWidget('SpfTimerWidget'));
+            
+            if (isPinned) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                return;
+            }
             }
 
             Alert.alert(

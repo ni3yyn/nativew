@@ -84,7 +84,7 @@ export const AnalysisCarousel = ({ insights, onSelect }) => {
                 decelerationRate="fast"
                 contentContainerStyle={[
                     styles.carouselContentContainer,
-                    { flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row' }
+                    { flexDirection: isRTL ? 'row-reverse' : 'row' }
                 ]}
             >
                 {insights.map((insight, index) => {

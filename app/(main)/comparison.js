@@ -1031,59 +1031,6 @@ export default function ComparisonPage() {
                     <View style={globalStyles.deckHeader}>
                         <Text style={globalStyles.deckTitle}>{t('comp_which_better', language)}</Text>
 
-                        <View style={{
-                            flexDirection: 'row',
-                            backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : (COLORS.surfaceSoft || 'rgba(0,0,0,0.04)'),
-                            borderRadius: 12,
-                            padding: 4,
-                            marginTop: 10,
-                            marginBottom: 5,
-                            borderWidth: 0.5,
-                            borderColor: COLORS.border
-                        }}>
-                            <TouchableOpacity
-                                onPress={() => setScanMode('fast')}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                    backgroundColor: scanMode === 'fast' ? COLORS.accentGreen : 'transparent',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'row',
-                                    gap: 6
-                                }}
-                            >
-                                <FontAwesome5 name="bolt" size={14} color={scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim} />
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold',
-                                    fontSize: 13,
-                                    color: scanMode === 'fast' ? COLORS.textOnAccent : COLORS.textDim
-                                }}>{t('comp_scan_mode_fast', language)}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => setScanMode('accurate')}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                    backgroundColor: scanMode === 'accurate' ? COLORS.accentGreen : 'transparent',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'row',
-                                    gap: 6
-                                }}
-                            >
-                                <FontAwesome5 name="search-plus" size={14} color={scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim} />
-                                <Text style={{
-                                    fontFamily: 'Tajawal-Bold',
-                                    fontSize: 13,
-                                    color: scanMode === 'accurate' ? COLORS.textOnAccent : COLORS.textDim
-                                }}>{t('comp_scan_mode_accurate', language)}</Text>
-                            </TouchableOpacity>
-                        </View>
-
                         <Text style={{
                             fontFamily: 'Tajawal-Regular',
                             color: scanMode === 'accurate' ? COLORS.warning : COLORS.accentGreen,
@@ -1370,11 +1317,11 @@ export default function ComparisonPage() {
 
                 {/* 3. RESET */}
                 <StaggeredItem index={2}>
-                    <TouchableOpacity activeOpacity={0.7} onPress={resetAll} style={styles.resetBtn}>
-                        <Text style={styles.resetText}>{t('comp_reset_btn', language)}</Text>
-                        <FontAwesome5 name="redo" color={COLORS.textSecondary} size={14} />
-                    </TouchableOpacity>
-                </StaggeredItem>
+    <TouchableOpacity activeOpacity={0.7} onPress={resetAll} style={styles.resetBtn}>
+        <Text style={styles.resetText}>{t('comp_reset_btn', language)}</Text>
+        <FontAwesome5 name="redo" color={COLORS.textOnAccent} size={14} />
+    </TouchableOpacity>
+</StaggeredItem>
 
             </ScrollView>
         );
@@ -1598,7 +1545,7 @@ const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
 
     // --- HERO RESULTS DESIGN ---
     heroWinnerCard: {
-        backgroundColor: COLORS.card,
+        backgroundColor: 'transparent',
         borderRadius: 28,
         borderWidth: 1,
         borderColor: COLORS.border,
@@ -1607,11 +1554,7 @@ const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
         marginTop: 8,
         marginBottom: 0,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: isDark ? 0.2 : 0.08,
-        shadowRadius: 16,
-        elevation: 4
+        
     },
     winnerBanner: {
         flexDirection: 'row-reverse',
@@ -1694,7 +1637,7 @@ const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: COLORS.card,
+        backgroundColor: 'transparent',
         borderWidth: 1.5,
         borderColor: COLORS.gold,
         justifyContent: 'center',
@@ -1750,7 +1693,7 @@ const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
         alignSelf: 'center', 
         justifyContent: 'center', 
         padding: 18, 
-        backgroundColor: COLORS.card, 
+        backgroundColor: COLORS.accentGreen,
         borderWidth: 1,
         borderColor: COLORS.border,
         borderRadius: 16, 
@@ -1758,7 +1701,7 @@ const createComparisonStyles = (COLORS, isDark) => StyleSheet.create({
         marginTop: 25, 
         width: '100%' 
     },
-    resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textSecondary, fontSize: 15 },
+    resetText: { fontFamily: 'Tajawal-Bold', color: COLORS.textOnAccent, fontSize: 15 },
 
     searchIcon: {
         marginLeft: 10

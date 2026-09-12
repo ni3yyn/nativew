@@ -2,16 +2,18 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, Animated,
-    TouchableOpacity, Image,
+    TouchableOpacity, Image, Pressable,
 } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+
 import { useTheme } from '../../context/ThemeContext';
 import { useAppContext } from '../../context/AppContext';
 import { getOptimizedImage } from '../../utils/imageOptimizerr';
 import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { useRTL } from '../../hooks/useRTL';
 import { getPointsForField } from '../../utils/gamificationEngine';
 import { usePendingContributions } from '../../hooks/usePendingContributions';
 import {
@@ -34,17 +36,41 @@ const formatPrice = (price) => {
     return price;
 };
 
-export default function ProductCard({ item, index, onPress, onPressBounty, onSelectBrand, isCompareMode = false, isSelected = false }) {
-    const { colors: C } = useTheme();
+// 🌟 CACHED STYLESHEET: Shared across all card instances to prevent garbage collection thrashing
+let cachedStyles = null;
+let cachedStyleKey = null;
+
+const getCardStyles = (C, rtl, isLight) => {
+    const key = `${C.card}_${C.border}_${rtl.isRTL}_${isLight}`;
+    if (cachedStyleKey === key && cachedStyles) return cachedStyles;
+    cachedStyleKey = key;
+    cachedStyles = createStyles(C, rtl, isLight);
+    return cachedStyles;
+};
+
+function ProductCard({ 
+    item, 
+    index, 
+    onPress, 
+    onPressBounty, 
+    onSelectBrand, 
+    isCompareMode = false, 
+    isSelected = false 
+}) {
+    const { colors: C, activeThemeId } = useTheme();
     const { user, userProfile, savedProducts } = useAppContext();
     const router = useRouter();
     const lang = useCurrentLanguage();
+    const rtl = useRTL();
+    const styles = getCardStyles(C, rtl, activeThemeId === 'light');
+
+    // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(20)).current;
+    const translateY = useRef(new Animated.Value(14)).current;
+    const cardScale = useRef(new Animated.Value(1)).current;
 
     // ── Smart save state ──────────────────────────────────────────────────────
     const [showClaimsPicker, setShowClaimsPicker] = useState(false);
-    // docId of the freshly saved shelf entry (needed for later update)
     const pendingDocIdRef = useRef(null);
 
     // ── Image state ───────────────────────────────────────────────────────────
@@ -70,38 +96,44 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
         p => p.productId === item?.id || p.id === item?.id ||
         (p.productName && item?.name && p.productName.toLowerCase() === item.name.toLowerCase())
     );
-    // Optimistic override for instant 0ms UI toggle
     const [optimisticSaved, setOptimisticSaved] = useState(null);
     const isSaved = optimisticSaved !== null ? optimisticSaved : !!savedItem;
 
-    // Component mounted ref for crash prevention on unmount
     const isMountedRef = useRef(true);
     useEffect(() => {
         isMountedRef.current = true;
         return () => { isMountedRef.current = false; };
     }, []);
 
-    // Reset optimistic override when Firestore syncs
     useEffect(() => {
         setOptimisticSaved(null);
     }, [savedProducts]);
 
     // ── Pending contributions ─────────────────────────────────────────────────
-    const { hasPending, loading } = usePendingContributions(item.id);
+    const { hasPending } = usePendingContributions(item.id);
 
     // ── Entry animation ───────────────────────────────────────────────────────
     useEffect(() => {
         Animated.parallel([
             Animated.timing(fadeAnim, {
-                toValue: 1, duration: 400, delay: index * 50, useNativeDriver: true,
+                toValue: 1, duration: 300, delay: index * 35, useNativeDriver: true,
             }),
             Animated.spring(translateY, {
-                toValue: 0, friction: 8, tension: 40, delay: index * 50, useNativeDriver: true,
+                toValue: 0, friction: 8, tension: 45, delay: index * 35, useNativeDriver: true,
             }),
         ]).start();
     }, []);
 
-    // ── Smart Save / Remove (Instant UI + Background Processing) ──────────────
+    // ── Tactile Press Feedback ────────────────────────────────────────────────
+    const handlePressIn = () => {
+        Animated.spring(cardScale, { toValue: 0.98, useNativeDriver: true }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 45, useNativeDriver: true }).start();
+    };
+
+    // ── Smart Save / Remove ───────────────────────────────────────────────────
     const handleSmartSave = (e) => {
         e?.stopPropagation?.();
 
@@ -115,21 +147,19 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
             return;
         }
 
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-        // ── REMOVE (Instant UI + Silent Background Delete) ───────────────────
         if (isSaved && savedItem?.id) {
-            setOptimisticSaved(false); // Instant text toggle to "+ حفظ"
+            setOptimisticSaved(false);
 
             removeProductFromShelf(user.uid, savedItem.id).catch(err => {
                 console.error('[ProductCard] Remove error:', err);
-                if (isMountedRef.current) setOptimisticSaved(true); // Revert on failure
+                if (isMountedRef.current) setOptimisticSaved(true);
             });
             return;
         }
 
-        // ── SAVE (Instant UI + Background Save & Analysis) ────────────────────
-        setOptimisticSaved(true); // Instant text toggle to "محفوظ ✓"
+        setOptimisticSaved(true);
 
         const hasIngredients = Array.isArray(item.ingredients) 
             ? item.ingredients.length > 0 
@@ -155,11 +185,10 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
             }
         }).catch(err => {
             console.error('[ProductCard] Save error:', err);
-            if (isMountedRef.current) setOptimisticSaved(false); // Revert on failure
+            if (isMountedRef.current) setOptimisticSaved(false);
         });
     };
 
-    // Called when user confirms claims in the picker
     const handleClaimsConfirmed = useCallback((selectedClaims) => {
         setShowClaimsPicker(false);
         const docId = pendingDocIdRef.current;
@@ -171,7 +200,6 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
         ).catch(err => console.warn('[BackgroundAnalysis] Error:', err));
     }, [user, userProfile, item, lang]);
 
-    // Called when user dismisses the picker without confirming
     const handlePickerDismiss = useCallback(() => {
         setShowClaimsPicker(false);
         const docId = pendingDocIdRef.current;
@@ -180,7 +208,6 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
         }
     }, [user]);
 
-    // ── Render ────────────────────────────────────────────────────────────────
     const displayPrice = formatPrice(item.price);
     const isMissingPrice = !displayPrice;
     const isMissingIngredients = !item.ingredients || item.ingredients.trim() === '';
@@ -197,238 +224,357 @@ export default function ProductCard({ item, index, onPress, onPressBounty, onSel
                     {
                         backgroundColor: C.card,
                         borderColor: isSelected ? C.accentGreen : C.border,
-                        borderWidth: isSelected ? 2 : 1,
+                        borderWidth: isSelected ? 0.5 : 0.5,
                         opacity: fadeAnim,
-                        transform: [{ translateY }],
+                        transform: [{ translateY }, { scale: cardScale }],
                     },
                 ]}
             >
-                <TouchableOpacity
-                    activeOpacity={0.9}
+                <Pressable
                     onPress={() => onPress(item)}
-                    style={styles.touchableArea}
+                    onPressIn={handlePressIn}
+                    onPressOut={handlePressOut}
+                    style={[styles.touchableArea, { flexDirection: rtl.flexDirection }]}
                 >
-                    <View style={styles.cardImageContainer}>
-                        {(!imageUri || hasImageError) ? (
-                            <FontAwesome5 name={item.category?.icon || 'box'} size={28} color={C.textDim} />
-                        ) : (
-                            <Image
-                                source={{ uri: imageUri }}
-                                style={styles.cardImage}
-                                resizeMode="contain"
-                                onError={handleImageError}
-                            />
-                        )}
+                    {/* 🌟 1. PRODUCT IMAGE CONTAINER (FIXED RATIO) */}
+                    <View style={styles.imageStageWrapper}>
+                        <View style={[styles.cardImageContainer, { backgroundColor: activeThemeId === 'light' ? '#FFF' : (C.background || '#14231E') }]}>
+                            {(!imageUri || hasImageError) ? (
+                                <FontAwesome5 name={item.category?.icon || 'box'} size={24} color={C.textDim} />
+                            ) : (
+                                <Image
+                                    source={{ uri: imageUri }}
+                                    style={styles.cardImage}
+                                    resizeMode="contain"
+                                    onError={handleImageError}
+                                />
+                            )}
+                        </View>
+
                         {isCompareMode && (
                             <View style={[
                                 styles.compareCheckbox,
                                 {
                                     borderColor: isSelected ? C.accentGreen : C.textDim,
-                                    backgroundColor: isSelected ? C.accentGreen : 'transparent',
+                                    backgroundColor: isSelected ? C.accentGreen : 'rgba(0,0,0,0.4)',
                                 },
                             ]}>
                                 {isSelected && <Feather name="check" size={10} color="#FFF" />}
                             </View>
                         )}
-                        <View style={[styles.categoryBadge, { backgroundColor: C.background }]}>
+
+                        <View style={[styles.categoryBadge, { backgroundColor: C.card, borderColor: C.border }]}>
                             <FontAwesome5
                                 name={item.category?.icon || 'box'}
-                                size={10}
-                                color={C.textDim}
+                                size={9}
+                                color={C.accentGreen}
                             />
                         </View>
                     </View>
 
+                    {/* 🌟 2. PRODUCT DETAILS (LOCKED COMPACT HEIGHT) */}
                     <View style={styles.cardContent}>
-                        <View style={styles.brandRow}>
-                            <View style={styles.brandWithQty}>
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    onPress={(e) => {
-                                        e?.stopPropagation?.();
-                                        if (!item.brand) return;
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        if (onSelectBrand) {
-                                            onSelectBrand(item.brand);
-                                        } else {
-                                            router.push({
-                                                pathname: '/CatalogScreen',
-                                                params: { search: item.brand }
-                                            });
-                                        }
-                                    }}
-                                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                    style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}
-                                >
-                                    <Text style={[styles.brandText, { color: C.accentGreen }]}>
-                                        {item.brand}
-                                    </Text>
-                                    <FontAwesome5 name="search" size={9} color={C.accentGreen} style={{ opacity: 0.7 }} />
-                                </TouchableOpacity>
-                                {item.quantity ? (
-                                    <Text style={[styles.qtyText, { color: C.textDim }]}>
-                                        • {item.quantity}
-                                    </Text>
-                                ) : null}
-                            </View>
+                        {/* Brand Row (Quantity / Size removed) */}
+                        <View style={[styles.brandRow, { flexDirection: rtl.flexDirection }]}>
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    if (!item.brand) return;
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                    if (onSelectBrand) {
+                                        onSelectBrand(item.brand);
+                                    } else {
+                                        router.push({
+                                            pathname: '/CatalogScreen',
+                                            params: { search: item.brand }
+                                        });
+                                    }
+                                }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[styles.brandBtn, { flexDirection: rtl.flexDirection }]}
+                            >
+                                <Text style={[styles.brandText, { color: C.accentGreen }]}>
+                                    {item.brand}
+                                </Text>
+                                <Feather name="search" size={9} color={C.accentGreen} style={{ opacity: 0.8 }} />
+                            </TouchableOpacity>
                         </View>
 
+                        {/* Title (Clean 2-line cap) */}
                         <Text
-                            style={[styles.productName, { color: C.textPrimary }]}
+                            style={[styles.productName, { color: C.textPrimary, textAlign: rtl.textAlign }]}
                             numberOfLines={2}
                         >
                             {item.name}
                         </Text>
 
-                        <View style={styles.cardFooter}>
-                            <View style={styles.priceAndBountyRow}>
+                        {/* Footer: Price & Save Action */}
+                        <View style={[styles.cardFooter, { flexDirection: rtl.flexDirection }]}>
+                            <View style={[styles.priceAndBountyRow, { flexDirection: rtl.flexDirection }]}>
                                 {isMissingPrice ? (
                                     hasPendingPrice ? (
-                                        <PendingBadge field="price" C={C} lang={lang} />
+                                        <PendingBadge C={C} lang={lang} rtl={rtl} />
                                     ) : (
                                         <TouchableOpacity
-                                            onPress={() => onPressBounty(item, 'price')}
+                                            onPress={(e) => {
+                                                e?.stopPropagation?.();
+                                                onPressBounty(item, 'price');
+                                            }}
                                             style={[
-                                                styles.microBounty,
+                                                styles.microBountyPill,
                                                 {
-                                                    borderColor: C.gold + '50',
-                                                    backgroundColor: C.gold + '15',
+                                                    borderColor: (C.gold || '#F59E0B') + '40',
+                                                    backgroundColor: (C.gold || '#F59E0B') + '14',
+                                                    flexDirection: rtl.flexDirection,
                                                 },
                                             ]}
+                                            activeOpacity={0.75}
                                         >
-                                            <FontAwesome5 name="coins" size={9} color={C.gold} />
-                                            <Text style={[styles.microBountyText, { color: C.gold }]}>
+                                            <FontAwesome5 name="coins" size={8.5} color={C.gold || '#F59E0B'} />
+                                            <Text style={[styles.microBountyText, { color: C.gold || '#F59E0B' }]}>
                                                 {t('catalog_add_price', lang)} (+{pricePoints})
                                             </Text>
                                         </TouchableOpacity>
                                     )
                                 ) : (
-                                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                        <Text style={[styles.priceText, { color: C.accentGreen }]}>
-                                            {displayPrice} {t('catalog_currency', lang)}
+                                    <View style={[styles.priceInlineRow, { flexDirection: rtl.flexDirection }]}>
+                                        <Text style={[styles.priceText, { color: C.textPrimary }]}>
+                                            {displayPrice}
+                                            <Text style={[styles.currencyText, { color: C.accentGreen }]}> {t('catalog_currency', lang)}</Text>
                                         </Text>
-                                        {isMissingIngredients &&
-                                            !hasPendingIngredients &&
-                                            !hasPendingPrice && (
-                                                <TouchableOpacity
-                                                    onPress={() => onPressBounty(item, 'ingredients')}
-                                                    style={[
-                                                        styles.microBounty,
-                                                        {
-                                                            borderColor: C.accentGreen + '40',
-                                                            backgroundColor: C.accentGreen + '15',
-                                                        },
-                                                    ]}
-                                                >
-                                                    <FontAwesome5 name="flask" size={10} color={C.accentGreen} />
-                                                    <Text
-                                                        style={[
-                                                            styles.microBountyText,
-                                                            { color: C.accentGreen },
-                                                        ]}
-                                                    >
-                                                        +{ingredientsPoints}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            )}
+
+                                        {isMissingIngredients && !hasPendingIngredients && !hasPendingPrice && (
+                                            <TouchableOpacity
+                                                onPress={(e) => {
+                                                    e?.stopPropagation?.();
+                                                    onPressBounty(item, 'ingredients');
+                                                }}
+                                                style={[
+                                                    styles.microBountyPill,
+                                                    {
+                                                        borderColor: C.accentGreen + '40',
+                                                        backgroundColor: C.accentGreen + '14',
+                                                        flexDirection: rtl.flexDirection,
+                                                    },
+                                                ]}
+                                                activeOpacity={0.75}
+                                            >
+                                                <FontAwesome5 name="flask" size={8.5} color={C.accentGreen} />
+                                                <Text style={[styles.microBountyText, { color: C.accentGreen }]}>
+                                                    +{ingredientsPoints}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        )}
+
                                         {isMissingIngredients && hasPendingIngredients && (
-                                            <PendingBadge field="ingredients" C={C} small lang={lang} />
+                                            <PendingBadge C={C} small lang={lang} rtl={rtl} />
                                         )}
                                     </View>
                                 )}
                             </View>
 
-                            {/* High-visibility clean text save button in bottom left */}
+                            {/* Tactile Save Pill */}
                             <TouchableOpacity
-                                activeOpacity={0.7}
+                                activeOpacity={0.75}
                                 onPress={handleSmartSave}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                style={{ paddingVertical: 2, paddingHorizontal: 4 }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[
+                                    styles.saveCapsule,
+                                    {
+                                        backgroundColor: isSaved ? (C.accentGreen + '18') : (C.background || 'rgba(0,0,0,0.06)'),
+                                        borderColor: isSaved ? (C.accentGreen + '50') : C.border,
+                                        flexDirection: rtl.flexDirection,
+                                    }
+                                ]}
                             >
-                                <Text style={{
-                                    fontFamily: 'Tajawal-ExtraBold',
-                                    fontSize: 14,
-                                    color: isSaved ? C.accentGreen : C.textPrimary,
-                                }}>
+                                <Feather 
+                                    name={isSaved ? "check" : "bookmark"} 
+                                    size={11} 
+                                    color={isSaved ? C.accentGreen : C.textSecondary} 
+                                />
+                                <Text style={[
+                                    styles.saveCapsuleText, 
+                                    { color: isSaved ? C.accentGreen : C.textSecondary }
+                                ]}>
                                     {isSaved ? t('catalog_saved_badge', lang) : t('catalog_save_action', lang)}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </TouchableOpacity>
+                </Pressable>
             </Animated.View>
 
-            {/* Claims picker — mounts per card only when needed */}
-            <ClaimsPickerModal
-                visible={showClaimsPicker}
-                product={item}
-                onConfirm={handleClaimsConfirmed}
-                onDismiss={handlePickerDismiss}
-            />
+            {/* 🌟 LAZY MOUNT CLAIMS PICKER: Instantiated only when opened */}
+            {showClaimsPicker && (
+                <ClaimsPickerModal
+                    visible={showClaimsPicker}
+                    product={item}
+                    onConfirm={handleClaimsConfirmed}
+                    onDismiss={handlePickerDismiss}
+                />
+            )}
         </>
     );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Helper component for pending badge
-// ─────────────────────────────────────────────────────────────
-const PendingBadge = ({ field, C, small, lang }) => (
+const PendingBadge = ({ C, small, lang, rtl }) => (
     <View
         style={[
             styles.pendingBadge,
-            { backgroundColor: C.gold + '20', borderColor: C.gold },
-            small && { paddingHorizontal: 6, paddingVertical: 3, gap: 4 },
+            { 
+                backgroundColor: (C.gold || '#F59E0B') + '15', 
+                borderColor: (C.gold || '#F59E0B') + '40',
+                flexDirection: rtl.flexDirection,
+            },
+            small && { paddingHorizontal: 5, paddingVertical: 2, gap: 3 },
         ]}
     >
-        <Feather name="clock" size={small ? 8 : 10} color={C.gold} />
-        <Text style={[styles.pendingText, { color: C.gold, fontSize: small ? 9 : 10 }]}>
+        <Feather name="clock" size={small ? 8 : 9.5} color={C.gold || '#F59E0B'} />
+        <Text style={[styles.pendingText, { color: C.gold || '#F59E0B', fontSize: small ? 8.5 : 10 }]}>
             {t('catalog_pending_review', lang)}
         </Text>
     </View>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (C, rtl, isLight) => StyleSheet.create({
+    // 🌟 RIGID, COMPACT CONTAINER HEIGHT (PREVENTS VERTICAL EXPLOSION)
     cardContainer: {
-        borderRadius: 20, borderWidth: 0.5, marginBottom: 15, height: 130, overflow: 'hidden',
+        borderRadius: 20,
+        marginBottom: 11,
+        height: 126, // 👈 Locked compact height
+        overflow: 'hidden',
     },
     touchableArea: {
-        flexDirection: 'row-reverse', width: '100%', height: '100%', padding: 12, gap: 15,
+        width: '100%',
+        height: '100%',
+        padding: 10,
+        gap: 12,
+        alignItems: 'center',
+    },
+    imageStageWrapper: {
+        position: 'relative',
+        width: 92,
+        height: '100%',
     },
     cardImageContainer: {
-        width: 100, height: '100%', backgroundColor: '#FFF',
-        borderRadius: 14, justifyContent: 'center', alignItems: 'center', padding: 4, overflow: 'hidden',
+        width: '100%',
+        height: '100%',
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 4,
+        overflow: 'hidden',
+        borderWidth: 0.5,
+        borderColor: 'rgba(0,0,0,0.06)',
     },
-    cardImage: { width: '100%', height: '100%' },
-    categoryBadge: { position: 'absolute', bottom: 5, right: 5, padding: 6, borderRadius: 10 },
-    cardContent: { flex: 1, justifyContent: 'space-between' },
-    brandRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
-    brandWithQty: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
-    brandText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 12 },
-    qtyText: { fontFamily: 'Tajawal-Regular', fontSize: 11 },
-    cleanBookmarkBtn: { padding: 4, justifyContent: 'center', alignItems: 'center' },
-    productName: { fontFamily: 'Tajawal-Bold', fontSize: 14, textAlign: 'right' },
-    cardFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    priceText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 15 },
-    bountyButton: {
-        flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
-        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 0.5, borderStyle: 'dashed',
+    cardImage: { 
+        width: '100%', 
+        height: '100%' 
     },
-    bountyText: { fontFamily: 'Tajawal-Bold', fontSize: 11 },
-    pointsPill: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
-    pointsPillText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 9, color: '#000' },
-    priceAndBountyRow: { flexShrink: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
-    microBounty: {
-        flexDirection: 'row-reverse', alignItems: 'center', gap: 4,
-        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 0.5,
-    },
-    microBountyText: { fontFamily: 'Tajawal-ExtraBold', fontSize: 10 },
-    pendingBadge: {
-        flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
-        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 0.5, borderStyle: 'dashed',
-    },
-    pendingText: { fontFamily: 'Tajawal-Bold', fontSize: 10 },
     compareCheckbox: {
-        position: 'absolute', top: 5, left: 5, width: 20, height: 20, borderRadius: 10,
-        borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', zIndex: 10,
+        position: 'absolute', 
+        top: 4, 
+        left: 4, 
+        width: 18, 
+        height: 18, 
+        borderRadius: 9,
+        borderWidth: 1.5, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        zIndex: 10,
+    },
+    categoryBadge: { 
+        position: 'absolute', 
+        bottom: 3, 
+        right: 3, 
+        width: 20, 
+        height: 20, 
+        borderRadius: 10, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        borderWidth: 0.8,
+    },
+    cardContent: { 
+        flex: 1, 
+        height: '100%',
+        justifyContent: 'space-between',
+        paddingVertical: 1,
+    },
+    brandRow: { 
+        justifyContent: 'flex-start', 
+        alignItems: 'center',
+    },
+    brandBtn: {
+        alignItems: 'center',
+        gap: 4,
+    },
+    brandText: { 
+        fontFamily: 'Tajawal-ExtraBold', 
+        fontSize: 11.5,
+    },
+    productName: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 13.5, 
+        lineHeight: 18,
+    },
+    cardFooter: { 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+    },
+    priceAndBountyRow: { 
+        flexShrink: 1, 
+        alignItems: 'center', 
+        gap: 5,
+    },
+    priceInlineRow: {
+        alignItems: 'center',
+        gap: 5,
+    },
+    priceText: { 
+        fontFamily: 'Tajawal-ExtraBold', 
+        fontSize: 14.5,
+    },
+    currencyText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10.5,
+    },
+    microBountyPill: {
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 7,
+        borderWidth: 0.8,
+    },
+    microBountyText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 10,
+    },
+    pendingBadge: {
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 2.5,
+        borderRadius: 7,
+        borderWidth: 0.8,
+    },
+    pendingText: { 
+        fontFamily: 'Tajawal-Bold', 
+        fontSize: 9.5,
+    },
+    saveCapsule: {
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3.5,
+        borderRadius: 9,
+        borderWidth: 0.8,
+    },
+    saveCapsuleText: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10.5,
     },
 });
+
+export default React.memo(ProductCard);

@@ -95,15 +95,6 @@
 # Google Mobile Ads
 -keep class com.google.android.gms.ads.** { *; }
 
-# Unity Ads
--keep class com.unity3d.ads.** { *; }
--keep class com.unity3d.services.** { *; }
--keep interface com.unity3d.ads.** { *; }
--keep interface com.unity3d.services.** { *; }
-
-# Unity Ads Mediation Adapter
--keep class com.google.ads.mediation.unity.** { *; }
-
 # Generic mediation keep (catches all adapters)
 -keep class com.google.ads.mediation.** { *; }
 

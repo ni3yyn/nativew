@@ -1689,6 +1689,95 @@ actionSub: {
     flexShrink: 1,
     lineHeight: 16
   },
+  // --- Step 0 Arena Layout & Deck ---
+  heroVisualContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomDeck: {
+    width: '100%',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    overflow: 'hidden',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+  },
+  bottomDeckGradient: {
+    padding: 25,
+    paddingBottom: 40,
+  },
+  deckHeader: {
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  deckTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 24,
+    color: COLORS.textPrimary,
+    marginBottom: 5,
+  },
+  primaryActionBtn: {
+    width: '100%',
+    borderRadius: 20,
+    marginBottom: 10,
+    ...Platform.select({
+      default: { 
+        elevation: 8, 
+        shadowColor: COLORS.accentGreen, 
+        shadowOpacity: 0.4, 
+        shadowRadius: 10, 
+        shadowOffset: { width: 0, height: 5 } 
+      }
+    })
+  },
+  primaryActionGradient: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 20,
+    gap: 15,
+  },
+  iconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.textPrimary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryActionTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 18,
+    color: COLORS.textOnAccent,
+    textAlign: 'right',
+  },
+  primaryActionSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 12,
+    color: COLORS.textOnAccent + 'CC',
+    textAlign: 'right',
+  },
+
+  // --- Step 3 Claims Headers ---
+  heroTitle: {
+    fontFamily: 'Tajawal-ExtraBold',
+    fontSize: 28,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  heroSub: {
+    fontFamily: 'Tajawal-Regular',
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    minHeight: 22,
+  },
 });
 
 export const styles = createStyles(COLORS);

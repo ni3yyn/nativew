@@ -1,10 +1,6 @@
 // src/widgets/SpfTimerWidget.js
 import React from 'react';
-import {
-    FlexWidget,
-    TextWidget,
-    SvgWidget,
-} from 'react-native-android-widget';
+import { FlexWidget, TextWidget, SvgWidget } from 'react-native-android-widget';
 
 export const SpfTimerWidget = ({
     uvLevel = 8.5,

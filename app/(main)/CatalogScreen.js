@@ -1,10 +1,10 @@
 // CatalogScreen.js
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -35,6 +35,7 @@ import { CatalogService } from '../../src/services/catalogService';
 const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
 const DEV_MODE_KEY = '@dev_mode_enabled';
 const ITEMS_PER_PAGE = 8;
+const ITEM_HEIGHT = 137;
 
 // 🌟 FIXED CONTROLS HEIGHT: Eliminates layout thrashing and continuous re-renders
 const CONTROLS_HEIGHT = 150;
@@ -46,26 +47,46 @@ const getPriceValue = (price) => {
     return parseFloat(price) || null;
 };
 
-// Helper to determine if a product is Algerian
-const isAlgerianProduct = (product) => {
-    if (!product) return false;
-    
+// ✅ REPLACE `isAlgerianProduct` WITH THIS:
+const processCatalogData = (rawList) => {
+  if (!Array.isArray(rawList)) return [];
+
+  return rawList.map((p, idx) => {
     const originText = String(
-        product.origin || 
-        product.country || 
-        product.madeIn || 
-        (product.brand && product.brand.origin) || 
-        ''
+      p.origin || 
+      p.country || 
+      p.madeIn || 
+      (p.brand && p.brand.origin) || 
+      ''
     ).toLowerCase();
-    
-    return (
-        originText.includes('algeria') || 
-        originText === 'dz' || 
-        originText.includes('الجزائر') ||
-        product.isLocal === true || 
-        product.isAlgerian === true
+
+    const isLocal = (
+      originText.includes('algeria') || 
+      originText === 'dz' || 
+      originText.includes('الجزائر') ||
+      p.isLocal === true || 
+      p.isAlgerian === true
     );
+
+    // Pre-calculate lowercased search index so typing doesn't rebuild strings for 3,000 items
+    const searchTarget = `${p.name || ''} ${p.name_ar || ''} ${p.brand || ''} ${p.brand_ar || ''} ${p.category?.name || ''}`.toLowerCase();
+    const priceVal = getPriceValue(p.price);
+
+    return {
+      ...p,
+      _isLocal: isLocal,
+      _searchTarget: searchTarget,
+      _priceVal: priceVal,
+    };
+  }).sort((a, b) => {
+    // Pre-sort Algerian items to the top ONCE here so useMemo never has to sort
+    if (a._isLocal && !b._isLocal) return -1;
+    if (!a._isLocal && b._isLocal) return 1;
+    return 0;
+  });
 };
+
+let _processedCatalogCache = null;
 
 export default function CatalogScreen() {
   const { colors: C, activeThemeId } = useTheme();
@@ -101,6 +122,7 @@ export default function CatalogScreen() {
   // App States
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [products, setProducts] = useState([]);
   
   // Filter States
@@ -139,6 +161,12 @@ export default function CatalogScreen() {
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
+
+  const getItemLayout = useCallback((_, index) => ({
+  length: ITEM_HEIGHT,
+  offset: ITEM_HEIGHT * index,
+  index,
+}), []);
 
   // Immediate search trigger on keyboard enter / search button
   const handleSearchSubmit = useCallback(() => {
@@ -188,7 +216,7 @@ export default function CatalogScreen() {
         setShowIntro(hasSeenIntro !== 'true');
       } catch (error) {
         console.error('Error checking intro status:', error);
-        setShowIntro(true);
+        setShowIntro(false);
       } finally {
         setCheckingIntro(false);
       }
@@ -204,44 +232,88 @@ export default function CatalogScreen() {
       }
   }, [userProfile?.points]);
 
-  // Data Loading Implementation
+  const navigation = useNavigation();
+  const [isTransitionReady, setIsTransitionReady] = useState(false);
+
+  // 🌟 1. Wait for screen slide/push transition to finish (320ms) before doing anything heavy
+  useEffect(() => {
+    let isMounted = true;
+
+    const unsubscribe = navigation?.addListener?.('transitionEnd', () => {
+      if (isMounted) setIsTransitionReady(true);
+    });
+
+    const timer = setTimeout(() => {
+      if (isMounted) setIsTransitionReady(true);
+    }, 320);
+
+    return () => {
+      isMounted = false;
+      if (typeof unsubscribe === 'function') unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [navigation]);
+
+  // 🌟 2. Optimized loadData that caches pre-processed products in memory
   const loadData = useCallback(async (force = false) => {
     try {
       if (force) {
         setSyncing(true);
-      }
-      
-      const data = await CatalogService.fetchCatalog(force);
-      
-      if (data && data.length > 0) {
-        setProducts(data);
       } else {
-        const cachedData = await CatalogService.fetchCatalog(false);
-        setProducts(cachedData || []);
+        setLoading(true);
+      }
+      setLoadError(false);
+      
+      // Instant return (0ms) if already processed in memory
+      if (_processedCatalogCache && !force) {
+        setProducts(_processedCatalogCache);
+        setLoading(false);
+        setSyncing(false);
+        return;
+      }
+
+      const rawData = await CatalogService.fetchCatalog(force);
+      
+      if (Array.isArray(rawData) && rawData.length > 0) {
+        const processed = processCatalogData(rawData);
+        _processedCatalogCache = processed;
+        setProducts(processed);
+        setLoadError(false);
+      } else {
+        setProducts(prev => {
+          if (prev.length === 0) setLoadError(true);
+          return prev;
+        });
       }
 
       setLoading(false);
       setSyncing(false);
-      
       if (force) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error("❌ loadData failed:", error);
-      const cachedData = await CatalogService.fetchCatalog(false);
-      setProducts(cachedData || []);
+      setProducts(prev => {
+        if (prev.length === 0) setLoadError(true);
+        return prev;
+      });
       setSyncing(false);
       setLoading(false);
     }
   }, []);
 
-  // 3. Load catalog data once intro check is clear
+  // 🌟 3. Trigger load ONLY when screen transition is 100% settled
   useEffect(() => { 
-    if (!showIntro && !checkingIntro) {
-      loadData(); 
+    if (isTransitionReady) {
+      loadData();
     }
-  }, [showIntro, checkingIntro, loadData]);
+  }, [isTransitionReady, loadData]);
 
   // 4. Smooth Animation trigger for the compare banner
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     Animated.timing(compareBannerAnim, {
       toValue: isCompareMode ? 1 : 0,
       duration: 300,
@@ -254,13 +326,11 @@ export default function CatalogScreen() {
     try {
       await AsyncStorage.setItem(CATALOG_INTRO_SEEN_KEY, 'true');
       setShowIntro(false);
-      loadData();
     } catch (error) {
       console.error('Error saving intro preference:', error);
       setShowIntro(false);
-      loadData();
     }
-  }, [loadData]);
+  }, []);
   
   const toggleDevMode = useCallback(async () => {
     try {
@@ -286,9 +356,11 @@ export default function CatalogScreen() {
   }, [devMode]);
 
   const availableBrands = useMemo(() => {
+      // Don't compute 3,000 brands until user opens filter modal
+      if (!isFilterModalVisible) return ['all']; 
       const brands = new Set(products.map(p => p.brand).filter(Boolean));
       return ['all', ...Array.from(brands).sort()];
-  }, [products]);
+  }, [products, isFilterModalVisible]);
 
   // Alias maps for fuzzy matching skin types & claims
   const SKIN_TYPE_ALIASES = {
@@ -346,8 +418,7 @@ export default function CatalogScreen() {
     if (!query) return 100;
     if (!product) return 0;
     
-    query = query.toLowerCase().trim();
-    const searchString = `${product.name || ''} ${product.name_ar || ''} ${product.brand || ''} ${product.brand_ar || ''} ${product.category?.name || ''}`.toLowerCase();
+    const searchString = product._searchTarget || '';
     
     if ((product.name && product.name.toLowerCase() === query) || 
         (product.brand && product.brand.toLowerCase() === query)) {
@@ -395,7 +466,7 @@ export default function CatalogScreen() {
       }
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
       const matchBrand = advancedFilters.brand === 'all' || p.brand === advancedFilters.brand;
-      const matchLocal = advancedFilters.localOnly ? isAlgerianProduct(p) : true;
+      const matchLocal = advancedFilters.localOnly ? p._isLocal : true;
 
       let matchMissing = true;
       if (advancedFilters.missingFields && advancedFilters.missingFields.length > 0) {
@@ -436,21 +507,15 @@ export default function CatalogScreen() {
       return matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
     });
 
+    // ONLY SORT IF NECESSARY
     if (advancedFilters.sort === 'price_asc') {
-        result.sort((a, b) => (getPriceValue(a.price) || 999999) - (getPriceValue(b.price) || 999999));
+        result.sort((a, b) => (a._priceVal || 999999) - (b._priceVal || 999999));
     } else if (advancedFilters.sort === 'price_desc') {
-        result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
+        result.sort((a, b) => (b._priceVal || 0) - (a._priceVal || 0));
     } else if (isSearching) {
         result.sort((a, b) => (b._searchScore || 0) - (a._searchScore || 0));
-    } else if (!isSearching) {
-        result.sort((a, b) => {
-            const aIsAlg = isAlgerianProduct(a);
-            const bIsAlg = isAlgerianProduct(b);
-            if (aIsAlg && !bIsAlg) return -1;
-            if (!aIsAlg && bIsAlg) return 1;
-            return 0;
-        });
     }
+    // Note: Default sort is omitted because products are already pre-sorted on initial load
 
     return result;
   }, [debouncedSearch, activeCat, products, advancedFilters]);
@@ -666,6 +731,51 @@ export default function CatalogScreen() {
   ), [handleProductPress, handleContribute, handleSelectBrand, isCompareMode, selectedCompareIds]);
 
   const ListEmptyComponent = useMemo(() => {
+    // 1. Initial loading state when products are being fetched
+    if (loading && products.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyIconBox, { backgroundColor: C.card, borderColor: C.accentGreen + '30' }]}>
+            <ActivityIndicator size="large" color={C.accentGreen} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
+            {t('catalog_loading_title', language) || 'جاري تحميل المنتجات...'}
+          </Text>
+          <Text style={[styles.emptyDescription, { color: C.textDim, textAlign: 'center', lineHeight: 22 }]}>
+            {t('catalog_loading_desc', language) || 'يتم جلب دليل المنتجات الموثقة، يرجى الانتظار لحظات...'}
+          </Text>
+        </View>
+      );
+    }
+
+    // 2. Load failed / offline on first launch
+    if (!loading && products.length === 0 && loadError) {
+      return (
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyIconBox, { backgroundColor: C.card, borderColor: C.border }]}>
+            <Feather name="wifi-off" size={32} color={C.accentGreen} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
+            {t('catalog_load_failed_title', language) || 'تعذر تحميل المنتجات'}
+          </Text>
+          <Text style={[styles.emptyDescription, { color: C.textDim, textAlign: 'center', lineHeight: 22 }]}>
+            {t('catalog_load_failed_desc', language) || 'تأكدي من الاتصال بالإنترنت ثم أعيدي المحاولة.'}
+          </Text>
+          <TouchableOpacity 
+            style={[styles.emptyAddButton, { backgroundColor: C.accentGreen, borderColor: C.accentGreen }]}
+            onPress={() => loadData(true)}
+            activeOpacity={0.8}
+          >
+            <Feather name="refresh-cw" size={16} color={C.textOnAccent || '#FFFFFF'} />
+            <Text style={[styles.emptyAddButtonText, { color: C.textOnAccent || '#FFFFFF' }]}>
+              {t('catalog_retry_action', language) || 'إعادة المحاولة'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // 3. Normal empty state (search / filter)
     const hasSearchTerm = search.length > 0 || debouncedSearch.length > 0;
     const hasActiveFilter = advancedFilters.brand !== 'all' || advancedFilters.bountiesOnly || advancedFilters.sort !== 'default';
     
@@ -690,7 +800,7 @@ export default function CatalogScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [C.textDim, C.textPrimary, C.accentGreen, language, styles, search.length, advancedFilters, handleOpenAddProduct]);
+  }, [loading, products.length, loadError, C.card, C.accentGreen, C.border, C.textPrimary, C.textDim, C.textOnAccent, language, styles, loadData, search.length, debouncedSearch.length, advancedFilters, handleOpenAddProduct]);
 
   const ListFooterComponent = useMemo(() => {
       if (Array.isArray(filteredData) && visibleCount < filteredData.length) {
@@ -705,27 +815,7 @@ export default function CatalogScreen() {
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
-    if (checkingIntro) {
-        return (
-            <View style={[styles.center, { backgroundColor: C.background }]}>
-                <ActivityIndicator size="large" color={C.accentGreen} />
-            </View>
-        );
-    }
-
-    if (showIntro) {
-        return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
-    }
-
-    if (loading) {
-        return (
-            <View style={[styles.center, { backgroundColor: C.background }]}>
-                <ActivityIndicator size="large" color={C.accentGreen} />
-            </View>
-        );
-    }
-
-    const isLightTheme = activeThemeId === 'light';
+  const isLightTheme = activeThemeId === 'light';
 
     const renderContent = () => (
         <View style={styles.container}>
@@ -742,7 +832,11 @@ export default function CatalogScreen() {
                 scrollY={scrollY}
                 activeTab="catalog"
                 title={t('catalog_title', language)}
-                subtitle={interpolate(t('catalog_header_desc', language) || '%{count} منتج تجميلي موثّق', { count: products.length })}
+                subtitle={
+                    loading && products.length === 0
+                        ? (t('catalog_loading_title', language) || 'جاري تحميل المنتجات...')
+                        : interpolate(t('catalog_header_desc', language) || '%{count} منتج تجميلي موثّق', { count: products.length })
+                }
             />
 
             {/* 🌟 STICKY/COLLAPSIBLE CONTROLS (Native Transform) */}
@@ -825,6 +919,7 @@ export default function CatalogScreen() {
             <Animated.FlatList 
                 data={visibleData} 
                 keyExtractor={keyExtractor} 
+                getItemLayout={getItemLayout}
                 showsVerticalScrollIndicator={false}
                 renderItem={renderProduct}
                 contentContainerStyle={[
@@ -847,7 +942,7 @@ export default function CatalogScreen() {
                 initialNumToRender={ITEMS_PER_PAGE}
                 maxToRenderPerBatch={ITEMS_PER_PAGE}
                 windowSize={5}
-                removeClippedSubviews={Platform.OS === 'android'}
+                removeClippedSubviews={false}
                 onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
                     { useNativeDriver: true } // 👈 NATIVE DRIVER (Zero JS lag)
@@ -891,10 +986,44 @@ export default function CatalogScreen() {
   </Animated.View>
 </View>
 
-            <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={closeProductDetail} onContribute={handleContribute} onSelectBrand={handleSelectBrand} />
-            <BountyModal visible={bountyState.visible} product={bountyState.product} field={bountyState.field} onClose={closeBountyModal} onSubmit={handleBountySubmit} />
-            <FilterModal visible={isFilterModalVisible} onClose={closeFilterModal} onApply={setAdvancedFilters} currentFilters={advancedFilters} availableBrands={availableBrands} />
-            <AddProductModal visible={isAddProductVisible} onClose={closeAddProductModal} onSubmit={handleNewProductSubmit} />
+            {!!selectedProduct && (
+  <CatalogDetailModal 
+    visible={!!selectedProduct} 
+    product={selectedProduct} 
+    onClose={closeProductDetail} 
+    onContribute={handleContribute} 
+    onSelectBrand={handleSelectBrand} 
+  />
+)}
+
+{bountyState.visible && (
+  <BountyModal 
+    visible={bountyState.visible} 
+    product={bountyState.product} 
+    field={bountyState.field} 
+    onClose={closeBountyModal} 
+    onSubmit={handleBountySubmit} 
+  />
+)}
+
+{isFilterModalVisible && (
+  <FilterModal 
+    visible={isFilterModalVisible} 
+    onClose={closeFilterModal} 
+    onApply={setAdvancedFilters} 
+    currentFilters={advancedFilters} 
+    availableBrands={availableBrands} 
+  />
+)}
+
+{isAddProductVisible && (
+  <AddProductModal 
+    visible={isAddProductVisible} 
+    onClose={closeAddProductModal} 
+    onSubmit={handleNewProductSubmit} 
+  />
+)}
+            {showIntro && <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />}
         </View>
     );
 
@@ -1007,6 +1136,15 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 30,
     paddingVertical: 24,
+  },
+  emptyIconBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyTitle: { 
     fontFamily: 'Tajawal-Bold', 

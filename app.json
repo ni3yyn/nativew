@@ -3,7 +3,7 @@
     "name": "وثيق",
     "slug": "nativew",
     "scheme": "whathiq",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -46,13 +46,24 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK"
       ],
-      "runtimeVersion": "2.0.0"
+      "runtimeVersion": "2.0.1"
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#00000000",
+      "barStyle": "dark-content"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#00000000",
+          "barStyle": "dark-content"
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -78,7 +89,7 @@
       "expo-build-properties",
       "expo-audio",
       "expo-asset"
-      ],
+    ],
     "extra": {
       "router": {},
       "eas": {

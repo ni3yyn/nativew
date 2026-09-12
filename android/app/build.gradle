@@ -95,8 +95,8 @@ android {
         targetSdkVersion 36
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 22
-        versionName "2.0.0"
+        versionCode 23
+        versionName "2.0.1"
         resConfigs "en"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
@@ -188,8 +188,6 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation 'com.google.ads.mediation:unity:4.12.5.0'
-    implementation 'com.unity3d.ads:unity-ads:4.12.5'
     implementation platform('com.google.firebase:firebase-bom:34.10.0')
     implementation 'com.google.firebase:firebase-perf'
 
