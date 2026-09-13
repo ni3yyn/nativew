@@ -49,7 +49,7 @@
       </intent-filter>
     </activity>
     <receiver
-    android:name=".SpfTimerWidget"
+    android:name="com.wathiq.app.widget.SpfTimerWidget"
     android:exported="false"
     android:label="مؤقت">
     <intent-filter>
