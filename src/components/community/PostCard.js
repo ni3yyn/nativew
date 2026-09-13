@@ -253,9 +253,16 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
     );
 
     // ------------------------------------------------------------------
-    //  expo-audio player — null source until we resolve a URI
+    //  expo-audio player — ALWAYS pass a valid AudioSource object.
+    //  Never pass `null` — it crashes the native bridge with a
+    //  NullPointerException ("cannot be cast to AudioSource?").
     // ------------------------------------------------------------------
-    const player = useAudioPlayer(resolvedUri ? { uri: resolvedUri } : null);
+    const audioSource = useMemo(
+        () => (resolvedUri ? { uri: resolvedUri } : { uri: '' }),
+        [resolvedUri]
+    );
+
+    const player = useAudioPlayer(audioSource);
     const status = useAudioPlayerStatus(player);
 
     const isPlaying = !!status?.playing;
@@ -264,23 +271,23 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
     const duration  = (status?.duration   ?? 0) * 1000;    // s → ms
 
     // ------------------------------------------------------------------
-//  Registry entry — exposes the LIVE player via getPlayer()
-// ------------------------------------------------------------------
-const playerRef = useRef(player);
-useEffect(() => { playerRef.current = player; }, [player]);
+    //  Registry entry — exposes the LIVE player via getPlayer()
+    // ------------------------------------------------------------------
+    const playerRef = useRef(player);
+    useEffect(() => { playerRef.current = player; }, [player]);
 
-const entryRef = useRef(null);
-if (!entryRef.current) {
-    entryRef.current = {
-        getPlayer: () => playerRef.current,
-    };
-}
+    const entryRef = useRef(null);
+    if (!entryRef.current) {
+        entryRef.current = {
+            getPlayer: () => playerRef.current,
+        };
+    }
 
-useEffect(() => {
-    if (!entryRef.current) return;
-    const unregister = _registerTipsPlayer(entryRef.current);
-    return unregister;
-}, []);
+    useEffect(() => {
+        if (!entryRef.current) return;
+        const unregister = _registerTipsPlayer(entryRef.current);
+        return unregister;
+    }, []);
 
     // Global audio mode
     useEffect(() => {

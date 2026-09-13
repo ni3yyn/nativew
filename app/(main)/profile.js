@@ -1964,7 +1964,7 @@ const handleShelfViewChange = (newView) => {
 
             // 3. Try to get location safely and quickly
             // getLastKnownPositionAsync gets cached location instantly and NEVER triggers popups
-            let loc = await Location.getLastKnownPositionAsync({});
+            let loc = await Location.getLastKnownPositionAsync();
             
             // If there's no cache, gently request it using Balanced accuracy
             if (!loc) {
