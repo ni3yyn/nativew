@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:layoutDirection="ltr"
+    android:gravity="center_vertical">
+
+    <!-- LEFT: Ring and Stacked Timer -->
+    <RelativeLayout
+        android:layout_width="110dp"
+        android:layout_height="110dp">
+
+        <!-- Background Ring Track -->
+        <ProgressBar
+            android:id="@+id/widget_progress_bg"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="100"
+            android:progressDrawable="@drawable/ring_bg_track" />
+
+        <!-- Active Progress Ring -->
+        <ProgressBar
+            android:id="@+id/widget_progress_active"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="100"
+            android:progressDrawable="@drawable/ring_active_track" />
+
+        <!-- Center Numbers (Minutes / Dash / Seconds) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <!-- Minutes -->
+            <TextView
+                android:id="@+id/widget_minutes_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#18352D"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false"
+                android:text="74" />
+
+            <!-- Separator Dash -->
+            <View
+                android:id="@+id/widget_separator"
+                android:layout_width="14dp"
+                android:layout_height="2.5dp"
+                android:layout_marginTop="1dp"
+                android:layout_marginBottom="1dp"
+                android:background="#CC8A1A" />
+
+            <!-- Seconds -->
+            <TextView
+                android:id="@+id/widget_seconds_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#CC8A1A"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false"
+                android:text=":49" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- RIGHT: Info and Action Button -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:layoutDirection="rtl">
+
+        <!-- Top Header: Title & UV Level -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#18352D"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:text="مؤقت وثيق" />
+
+            <TextView
+                android:id="@+id/widget_uv_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#CC8A1A"
+                android:textSize="13.5sp"
+                android:textStyle="bold"
+                android:text="UV ~8.5 ☀️" />
+        </RelativeLayout>
+
+        <!-- Status Label -->
+        <TextView
+            android:id="@+id/widget_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/tajawal_bold"
+            android:gravity="start|center_vertical"
+            android:textColor="#4A6B5F"
+            android:textSize="12.5sp"
+            android:text="حماية نشطة" />
+
+        <!-- Bottom CTA Button -->
+        <LinearLayout
+            android:id="@+id/widget_action_btn"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/btn_bg"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_btn_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#FFFFFF"
+                android:textSize="12.5sp"
+                android:text="إعادة المؤقت ↻" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -17,13 +17,16 @@ import com.facebook.react.defaults.DefaultReactHost
 import com.facebook.react.modules.i18nmanager.I18nUtil
 import expo.modules.ApplicationLifecycleDispatcher
 
+// 1. IMPORT YOUR WIDGET PACKAGE HERE
+import com.wathiq.app.widget.SpfWidgetPackage
+
 class MainApplication : Application(), ReactApplication {
 
   override val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
     override fun getPackages(): List<ReactPackage> =
       PackageList(this).packages.apply {
-        // Packages that cannot be autolinked yet can be added manually here, for example:
-        // add(MyReactNativePackage())
+        // 2. REGISTER YOUR WIDGET PACKAGE HERE
+        add(SpfWidgetPackage())
       }
 
     override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"

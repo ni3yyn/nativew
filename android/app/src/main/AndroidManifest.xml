@@ -49,28 +49,20 @@
       </intent-filter>
     </activity>
     <receiver
-    android:name="com.wathiq.app.widget.SpfTimerWidget"
-    android:exported="false"
-    android:label="مؤقت">
-    <intent-filter>
-        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-        <action android:name="com.wathiq.app.WIDGET_CLICK" />
-    </intent-filter>
-    <meta-data
-        android:name="android.appwidget.provider"
-        android:resource="@xml/spf_timer_info" />
-</receiver>
-<receiver
-        android:name="com.wathiq.app.widget.SpfTimerCompactWidget"
-        android:exported="false"
-        android:label="مؤقت وثيق (مربع)">
+        android:name="com.wathiq.app.widget.SpfNativeWidgetProvider"
+        android:exported="true"
+        android:label="مؤقت وثيق">
         <intent-filter>
             <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            <action android:name="com.wathiq.app.WIDGET_CLICK" />
+            <action android:name="com.wathiq.app.ACTION_START_TIMER" />
+            <action android:name="com.wathiq.app.ACTION_TIMER_EXPIRED" />
+            <!-- 🌟 REBOOT IMMUNITY -->
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+            <action android:name="android.intent.action.QUICKBOOT_POWERON" />
         </intent-filter>
         <meta-data
             android:name="android.appwidget.provider"
-            android:resource="@xml/spf_timer_compact_info" />
+            android:resource="@xml/spf_timer_info" />
     </receiver>
   </application>
 </manifest>

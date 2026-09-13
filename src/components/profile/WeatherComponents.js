@@ -1,3 +1,5 @@
+// src/components/profile/WeatherComponents.js
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View,
@@ -13,6 +15,7 @@ import {
     Platform,
     Alert,
     Easing,
+    NativeModules,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,7 +25,6 @@ import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop } from 're
 import { PressableScale, StaggeredItem } from '../common/Animations';
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
-import { requestPinWidget } from 'react-native-android-widget';
 import { AlertService } from '../../services/alertService';
 import { useTheme } from '../../context/ThemeContext';
 import { t } from '../../i18n';
@@ -425,8 +427,9 @@ const HourlySkinRisk = ({ forecast }) => {
                         const color = hour.color || COLORS.success;
                         const icon = hour.icon || (isNight ? 'moon' : 'sun');
                         const label = hour.label || t('weather_uv_status_safe', language);
-                        const barHeight = Math.min(Math.max((hour.uv * 6) + 20, 20), 65);
-                        const isRisky = hour.uv >= 5;
+                        const safeUv = Number(hour.uv) || 0;
+                        const barHeight = Math.min(Math.max((safeUv * 6) + 20, 20), 65);
+                        const isRisky = safeUv >= 5;
 
                         return (
                             <View key={index} style={[styles.timeSlot, isCurrent && styles.timeSlotActive]}>
@@ -534,41 +537,16 @@ export const WeatherDetailedSheet = ({ insight }) => {
     const uvIndex = raw.uvIndex !== undefined ? raw.uvIndex : 0;
     const isDay = raw.isDay !== undefined ? raw.isDay : true;
 
-    // Native Action: Trigger native Android "Add to Home screen" dialog
-    const handleAddWidget = async () => {
-        Haptics.selectionAsync();
+    // 🌟 Pure 1-Step: Tapping immediately triggers Android's native "Add to Home screen" dialog
+    const handleAddWidget = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-        if (Platform.OS !== 'android') {
-            Alert.alert(
-                language === 'ar' ? 'تنبيه' : 'Notice',
-                language === 'ar' ? 'الويدجت متاح لأجهزة أندرويد حالياً.' : 'Homescreen widget is currently available on Android.'
-            );
-            return;
-        }
-
-        try {
-            if (typeof requestPinWidget === 'function') {
-                const isPinned = await requestPinWidget({ widgetName: 'SpfTimer' }).catch(() => requestPinWidget('SpfTimer'));
-                if (isPinned) {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    return;
-                }
+        if (Platform.OS === 'android' && NativeModules.SpfWidgetModule?.pinWidget) {
+            try {
+                NativeModules.SpfWidgetModule.pinWidget();
+            } catch (e) {
+                console.warn('Pin widget error:', e);
             }
-
-            Alert.alert(
-                language === 'ar' ? 'إضافة مؤقت وثيق' : 'Add Wathiq Widget',
-                language === 'ar'
-                    ? 'اضغط مطولاً على أي مساحة فارغة في شاشة هاتفك الرئيسية، اختر (Widgets)، ثم اسحب «مؤقت وثيق».'
-                    : 'Long-press any empty space on your home screen, tap (Widgets), and add "Wathiq Timer".',
-                [{ text: language === 'ar' ? 'حسناً' : 'OK', style: 'default' }]
-            );
-        } catch {
-            Alert.alert(
-                language === 'ar' ? 'إضافة مؤقت وثيق' : 'Add Widget',
-                language === 'ar'
-                    ? 'اضغط مطولاً على شاشة هاتفك الرئيسية واختر (Widgets) لإضافة «مؤقت وثيق».'
-                    : 'Long-press your home screen and choose (Widgets) to add "Wathiq Timer".'
-            );
         }
     };
 
@@ -602,7 +580,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                 </LinearGradient>
             </View>
 
-            {/* 2. 🌟 EDUCATIONAL + SOLUTION WIDGET SECTION (NO ICON, FULL WIDTH, INCREASED FONT) 🌟 */}
+            {/* 2. 🌟 NOTE OF SUNSCREEN DEGRADING + ADD TO HOMESCREEN BUTTON (NO SVG / NO TIMER) 🌟 */}
             <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={handleAddWidget}
@@ -620,7 +598,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                     </Text>
                 </View>
 
-                {/* Educational problem then solution in 2 concise phrases with larger font */}
+                {/* The note on sunscreen degradation */}
                 <Text style={styles.cleanWidgetDesc}>
                     {language === 'ar'
                         ? 'تفقد فلاتر واقي الشمس فاعليتها تدريجياً مع استمرار التعرض للأشعة والحرارة. «مؤقت وثيق» يحسب توقيت التجديد الذكي تلقائياً ويعرضه مباشرة على شاشة هاتفك.'
@@ -638,7 +616,7 @@ export const WeatherDetailedSheet = ({ insight }) => {
                 </ScrollView>
             </View>
 
-            {/* 4. TIMELINE (Skin Index - Flat) */}
+            {/* 4. TIMELINE */}
             <HourlySkinRisk forecast={data.hourlyForecast} />
 
             {/* 5. ACCESSORIES */}
@@ -1208,7 +1186,7 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
     },
     cleanWidgetDesc: {
         fontFamily: 'Tajawal-Regular',
-        fontSize: 13.5, // 👈 حجم خط أكبر وواضح للقراءة
+        fontSize: 13.5,
         color: COLORS.textSecondary,
         textAlign: isRTL ? 'right' : 'left',
         lineHeight: 20,
@@ -1394,7 +1372,6 @@ const createStyles = (COLORS, isRTL) => StyleSheet.create({
         opacity: 0.8
     },
 
-    // 🌟 تقليص الحواف الأفقية للمودال إلى 10px لتمدد العناصر براحة 🌟
     sheetContainer: { paddingHorizontal: 10 },
     sectionWrapper: { marginTop: 24, paddingHorizontal: 2 },
     sectionHeaderRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 10, gap: 8, paddingRight: 4 },

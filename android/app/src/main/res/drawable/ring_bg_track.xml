@@ -1,0 +1,4 @@
+<!-- ring_bg_track.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="ring" android:thickness="10dp" android:useLevel="false">
+    <solid android:color="#1718352D" />
+</shape>
