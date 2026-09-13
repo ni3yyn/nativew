@@ -88,15 +88,30 @@
       [
   "react-native-android-widget",
   {
+    "fonts": [
+      "./assets/fonts/Tajawal-Bold.ttf",
+      "./assets/fonts/Tajawal-ExtraBold.ttf"
+    ],
     "widgets": [
       {
         "name": "SpfTimerWidget",
-        "label": "مؤقت وثيق",
+        "label": "مؤقت وثيق (عريض 4x2)",
         "minWidth": "250dp",
         "minHeight": "110dp",
         "targetCellWidth": 4,
         "targetCellHeight": 2,
-        "description": "مؤقت حماية من أشعة الشمس",
+        "description": "مؤقت حماية من أشعة الشمس (لوحة عريضة)",
+        "updatePeriodMillis": 1800000,
+        "resizeMode": "horizontal|vertical"
+      },
+      {
+        "name": "SpfTimerCompactWidget",
+        "label": "مؤقت وثيق (مربع 2x2)",
+        "minWidth": "110dp",
+        "minHeight": "110dp",
+        "targetCellWidth": 2,
+        "targetCellHeight": 2,
+        "description": "مؤقت حماية من أشعة الشمس (مربع صغير)",
         "updatePeriodMillis": 1800000,
         "resizeMode": "horizontal|vertical"
       }

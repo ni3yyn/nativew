@@ -60,5 +60,17 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/spf_timer_info" />
 </receiver>
+<receiver
+        android:name="com.wathiq.app.widget.SpfTimerCompactWidget"
+        android:exported="false"
+        android:label="مؤقت وثيق (مربع)">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            <action android:name="com.wathiq.app.WIDGET_CLICK" />
+        </intent-filter>
+        <meta-data
+            android:name="android.appwidget.provider"
+            android:resource="@xml/spf_timer_compact_info" />
+    </receiver>
   </application>
 </manifest>
