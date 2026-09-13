@@ -11,6 +11,12 @@ import { resolveSpfContext } from '../services/spfContextEngine';
 
 const WIDGET_STATE_KEY = '@wathiq_live_timer_state';
 
+// Width (in dp) below which we fall back to the compact 2x2 layout when the
+// user has resized the 4x2 widget down. This is intentionally generous —
+// the large layout needs ~250dp to fit the ring + text row without
+// clipping/overflowing, so we switch well before that.
+const COMPACT_WIDTH_THRESHOLD_DP = 220;
+
 export async function widgetTaskHandler(props) {
     const { widgetAction, clickAction, renderWidget, widgetInfo } = props;
 
@@ -66,7 +72,7 @@ export async function widgetTaskHandler(props) {
 
         // 4. Calculate Remaining Countdown
         let remainingSeconds = Math.max(0, Math.ceil((state.endTime - now) / 1000));
-        
+
         // Auto-expire when timer finishes
         if (state.timerState === 'running' && remainingSeconds <= 0) {
             state.timerState = 'expired';
@@ -77,10 +83,23 @@ export async function widgetTaskHandler(props) {
 
         // 🌟 5. DYNAMIC WIDGET SELECTOR (Handles BOTH 4x2 and 2x2)
         // - Checks if user picked the dedicated 2x2 widget: 'SpfTimerCompactWidget'
-        // - OR if the user dragged/shrunk the 4x2 widget below 220dp width
-        const isCompact = 
-            widgetInfo?.widgetName === 'SpfTimerCompactWidget' || 
-            (widgetInfo?.width && widgetInfo.width < 220);
+        // - OR if the user dragged/shrunk the 4x2 widget below the compact threshold
+        //
+        // NOTE: `widgetInfo.width`/`widgetInfo.height` from react-native-android-widget
+        // are reported in dp, matching the `minWidth`/`minHeight` values you set in
+        // app.json — so comparing directly against a dp threshold here is correct.
+        // Logged below so you can confirm the actual values on-device in Logcat if the
+        // wrong layout ever gets picked again.
+        const reportedWidth = widgetInfo?.width;
+        const isNamedCompact = widgetInfo?.widgetName === 'SpfTimerCompactWidget';
+        const isResizedCompact = typeof reportedWidth === 'number' && reportedWidth > 0 && reportedWidth < COMPACT_WIDTH_THRESHOLD_DP;
+        const isCompact = isNamedCompact || isResizedCompact;
+
+        if (__DEV__) {
+            console.log(
+                `[Widget] name=${widgetInfo?.widgetName} width=${reportedWidth}dp height=${widgetInfo?.height}dp -> isCompact=${isCompact}`
+            );
+        }
 
         const WidgetComponent = isCompact ? SpfTimerCompactWidget : SpfTimerWidget;
 
@@ -98,7 +117,7 @@ export async function widgetTaskHandler(props) {
 
     } catch (error) {
         console.error('[Widget TaskHandler Error]:', error);
-        
+
         // Visual fallback to avoid Android launcher error crashes
         renderWidget(
             <FlexWidget

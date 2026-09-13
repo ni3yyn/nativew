@@ -40,6 +40,7 @@ export const SpfTimerCompactWidget = ({
         buttonTextColor = '#F0F5F0';
     }
 
+    const RING_SIZE = 96;
     const ringColor = isExpired ? '#D94A4F' : accentColor;
     const radius = 38;
     const cx = 48;
@@ -65,7 +66,7 @@ export const SpfTimerCompactWidget = ({
     `;
 
     const ringSvg = `
-        <svg width="96" height="96" viewBox="0 0 96 96">
+        <svg width="${RING_SIZE}" height="${RING_SIZE}" viewBox="0 0 96 96">
             <circle cx="${cx}" cy="${cy}" r="${radius}" stroke="rgba(24, 53, 45, 0.09)" stroke-width="8.5" fill="none" />
 
             ${(isRunning || timerState === 'idle') ? `
@@ -150,19 +151,21 @@ export const SpfTimerCompactWidget = ({
                     />
                 </FlexWidget>
 
-                {/* Centered Gauge */}
+                {/* Centered Gauge — fixed size, never grows/shrinks */}
                 <OverlapWidget
                     style={{
-                        width: 96,
-                        height: 96,
+                        width: RING_SIZE,
+                        height: RING_SIZE,
+                        flexGrow: 0,
+                        flexShrink: 0,
                     }}
                 >
-                    <SvgWidget svg={ringSvg} style={{ width: 96, height: 96 }} />
+                    <SvgWidget svg={ringSvg} style={{ width: RING_SIZE, height: RING_SIZE }} />
 
                     <FlexWidget
                         style={{
-                            width: 96,
-                            height: 96,
+                            width: RING_SIZE,
+                            height: RING_SIZE,
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}

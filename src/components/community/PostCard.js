@@ -239,9 +239,23 @@ const TipsActivePlayer = React.memo(({
     rtl,
     styles,
 }) => {
-    // 🌟 FULL FIX: Pass 'uri' directly as a raw string. 
+    // 🌟 FULL FIX: Pass 'uri' directly as a raw string.
     // Do NOT wrap in { uri: uri } to prevent Android Kotlin NullPointerExceptions.
-    const player = useAudioPlayer(uri);
+    //
+    // 🛡️ CRASH GUARD: expo-audio's native AudioPlayer constructor throws a fatal,
+    // unrecoverable JavascriptException ("cannot be cast to type AudioSource,
+    // received ReadableNativeMap") if it ever receives a non-string/number value
+    // (e.g. an object, due to malformed upstream data). We validate here so a bad
+    // value degrades to "no player" instead of crashing the whole app.
+    const safeUri = typeof uri === 'string' && uri.length > 0 ? uri : null;
+
+    useEffect(() => {
+        if (uri && !safeUri) {
+            console.warn('[TipsActivePlayer] Rejected non-string audio uri:', typeof uri, uri);
+        }
+    }, [uri, safeUri]);
+
+    const player = useAudioPlayer(safeUri);
     const status = useAudioPlayerStatus(player);
 
     const isPlaying = !!status?.playing;
@@ -349,10 +363,23 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
         return txt;
     }, [post?.title]);
 
-    const cloudAudioUrl = useMemo(
-        () => post?.audioUrl || post?.audio_url || null,
-        [post?.audioUrl, post?.audio_url]
-    );
+    // 🛡️ CRASH GUARD: post.audioUrl / post.audio_url should always be a plain URL
+    // string, but if the data layer ever returns an object here (e.g. an
+    // un-unwrapped Supabase Storage response, or a jsonb column shaped like
+    // { uri, duration }), it used to flow straight into useAudioPlayer() and
+    // trigger a native "cannot be cast to type AudioSource" crash. We coerce
+    // known object shapes to a string and reject anything else here, once,
+    // at the source, instead of at every consumer.
+    const cloudAudioUrl = useMemo(() => {
+        const raw = post?.audioUrl || post?.audio_url || null;
+        if (!raw) return null;
+        if (typeof raw === 'string') return raw;
+        if (typeof raw === 'object') {
+            console.warn('[TipsContent] post.audioUrl/audio_url was an object, not a string:', raw);
+            return raw.uri || raw.url || raw.publicUrl || null;
+        }
+        return null;
+    }, [post?.audioUrl, post?.audio_url]);
 
     useEffect(() => {
         setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -428,7 +455,10 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
         setAutoPlayRequested(true);
 
         const uri = await resolveAudioUri();
-        if (!uri) {
+        if (!uri || typeof uri !== 'string') {
+            if (uri) {
+                console.warn('[TipsContent] resolveAudioUri returned a non-string value:', typeof uri, uri);
+            }
             setAutoPlayRequested(false);
             Alert.alert(
                 t('community_error_title', language),

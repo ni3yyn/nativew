@@ -49,6 +49,7 @@ export const SpfTimerWidget = ({
     else if (isRunning) twoWordStatus = 'حماية نشطة';
 
     // 4. Ring Math (110dp size, 10dp stroke, radius 44)
+    const RING_SIZE = 110;
     const ringColor = isExpired ? '#D94A4F' : accentColor;
     const circumference = 276.46;
     const strokeDashoffset = circumference * (1 - (isRunning ? clampedProgress : isExpired ? 0 : 1));
@@ -73,40 +74,40 @@ export const SpfTimerWidget = ({
     `;
 
     const ringSvg = `
-        <svg width="110" height="110" viewBox="0 0 110 110">
+        <svg width="${RING_SIZE}" height="${RING_SIZE}" viewBox="0 0 110 110">
             <!-- Light Track -->
             <circle cx="55" cy="55" r="44" stroke="rgba(24, 53, 45, 0.09)" stroke-width="10" fill="none" />
-            
+
             <!-- Progress Stroke -->
             ${(isRunning || timerState === 'idle') ? `
-                <circle 
-                    cx="55" cy="55" r="44" 
-                    stroke="${ringColor}" 
-                    stroke-width="10" 
-                    stroke-dasharray="276.46" 
-                    stroke-dashoffset="${strokeDashoffset}" 
-                    stroke-linecap="round" 
-                    fill="none" 
-                    transform="rotate(-90 55 55)" 
+                <circle
+                    cx="55" cy="55" r="44"
+                    stroke="${ringColor}"
+                    stroke-width="10"
+                    stroke-dasharray="276.46"
+                    stroke-dashoffset="${strokeDashoffset}"
+                    stroke-linecap="round"
+                    fill="none"
+                    transform="rotate(-90 55 55)"
                 />
             ` : isExpired ? `
-                <circle 
-                    cx="55" cy="55" r="44" 
-                    stroke="#D94A4F" 
-                    stroke-width="10" 
-                    fill="none" 
+                <circle
+                    cx="55" cy="55" r="44"
+                    stroke="#D94A4F"
+                    stroke-width="10"
+                    fill="none"
                 />
             ` : ''}
 
             <!-- Moving Edge Dot -->
             ${(isRunning && clampedProgress > 0) ? `
-                <circle 
-                    cx="${dotX.toFixed(2)}" 
-                    cy="${dotY.toFixed(2)}" 
-                    r="5.2" 
-                    fill="#FFFFFF" 
-                    stroke="${ringColor}" 
-                    stroke-width="2.5" 
+                <circle
+                    cx="${dotX.toFixed(2)}"
+                    cy="${dotY.toFixed(2)}"
+                    r="5.2"
+                    fill="#FFFFFF"
+                    stroke="${ringColor}"
+                    stroke-width="2.5"
                 />
             ` : ''}
         </svg>
@@ -122,10 +123,10 @@ export const SpfTimerWidget = ({
                 height: 'match_parent',
             }}
         >
-            {/* 🌟 1. Light Aurora Gradient Background */}
+            {/* 1. Light Aurora Gradient Background */}
             <SvgWidget svg={backgroundGradientSvg} style={{ width: 'match_parent', height: 'match_parent' }} />
 
-            {/* 🌟 2. Content Container: Ring on LEFT, Text/Buttons on RIGHT */}
+            {/* 2. Content Container: Ring on LEFT, Text/Buttons on RIGHT */}
             <FlexWidget
                 style={{
                     width: 'match_parent',
@@ -135,19 +136,21 @@ export const SpfTimerWidget = ({
                     alignItems: 'center',
                 }}
             >
-                {/* 👈 LEFT: THICK TIMER RING */}
+                {/* LEFT: THICK TIMER RING — fixed size, never grows/shrinks */}
                 <OverlapWidget
                     style={{
-                        width: 110,
-                        height: 110,
+                        width: RING_SIZE,
+                        height: RING_SIZE,
+                        flexGrow: 0,
+                        flexShrink: 0,
                     }}
                 >
-                    <SvgWidget svg={ringSvg} style={{ width: 110, height: 110 }} />
+                    <SvgWidget svg={ringSvg} style={{ width: RING_SIZE, height: RING_SIZE }} />
 
                     <FlexWidget
                         style={{
-                            width: 110,
-                            height: 110,
+                            width: RING_SIZE,
+                            height: RING_SIZE,
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}
@@ -204,10 +207,20 @@ export const SpfTimerWidget = ({
                     </FlexWidget>
                 </OverlapWidget>
 
-                {/* 👉 RIGHT: INFO & CONTROLS */}
+                {/* RIGHT: INFO & CONTROLS
+                    NOTE: `flex: 1` is not used here on purpose. This library's flex->RemoteViews
+                    conversion does not reliably translate the `flex` shorthand into a proper
+                    0dp-width + weight=1 LinearLayout child inside a row that also contains a
+                    fixed-size OverlapWidget sibling — it can fall back to claiming the FULL
+                    parent width instead of the remaining space, which is what pushed this
+                    column's text/button outside the card in the previous build.
+                    flexGrow + flexShrink + flexBasis: 0 is the safe, explicit form. */}
                 <FlexWidget
                     style={{
-                        flex: 1,
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 0,
+                        width: 0,
                         height: 'match_parent',
                         justifyContent: 'space-between',
                         paddingLeft: 12,
