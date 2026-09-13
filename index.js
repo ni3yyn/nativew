@@ -13,7 +13,7 @@ try {
 
 // تسجيل المعالج لنظام أندرويد فقط
 if (Platform.OS === 'android') {
-  registerWidgetTaskHandler('SpfTimerWidget', widgetTaskHandler);
+  registerWidgetTaskHandler(widgetTaskHandler);
 }
 
 // تشغيل Expo Router كالمعتاد

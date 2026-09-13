@@ -23,6 +23,7 @@
       }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "package": "com.wathiq.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
@@ -84,6 +85,24 @@
           "icon": "./assets/icon.png"
         }
       ],
+      [
+  "react-native-android-widget",
+  {
+    "widgets": [
+      {
+        "name": "SpfTimerWidget",
+        "label": "مؤقت وثيق",
+        "minWidth": "250dp",
+        "minHeight": "110dp",
+        "targetCellWidth": 4,
+        "targetCellHeight": 2,
+        "description": "مؤقت حماية من أشعة الشمس",
+        "updatePeriodMillis": 1800000,
+        "resizeMode": "horizontal|vertical"
+      }
+    ]
+  }
+],
       "expo-font",
       "@react-native-community/datetimepicker",
       "expo-build-properties",
