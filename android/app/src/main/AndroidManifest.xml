@@ -55,8 +55,8 @@
         <intent-filter>
             <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             <action android:name="com.wathiq.app.ACTION_START_TIMER" />
+            <action android:name="com.wathiq.app.ACTION_STOP_TIMER" />
             <action android:name="com.wathiq.app.ACTION_TIMER_EXPIRED" />
-            <!-- 🌟 REBOOT IMMUNITY -->
             <action android:name="android.intent.action.BOOT_COMPLETED" />
             <action android:name="android.intent.action.QUICKBOOT_POWERON" />
         </intent-filter>
