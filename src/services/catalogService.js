@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system/legacy'; 
-import { FALLBACK_PRODUCTS } from '../constants/productData';
 
 // Production endpoints
 const GITHUB_CDN_URL = "https://cdn.jsdelivr.net/gh/ni3yyn/prdcts@main/finalcatalog506.json"; 
@@ -11,8 +10,58 @@ const ETAG_FILENAME = "wathiq_catalog_etag_prod.txt";
 const LOCAL_PATH = `${FileSystem.documentDirectory}${FILENAME}`;
 const ETAG_PATH = `${FileSystem.documentDirectory}${ETAG_FILENAME}`;
 
-// Helper: Fetch with Timeout to prevent infinite loading screens on bad networks (20s for ~3MB payload)
-const fetchWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
+// ---------------------------------------------------------------------------
+// Defensive FS wrappers.
+//
+// On some builds the native expo-file-system module rejects the 2nd argument
+// to getInfoAsync unless it is a valid InfoOptionsLegacy instance, producing:
+//   "The 2nd argument cannot be cast to type ...InfoOptionsLegacy
+//    (received class com.facebook.react.bridge.ReadableNativeMap)"
+//   → java.lang.NullPointerException
+// We never pass a 2nd argument, and we never let a native throw abort the
+// whole catalog load with a native NPE — instead the throw surfaces as a
+// normal JS error the screen can render a retry for.
+// ---------------------------------------------------------------------------
+async function safeGetInfo(uri) {
+  try {
+    return await FileSystem.getInfoAsync(uri);
+  } catch (e) {
+    console.warn(`⚠️ getInfoAsync failed for ${uri}: ${e?.message || e}`);
+    return { exists: false };
+  }
+}
+
+async function safeReadString(uri) {
+  try {
+    return await FileSystem.readAsStringAsync(uri);
+  } catch (e) {
+    console.warn(`⚠️ readAsStringAsync failed for ${uri}: ${e?.message || e}`);
+    return null;
+  }
+}
+
+async function safeWriteString(uri, contents) {
+  try {
+    await FileSystem.writeAsStringAsync(uri, contents, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+    return true;
+  } catch (e) {
+    console.warn(`⚠️ writeAsStringAsync failed for ${uri}: ${e?.message || e}`);
+    return false;
+  }
+}
+
+async function safeDelete(uri) {
+  try {
+    await FileSystem.deleteAsync(uri, { idempotent: true });
+  } catch (e) {
+    console.warn(`⚠️ deleteAsync failed for ${uri}: ${e?.message || e}`);
+  }
+}
+
+// Helper: Fetch with Timeout to prevent infinite loading screens on bad networks
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 8000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -25,140 +74,118 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
     }
 };
 
-let _memoryCatalogCache = null;
-let _activeFetchPromise = null;
-
 export const CatalogService = {
+  /**
+   * Fetch the catalog.
+   *
+   * Resolves with a non-empty array on success (network or local cache).
+   * Throws on any failure. There is no silent fallback — the caller is
+   * responsible for presenting a retry UI.
+   */
   async fetchCatalog(forceUpdate = false) {
-    if (!forceUpdate && _memoryCatalogCache && Array.isArray(_memoryCatalogCache) && _memoryCatalogCache.length > 0) {
-      return _memoryCatalogCache;
+    const dbInfo = await safeGetInfo(LOCAL_PATH);
+    const etagInfo = await safeGetInfo(ETAG_PATH);
+    let localETag = '';
+
+    if (etagInfo.exists) {
+      const etagRaw = await safeReadString(ETAG_PATH);
+      if (etagRaw) localETag = etagRaw.trim();
     }
 
-    // Deduplicate in-flight fetch
-    if (_activeFetchPromise && !forceUpdate) {
-      return _activeFetchPromise;
-    }
-
-    _activeFetchPromise = (async () => {
-      try {
-        const dbInfo = await FileSystem.getInfoAsync(LOCAL_PATH);
-        const etagInfo = await FileSystem.getInfoAsync(ETAG_PATH);
-        let localETag = '';
-
-        if (etagInfo.exists) {
-          try {
-            localETag = await FileSystem.readAsStringAsync(ETAG_PATH);
-          } catch (e) {
-            console.warn("Could not read ETag:", e);
-          }
-        }
-        
-        if (!dbInfo.exists || forceUpdate) {
-          console.log(`📡 Syncing: Fetching latest products (${forceUpdate ? 'Forced' : 'Auto'})...`);
-          
-          const primaryUrl = forceUpdate ? `${GITHUB_RAW_URL}?t=${Date.now()}` : GITHUB_CDN_URL;
-          const fallbackUrl = forceUpdate ? `${GITHUB_CDN_URL}?t=${Date.now()}` : GITHUB_RAW_URL;
-          const headers = (localETag && !forceUpdate) ? { 'If-None-Match': localETag } : {};
-
-          let response = null;
-          try {
-            response = await fetchWithTimeout(primaryUrl, { headers }, 20000);
-          } catch (primaryErr) {
-            console.warn(`⚠️ Primary catalog URL failed (${primaryUrl}): ${primaryErr.message}. Trying fallback URL...`);
-            response = await fetchWithTimeout(fallbackUrl, { headers }, 20000);
-          }
-
-          // HTTP 304: Nothing has changed on the server, load local cache
-          if (response.status === 304 && dbInfo.exists) {
-            console.log("✅ Catalog up to date (304 Not Modified).");
-            return await this.readLocalCache();
-          }
-
-          if (!response.ok) throw new Error(`Server returned ${response.status}`);
-          
-          const data = await response.json();
-          
-          // Safety check: Ensure the response is actually an array before saving it
-          if (!Array.isArray(data)) throw new Error("Invalid catalog format received from server.");
-
-          _memoryCatalogCache = data;
-
-          // Write to Sandbox Storage asynchronously
-          try {
-            await FileSystem.writeAsStringAsync(LOCAL_PATH, JSON.stringify(data), {
-                encoding: FileSystem.EncodingType.UTF8
-            });
-            
-            // Save the new ETag to optimize future requests
-            const newETag = response.headers.get('ETag');
-            if (newETag && !forceUpdate) {
-               await FileSystem.writeAsStringAsync(ETAG_PATH, newETag);
-            }
-          } catch (fsErr) {
-            console.warn("⚠️ Failed writing catalog to local storage:", fsErr.message);
-          }
-          
-          console.log(`✅ Update Successful. Extracted ${data.length} products.`);
-          return data;
-        }
-
+    // ---------------------------------------------------------------
+    // Cache-hit path: file exists and we're not forcing a refresh.
+    // Try local cache first; only hit the network if the cache is bad.
+    // ---------------------------------------------------------------
+    if (dbInfo.exists && !forceUpdate) {
+      const cached = await this.readLocalCache();
+      if (Array.isArray(cached) && cached.length > 0) {
         console.log("📂 Storage: Loading products from local cache...");
-        return await this.readLocalCache();
-
-      } catch (error) {
-        console.warn(`⚠️ Catalog sync failed: ${error.message}. Attempting recovery...`);
-        return await this.readLocalCacheFallback();
-      } finally {
-        _activeFetchPromise = null;
+        return cached;
       }
-    })();
+      console.warn("⚠️ Local cache unusable; fetching from network.");
+    }
 
-    return _activeFetchPromise;
+    // ---------------------------------------------------------------
+    // Network path: either no cache, forced refresh, or bad cache.
+    // ---------------------------------------------------------------
+    console.log(`📡 Syncing: Fetching latest products (${forceUpdate ? 'Forced' : 'Auto'})...`);
+
+    const fetchUrl = forceUpdate ? `${GITHUB_RAW_URL}?t=${Date.now()}` : GITHUB_CDN_URL;
+    const headers = (localETag && !forceUpdate) ? { 'If-None-Match': localETag } : {};
+
+    const response = await fetchWithTimeout(fetchUrl, { headers });
+
+    // 304: nothing changed server-side. Only valid if we actually have a
+    // usable cache. If we don't, the request was conditional on a bad
+    // etag — refetch unconditionally.
+    if (response.status === 304) {
+      if (dbInfo.exists) {
+        const cached = await this.readLocalCache();
+        if (Array.isArray(cached) && cached.length > 0) {
+          console.log("✅ Catalog up to date (304 Not Modified).");
+          return cached;
+        }
+      }
+      console.warn("⚠️ 304 received but no usable cache — refetching unconditionally.");
+      const retry = await fetchWithTimeout(fetchUrl, {});
+      if (!retry.ok) throw new Error(`Server returned ${retry.status}`);
+      const retryData = await retry.json();
+      if (!Array.isArray(retryData) || retryData.length === 0) {
+        throw new Error("Server returned an invalid or empty catalog.");
+      }
+      await safeWriteString(LOCAL_PATH, JSON.stringify(retryData));
+      const retryETag = retry.headers.get('ETag');
+      if (retryETag && !forceUpdate) {
+        await safeWriteString(ETAG_PATH, retryETag);
+      }
+      console.log(`✅ Update Successful. Extracted ${retryData.length} products.`);
+      return retryData;
+    }
+
+    if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+    const data = await response.json();
+
+    // Must be a non-empty array. An empty array from the server is treated
+    // as an error and never overwrites a good local cache.
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid catalog format received from server.");
+    }
+    if (data.length === 0) {
+      throw new Error("Server returned an empty catalog.");
+    }
+
+    // Persist. A failed disk write must not fail the load — data is in memory.
+    await safeWriteString(LOCAL_PATH, JSON.stringify(data));
+
+    const newETag = response.headers.get('ETag');
+    if (newETag && !forceUpdate) {
+      await safeWriteString(ETAG_PATH, newETag);
+    }
+
+    console.log(`✅ Update Successful. Extracted ${data.length} products.`);
+    return data;
   },
 
-  // Helper: Safely reads the local cache and handles JSON corruption
+  /**
+   * Reads the local cache. Returns null on any failure (missing, unreadable,
+   * corrupt, or empty). Never throws.
+   */
   async readLocalCache() {
-    if (_memoryCatalogCache && Array.isArray(_memoryCatalogCache) && _memoryCatalogCache.length > 0) {
-      return _memoryCatalogCache;
-    }
+    const localContent = await safeReadString(LOCAL_PATH);
+    if (!localContent) return null;
+
     try {
-      const localContent = await FileSystem.readAsStringAsync(LOCAL_PATH);
       const data = JSON.parse(localContent);
-      if (Array.isArray(data)) {
-        _memoryCatalogCache = data;
+      if (Array.isArray(data) && data.length > 0) {
         return data;
       }
-      throw new Error("Local cache is not an array");
+      console.warn("⚠️ Local cache is not a non-empty array; discarding.");
     } catch (parseError) {
-      console.error("❌ Corrupted cache detected. Cleaning up...");
-      try {
-        await FileSystem.deleteAsync(LOCAL_PATH, { idempotent: true });
-      } catch (e) {}
-      throw parseError; // Cascade to the fallback handler
-    }
-  },
-
-  // Helper: The ultimate safety net
-  async readLocalCacheFallback() {
-    try {
-      const info = await FileSystem.getInfoAsync(LOCAL_PATH);
-      if (info.exists) {
-        const localContent = await FileSystem.readAsStringAsync(LOCAL_PATH);
-        const parsed = JSON.parse(localContent);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          _memoryCatalogCache = parsed;
-          return parsed;
-        }
-      }
-    } catch (e) {
-      // Corrupted fallback cache, ignore and proceed to hardcoded fallback
+      console.warn("❌ Corrupted cache detected:", parseError?.message || parseError);
     }
 
-    if (Array.isArray(FALLBACK_PRODUCTS) && FALLBACK_PRODUCTS.length > 0) {
-      console.log("🛡️ Using Hardcoded Fallback Products.");
-      return FALLBACK_PRODUCTS;
-    }
-
-    return [];
+    await safeDelete(LOCAL_PATH);
+    return null;
   }
 };

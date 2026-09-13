@@ -1,10 +1,11 @@
 // CatalogScreen.js
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing, InteractionManager } from 'react-native';
+import { View, StyleSheet, Platform, FlatList, TextInput, Text, ActivityIndicator, TouchableOpacity, RefreshControl, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -12,10 +13,6 @@ import { t, interpolate } from '../../src/i18n/index';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 import { useRTL } from '../../src/hooks/useRTL';
 import { useAppContext } from '../../src/context/AppContext';
-import { LinearGradient } from 'expo-linear-gradient';
-
-// 🌟 UNIFIED AUTHENTIC HEADER
-import AuthenticHeader, { getHeaderDimensions } from '../../src/utils/AuthenticHeader';
 
 import ProductCard from '../../src/components/catalog/ProductCard';
 import CatalogDetailModal from '../../src/components/catalog/CatalogDetailModal';
@@ -25,7 +22,6 @@ import BountyModal from '../../src/components/catalog/BountyModal';
 import FilterModal from '../../src/components/catalog/FilterModal';
 import AddProductModal from '../../src/components/catalog/AddProductModal';
 import CatalogIntro from '../../src/components/catalog/CatalogIntro'; 
-import AppTextInput from '../../src/components/common/AppTextInput'; 
 
 import { submitBounty, submitNewProduct } from '../../src/services/bountyService'; 
 import { AlertService } from '../../src/services/alertService';
@@ -33,12 +29,8 @@ import { CatalogService } from '../../src/services/catalogService';
 
 // Storage keys & Pagination
 const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
-const DEV_MODE_KEY = '@dev_mode_enabled';
-const ITEMS_PER_PAGE = 8;
-const ITEM_HEIGHT = 137;
-
-// 🌟 FIXED CONTROLS HEIGHT: Eliminates layout thrashing and continuous re-renders
-const CONTROLS_HEIGHT = 150;
+const DEV_MODE_KEY = '@dev_mode_enabled'; // For testing
+const ITEMS_PER_PAGE = 8; // Lazy loading batch size
 
 const getPriceValue = (price) => {
     if (!price) return null;
@@ -47,49 +39,29 @@ const getPriceValue = (price) => {
     return parseFloat(price) || null;
 };
 
-// ✅ REPLACE `isAlgerianProduct` WITH THIS:
-const processCatalogData = (rawList) => {
-  if (!Array.isArray(rawList)) return [];
-
-  return rawList.map((p, idx) => {
+// Helper to determine if a product is Algerian
+const isAlgerianProduct = (product) => {
+    if (!product) return false;
+    
     const originText = String(
-      p.origin || 
-      p.country || 
-      p.madeIn || 
-      (p.brand && p.brand.origin) || 
-      ''
+        product.origin || 
+        product.country || 
+        product.madeIn || 
+        (product.brand && product.brand.origin) || 
+        ''
     ).toLowerCase();
-
-    const isLocal = (
-      originText.includes('algeria') || 
-      originText === 'dz' || 
-      originText.includes('الجزائر') ||
-      p.isLocal === true || 
-      p.isAlgerian === true
+    
+    return (
+        originText.includes('algeria') || 
+        originText === 'dz' || 
+        originText.includes('الجزائر') ||
+        product.isLocal === true || 
+        product.isAlgerian === true
     );
-
-    // Pre-calculate lowercased search index so typing doesn't rebuild strings for 3,000 items
-    const searchTarget = `${p.name || ''} ${p.name_ar || ''} ${p.brand || ''} ${p.brand_ar || ''} ${p.category?.name || ''}`.toLowerCase();
-    const priceVal = getPriceValue(p.price);
-
-    return {
-      ...p,
-      _isLocal: isLocal,
-      _searchTarget: searchTarget,
-      _priceVal: priceVal,
-    };
-  }).sort((a, b) => {
-    // Pre-sort Algerian items to the top ONCE here so useMemo never has to sort
-    if (a._isLocal && !b._isLocal) return -1;
-    if (!a._isLocal && b._isLocal) return 1;
-    return 0;
-  });
 };
 
-let _processedCatalogCache = null;
-
 export default function CatalogScreen() {
-  const { colors: C, activeThemeId } = useTheme();
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const { userProfile } = useAppContext(); 
   
@@ -102,22 +74,7 @@ export default function CatalogScreen() {
   const params = useLocalSearchParams();
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [selectedCompareIds, setSelectedCompareIds] = useState([]);
-  
-  // 🌟 NATIVE GPU-DRIVEN SCROLL
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  // 🌟 HEADER COLLAPSE DIMENSIONS
-  const { maxHeight, scrollDistance } = useMemo(
-    () => getHeaderDimensions(insets.top),
-    [insets.top]
-  );
-
-  // 🌟 NATIVE TRANSFORM FOR CONTROLS (Zero JS thread lag)
-  const controlsTranslateY = scrollY.interpolate({
-    inputRange: [0, scrollDistance],
-    outputRange: [0, -scrollDistance],
-    extrapolate: 'clamp',
-  });
+  const [scrollY] = useState(new Animated.Value(0));
   
   // App States
   const [loading, setLoading] = useState(true);
@@ -154,50 +111,6 @@ export default function CatalogScreen() {
   const plusPulseAnim = useRef(new Animated.Value(1)).current;
   const inputRef = useRef(null);
 
-  // Smart Debounce: updates debouncedSearch 500ms after user stops typing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const getItemLayout = useCallback((_, index) => ({
-  length: ITEM_HEIGHT,
-  offset: ITEM_HEIGHT * index,
-  index,
-}), []);
-
-  // Immediate search trigger on keyboard enter / search button
-  const handleSearchSubmit = useCallback(() => {
-    setDebouncedSearch(search);
-  }, [search]);
-
-  // Immediate clear trigger
-  const handleClearSearch = useCallback(() => {
-    setSearch('');
-    setDebouncedSearch('');
-  }, []);
-
-  // Sync incoming navigation params (e.g. from Home/Profile)
-  useEffect(() => {
-    if (params?.search) {
-      setSearch(params.search);
-      setDebouncedSearch(params.search);
-    }
-  }, [params?.search]);
-
-  // Quick brand filter trigger
-  const handleSelectBrand = useCallback((brandName) => {
-    if (!brandName) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSearch(brandName);
-    
-    setTimeout(() => {
-        setDebouncedSearch(brandName);
-    }, 50);
-  }, []);
-
   // 1. Check if intro should be shown
   useEffect(() => {
     const checkIntroStatus = async () => {
@@ -216,7 +129,7 @@ export default function CatalogScreen() {
         setShowIntro(hasSeenIntro !== 'true');
       } catch (error) {
         console.error('Error checking intro status:', error);
-        setShowIntro(false);
+        setShowIntro(true);
       } finally {
         setCheckingIntro(false);
       }
@@ -232,88 +145,55 @@ export default function CatalogScreen() {
       }
   }, [userProfile?.points]);
 
-  const navigation = useNavigation();
-  const [isTransitionReady, setIsTransitionReady] = useState(false);
-
-  // 🌟 1. Wait for screen slide/push transition to finish (320ms) before doing anything heavy
+  // 2b. Debounce search so filteredData is not recomputed on every keystroke.
+  //     On large catalogs this starves the JS thread and can trip the fetch
+  //     timeout inside catalogService.
   useEffect(() => {
-    let isMounted = true;
+    const id = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(id);
+  }, [search]);
 
-    const unsubscribe = navigation?.addListener?.('transitionEnd', () => {
-      if (isMounted) setIsTransitionReady(true);
-    });
-
-    const timer = setTimeout(() => {
-      if (isMounted) setIsTransitionReady(true);
-    }, 320);
-
-    return () => {
-      isMounted = false;
-      if (typeof unsubscribe === 'function') unsubscribe();
-      clearTimeout(timer);
-    };
-  }, [navigation]);
-
-  // 🌟 2. Optimized loadData that caches pre-processed products in memory
+  // Data Loading Implementation
   const loadData = useCallback(async (force = false) => {
     try {
-      if (force) {
-        setSyncing(true);
-      } else {
-        setLoading(true);
-      }
+      if (force) setSyncing(true);
+      else setLoading(true);
       setLoadError(false);
-      
-      // Instant return (0ms) if already processed in memory
-      if (_processedCatalogCache && !force) {
-        setProducts(_processedCatalogCache);
-        setLoading(false);
-        setSyncing(false);
-        return;
+
+      const data = await CatalogService.fetchCatalog(force);
+
+      // Service contract: resolves only with a non-empty array.
+      // Anything else means a contract violation — surface as an error.
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Empty catalog received.");
       }
 
-      const rawData = await CatalogService.fetchCatalog(force);
-      
-      if (Array.isArray(rawData) && rawData.length > 0) {
-        const processed = processCatalogData(rawData);
-        _processedCatalogCache = processed;
-        setProducts(processed);
-        setLoadError(false);
-      } else {
-        setProducts(prev => {
-          if (prev.length === 0) setLoadError(true);
-          return prev;
-        });
-      }
-
+      setProducts(data);
+    } catch (error) {
+      console.error("❌ loadData failed:", error);
+      // Only surface the failure UI if we have nothing to display at all.
+      // Never re-call fetchCatalog here — that would re-trigger the same
+      // native FS throw and leave the screen stuck on the spinner.
+      setProducts(prev => {
+        if (!Array.isArray(prev) || prev.length === 0) setLoadError(true);
+        return prev;
+      });
+    } finally {
       setLoading(false);
       setSyncing(false);
       if (force) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      console.error("❌ loadData failed:", error);
-      setProducts(prev => {
-        if (prev.length === 0) setLoadError(true);
-        return prev;
-      });
-      setSyncing(false);
-      setLoading(false);
     }
   }, []);
 
-  // 🌟 3. Trigger load ONLY when screen transition is 100% settled
+  // 3. Load catalog data once intro check is clear
   useEffect(() => { 
-    if (isTransitionReady) {
-      loadData();
+    if (!showIntro && !checkingIntro) {
+      loadData(); 
     }
-  }, [isTransitionReady, loadData]);
+  }, [showIntro, checkingIntro, loadData]);
 
   // 4. Smooth Animation trigger for the compare banner
-  const isInitialMount = useRef(true);
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
     Animated.timing(compareBannerAnim, {
       toValue: isCompareMode ? 1 : 0,
       duration: 300,
@@ -326,11 +206,13 @@ export default function CatalogScreen() {
     try {
       await AsyncStorage.setItem(CATALOG_INTRO_SEEN_KEY, 'true');
       setShowIntro(false);
+      loadData();
     } catch (error) {
       console.error('Error saving intro preference:', error);
       setShowIntro(false);
+      loadData();
     }
-  }, []);
+  }, [loadData]);
   
   const toggleDevMode = useCallback(async () => {
     try {
@@ -356,11 +238,9 @@ export default function CatalogScreen() {
   }, [devMode]);
 
   const availableBrands = useMemo(() => {
-      // Don't compute 3,000 brands until user opens filter modal
-      if (!isFilterModalVisible) return ['all']; 
       const brands = new Set(products.map(p => p.brand).filter(Boolean));
       return ['all', ...Array.from(brands).sort()];
-  }, [products, isFilterModalVisible]);
+  }, [products]);
 
   // Alias maps for fuzzy matching skin types & claims
   const SKIN_TYPE_ALIASES = {
@@ -414,60 +294,29 @@ export default function CatalogScreen() {
       return types.map(t => String(t)).filter(Boolean);
   };
 
-  const getRelevanceScore = (query, product) => {
-    if (!query) return 100;
-    if (!product) return 0;
-    
-    const searchString = product._searchTarget || '';
-    
-    if ((product.name && product.name.toLowerCase() === query) || 
-        (product.brand && product.brand.toLowerCase() === query)) {
-        return 100;
-    }
-    
-    if (searchString.includes(query)) {
-       if (searchString.startsWith(query)) return 90;
-       return 80;
-    }
-    
-    const queryWords = query.split(/\s+/);
-    if (queryWords.length > 1) {
-        const allWordsMatch = queryWords.every(word => searchString.includes(word));
-        if (allWordsMatch) return 60;
-    }
-    
-    if (query.length > 3) {
-        let qIdx = 0;
-        for (let i = 0; i < searchString.length; i++) {
-          if (searchString[i] === query[qIdx]) {
-            qIdx++;
-            if (qIdx === query.length) {
-                return 30 + (query.length / searchString.length) * 10;
-            }
-          }
-        }
-    }
-    
-    return 0;
-  };
-
   const filteredData = useMemo(() => {
     if (!products || !Array.isArray(products) || products.length === 0) {
       return [];
     }
     
-    const searchTrimmed = debouncedSearch.trim();
-    const isSearching = searchTrimmed.length > 0;
+    const searchLower = debouncedSearch.trim().toLowerCase();
     
     let result = products.filter(p => {
-      if (isSearching) {
-         p._searchScore = getRelevanceScore(searchTrimmed, p);
-         if (p._searchScore === 0) return false;
-      }
+      // 1. Search Query Match
+      const matchSearch = searchLower === '' || 
+                          (p.name || "").toLowerCase().includes(searchLower) || 
+                          (p.brand || "").toLowerCase().includes(searchLower);
+      
+      // 2. Category Filter
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
+      
+      // 3. Brand Filter
       const matchBrand = advancedFilters.brand === 'all' || p.brand === advancedFilters.brand;
-      const matchLocal = advancedFilters.localOnly ? p._isLocal : true;
+      
+      // 4. Algerian Local Filter
+      const matchLocal = advancedFilters.localOnly ? isAlgerianProduct(p) : true;
 
+      // 5. Granular Missing Fields (Bounties) Filter
       let matchMissing = true;
       if (advancedFilters.missingFields && advancedFilters.missingFields.length > 0) {
         matchMissing = advancedFilters.missingFields.some(fieldKey => {
@@ -480,6 +329,7 @@ export default function CatalogScreen() {
         });
       }
 
+      // 6. Target Skin Types Filter (Fuzzy Alias Match)
       let matchSkinType = true;
       if (advancedFilters.skinTypes && advancedFilters.skinTypes.length > 0) {
         const prodTypes = getProductTargetSkinTypes(p);
@@ -492,6 +342,7 @@ export default function CatalogScreen() {
         });
       }
 
+      // 7. Claims Filter (Fuzzy Alias Match)
       let matchClaims = true;
       if (advancedFilters.claims && advancedFilters.claims.length > 0) {
         const prodClaims = getProductClaims(p);
@@ -504,18 +355,23 @@ export default function CatalogScreen() {
         });
       }
 
-      return matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
+      return matchSearch && matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
     });
 
-    // ONLY SORT IF NECESSARY
+    // Sorting
     if (advancedFilters.sort === 'price_asc') {
-        result.sort((a, b) => (a._priceVal || 999999) - (b._priceVal || 999999));
+        result.sort((a, b) => (getPriceValue(a.price) || 999999) - (getPriceValue(b.price) || 999999));
     } else if (advancedFilters.sort === 'price_desc') {
-        result.sort((a, b) => (b._priceVal || 0) - (a._priceVal || 0));
-    } else if (isSearching) {
-        result.sort((a, b) => (b._searchScore || 0) - (a._searchScore || 0));
+        result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
+    } else {
+        result.sort((a, b) => {
+            const aIsAlg = isAlgerianProduct(a);
+            const bIsAlg = isAlgerianProduct(b);
+            if (aIsAlg && !bIsAlg) return -1;
+            if (!aIsAlg && bIsAlg) return 1;
+            return 0;
+        });
     }
-    // Note: Default sort is omitted because products are already pre-sorted on initial load
 
     return result;
   }, [debouncedSearch, activeCat, products, advancedFilters]);
@@ -674,6 +530,7 @@ export default function CatalogScreen() {
     }
   }, [language]);
 
+  // Modal and interactions close actions
   const closeProductDetail = useCallback(() => setSelectedProduct(null), []);
   const closeBountyModal = useCallback(() => setBountyState(prev => ({ ...prev, visible: false })), []);
   const closeFilterModal = useCallback(() => setFilterModalVisible(false), []);
@@ -716,6 +573,7 @@ export default function CatalogScreen() {
     setAddProductVisible(true);
   }, [plusScaleAnim]);
 
+  // FlatList performance extractions
   const keyExtractor = useCallback(item => item.id?.toString() || Math.random().toString(), []);
   
   const renderProduct = useCallback(({ item, index }) => (
@@ -724,32 +582,26 @@ export default function CatalogScreen() {
           index={index % ITEMS_PER_PAGE} 
           onPress={handleProductPress} 
           onPressBounty={handleContribute}
-          onSelectBrand={handleSelectBrand}
           isCompareMode={isCompareMode}
           isSelected={selectedCompareIds.includes(item.id)}
       />
-  ), [handleProductPress, handleContribute, handleSelectBrand, isCompareMode, selectedCompareIds]);
+  ), [handleProductPress, handleContribute, isCompareMode, selectedCompareIds]);
 
   const ListEmptyComponent = useMemo(() => {
-    // 1. Initial loading state when products are being fetched
+    // 1. Still loading with nothing on screen yet.
     if (loading && products.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIconBox, { backgroundColor: C.card, borderColor: C.accentGreen + '30' }]}>
-            <ActivityIndicator size="large" color={C.accentGreen} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
+          <ActivityIndicator size="large" color={C.accentGreen} />
+          <Text style={[styles.emptyDescription, { color: C.textDim, marginTop: 16 }]}>
             {t('catalog_loading_title', language) || 'جاري تحميل المنتجات...'}
-          </Text>
-          <Text style={[styles.emptyDescription, { color: C.textDim, textAlign: 'center', lineHeight: 22 }]}>
-            {t('catalog_loading_desc', language) || 'يتم جلب دليل المنتجات الموثقة، يرجى الانتظار لحظات...'}
           </Text>
         </View>
       );
     }
 
-    // 2. Load failed / offline on first launch
-    if (!loading && products.length === 0 && loadError) {
+    // 2. Genuine failure to load anything.
+    if (loadError && products.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <View style={[styles.emptyIconBox, { backgroundColor: C.card, borderColor: C.border }]}>
@@ -758,10 +610,10 @@ export default function CatalogScreen() {
           <Text style={[styles.emptyTitle, { color: C.textPrimary }]}>
             {t('catalog_load_failed_title', language) || 'تعذر تحميل المنتجات'}
           </Text>
-          <Text style={[styles.emptyDescription, { color: C.textDim, textAlign: 'center', lineHeight: 22 }]}>
+          <Text style={[styles.emptyDescription, { color: C.textDim, textAlign: 'center' }]}>
             {t('catalog_load_failed_desc', language) || 'تأكدي من الاتصال بالإنترنت ثم أعيدي المحاولة.'}
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.emptyAddButton, { backgroundColor: C.accentGreen, borderColor: C.accentGreen }]}
             onPress={() => loadData(true)}
             activeOpacity={0.8}
@@ -775,8 +627,8 @@ export default function CatalogScreen() {
       );
     }
 
-    // 3. Normal empty state (search / filter)
-    const hasSearchTerm = search.length > 0 || debouncedSearch.length > 0;
+    // 3. Products loaded fine but filters/search excluded everything.
+    const hasSearchTerm = search.length > 0;
     const hasActiveFilter = advancedFilters.brand !== 'all' || advancedFilters.bountiesOnly || advancedFilters.sort !== 'default';
     
     return (
@@ -800,7 +652,23 @@ export default function CatalogScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [loading, products.length, loadError, C.card, C.accentGreen, C.border, C.textPrimary, C.textDim, C.textOnAccent, language, styles, loadData, search.length, debouncedSearch.length, advancedFilters, handleOpenAddProduct]);
+  }, [
+    loading,
+    products.length,
+    loadError,
+    C.textDim,
+    C.textPrimary,
+    C.accentGreen,
+    C.card,
+    C.border,
+    C.textOnAccent,
+    language,
+    styles,
+    search.length,
+    advancedFilters,
+    handleOpenAddProduct,
+    loadData,
+  ]);
 
   const ListFooterComponent = useMemo(() => {
       if (Array.isArray(filteredData) && visibleCount < filteredData.length) {
@@ -815,268 +683,199 @@ export default function CatalogScreen() {
 
   const hasActiveFilters = advancedFilters.bountiesOnly || advancedFilters.brand !== 'all' || advancedFilters.sort !== 'default';
 
-  const isLightTheme = activeThemeId === 'light';
+  // ---------------- UI RENDERS ----------------
 
-    const renderContent = () => (
-        <View style={styles.container}>
-            <TouchableOpacity 
-                style={styles.devModeToggle}
-                onLongPress={toggleDevMode}
-                activeOpacity={0.7}
-            >
-                <View style={{ height: 1, width: 1, opacity: 0 }} />
-            </TouchableOpacity>
-            
-            {/* 🌟 UNIFIED AUTHENTIC HEADER */}
-            <AuthenticHeader
-                scrollY={scrollY}
-                activeTab="catalog"
-                title={t('catalog_title', language)}
-                subtitle={
-                    loading && products.length === 0
-                        ? (t('catalog_loading_title', language) || 'جاري تحميل المنتجات...')
-                        : interpolate(t('catalog_header_desc', language) || '%{count} منتج تجميلي موثّق', { count: products.length })
-                }
-            />
-
-            {/* 🌟 STICKY/COLLAPSIBLE CONTROLS (Native Transform) */}
-            <Animated.View 
-                style={[
-                    styles.controlsContainer, 
-                    { 
-                        top: maxHeight - 8,
-                        transform: [{ translateY: controlsTranslateY }]
-                    }
-                ]}
-            >
-                {/* 🌟 REWARDS BANNER (Stable, zero layout reflows) */}
-                <RewardsBanner 
-                    currentPoints={userPoints} 
-                    language={language}
-                />
-
-                {/* SEARCH BAR */}
-                <View style={[
-                    styles.searchContainer, 
-                    { 
-                        backgroundColor: C.card, 
-                        borderColor: C.accentGreen + '40',
-                        shadowColor: C.accentGreen
-                    }
-                ]}>
-                    <TouchableOpacity 
-                        style={styles.searchSide}
-                        activeOpacity={1}
-                        onPress={() => inputRef.current?.focus()}
-                    >
-                        <FontAwesome5 name="search" size={16} color={C.textSecondary} />
-                        <AppTextInput 
-                            ref={inputRef}
-                            style={[styles.input, { color: C.textPrimary }]} 
-                            value={search} 
-                            onChangeText={setSearch} 
-                            onSubmitEditing={handleSearchSubmit}
-                            returnKeyType="search"
-                            placeholder={t('catalog_search_placeholder', language)}
-                            placeholderTextColor={C.textDim}
-                            textAlign={rtl.textAlign}
-                            textAlignVertical="center"
-                            paddingVertical={0}
-                            paddingHorizontal={0}
-                            height="100%"
-                            includeFontPadding={false}
-                        />
-                        {search.length > 0 && (
-                            <TouchableOpacity 
-                                onPress={handleClearSearch} 
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                style={{ paddingHorizontal: 6 }}
-                            >
-                                <Feather name="x-circle" size={16} color={C.textDim} />
-                            </TouchableOpacity>
-                        )}
-                    </TouchableOpacity>
-
-                    <View style={[styles.divider, { backgroundColor: C.border }]} />
-
-                    <TouchableOpacity 
-                        onPress={handleFilterOpen} 
-                        style={[
-                            styles.filterBtn, 
-                            { backgroundColor: C.accentGreen + '1A' }
-                        ]}
-                        activeOpacity={0.7}
-                    >
-                        <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textSecondary} />
-                        {hasActiveFilters && <View style={[styles.activeFilterDot, { backgroundColor: C.accentGreen, borderColor: C.card }]} />}
-                    </TouchableOpacity>
-                </View>
-                
-                <CategoryFilter activeCategory={activeCat} onSelect={setActiveCat} />
-            </Animated.View>
-
-            {/* 🌟 100% NATIVE GPU-DRIVEN ANIMATED FLATLIST */}
-            <Animated.FlatList 
-                data={visibleData} 
-                keyExtractor={keyExtractor} 
-                getItemLayout={getItemLayout}
-                showsVerticalScrollIndicator={false}
-                renderItem={renderProduct}
-                contentContainerStyle={[
-                    styles.list,
-                    { paddingTop: maxHeight + CONTROLS_HEIGHT + 14 },
-                    (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
-                ]}
-                refreshControl={
-                    <RefreshControl 
-                        refreshing={syncing} 
-                        onRefresh={refreshData} 
-                        tintColor={C.gold} 
-                        progressViewOffset={maxHeight + CONTROLS_HEIGHT}
-                    />
-                }
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5} 
-                ListEmptyComponent={ListEmptyComponent}
-                ListFooterComponent={ListFooterComponent}
-                initialNumToRender={ITEMS_PER_PAGE}
-                maxToRenderPerBatch={ITEMS_PER_PAGE}
-                windowSize={5}
-                removeClippedSubviews={false}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: true } // 👈 NATIVE DRIVER (Zero JS lag)
-                )}
-                scrollEventThrottle={16}
-            />
-
-            {/* 🌟 1. Anchor the absolute parent container based on language */}
-<View 
-  style={[
-    styles.fabStack, 
-    rtl.isRTL ? { left: 20 } : { right: 20 } // 👈 Moves the whole stack to the correct screen edge
-  ]}
->
-  {/* Secondary Compare FAB (Solid) */}
-  <TouchableOpacity
-    style={[
-      styles.fabSolid, 
-      { backgroundColor: isCompareMode ? C.card : C.accentGreen },
-      isCompareMode && styles.fabSolidActive
-    ]}
-    activeOpacity={0.8}
-    onPress={handleToggleCompareMode}
-  >
-    <MaterialCommunityIcons
-      name="compare"
-      size={24}
-      color={isCompareMode ? C.accentGreen : C.textOnAccent}
-    />
-  </TouchableOpacity>
-
-  {/* Main Add Product FAB (Solid) */}
-  <Animated.View style={{ transform: [{ scale: plusPulseAnim }] }}>
-    <TouchableOpacity 
-      style={[styles.fabSolid, { backgroundColor: C.accentGreen }]} 
-      activeOpacity={0.8}
-      onPress={handleOpenAddProduct}
-    >
-      <Feather name="plus" size={24} color={C.textOnAccent} />
-    </TouchableOpacity>
-  </Animated.View>
-</View>
-
-            {!!selectedProduct && (
-  <CatalogDetailModal 
-    visible={!!selectedProduct} 
-    product={selectedProduct} 
-    onClose={closeProductDetail} 
-    onContribute={handleContribute} 
-    onSelectBrand={handleSelectBrand} 
-  />
-)}
-
-{bountyState.visible && (
-  <BountyModal 
-    visible={bountyState.visible} 
-    product={bountyState.product} 
-    field={bountyState.field} 
-    onClose={closeBountyModal} 
-    onSubmit={handleBountySubmit} 
-  />
-)}
-
-{isFilterModalVisible && (
-  <FilterModal 
-    visible={isFilterModalVisible} 
-    onClose={closeFilterModal} 
-    onApply={setAdvancedFilters} 
-    currentFilters={advancedFilters} 
-    availableBrands={availableBrands} 
-  />
-)}
-
-{isAddProductVisible && (
-  <AddProductModal 
-    visible={isAddProductVisible} 
-    onClose={closeAddProductModal} 
-    onSubmit={handleNewProductSubmit} 
-  />
-)}
-            {showIntro && <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />}
-        </View>
-    );
-
-    if (isLightTheme) {
-        return (
-            <LinearGradient
-                colors={[
-                    C.background,
-                    C.gradientStart || C.background,
-                    C.gradientMid || C.accentGreen + '15',
-                    C.gradientEnd || C.accentGreen + '25',
-                    'rgba(61, 146, 117, 0.30)'
-                ]}
-                locations={[0, 0.4, 0.65, 0.85, 1]}
-                style={{ flex: 1 }}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-            >
-                {renderContent()}
-            </LinearGradient>
-        );
-    }
-
+  if (checkingIntro) {
     return (
-        <View style={{ flex: 1, backgroundColor: C.background }}>
-            {renderContent()}
-        </View>
+      <View style={[styles.center, { backgroundColor: C.background }]}>
+        <ActivityIndicator size="large" color={C.accentGreen} />
+      </View>
     );
+  }
+
+  if (showIntro) {
+    return <CatalogIntro visible={showIntro} onFinish={handleIntroFinish} />;
+  }
+
+  if (loading && products.length === 0) {
+    return (
+      <View style={[styles.center, { backgroundColor: C.background }]}>
+        <ActivityIndicator size="large" color={C.accentGreen} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: C.background }]}>
+      <TouchableOpacity 
+        style={styles.devModeToggle}
+        onLongPress={toggleDevMode}
+        activeOpacity={0.7}
+      >
+        <View style={{ height: 1, width: 1, opacity: 0 }} />
+      </TouchableOpacity>
+      
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.topRow}>
+          <TouchableOpacity onLongPress={toggleDevMode} activeOpacity={0.7}>
+            <Text style={[styles.title, { color: C.textPrimary }]}>{t('catalog_title', language)}</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+            <TouchableOpacity onPress={refreshData} disabled={syncing}>
+              {syncing ? <ActivityIndicator size="small" color={C.gold} /> : <Feather name="refresh-cw" size={20} color={C.textDim} />}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <RewardsBanner 
+          currentPoints={userPoints} 
+          scrollY={scrollY}
+        />
+
+        {/* 🌟 IDENTICAL SEARCH BAR (MATCHES SHELF SEARCH BAR) 🌟 */}
+        <View style={[
+          styles.searchContainer, 
+          { 
+            backgroundColor: C.card, 
+            borderColor: C.accentGreen + '40',
+            shadowColor: C.accentGreen
+          }
+        ]}>
+          {/* TAPPING ANYWHERE IN THIS ENTIRE ZONE FOCUSES THE INPUT */}
+          <TouchableOpacity 
+            style={styles.searchSide}
+            activeOpacity={1}
+            onPress={() => inputRef.current?.focus()}
+          >
+            <FontAwesome5 name="search" size={16} color={C.textSecondary} />
+            <TextInput 
+              ref={inputRef}
+              style={[styles.input, { color: C.textPrimary }]} 
+              value={search} 
+              onChangeText={setSearch} 
+              textAlign={rtl.textAlign}
+              textAlignVertical="center"
+              paddingVertical={0}
+              paddingHorizontal={0}
+              height="100%"
+              includeFontPadding={false}
+            />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: C.border }]} />
+
+          <TouchableOpacity 
+            onPress={handleFilterOpen} 
+            style={[
+              styles.filterBtn, 
+              { backgroundColor: C.accentGreen + '1A' }
+            ]}
+            activeOpacity={0.7}
+          >
+            <Feather name="sliders" size={18} color={hasActiveFilters ? C.accentGreen : C.textSecondary} />
+            {hasActiveFilters && <View style={[styles.activeFilterDot, { backgroundColor: C.accentGreen, borderColor: C.card }]} />}
+          </TouchableOpacity>
+        </View>
+        
+        <CategoryFilter activeCategory={activeCat} onSelect={setActiveCat} />
+      </View>
+
+      <FlatList 
+        data={visibleData} 
+        keyExtractor={keyExtractor} 
+        showsVerticalScrollIndicator={false}
+        renderItem={renderProduct}
+        contentContainerStyle={[
+          styles.list,
+          (!Array.isArray(visibleData) || visibleData.length === 0) && styles.emptyList
+        ]}
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshData} tintColor={C.gold} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5} 
+        ListEmptyComponent={ListEmptyComponent}
+        ListFooterComponent={ListFooterComponent}
+        initialNumToRender={ITEMS_PER_PAGE}
+        maxToRenderPerBatch={ITEMS_PER_PAGE}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+      />
+
+      <View style={styles.fabStack}>
+        <TouchableOpacity
+          style={[
+            styles.fabSecondary,
+            rtl.flexDirection === 'row-reverse' ? { left: 20 } : { right: 20 }
+          ]}
+          activeOpacity={0.8}
+          onPress={handleToggleCompareMode}
+        >
+          <LinearGradient
+            colors={[C.accentGreen, C.card]}
+            style={[styles.fabGradient, isCompareMode && styles.fabGradientActive]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            <MaterialCommunityIcons
+              name="compare"
+              size={24}
+              color={C.textOnAccent}
+            />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <Animated.View
+          style={{
+            transform: [
+              { scale: plusPulseAnim }
+            ]
+          }}
+        >
+          <TouchableOpacity 
+            style={[
+              styles.fab, 
+              rtl.flexDirection === 'row-reverse' ? { left: 20 } : { right: 20 }
+            ]} 
+            activeOpacity={0.8}
+            onPress={handleOpenAddProduct}
+          >
+            <LinearGradient
+              colors={[C.accentGreen, C.card]}
+              style={styles.fabGradient}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              <Feather name="plus" size={24} color={C.textOnAccent} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+
+      <CatalogDetailModal visible={!!selectedProduct} product={selectedProduct} onClose={closeProductDetail} onContribute={handleContribute} />
+      <BountyModal visible={bountyState.visible} product={bountyState.product} field={bountyState.field} onClose={closeBountyModal} onSubmit={handleBountySubmit} />
+      <FilterModal visible={isFilterModalVisible} onClose={closeFilterModal} onApply={setAdvancedFilters} currentFilters={advancedFilters} availableBrands={availableBrands} />
+      <AddProductModal visible={isAddProductVisible} onClose={closeAddProductModal} onSubmit={handleNewProductSubmit} />
+    </View>
+  );
 }
 
 const createStyles = (C, rtl, isEn) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { paddingHorizontal: 20, paddingBottom: 10 },
+  topRow: { flexDirection: rtl.flexDirection, justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  title: { fontFamily: 'Tajawal-ExtraBold', fontSize: isEn ? 26 : 24 },
   
-  // 🌟 PINNED CONTROLS: Rigid height, zero layout thrashing
-  controlsContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: CONTROLS_HEIGHT,
-    zIndex: 9,
-    paddingHorizontal: 20,
-    backgroundColor: C.background,
-  },
-
+  /* IDENTICAL SEARCH BAR STYLES (MATCHES SHELF SEARCH BAR) */
   searchContainer: { 
     flexDirection: rtl.flexDirection, 
     height: 56, 
     borderRadius: 20, 
     alignItems: 'center', 
-    borderWidth: 0.5, 
+    borderWidth: 1, 
     marginBottom: 10, 
-    marginTop: -9,
+    marginTop: 5,
     paddingHorizontal: 8,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -1085,18 +884,21 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
   },
   searchSide: {
     flex: 1,
-    height: '100%',
+    height: '100%',     // 🌟 Maximize touch height
     flexDirection: rtl.flexDirection,
     alignItems: 'center',
     paddingRight: 12,
     paddingLeft: 6,
     gap: 10,
   },
+  searchIcon: { 
+    // marginEnd removed — 'gap' in searchSide handles spacing cleanly
+  },
   input: { 
     flex: 1, 
-    height: '100%',
+    height: '100%',     // 🌟 Fills entire search side for instant tap response
     fontFamily: 'Tajawal-Regular', 
-    fontSize: isEn ? 16 : 16, 
+    fontSize: isEn ? 20 : 20, 
     textAlign: rtl.textAlign,
     textAlignVertical: 'center',
     paddingVertical: 0,
@@ -1128,7 +930,7 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     borderWidth: 2 
   },
   
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
+  list: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 1 },
   emptyContainer: {
     flex: 1,
     minHeight: 320,
@@ -1141,7 +943,7 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    borderWidth: 0.5,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1167,30 +969,17 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 0.5,
+    borderWidth: 1,
   },
   emptyAddButtonText: {
     fontFamily: 'Tajawal-Bold',
     fontSize: isEn ? 15 : 14,
   },
-  fabStack: { 
-  position: 'absolute', 
-  bottom: 90, 
-  zIndex: 100, 
-  gap: 10,
-  alignItems: 'center',
-},
-fabSolid: { 
-  width: 54, 
-  height: 54, 
-  borderRadius: 27, 
-  alignItems: 'center', 
-  justifyContent: 'center'
-},
-fabSolidActive: { 
-  borderWidth: 2, 
-  borderColor: C.accentGreen,
-},
+  fabStack: { position: 'absolute', bottom: 90, zIndex: 100, gap: 10 },
+  fab: { position: 'relative', zIndex: 100 },
+  fabSecondary: { position: 'relative', zIndex: 100 },
+  fabGradient: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  fabGradientActive: { borderWidth: 2, borderColor: C.textOnAccent, shadowOpacity: 0.45, shadowRadius: 10, transform: [{ scale: 1.03 }] },
   devModeToggle: { position: 'absolute', top: 0, left: 0, width: 50, height: 50, zIndex: 999 },
   emptyList: {
     flexGrow: 1,
