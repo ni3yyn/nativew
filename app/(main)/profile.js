@@ -1935,9 +1935,6 @@ const handleShelfViewChange = (newView) => {
             setIsAnalyzingProfile(false);
         }
     }, [savedProducts, userProfile]);
-
-    const isWeatherFetchInProgress = useRef(false);
-
     // ========================================================================
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (BULLETPROOF FALLBACK) ---
     // ========================================================================
