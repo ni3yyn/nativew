@@ -46,6 +46,7 @@ Notifications.setNotificationHandler({
         shouldShowList: true,   // Replaces shouldShowBanner
         shouldPlaySound: true,
         shouldSetBadge: false,
+        shouldShowAlert: true,
     }),
 });
 

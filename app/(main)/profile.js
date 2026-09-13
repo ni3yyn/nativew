@@ -1936,58 +1936,82 @@ const handleShelfViewChange = (newView) => {
         }
     }, [savedProducts, userProfile]);
 
+    const isWeatherFetchInProgress = useRef(false);
+
     // ========================================================================
     // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
     // ========================================================================
+
     const runWeatherAnalysis = useCallback(async () => {
-        // NOTE: Weather analysis runs independently of products — always execute
+        // Prevent overlapping parallel executions
+        if (isWeatherFetchInProgress.current) return;
+        isWeatherFetchInProgress.current = true;
+
         setIsAnalyzingWeather(true);
         setWeatherErrorType(null);
 
         try {
-            // 1. Check if the app has permission
-            let { status } = await Location.getForegroundPermissionsAsync();
+            // 1. Verify foreground permission
+            const { status } = await Location.getForegroundPermissionsAsync();
             setLocationPermission(status);
 
             if (status !== 'granted') {
                 setWeatherErrorType('permission');
-                setIsAnalyzingWeather(false);
                 return;
             }
 
-            let servicesEnabled = await Location.hasServicesEnabledAsync();
+            // 2. Verify device location master toggle
+            const servicesEnabled = await Location.hasServicesEnabledAsync();
             if (!servicesEnabled) {
                 setWeatherErrorType('permission');
-                setIsAnalyzingWeather(false);
                 return;
             }
 
-            // 3. Try to get location safely and quickly
-            // getLastKnownPositionAsync gets cached location instantly and NEVER triggers popups
-            let loc = await Location.getLastKnownPositionAsync();
-            
-            // If there's no cache, gently request it using Balanced accuracy
+            // 3. Retrieve location safely (Protected against Android Kotlin cast crash)
+            let loc = null;
+            try {
+                loc = await Location.getLastKnownPositionAsync();
+            } catch (_) {
+                // Ignore: Android Expo SDK 54 casting bug on empty options
+                loc = null;
+            }
+
+            // Fallback to active location fix if cache is empty or threw
             if (!loc) {
                 loc = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced 
+                    accuracy: Location.Accuracy.Balanced,
                 });
             }
 
-            let cityName = t('location_my_position', language);
-            try {
-                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=ar`;
-                const geoRes = await fetch(geoUrl);
-                const geoData = await geoRes.json();
-                cityName = geoData.city || geoData.locality || geoData.principalSubdivision || t('location_my_position', language);
-            } catch (e) {
-                console.log('City fetch warning:', e.message);
+            if (!loc?.coords?.latitude || !loc?.coords?.longitude) {
+                throw new Error("Unable to obtain valid device coordinates");
             }
 
+            // 4. Reverse Geocoding with 4s network abort timeout
+            let cityName = t('location_my_position', language);
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=${language || 'ar'}`;
+                const geoRes = await fetch(geoUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (geoRes.ok) {
+                    const geoData = await geoRes.json();
+                    cityName = geoData.city || geoData.locality || geoData.principalSubdivision || t('location_my_position', language);
+                }
+            } catch (geoErr) {
+                // Non-critical: defaults gracefully to cityName
+                console.log('City name resolution fallback:', geoErr?.message || geoErr);
+            }
+
+            // 5. Backend Weather Evaluation
             const response = await fetch(`${PROFILE_API_URL}/analyze-weather`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    products: savedProducts,
+                    products: savedProducts || [],
                     settings: userProfile?.settings || {},
                     location: {
                         lat: loc.coords.latitude,
@@ -1997,9 +2021,13 @@ const handleShelfViewChange = (newView) => {
                 })
             });
 
+            if (!response.ok) {
+                throw new Error(`Weather service returned HTTP status ${response.status}`);
+            }
+
             const data = await response.json();
 
-            if (response.ok && data.insights) {
+            if (data?.insights) {
                 setWeatherData(data.insights);
             } else {
                 setWeatherErrorType('service');
@@ -2009,9 +2037,10 @@ const handleShelfViewChange = (newView) => {
             console.error("Weather Analysis Error:", e);
             setWeatherErrorType('service');
         } finally {
+            isWeatherFetchInProgress.current = false;
             setIsAnalyzingWeather(false);
         }
-    }, [savedProducts, userProfile]);
+    }, [savedProducts, userProfile, language]);
 
     useEffect(() => {
         const backAction = () => {

@@ -23,6 +23,7 @@ Notifications.setNotificationHandler({
     shouldShowBanner: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowAlert: true,
   }),
 });
 

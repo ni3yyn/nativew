@@ -12,6 +12,7 @@ Notifications.setNotificationHandler({
     shouldShowList: true,   // FIXED: iOS 14+ requirement
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowAlert: true,
   }),
 });
 

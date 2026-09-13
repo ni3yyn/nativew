@@ -227,52 +227,26 @@ const RoutineRateContent = React.memo(({ post, onViewProduct, COLORS, rtl, style
 const ELEVENLABS_API_KEY = 'sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589';
 const ELEVENLABS_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
 
-const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl, styles, language }) => {
-    const isRTL = rtl?.isRTL;
-    const router = useRouter();
-
-    const [isExpanded, setIsExpanded]     = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [resolvedUri, setResolvedUri]   = useState(null);
-    const [loadError, setLoadError]       = useState(null);
-
-    // Pending play request — set to true when user taps before the audio is ready
-    const pendingPlayRef = useRef(false);
-
-    const validTitle = useMemo(() => {
-        if (!post?.title) return null;
-        const txt = String(post.title).trim();
-        if (!txt || txt === 'null') return null;
-        return txt;
-    }, [post?.title]);
-
-    // Cloud URL wins if it exists on the post
-    const cloudAudioUrl = useMemo(
-        () => post?.audioUrl || post?.audio_url || null,
-        [post?.audioUrl, post?.audio_url]
-    );
-
-    // ------------------------------------------------------------------
-    //  expo-audio player — ALWAYS pass a valid AudioSource object.
-    //  Never pass `null` — it crashes the native bridge with a
-    //  NullPointerException ("cannot be cast to AudioSource?").
-    // ------------------------------------------------------------------
-    const audioSource = useMemo(
-        () => (resolvedUri ? { uri: resolvedUri } : { uri: '' }),
-        [resolvedUri]
-    );
-
+// 🌟 ACTIVE PLAYER: Only mounts when a genuine, non-empty URI is available
+const TipsActivePlayer = React.memo(({
+    uri,
+    autoPlay = false,
+    formatTime,
+    isRTL,
+    COLORS,
+    rtl,
+    styles,
+}) => {
+    // Guaranteed to be a valid, non-empty URI
+    const audioSource = useMemo(() => ({ uri }), [uri]);
     const player = useAudioPlayer(audioSource);
     const status = useAudioPlayerStatus(player);
 
     const isPlaying = !!status?.playing;
     const isLoaded  = status?.isLoaded ?? false;
-    const position  = (status?.currentTime ?? 0) * 1000;   // s → ms
-    const duration  = (status?.duration   ?? 0) * 1000;    // s → ms
+    const position  = (status?.currentTime ?? 0) * 1000;
+    const duration  = (status?.duration   ?? 0) * 1000;
 
-    // ------------------------------------------------------------------
-    //  Registry entry — exposes the LIVE player via getPlayer()
-    // ------------------------------------------------------------------
     const playerRef = useRef(player);
     useEffect(() => { playerRef.current = player; }, [player]);
 
@@ -285,25 +259,103 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
 
     useEffect(() => {
         if (!entryRef.current) return;
-        const unregister = _registerTipsPlayer(entryRef.current);
-        return unregister;
+        return _registerTipsPlayer(entryRef.current);
     }, []);
 
-    // Global audio mode
+    // Auto-play when ready if requested
+    const hasAutoPlayed = useRef(false);
+    useEffect(() => {
+        if (autoPlay && player && !hasAutoPlayed.current) {
+            hasAutoPlayed.current = true;
+            _stopAllTipsAudioExcept(entryRef.current);
+            player.play();
+        }
+    }, [player, autoPlay]);
+
+    const handleToggle = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        if (!player) return;
+
+        if (isPlaying) {
+            player.pause();
+        } else {
+            if (duration > 0 && position >= duration - 150) player.seekTo(0);
+            _stopAllTipsAudioExcept(entryRef.current);
+            player.play();
+        }
+    }, [player, isPlaying, duration, position]);
+
+    const handleSlidingComplete = useCallback((value) => {
+        if (!player || !isLoaded) return;
+        player.seekTo(value / 1000);
+    }, [player, isLoaded]);
+
+    return (
+        <>
+            <TouchableOpacity
+                onPress={handleToggle}
+                style={styles.playBtn}
+                activeOpacity={0.8}
+            >
+                <Ionicons
+                    name={isPlaying ? 'pause' : 'play'}
+                    size={18}
+                    color="#FFF"
+                    style={{ marginLeft: 2 }}
+                />
+            </TouchableOpacity>
+
+            <View style={styles.pillInfo}>
+                <View style={{
+                    flexDirection: rtl.flexDirection,
+                    justifyContent: 'space-between',
+                }}>
+                    <Text style={styles.timerText}>
+                        {formatTime(position)} / {formatTime(duration)}
+                    </Text>
+                </View>
+                <Slider
+                    style={{ width: '100%', height: 26 }}
+                    minimumValue={0}
+                    maximumValue={duration > 0 ? duration : 1}
+                    value={position}
+                    onSlidingComplete={handleSlidingComplete}
+                    minimumTrackTintColor={COLORS.info}
+                    maximumTrackTintColor={COLORS.border}
+                    thumbTintColor={COLORS.info}
+                    inverted={isRTL}
+                    disabled={!isLoaded}
+                />
+            </View>
+        </>
+    );
+});
+
+const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl, styles, language }) => {
+    const isRTL = rtl?.isRTL;
+    const router = useRouter();
+
+    const [isExpanded, setIsExpanded]     = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [resolvedUri, setResolvedUri]   = useState(null);
+    const [autoPlayRequested, setAutoPlayRequested] = useState(false);
+
+    const validTitle = useMemo(() => {
+        if (!post?.title) return null;
+        const txt = String(post.title).trim();
+        if (!txt || txt === 'null') return null;
+        return txt;
+    }, [post?.title]);
+
+    const cloudAudioUrl = useMemo(
+        () => post?.audioUrl || post?.audio_url || null,
+        [post?.audioUrl, post?.audio_url]
+    );
+
     useEffect(() => {
         setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     }, []);
 
-    // Reset pending play flag if post changes or component unmounts
-    useEffect(() => {
-        return () => {
-            pendingPlayRef.current = false;
-        };
-    }, [post?.id]);
-
-    // ------------------------------------------------------------------
-    //  Cache helpers
-    // ------------------------------------------------------------------
     const getCachedFile = useCallback(() => {
         try {
             const dir = new Directory(Paths.cache, 'audio_tips');
@@ -315,12 +367,7 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
         }
     }, [post?.id]);
 
-    // ------------------------------------------------------------------
-    //  Resolve URI: cloud → cache → ElevenLabs
-    // ------------------------------------------------------------------
     const resolveAudioUri = useCallback(async () => {
-        setLoadError(null);
-
         // 1. Cloud URL
         if (cloudAudioUrl) return cloudAudioUrl;
 
@@ -328,11 +375,8 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
         const cached = getCachedFile();
         if (cached?.exists) return cached.uri;
 
-        // 3. ElevenLabs
-        if (!ELEVENLABS_API_KEY) {
-            setLoadError('missing_api_key');
-            return null;
-        }
+        // 3. ElevenLabs TTS
+        if (!ELEVENLABS_API_KEY) return null;
 
         setIsGenerating(true);
         try {
@@ -358,7 +402,6 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
 
             if (!res.ok) {
                 console.warn('[TipsContent] ElevenLabs HTTP', res.status);
-                setLoadError(`http_${res.status}`);
                 return null;
             }
 
@@ -366,86 +409,33 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
             const base64 = _arrayBufferToBase64(arrayBuffer);
 
             const file = getCachedFile();
-            if (!file) {
-                setLoadError('cache_error');
-                return null;
-            }
+            if (!file) return null;
             file.write(base64, { encoding: 'base64' });
 
             return file.uri;
         } catch (e) {
             console.warn('[TipsContent] TTS generation failed:', e);
-            setLoadError(String(e?.message || e));
             return null;
         } finally {
             setIsGenerating(false);
         }
     }, [cloudAudioUrl, getCachedFile, validTitle, post?.content]);
 
-    // ------------------------------------------------------------------
-    //  Play / pause — with auto-play after URI resolves
-    // ------------------------------------------------------------------
-    const handleToggle = useCallback(async () => {
+    const handleInitialPlay = useCallback(async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        setAutoPlayRequested(true);
 
-        // Case 1: No URI yet → resolve, mark pending play
-        if (!resolvedUri) {
-            pendingPlayRef.current = true;
-            const uri = await resolveAudioUri();
-            if (!uri) {
-                pendingPlayRef.current = false;
-                Alert.alert(
-                    t('community_error_title', language),
-                    t('community_audio_check_internet', language)
-                );
-                return;
-            }
-            setResolvedUri(uri);
-            return; // the auto-play effect below handles playback
-        }
-
-        // Case 2: URI exists but player not loaded yet → mark pending
-        if (!player || !isLoaded) {
-            pendingPlayRef.current = true;
+        const uri = await resolveAudioUri();
+        if (!uri) {
+            setAutoPlayRequested(false);
+            Alert.alert(
+                t('community_error_title', language),
+                t('community_audio_check_internet', language)
+            );
             return;
         }
-
-        // Case 3: Ready → normal toggle
-        if (isPlaying) {
-            player.pause();
-        } else {
-            if (duration > 0 && position >= duration - 150) player.seekTo(0);
-            _stopAllTipsAudioExcept(entryRef.current);
-            player.play();
-        }
-    }, [
-        resolvedUri, resolveAudioUri, player, isLoaded,
-        isPlaying, position, duration, language,
-    ]);
-
-    // ------------------------------------------------------------------
-    //  Auto-play once the player is loaded AND a play was requested
-    // ------------------------------------------------------------------
-    useEffect(() => {
-        if (!pendingPlayRef.current) return;
-        if (!player || !isLoaded) return;
-
-        pendingPlayRef.current = false;
-
-        if (duration > 0 && position >= duration - 150) {
-            player.seekTo(0);
-        }
-        _stopAllTipsAudioExcept(entryRef.current);
-        player.play();
-    }, [player, isLoaded, duration, position]);
-
-    // ------------------------------------------------------------------
-    //  Seeking
-    // ------------------------------------------------------------------
-    const handleSlidingComplete = useCallback((value) => {
-        if (!player || !isLoaded) return;
-        player.seekTo(value / 1000);
-    }, [player, isLoaded]);
+        setResolvedUri(uri);
+    }, [resolveAudioUri, language]);
 
     const formatTime = useCallback((millis) => {
         if (!millis || millis < 0) return '0:00';
@@ -455,12 +445,8 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     }, []);
 
-    const showSpinner = isGenerating || (resolvedUri && !isLoaded && !loadError);
     const hasCta = !!(post?.ctaLabel && post?.ctaLink);
 
-    // ------------------------------------------------------------------
-    //  Render
-    // ------------------------------------------------------------------
     return (
         <View style={{ marginBottom: 4 }}>
             <View style={{
@@ -485,46 +471,59 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
 
             <View style={styles.pillContainer}>
                 <View style={[styles.pillMain, { flexDirection: rtl.flexDirection }]}>
-                    <TouchableOpacity
-                        onPress={handleToggle}
-                        disabled={showSpinner}
-                        style={styles.playBtn}
-                        activeOpacity={0.8}
-                    >
-                        {showSpinner ? (
-                            <ActivityIndicator size="small" color="#FFF" />
-                        ) : (
-                            <Ionicons
-                                name={isPlaying ? 'pause' : 'play'}
-                                size={18}
-                                color="#FFF"
-                                style={{ marginLeft: 2 }}
-                            />
-                        )}
-                    </TouchableOpacity>
-
-                    <View style={styles.pillInfo}>
-                        <View style={{
-                            flexDirection: rtl.flexDirection,
-                            justifyContent: 'space-between',
-                        }}>
-                            <Text style={styles.timerText}>
-                                {formatTime(position)} / {formatTime(duration)}
-                            </Text>
-                        </View>
-                        <Slider
-                            style={{ width: '100%', height: 26 }}
-                            minimumValue={0}
-                            maximumValue={duration > 0 ? duration : 1}
-                            value={position}
-                            onSlidingComplete={handleSlidingComplete}
-                            minimumTrackTintColor={COLORS.info}
-                            maximumTrackTintColor={COLORS.border}
-                            thumbTintColor={COLORS.info}
-                            inverted={isRTL}
-                            disabled={!isLoaded}
+                    {resolvedUri ? (
+                        <TipsActivePlayer
+                            uri={resolvedUri}
+                            autoPlay={autoPlayRequested}
+                            formatTime={formatTime}
+                            isRTL={isRTL}
+                            COLORS={COLORS}
+                            rtl={rtl}
+                            styles={styles}
                         />
-                    </View>
+                    ) : (
+                        <>
+                            <TouchableOpacity
+                                onPress={handleInitialPlay}
+                                disabled={isGenerating}
+                                style={styles.playBtn}
+                                activeOpacity={0.8}
+                            >
+                                {isGenerating ? (
+                                    <ActivityIndicator size="small" color="#FFF" />
+                                ) : (
+                                    <Ionicons
+                                        name="play"
+                                        size={18}
+                                        color="#FFF"
+                                        style={{ marginLeft: 2 }}
+                                    />
+                                )}
+                            </TouchableOpacity>
+
+                            <View style={styles.pillInfo}>
+                                <View style={{
+                                    flexDirection: rtl.flexDirection,
+                                    justifyContent: 'space-between',
+                                }}>
+                                    <Text style={styles.timerText}>
+                                        0:00 / {post.duration || '--:--'}
+                                    </Text>
+                                </View>
+                                <Slider
+                                    style={{ width: '100%', height: 26 }}
+                                    minimumValue={0}
+                                    maximumValue={1}
+                                    value={0}
+                                    minimumTrackTintColor={COLORS.info}
+                                    maximumTrackTintColor={COLORS.border}
+                                    thumbTintColor={COLORS.info}
+                                    inverted={isRTL}
+                                    disabled={true}
+                                />
+                            </View>
+                        </>
+                    )}
 
                     <TouchableOpacity
                         onPress={() => setIsExpanded(!isExpanded)}
