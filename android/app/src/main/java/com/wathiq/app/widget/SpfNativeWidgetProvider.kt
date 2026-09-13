@@ -1,5 +1,6 @@
 package com.wathiq.app.widget
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,6 +11,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
@@ -19,7 +22,13 @@ import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.wathiq.app.MainActivity
 import com.wathiq.app.R
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Calendar
+import kotlin.concurrent.thread
 
 class SpfNativeWidgetProvider : AppWidgetProvider() {
 
@@ -29,6 +38,13 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         const val CHANNEL_ID = "wathiq_spf_timer_channel"
         const val NOTIFICATION_ID = 1001
         const val PREFS_NAME = "wathiq_widget_prefs"
+
+        // State constants
+        const val STATE_IDLE = "IDLE"
+        const val STATE_LOADING = "LOADING"
+        const val STATE_RUNNING = "RUNNING"
+        const val STATE_EXPIRED = "EXPIRED"
+        const val STATE_NIGHT = "NIGHT"
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -42,55 +58,155 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         when (intent.action) {
             ACTION_START_TIMER -> {
-                startTimer(context)
+                handleUserTapStart(context)
             }
             ACTION_TIMER_EXPIRED -> {
                 onTimerFinished(context)
             }
+            // 🌟 3. REBOOT IMMUNITY: Reschedule alarm after phone restarts
+            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON" -> {
+                handlePhoneReboot(context)
+            }
         }
     }
 
-    // 🌟 1. START TIMER & SCHEDULE EXACT SYSTEM ALARM
-    private fun startTimer(context: Context) {
+    // ========================================================================
+    // 🌟 1. REAL API CALL + LOADING STATE ON TAP
+    // ========================================================================
+    private fun handleUserTapStart(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val uv = estimateSolarUv()
-        val durationMinutes = getDurationMinutes(uv)
 
-        if (durationMinutes > 0) {
-            val durationMillis = durationMinutes * 60 * 1000L
-            val elapsedEndTime = SystemClock.elapsedRealtime() + durationMillis
-            val triggerAtWallClock = System.currentTimeMillis() + durationMillis
+        // Step A: Immediately show Loading State on the widget
+        prefs.edit().putString("STATE", STATE_LOADING).apply()
+        refreshAllWidgets(context)
 
-            // Save state
-            prefs.edit()
-                .putLong("END_TIME_MILLIS", elapsedEndTime)
-                .putFloat("LAST_UV", uv)
-                .putString("STATE", "RUNNING")
-                .apply()
+        // Step B: Asynchronously fetch coordinates and Live UV API
+        thread {
+            val coords = getNativeDeviceCoordinates(context)
+            val liveUv = fetchLiveUvFromApi(coords.first, coords.second)
 
-            // Schedule Exact Alarm for Notification & Widget update
-            scheduleAlarm(context, triggerAtWallClock)
+            // Step C: Determine if Night Recovery applies
+            val isNight = checkIsNightTime(liveUv)
 
-            // Refresh Widget UI immediately
+            if (isNight) {
+                // Night recovery state
+                prefs.edit()
+                    .putString("STATE", STATE_NIGHT)
+                    .putFloat("LAST_UV", 0.0f)
+                    .putLong("END_TIME_MILLIS", 0L)
+                    .apply()
+            } else {
+                // Active UV protection timer
+                val durationMinutes = getDurationMinutes(liveUv)
+                val durationMillis = durationMinutes * 60 * 1000L
+                val elapsedEndTime = SystemClock.elapsedRealtime() + durationMillis
+                val wallClockEndTime = System.currentTimeMillis() + durationMillis
+
+                prefs.edit()
+                    .putString("STATE", STATE_RUNNING)
+                    .putFloat("LAST_UV", liveUv)
+                    .putLong("END_TIME_MILLIS", elapsedEndTime)
+                    .putLong("WALL_CLOCK_END_TIME", wallClockEndTime)
+                    .apply()
+
+                // Schedule alarm for expiration
+                scheduleAlarm(context, wallClockEndTime)
+            }
+
+            // Step D: Update Widget UI with live results
             refreshAllWidgets(context)
         }
     }
 
-    // 🌟 2. TIMER FINISHED: PLAY SOUND, VIBRATE, NOTIFY & TURN WIDGET RED
+    // Native Location via Android LocationManager (No extra libs needed)
+    @SuppressLint("MissingPermission")
+    private fun getNativeDeviceCoordinates(context: Context): Pair<Double, Double> {
+        val defaultAlgiers = Pair(36.7538, 3.0588)
+        try {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return defaultAlgiers
+            val providers = lm.getProviders(true)
+            var bestLocation: Location? = null
+
+            for (provider in providers) {
+                val l = lm.getLastKnownLocation(provider) ?: continue
+                if (bestLocation == null || l.accuracy < bestLocation.accuracy) {
+                    bestLocation = l
+                }
+            }
+
+            if (bestLocation != null) {
+                return Pair(bestLocation.latitude, bestLocation.longitude)
+            }
+        } catch (e: Exception) {
+            // Permission restricted or GPS off
+        }
+        return defaultAlgiers
+    }
+
+    // Live Open-Meteo Satellite UV Fetch
+    private fun fetchLiveUvFromApi(lat: Double, lon: Double): Float {
+        val apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=uv_index"
+        try {
+            val url = URL(apiUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            conn.requestMethod = "GET"
+
+            if (conn.responseCode == 200) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val response = reader.readText()
+                reader.close()
+
+                val json = JSONObject(response)
+                val current = json.getJSONObject("current")
+                val uv = current.getDouble("uv_index").toFloat()
+                return Math.max(0.0f, Math.round(uv * 10f) / 10f)
+            }
+        } catch (e: Exception) {
+            // Offline fallback
+        }
+        // If offline, fallback to mathematical formula
+        return estimateSolarUv()
+    }
+
+    // ========================================================================
+    // 🌟 2. REBOOT IMMUNITY: Reschedule alarm after phone restarts
+    // ========================================================================
+    private fun handlePhoneReboot(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val state = prefs.getString("STATE", STATE_IDLE)
+        val wallClockEndTime = prefs.getLong("WALL_CLOCK_END_TIME", 0L)
+        val now = System.currentTimeMillis()
+
+        if (state == STATE_RUNNING && wallClockEndTime > now) {
+            val remainingMillis = wallClockEndTime - now
+            val newElapsedEndTime = SystemClock.elapsedRealtime() + remainingMillis
+
+            prefs.edit()
+                .putLong("END_TIME_MILLIS", newElapsedEndTime)
+                .apply()
+
+            scheduleAlarm(context, wallClockEndTime)
+            refreshAllWidgets(context)
+        } else if (state == STATE_RUNNING && wallClockEndTime <= now) {
+            onTimerFinished(context)
+        }
+    }
+
+    // ========================================================================
+    // 🌟 3. TIMER FINISHED: RINGS, VIBRATES & TURNS WIDGET RED
+    // ========================================================================
     private fun onTimerFinished(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val uv = prefs.getFloat("LAST_UV", estimateSolarUv())
 
-        // Update State to Expired
         prefs.edit()
-            .putString("STATE", "EXPIRED")
+            .putString("STATE", STATE_EXPIRED)
             .putLong("END_TIME_MILLIS", 0L)
             .apply()
 
-        // 1. Show Ringing Notification
         showExpirationNotification(context, uv)
-
-        // 2. Refresh Widget to Red Expired UI
         refreshAllWidgets(context)
     }
 
@@ -109,20 +225,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAtMillis,
-                    pendingIntent
-                )
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAtMillis,
-                    pendingIntent
-                )
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
         } catch (e: Exception) {
-            // Fallback for non-exact alarm if special permission is restricted
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
         }
     }
@@ -131,7 +238,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        // Create Channel for Android 8.0+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val audioAttributes = AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -153,7 +259,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Tap notification to open App
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -164,12 +269,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Choose valid notification icon
-        val iconRes = try {
-            R.drawable.notification_icon
-        } catch (e: Exception) {
-            R.mipmap.ic_launcher
-        }
+        val iconRes = try { R.drawable.notification_icon } catch (e: Exception) { R.mipmap.ic_launcher }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(iconRes)
@@ -186,9 +286,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         try {
             notificationManager.notify(NOTIFICATION_ID, notification)
-        } catch (e: SecurityException) {
-            // Android 13 POST_NOTIFICATIONS permission not yet accepted
-        }
+        } catch (e: SecurityException) {}
     }
 
     private fun refreshAllWidgets(context: Context) {
@@ -200,22 +298,24 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // 🌟 3. BIND XML AND DYNAMIC VIEWS
+    // ========================================================================
+    // 🌟 4. BIND XML VIEWS (Includes Night Skin Recovery Mode)
+    // ========================================================================
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_spf_timer)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        val state = prefs.getString("STATE", "IDLE") ?: "IDLE"
+        val state = prefs.getString("STATE", STATE_IDLE) ?: STATE_IDLE
         val endTime = prefs.getLong("END_TIME_MILLIS", 0L)
         var uv = prefs.getFloat("LAST_UV", -1f)
-
         if (uv == -1f) uv = estimateSolarUv()
 
-        val colorHex = getUvColor(uv)
+        val isNight = checkIsNightTime(uv)
+        val colorHex = if (isNight) "#818CF8" else getUvColor(uv)
         val colorInt = Color.parseColor(colorHex)
         val now = SystemClock.elapsedRealtime()
 
-        // Setup Button Click Intent
+        // Button Click Setup
         val clickIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply {
             action = ACTION_START_TIMER
         }
@@ -227,48 +327,70 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_action_btn, pendingClick)
 
-        // Header Values
-        views.setTextViewText(R.id.widget_uv_text, "UV ~$uv ☀️")
-        views.setTextColor(R.id.widget_uv_text, colorInt)
-
-        if (state == "RUNNING" && endTime > now) {
-            // Running State
-            views.setViewVisibility(R.id.widget_chronometer, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_ring_text, View.GONE)
-            views.setChronometer(R.id.widget_chronometer, endTime, "%s", true)
-
-            views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
-            views.setTextColor(R.id.widget_status_text, Color.parseColor("#1C9A66"))
-
-            views.setTextViewText(R.id.widget_btn_text, "إعادة المؤقت ↻")
-            views.setInt(R.id.widget_progress_active, "setColorFilter", colorInt)
-
-        } else if (state == "EXPIRED" || (state == "RUNNING" && endTime <= now)) {
-            // Expired State
-            views.setViewVisibility(R.id.widget_chronometer, View.GONE)
-            views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
-            views.setTextViewText(R.id.widget_ring_text, "00")
-            views.setTextColor(R.id.widget_ring_text, Color.parseColor("#D94A4F"))
-
-            views.setTextViewText(R.id.widget_status_text, "انتهت الحماية")
-            views.setTextColor(R.id.widget_status_text, Color.parseColor("#D94A4F"))
-
-            views.setTextViewText(R.id.widget_btn_text, "تجديد الآن ↻")
-            views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#D94A4F"))
-
+        // Header: UV or Night Moon
+        if (isNight) {
+            views.setTextViewText(R.id.widget_uv_text, "UV 0.0 🌙")
+            views.setTextColor(R.id.widget_uv_text, Color.parseColor("#818CF8"))
         } else {
-            // Idle / Safe State
-            views.setViewVisibility(R.id.widget_chronometer, View.GONE)
-            views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
+            views.setTextViewText(R.id.widget_uv_text, "UV ~$uv ☀️")
+            views.setTextColor(R.id.widget_uv_text, colorInt)
+        }
 
-            val duration = getDurationMinutes(uv)
-            if (duration == 0) {
-                views.setTextViewText(R.id.widget_ring_text, "آمن")
-                views.setTextColor(R.id.widget_ring_text, Color.parseColor("#1C9A66"))
-                views.setTextViewText(R.id.widget_status_text, "أشعة آمنة")
-                views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة")
-                views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#1C9A66"))
-            } else {
+        when {
+            // State: Loading
+            state == STATE_LOADING -> {
+                views.setViewVisibility(R.id.widget_chronometer, View.GONE)
+                views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
+                views.setTextViewText(R.id.widget_ring_text, "⏳")
+                views.setTextViewText(R.id.widget_status_text, "جاري تحديد الأشعة...")
+                views.setTextColor(R.id.widget_status_text, Color.parseColor("#4A6B5F"))
+                views.setTextViewText(R.id.widget_btn_text, "جاري القياس... ⏳")
+            }
+
+            // State: Running Countdown
+            state == STATE_RUNNING && endTime > now -> {
+                views.setViewVisibility(R.id.widget_chronometer, View.VISIBLE)
+                views.setViewVisibility(R.id.widget_ring_text, View.GONE)
+                views.setChronometer(R.id.widget_chronometer, endTime, "%s", true)
+
+                views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
+                views.setTextColor(R.id.widget_status_text, Color.parseColor("#1C9A66"))
+                views.setTextViewText(R.id.widget_btn_text, "إعادة المؤقت ↻")
+                views.setInt(R.id.widget_progress_active, "setColorFilter", colorInt)
+            }
+
+            // State: Expired
+            state == STATE_EXPIRED || (state == STATE_RUNNING && endTime <= now) -> {
+                views.setViewVisibility(R.id.widget_chronometer, View.GONE)
+                views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
+                views.setTextViewText(R.id.widget_ring_text, "00")
+                views.setTextColor(R.id.widget_ring_text, Color.parseColor("#D94A4F"))
+
+                views.setTextViewText(R.id.widget_status_text, "انتهت الحماية")
+                views.setTextColor(R.id.widget_status_text, Color.parseColor("#D94A4F"))
+                views.setTextViewText(R.id.widget_btn_text, "تجديد الآن ↻")
+                views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#D94A4F"))
+            }
+
+            // State: 🌙 Night Skin Recovery Mode
+            isNight -> {
+                views.setViewVisibility(R.id.widget_chronometer, View.GONE)
+                views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
+                views.setTextViewText(R.id.widget_ring_text, "راحة")
+                views.setTextColor(R.id.widget_ring_text, Color.parseColor("#818CF8"))
+
+                views.setTextViewText(R.id.widget_status_text, "وقت راحة البشرة 🌙")
+                views.setTextColor(R.id.widget_status_text, Color.parseColor("#818CF8"))
+                views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
+                views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#818CF8"))
+            }
+
+            // State: Daytime Idle
+            else -> {
+                views.setViewVisibility(R.id.widget_chronometer, View.GONE)
+                views.setViewVisibility(R.id.widget_ring_text, View.VISIBLE)
+
+                val duration = getDurationMinutes(uv)
                 views.setTextViewText(R.id.widget_ring_text, "$duration")
                 views.setTextColor(R.id.widget_ring_text, Color.parseColor("#18352D"))
                 views.setTextViewText(R.id.widget_status_text, "بانتظار البدء")
@@ -278,6 +400,12 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
+
+    private fun checkIsNightTime(uv: Float): Boolean {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) / 60f
+        return (hour >= 19.5 || hour < 6.5) || uv <= 0.2f
     }
 
     private fun estimateSolarUv(): Float {
