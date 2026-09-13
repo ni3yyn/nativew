@@ -1939,11 +1939,11 @@ const handleShelfViewChange = (newView) => {
     const isWeatherFetchInProgress = useRef(false);
 
     // ========================================================================
-    // --- 6. API LOGIC: WEATHER INTELLIGENCE (INDEPENDENT) ---
+    // --- 6. API LOGIC: WEATHER INTELLIGENCE (BULLETPROOF FALLBACK) ---
     // ========================================================================
+    const isWeatherFetchInProgress = useRef(false);
 
     const runWeatherAnalysis = useCallback(async () => {
-        // Prevent overlapping parallel executions
         if (isWeatherFetchInProgress.current) return;
         isWeatherFetchInProgress.current = true;
 
@@ -1951,62 +1951,67 @@ const handleShelfViewChange = (newView) => {
         setWeatherErrorType(null);
 
         try {
-            // 1. Verify foreground permission
-            const { status } = await Location.getForegroundPermissionsAsync();
-            setLocationPermission(status);
-
-            if (status !== 'granted') {
-                setWeatherErrorType('permission');
-                return;
-            }
-
-            // 2. Verify device location master toggle
-            const servicesEnabled = await Location.hasServicesEnabledAsync();
-            if (!servicesEnabled) {
-                setWeatherErrorType('permission');
-                return;
-            }
-
-            // 3. Retrieve location safely (Protected against Android Kotlin cast crash)
-            let loc = null;
-            try {
-                loc = await Location.getLastKnownPositionAsync();
-            } catch (_) {
-                // Ignore: Android Expo SDK 54 casting bug on empty options
-                loc = null;
-            }
-
-            // Fallback to active location fix if cache is empty or threw
-            if (!loc) {
-                loc = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                });
-            }
-
-            if (!loc?.coords?.latitude || !loc?.coords?.longitude) {
-                throw new Error("Unable to obtain valid device coordinates");
-            }
-
-            // 4. Reverse Geocoding with 4s network abort timeout
+            // Default fallback coordinates (Algiers) to prevent permanent failure
+            let coords = { latitude: 36.7538, longitude: 3.0588 };
             let cityName = t('location_my_position', language);
+            let hasRealPosition = false;
+
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const { status } = await Location.getForegroundPermissionsAsync();
+                setLocationPermission(status);
 
-                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.coords.latitude}&longitude=${loc.coords.longitude}&localityLanguage=${language || 'ar'}`;
-                const geoRes = await fetch(geoUrl, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                if (status === 'granted') {
+                    const servicesEnabled = await Location.hasServicesEnabledAsync();
+                    if (servicesEnabled) {
+                        let loc = null;
+                        
+                        // 1. Try last known position (without arguments)
+                        try {
+                            loc = await Location.getLastKnownPositionAsync();
+                        } catch (_) {
+                            loc = null;
+                        }
 
-                if (geoRes.ok) {
-                    const geoData = await geoRes.json();
-                    cityName = geoData.city || geoData.locality || geoData.principalSubdivision || t('location_my_position', language);
+                        // 2. Try current position (without arguments to avoid Kotlin cast crash)
+                        if (!loc) {
+                            try {
+                                loc = await Location.getCurrentPositionAsync();
+                            } catch (_) {
+                                loc = null;
+                            }
+                        }
+
+                        if (loc?.coords?.latitude && loc?.coords?.longitude) {
+                            coords = {
+                                latitude: loc.coords.latitude,
+                                longitude: loc.coords.longitude
+                            };
+                            hasRealPosition = true;
+                        }
+                    }
                 }
-            } catch (geoErr) {
-                // Non-critical: defaults gracefully to cityName
-                console.log('City name resolution fallback:', geoErr?.message || geoErr);
+            } catch (locErr) {
+                console.log('[Weather] Device location skipped, using default coords:', locErr?.message);
             }
 
-            // 5. Backend Weather Evaluation
+            // 3. Reverse geocode if we have real coordinates
+            if (hasRealPosition) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+                    const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=${language || 'ar'}`;
+                    const geoRes = await fetch(geoUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (geoRes.ok) {
+                        const geoData = await geoRes.json();
+                        cityName = geoData.city || geoData.locality || geoData.principalSubdivision || cityName;
+                    }
+                } catch (_) {}
+            }
+
+            // 4. Fetch Weather Insights from Backend
             const response = await fetch(`${PROFILE_API_URL}/analyze-weather`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2014,15 +2019,15 @@ const handleShelfViewChange = (newView) => {
                     products: savedProducts || [],
                     settings: userProfile?.settings || {},
                     location: {
-                        lat: loc.coords.latitude,
-                        lon: loc.coords.longitude,
+                        lat: coords.latitude,
+                        lon: coords.longitude,
                         city: cityName
                     }
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`Weather service returned HTTP status ${response.status}`);
+                throw new Error(`Weather service returned HTTP ${response.status}`);
             }
 
             const data = await response.json();

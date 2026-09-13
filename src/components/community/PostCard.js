@@ -227,7 +227,9 @@ const RoutineRateContent = React.memo(({ post, onViewProduct, COLORS, rtl, style
 const ELEVENLABS_API_KEY = 'sk_0725f26efa493f9a6306ef9819586eb4f41458dc6d804589';
 const ELEVENLABS_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
 
+// ============================================================================
 // 🌟 ACTIVE PLAYER: Only mounts when a genuine, non-empty URI is available
+// ============================================================================
 const TipsActivePlayer = React.memo(({
     uri,
     autoPlay = false,
@@ -237,9 +239,9 @@ const TipsActivePlayer = React.memo(({
     rtl,
     styles,
 }) => {
-    // Guaranteed to be a valid, non-empty URI
-    const audioSource = useMemo(() => ({ uri }), [uri]);
-    const player = useAudioPlayer(audioSource);
+    // 🌟 FULL FIX: Pass 'uri' directly as a raw string. 
+    // Do NOT wrap in { uri: uri } to prevent Android Kotlin NullPointerExceptions.
+    const player = useAudioPlayer(uri);
     const status = useAudioPlayerStatus(player);
 
     const isPlaying = !!status?.playing;
@@ -265,12 +267,12 @@ const TipsActivePlayer = React.memo(({
     // Auto-play when ready if requested
     const hasAutoPlayed = useRef(false);
     useEffect(() => {
-        if (autoPlay && player && !hasAutoPlayed.current) {
+        if (autoPlay && player && !hasAutoPlayed.current && isLoaded) {
             hasAutoPlayed.current = true;
             _stopAllTipsAudioExcept(entryRef.current);
             player.play();
         }
-    }, [player, autoPlay]);
+    }, [player, autoPlay, isLoaded]);
 
     const handleToggle = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
