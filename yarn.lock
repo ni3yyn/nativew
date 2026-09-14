@@ -5010,10 +5010,10 @@ expo-asset@~12.0.12:
     "@expo/image-utils" "^0.8.8"
     expo-constants "~18.0.12"
 
-expo-audio@1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/expo-audio/-/expo-audio-1.1.0.tgz#f13901d7dfe3df4f2931b85e3aaa569182984b25"
-  integrity sha512-B6SlDVQ8AHzCo8ImzO3C/5BzZ8vxULTCj9Ubx9bBSdcyDmU1DpDi0Tr4znEXOvBGn+u8eaTaPDN2a8RCAyXyXw==
+expo-audio@~1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/expo-audio/-/expo-audio-1.1.1.tgz#7b9763118e321c5dfbf2771cd4a5b6790ce4fc8d"
+  integrity sha512-CPCpJ+0AEHdzWROc0f00Zh6e+irLSl2ALos/LPvxEeIcJw1APfBa4DuHPkL4CQCWsVe7EnUjFpdwpqsEUWcP0g==
 
 expo-build-properties@~1.0.10:
   version "1.0.10"

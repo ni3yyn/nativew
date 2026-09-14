@@ -61,6 +61,39 @@
 -keep class * extends expo.modules.kotlin.views.ViewManagerWrapperDelegate
 -keep class * extends expo.modules.kotlin.views.ExpoView
 
+# ============================================
+# EXPO KOTLIN RECORDS (reflection-critical)
+# ============================================
+# @Record types are deserialized from JS objects via reflection.
+# R8 cannot see this and will strip them, causing runtime cast/NPE crashes
+# in expo-audio, expo-video, expo-image, expo-file-system, expo-location, etc.
+
+-keep class expo.modules.kotlin.records.** { *; }
+-keep class * implements expo.modules.kotlin.records.Record { *; }
+-keepclassmembers class * implements expo.modules.kotlin.records.Record { *; }
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+
+# ============================================
+# EXPO AUDIO (reflection + JNI)
+# ============================================
+
+-keep class expo.modules.audio.** { *; }
+-keepclassmembers class expo.modules.audio.** { *; }
+
+# ============================================
+# OTHER EXPO MODULES USING @Record (safety net)
+# ============================================
+
+-keep class expo.modules.filesystem.** { *; }
+-keep class expo.modules.image.** { *; }
+-keep class expo.modules.video.** { *; }
+-keep class expo.modules.location.** { *; }
+-keep class expo.modules.haptics.** { *; }
+-keep class expo.modules.linking.** { *; }
+-keep class expo.modules.clipboard.** { *; }
+-keep class expo.modules.sharing.** { *; }
+
 # Expo Updates internal state machine
 -keep class expo.modules.updates.statemachine.** { *; }
 -keep class expo.modules.updates.manifest.** { *; }
@@ -153,3 +186,5 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 -dontwarn androidx.room.**
+-dontwarn expo.modules.audio.**
+-dontwarn expo.modules.kotlin.records.**
