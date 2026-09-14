@@ -43,7 +43,8 @@
                 android:textStyle="bold"
                 android:text="UV 8.5" />
 
-            <Space
+            <!-- 🌟 FIXED: Replaced forbidden <Space> with <ImageView> -->
+            <ImageView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1" />
