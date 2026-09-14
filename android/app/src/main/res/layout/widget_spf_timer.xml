@@ -35,14 +35,14 @@
             android:progress="100"
             android:progressDrawable="@drawable/ring_active_track" />
 
-        <!-- 🌟 STACKED NUMBERS (Minutes / Separator Dash / Seconds) -->
+        <!-- Center Numbers -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical">
 
-            <!-- Top Digits (Minutes - Huge & Bold) -->
+            <!-- Minutes -->
             <TextView
                 android:id="@+id/widget_minutes_text"
                 android:layout_width="wrap_content"
@@ -54,8 +54,8 @@
                 android:includeFontPadding="false"
                 android:text="74" />
 
-            <!-- Middle Separator Dash -->
-            <View
+            <!-- 🌟 FIXED: Use ImageView instead of View for RemoteViews compliance -->
+            <ImageView
                 android:id="@+id/widget_separator"
                 android:layout_width="14dp"
                 android:layout_height="2.5dp"
@@ -63,7 +63,7 @@
                 android:layout_marginBottom="1dp"
                 android:background="#CC8A1A" />
 
-            <!-- Bottom Digits (Seconds - Accent Color) -->
+            <!-- Seconds -->
             <TextView
                 android:id="@+id/widget_seconds_text"
                 android:layout_width="wrap_content"
@@ -141,7 +141,7 @@
                 android:fontFamily="@font/tajawal_bold"
                 android:textColor="#FFFFFF"
                 android:textSize="12.5sp"
-                android:text="بدء المؤقت" />
+                android:text="بدء " />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
