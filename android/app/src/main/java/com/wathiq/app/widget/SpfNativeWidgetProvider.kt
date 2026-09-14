@@ -10,6 +10,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.location.Location
 import android.location.LocationManager
@@ -37,7 +38,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         const val ACTION_STOP_TIMER = "com.wathiq.app.ACTION_STOP_TIMER"
         const val ACTION_TIMER_EXPIRED = "com.wathiq.app.ACTION_TIMER_EXPIRED"
 
-        // Two dedicated channels: Low for silent live timer, High for ringing alert
         const val CHANNEL_LIVE_TIMER = "wathiq_live_timer_channel"
         const val CHANNEL_ALARM = "wathiq_spf_alarm_channel"
 
@@ -70,13 +70,9 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // ========================================================================
-    // 🌟 1. START TIMER: SCHEDULES ALARM & LAUNCHES ONGOING LIVE NOTIFICATION
-    // ========================================================================
     private fun handleUserTapStart(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // Show Loading State on widget
         prefs.edit().putString("STATE", STATE_LOADING).apply()
         refreshAllWidgets(context)
 
@@ -86,7 +82,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             val isNight = checkIsNightTime(liveUv)
 
             if (isNight) {
-                // Cancel any ongoing timer
                 cancelOngoingNotification(context)
                 prefs.edit()
                     .putString("STATE", STATE_NIGHT)
@@ -105,10 +100,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                     .putLong("WALL_CLOCK_END_TIME", wallClockEndTime)
                     .apply()
 
-                // 1. Schedule exact alarm for expiration
                 scheduleAlarm(context, wallClockEndTime)
-
-                // 2. Launch ongoing Lockscreen Live Timer
                 showOngoingLiveTimerNotification(context, wallClockEndTime, liveUv)
             }
 
@@ -116,22 +108,16 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // ========================================================================
-    // 🌟 2. STOP TIMER (From Notification or Widget)
-    // ========================================================================
     private fun handleStopTimer(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // Cancel Alarm
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
         val intent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_TIMER_EXPIRED }
         val pi = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         alarmManager?.cancel(pi)
 
-        // Dismiss Ongoing Notification
         cancelOngoingNotification(context)
 
-        // Reset to Idle
         prefs.edit()
             .putString("STATE", STATE_IDLE)
             .putLong("WALL_CLOCK_END_TIME", 0L)
@@ -140,14 +126,10 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         refreshAllWidgets(context)
     }
 
-    // ========================================================================
-    // 🌟 3. ONGOING LOCKSCREEN LIVE NOTIFICATION (ZERO BATTERY DRAIN)
-    // ========================================================================
     @SuppressLint("NotificationPermission")
     private fun showOngoingLiveTimerNotification(context: Context, wallClockEndTime: Long, uv: Float) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Create Silent Low-Priority Channel for Lockscreen Countdown
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val liveChannel = NotificationChannel(
                 CHANNEL_LIVE_TIMER,
@@ -162,7 +144,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             notificationManager.createNotificationChannel(liveChannel)
         }
 
-        // Tap Body ➔ Open App
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -170,13 +151,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             context, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action 1: [ ↻ تجديد ]
         val restartIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
         val restartPi = PendingIntent.getBroadcast(
             context, 101, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action 2: [ ✕ إلغاء ]
         val stopIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_STOP_TIMER }
         val stopPi = PendingIntent.getBroadcast(
             context, 102, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -188,17 +167,15 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             .setSmallIcon(iconRes)
             .setContentTitle("☀️ مؤقت وثيق • حماية نشطة")
             .setContentText("تنتهي طبقة الحماية (UV ~$uv) بعد:")
-            // 🌟 Native Android OS Real-time Lockscreen Countdown:
             .setWhen(wallClockEndTime)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
-            .setOngoing(true) // User cannot accidentally swipe away while protected
+            .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setColor(Color.parseColor("#3D9275"))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setContentIntent(contentPendingIntent)
-            // Interactive Lockscreen Buttons:
             .addAction(R.drawable.btn_bg, "↻ تجديد المؤقت", restartPi)
             .addAction(R.drawable.btn_bg, "✕ إلغاء", stopPi)
             .build()
@@ -213,26 +190,18 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         notificationManager.cancel(NOTIFICATION_LIVE_ID)
     }
 
-    // ========================================================================
-    // 🌟 4. TIMER EXPIRED: DISMISS LIVE TIMER & RING LOUD ALARM
-    // ========================================================================
     private fun onTimerFinished(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val uv = prefs.getFloat("LAST_UV", estimateSolarUv())
 
-        // 1. Dismiss Lockscreen Live Timer
         cancelOngoingNotification(context)
 
-        // 2. Set Expired State
         prefs.edit()
             .putString("STATE", STATE_EXPIRED)
             .putLong("WALL_CLOCK_END_TIME", 0L)
             .apply()
 
-        // 3. Ring Loud Expiration Alert
         showExpirationNotification(context, uv)
-
-        // 4. Update widget to Red
         refreshAllWidgets(context)
     }
 
@@ -269,7 +238,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             context, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action inside alarm notification: [ ↻ تجديد الآن ]
         val restartIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
         val restartPi = PendingIntent.getBroadcast(
             context, 103, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -281,7 +249,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             .setSmallIcon(iconRes)
             .setContentTitle("☀️ انتهت مدة واقي الشمس!")
             .setContentText("تلاشت طبقة الحماية (مستوى الأشعة الآن UV ~$uv). يُرجى إعادة التطبيق لحماية بشرتك.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("تلاشت طبقة الحماية تماماً (UV ~$uv). يُرجى إعادة وضع واقي الشمس فوراً لتجنب التصبغات وحروق الشمس."))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("تلاشت طبقة الحماية تماماً (UV ~$uv). يُرجى إعادة وضع واقي الشمس فوراً."))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
@@ -296,9 +264,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         } catch (e: SecurityException) {}
     }
 
-    // ========================================================================
-    // 🌟 5. REBOOT IMMUNITY
-    // ========================================================================
     private fun handlePhoneReboot(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val state = prefs.getString("STATE", STATE_IDLE)
@@ -377,9 +342,17 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // ========================================================================
-    // 🌟 6. WIDGET XML BINDING (Stacked Digits, Night & Expired Modes)
-    // ========================================================================
+    // 🌟 HELPER: Safe progress bar tinting for RemoteViews
+    private fun setProgressBarTint(views: RemoteViews, colorInt: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorStateList(
+                R.id.widget_progress_active,
+                "setProgressTintList",
+                ColorStateList.valueOf(colorInt)
+            )
+        }
+    }
+
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_spf_timer)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -395,14 +368,12 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         val colorInt = Color.parseColor(colorHex)
         val now = System.currentTimeMillis()
 
-        // Button click trigger
         val clickIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
         val pendingClick = PendingIntent.getBroadcast(
             context, 0, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.widget_action_btn, pendingClick)
 
-        // Header: UV or Night Moon
         if (isNight) {
             views.setTextViewText(R.id.widget_uv_text, "UV 0.0 🌙")
             views.setTextColor(R.id.widget_uv_text, Color.parseColor("#818CF8"))
@@ -412,7 +383,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
 
         when {
-            // Loading State
             state == STATE_LOADING -> {
                 views.setTextViewText(R.id.widget_minutes_text, "⏳")
                 views.setViewVisibility(R.id.widget_separator, View.GONE)
@@ -422,7 +392,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_btn_text, "جاري القياس... ⏳")
             }
 
-            // Running State (Stacked View)
             state == STATE_RUNNING && wallClockEndTime > now -> {
                 val remainingSeconds = Math.max(0L, (wallClockEndTime - now) / 1000L)
                 val m = remainingSeconds / 60
@@ -445,10 +414,9 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
                 val progress = if (totalDuration > 0) ((wallClockEndTime - now).toFloat() / totalDuration * 100).toInt() else 100
                 views.setProgressBar(R.id.widget_progress_active, 100, progress, false)
-                views.setInt(R.id.widget_progress_active, "setColorFilter", colorInt)
+                setProgressBarTint(views, colorInt)
             }
 
-            // Expired State
             state == STATE_EXPIRED || (state == STATE_RUNNING && wallClockEndTime <= now) -> {
                 views.setViewVisibility(R.id.widget_separator, View.VISIBLE)
                 views.setViewVisibility(R.id.widget_seconds_text, View.VISIBLE)
@@ -466,10 +434,9 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_btn_text, "تجديد الآن ↻")
 
                 views.setProgressBar(R.id.widget_progress_active, 100, 0, false)
-                views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#D94A4F"))
+                setProgressBarTint(views, Color.parseColor("#D94A4F"))
             }
 
-            // Night Skin Recovery Mode
             isNight -> {
                 views.setTextViewText(R.id.widget_minutes_text, "🌙")
                 views.setTextColor(R.id.widget_minutes_text, Color.parseColor("#818CF8"))
@@ -481,10 +448,9 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextColor(R.id.widget_status_text, Color.parseColor("#818CF8"))
                 views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
                 views.setProgressBar(R.id.widget_progress_active, 100, 100, false)
-                views.setInt(R.id.widget_progress_active, "setColorFilter", Color.parseColor("#818CF8"))
+                setProgressBarTint(views, Color.parseColor("#818CF8"))
             }
 
-            // Daytime Idle
             else -> {
                 val duration = getDurationMinutes(uv)
                 if (duration == 0) {
@@ -496,19 +462,26 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                     views.setTextColor(R.id.widget_seconds_text, Color.parseColor("#1C9A66"))
                     views.setTextViewText(R.id.widget_status_text, "أشعة آمنة")
                     views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة")
+                    views.setProgressBar(R.id.widget_progress_active, 100, 100, false)
+                    setProgressBarTint(views, Color.parseColor("#1C9A66"))
                 } else {
                     views.setViewVisibility(R.id.widget_separator, View.VISIBLE)
                     views.setViewVisibility(R.id.widget_seconds_text, View.VISIBLE)
+
                     views.setTextViewText(R.id.widget_minutes_text, "$duration")
                     views.setTextColor(R.id.widget_minutes_text, Color.parseColor("#18352D"))
+
                     views.setInt(R.id.widget_separator, "setBackgroundColor", colorInt)
+
                     views.setTextViewText(R.id.widget_seconds_text, "دقيقة")
                     views.setTextColor(R.id.widget_seconds_text, colorInt)
+
                     views.setTextViewText(R.id.widget_status_text, "بانتظار البدء")
                     views.setTextViewText(R.id.widget_btn_text, "بدء الحماية")
+
+                    views.setProgressBar(R.id.widget_progress_active, 100, 100, false)
+                    setProgressBarTint(views, colorInt)
                 }
-                views.setProgressBar(R.id.widget_progress_active, 100, 100, false)
-                views.setInt(R.id.widget_progress_active, "setColorFilter", colorInt)
             }
         }
 
