@@ -393,7 +393,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 val elapsedBase = SystemClock.elapsedRealtime() + (end - now)
                 views.setChronometer(R.id.widget_chronometer, elapsedBase, "%s", true)
 
-                views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
+                views.setTextViewText(R.id.widget_status_text, "صلّ على رسول اللّه")
                 val p = if (total > 0) ((end - now).toFloat() / total * 100).toInt() else 100
                 views.setProgressBar(R.id.widget_progress_bar, 100, p, false)
             }
