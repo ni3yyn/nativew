@@ -16,9 +16,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="13dp">
 
-        <!-- 🌟 TOP ROW: App Icon + City + UV Badge on Right, Refresh on Left -->
+        <!-- 🌟 TOP ROW: App Icon + City Name + UV Badge -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,14 +26,13 @@
             android:gravity="center_vertical"
             android:layoutDirection="ltr">
 
-            <!-- App Logo + App Name / City -->
+            <!-- Logo + City -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <!-- Small Brand Icon -->
                 <ImageView
                     android:id="@+id/widget_app_icon"
                     android:layout_width="16dp"
@@ -41,7 +40,6 @@
                     android:src="@mipmap/ic_launcher_round"
                     android:layout_marginEnd="6dp" />
 
-                <!-- City or App Name -->
                 <TextView
                     android:id="@+id/widget_city_text"
                     android:layout_width="wrap_content"
@@ -53,13 +51,13 @@
                     android:text="وثيق" />
             </LinearLayout>
 
-            <!-- Spacer (Legal in RemoteViews) -->
+            <!-- Spacer -->
             <ImageView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1" />
 
-            <!-- UV & Weather State -->
+            <!-- UV & Icon -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -83,15 +81,6 @@
                     android:textStyle="bold"
                     android:text="UV 8.5" />
             </LinearLayout>
-
-            <!-- Refresh Button -->
-            <ImageView
-                android:id="@+id/widget_action_btn"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:layout_marginStart="8dp"
-                android:padding="3dp"
-                android:src="@drawable/ic_widget_refresh" />
         </LinearLayout>
 
         <!-- 🌟 CENTER HERO: Massive Typographic Timer -->
@@ -110,20 +99,20 @@
                 android:countDown="true"
                 android:fontFamily="@font/tajawal_bold"
                 android:textColor="#FFFFFF"
-                android:textSize="44sp"
+                android:textSize="40sp"
                 android:textStyle="bold"
                 android:letterSpacing="-0.03"
                 android:includeFontPadding="false"
                 android:visibility="gone" />
 
-            <!-- Static Text (For Expired/Safe states) -->
+            <!-- Static Text (For Idle/Expired/Safe states) -->
             <TextView
                 android:id="@+id/widget_static_hero_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/tajawal_bold"
                 android:textColor="#FFFFFF"
-                android:textSize="36sp"
+                android:textSize="34sp"
                 android:textStyle="bold"
                 android:letterSpacing="-0.03"
                 android:includeFontPadding="false"
@@ -136,21 +125,42 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/tajawal_bold"
                 android:textColor="#A7F3D0"
-                android:textSize="13.5sp"
+                android:textSize="13sp"
                 android:layout_marginTop="2dp"
-                android:text="حماية نشطة" />
+                android:text="بانتظار البدء" />
         </LinearLayout>
 
-        <!-- 🌟 BOTTOM ROW: Thick Progress Bar -->
+        <!-- 🌟 PROGRESS BAR (Shown only when running) -->
         <ProgressBar
             android:id="@+id/widget_progress_bar"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="6dp"
+            android:layout_marginBottom="8dp"
             android:indeterminate="false"
             android:max="100"
             android:progress="75"
-            android:progressDrawable="@drawable/widget_progress_horizontal" />
+            android:progressDrawable="@drawable/widget_progress_horizontal"
+            android:visibility="gone" />
+
+        <!-- 🌟 PROMINENT BOTTOM ACTION BUTTON ("بدء الحماية" / "إعادة المؤقت" / "تجديد الآن") -->
+        <LinearLayout
+            android:id="@+id/widget_action_btn"
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:background="@drawable/btn_bg"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_btn_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/tajawal_bold"
+                android:textColor="#FFFFFF"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                android:text="بدء المؤقت" />
+        </LinearLayout>
     </LinearLayout>
 </RelativeLayout>

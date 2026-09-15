@@ -348,6 +348,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     // ========================================================================
     // 🌟 3. WIDGET UI RENDERING
     // ========================================================================
+    
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_spf_timer)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -361,6 +362,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         val isNight = checkIsNightTime(uv)
         val now = System.currentTimeMillis()
 
+        // 🌟 Button click trigger attached to the bottom action button
         val clickIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
         val pendingClick = PendingIntent.getBroadcast(context, 0, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         views.setOnClickPendingIntent(R.id.widget_action_btn, pendingClick)
@@ -370,9 +372,10 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         views.setTextViewText(R.id.widget_city_text, city)
 
+        // Reset default view states
         views.setViewVisibility(R.id.widget_chronometer, View.GONE)
         views.setViewVisibility(R.id.widget_static_hero_text, View.VISIBLE)
-        views.setViewVisibility(R.id.widget_progress_bar, View.VISIBLE)
+        views.setViewVisibility(R.id.widget_progress_bar, View.GONE)
 
         when {
             state == STATE_LOADING -> {
@@ -380,7 +383,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_uv_text, "UV --")
                 views.setTextViewText(R.id.widget_static_hero_text, "...")
                 views.setTextViewText(R.id.widget_status_text, "جار تحديد الأشعة")
-                views.setProgressBar(R.id.widget_progress_bar, 100, 0, true)
+                views.setTextViewText(R.id.widget_btn_text, "جار التحديد... ⏳")
             }
 
             state == STATE_RUNNING && end > now -> {
@@ -388,37 +391,45 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
+                // Show live Chronometer
                 views.setViewVisibility(R.id.widget_static_hero_text, View.GONE)
                 views.setViewVisibility(R.id.widget_chronometer, View.VISIBLE)
                 val elapsedBase = SystemClock.elapsedRealtime() + (end - now)
                 views.setChronometer(R.id.widget_chronometer, elapsedBase, "%s", true)
 
-                views.setTextViewText(R.id.widget_status_text, "صلّ على رسول اللّه")
+                views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
+                
+                // Show Progress Bar only when active
+                views.setViewVisibility(R.id.widget_progress_bar, View.VISIBLE)
                 val p = if (total > 0) ((end - now).toFloat() / total * 100).toInt() else 100
                 views.setProgressBar(R.id.widget_progress_bar, 100, p, false)
+
+                // Button text
+                views.setTextViewText(R.id.widget_btn_text, "إعادة المؤقت ↻")
             }
 
             state == STATE_EXPIRED || (state == STATE_RUNNING && end <= now) -> {
-                applySolidTheme(views, "#7F1D1D", "#FFFFFF", "#FECACA")
+                applySolidTheme(views, "#7F1D1D", "#FFFFFF", "#FECACA") // Crimson Red
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
                 views.setTextViewText(R.id.widget_static_hero_text, "00:00")
                 views.setTextViewText(R.id.widget_status_text, "انتهت الفعالية")
-                views.setProgressBar(R.id.widget_progress_bar, 100, 0, false)
+                views.setTextViewText(R.id.widget_btn_text, "تجديد الآن ↻")
             }
 
             isNight -> {
-                applySolidTheme(views, "#1E1B4B", "#FFFFFF", "#A5B4FC")
+                applySolidTheme(views, "#1E1B4B", "#FFFFFF", "#A5B4FC") // Deep Indigo
                 views.setTextViewText(R.id.widget_uv_text, "UV 0.0")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_moon)
 
                 views.setTextViewText(R.id.widget_static_hero_text, "راحة")
                 views.setTextViewText(R.id.widget_status_text, "تصبحين على خير")
-                views.setViewVisibility(R.id.widget_progress_bar, View.GONE)
+                views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
             }
 
             else -> {
+                // 🌟 IDLE: PROMINENT START BUTTON IS VISIBLE
                 applyGradientTheme(views, "#18352D", "#4A6B5F")
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
@@ -427,11 +438,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 if (duration == 0) {
                     views.setTextViewText(R.id.widget_static_hero_text, "آمن")
                     views.setTextViewText(R.id.widget_status_text, "أشعة آمنة")
-                    views.setViewVisibility(R.id.widget_progress_bar, View.GONE)
+                    views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
                 } else {
                     views.setTextViewText(R.id.widget_static_hero_text, "$duration د")
                     views.setTextViewText(R.id.widget_status_text, "بانتظار البدء")
-                    views.setProgressBar(R.id.widget_progress_bar, 100, 100, false)
+                    views.setTextViewText(R.id.widget_btn_text, "بدء الحماية")
                 }
             }
         }
@@ -449,7 +460,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         views.setTextColor(R.id.widget_status_text, Color.parseColor(textSubHex))
 
         views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(textMainHex))
-        views.setInt(R.id.widget_action_btn, "setColorFilter", Color.parseColor(textMainHex))
     }
 
     private fun applySolidTheme(views: RemoteViews, bgHex: String, textMainHex: String, textSubHex: String) {
@@ -463,7 +473,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         views.setTextColor(R.id.widget_status_text, Color.parseColor(textSubHex))
 
         views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(textMainHex))
-        views.setInt(R.id.widget_action_btn, "setColorFilter", Color.parseColor(textMainHex))
     }
 
     // ========================================================================
