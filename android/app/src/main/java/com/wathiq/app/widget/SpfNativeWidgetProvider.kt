@@ -22,6 +22,7 @@ import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.wathiq.app.MainActivity
 import com.wathiq.app.R
 import org.json.JSONObject
@@ -65,73 +66,78 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
 
-        when (intent.action) {
-            ACTION_START_TIMER -> handleUserTapStart(context)
-            ACTION_STOP_TIMER -> handleStopTimer(context)
-            ACTION_TIMER_EXPIRED -> onTimerFinished(context)
-            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON" -> handlePhoneReboot(context)
+        val action = intent.action
+        if (action == ACTION_START_TIMER || action == ACTION_STOP_TIMER || action == ACTION_TIMER_EXPIRED || action == Intent.ACTION_BOOT_COMPLETED || action == "android.intent.action.QUICKBOOT_POWERON") {
+            
+            val pendingResult = goAsync()
+
+            thread {
+                try {
+                    when (action) {
+                        ACTION_START_TIMER -> handleUserTapStart(context)
+                        ACTION_STOP_TIMER -> handleStopTimer(context)
+                        ACTION_TIMER_EXPIRED -> onTimerFinished(context)
+                        Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON" -> handlePhoneReboot(context)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in widget background thread", e)
+                } finally {
+                    pendingResult?.finish()
+                }
+            }
         }
     }
 
     // ========================================================================
-    // 🌟 1. TIMER START: ASYNC WITH goAsync() TO PREVENT OS THREAD KILL
+    // 🌟 1. TIMER LIFECYCLE
     // ========================================================================
     private fun handleUserTapStart(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // 1. Immediately render Loading State on widget
+        // 1. Immediately show loading on widget
         prefs.edit().putString("STATE", STATE_LOADING).apply()
         refreshAllWidgets(context)
 
-        // 🌟 CRUCIAL: goAsync() tells Android OS to KEEP process and network alive during background work
-        val pendingResult = goAsync()
+        val startTimestamp = SystemClock.elapsedRealtime()
 
-        thread {
-            try {
-                Log.d(TAG, "Starting background location & UV fetch...")
-                val coords = getNativeDeviceCoordinates(context)
-                Log.d(TAG, "Coordinates obtained: lat=${coords.first}, lon=${coords.second}")
+        // 2. Fetch coordinates, city and UV
+        val coords = getNativeDeviceCoordinates(context)
+        val cityName = getCityNameFromCoordinates(context, coords.first, coords.second)
+        val liveUv = fetchLiveUvFromApi(coords.first, coords.second)
+        val isNight = checkIsNightTime(liveUv)
 
-                val cityName = getCityNameFromCoordinates(context, coords.first, coords.second)
-                Log.d(TAG, "City name resolved: $cityName")
-
-                val liveUv = fetchLiveUvFromApi(coords.first, coords.second)
-                Log.d(TAG, "Final UV determined: $liveUv")
-
-                val isNight = checkIsNightTime(liveUv)
-
-                if (isNight) {
-                    cancelOngoingNotification(context)
-                    prefs.edit()
-                        .putString("STATE", STATE_NIGHT)
-                        .putFloat("LAST_UV", 0.0f)
-                        .putString("LAST_CITY", cityName)
-                        .putLong("WALL_CLOCK_END_TIME", 0L)
-                        .apply()
-                } else {
-                    val durationMins = getDurationMinutes(liveUv)
-                    val durationMillis = durationMins * 60 * 1000L
-                    val wallClockEnd = System.currentTimeMillis() + durationMillis
-
-                    prefs.edit()
-                        .putString("STATE", STATE_RUNNING)
-                        .putFloat("LAST_UV", liveUv)
-                        .putString("LAST_CITY", cityName)
-                        .putLong("TOTAL_DURATION_MILLIS", durationMillis)
-                        .putLong("WALL_CLOCK_END_TIME", wallClockEnd)
-                        .apply()
-
-                    scheduleAlarm(context, wallClockEnd)
-                    showOngoingLiveTimerNotification(context, wallClockEnd, liveUv)
-                }
-
-                refreshAllWidgets(context)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in widget async worker", e)
-            } finally {
-                pendingResult.finish() // Safely release BroadcastReceiver lock
-            }
+        // Ensure minimum 600ms loading duration for smooth UX
+        val elapsed = SystemClock.elapsedRealtime() - startTimestamp
+        if (elapsed < 600) {
+            try { Thread.sleep(600 - elapsed) } catch (_: Exception) {}
         }
+
+        if (isNight) {
+            cancelOngoingNotification(context)
+            prefs.edit()
+                .putString("STATE", STATE_NIGHT)
+                .putFloat("LAST_UV", 0.0f)
+                .putString("LAST_CITY", cityName)
+                .putLong("WALL_CLOCK_END_TIME", 0L)
+                .apply()
+        } else {
+            val durationMins = getDurationMinutes(liveUv)
+            val durationMillis = durationMins * 60 * 1000L
+            val wallClockEnd = System.currentTimeMillis() + durationMillis
+
+            prefs.edit()
+                .putString("STATE", STATE_RUNNING)
+                .putFloat("LAST_UV", liveUv)
+                .putString("LAST_CITY", cityName)
+                .putLong("TOTAL_DURATION_MILLIS", durationMillis)
+                .putLong("WALL_CLOCK_END_TIME", wallClockEnd)
+                .apply()
+
+            scheduleAlarm(context, wallClockEnd)
+            showOngoingLiveTimerNotification(context, wallClockEnd, liveUv)
+        }
+
+        refreshAllWidgets(context)
     }
 
     private fun handleStopTimer(context: Context) {
@@ -181,12 +187,20 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    private fun refreshAllWidgets(context: Context) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val thisWidget = ComponentName(context, SpfNativeWidgetProvider::class.java)
+        val allIds = appWidgetManager.getAppWidgetIds(thisWidget)
+        for (id in allIds) updateAppWidget(context, appWidgetManager, id)
+    }
+
     // ========================================================================
     // 🌟 2. NOTIFICATIONS
     // ========================================================================
     @SuppressLint("NotificationPermission")
     private fun showOngoingLiveTimerNotification(context: Context, wallClockEndTime: Long, uv: Float) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val rlm = "\u200F"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val liveChannel = NotificationChannel(
@@ -220,13 +234,12 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         )
 
         val iconRes = try { R.drawable.notification_icon } catch (e: Exception) { R.mipmap.ic_launcher }
-        val rlm = "\u200F"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_LIVE_TIMER)
             .setSmallIcon(iconRes)
-            .setContentTitle("${rlm}☀️ مؤقت وثيق • حماية نشطة")
-            .setContentText("${rlm}طبقة واقي الشمس فعالة ومستمرة (UV ~$uv)")
-            .setSubText("${rlm}مؤقت حي")
+            .setContentTitle("${rlm}مؤقت وثيق")
+            .setContentText("${rlm}طبقة واقي الشمس فعالة (UV ~$uv)")
+            .setSubText("${rlm} أستغفر الله")
             .setWhen(wallClockEndTime)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
@@ -297,8 +310,8 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ALARM)
             .setSmallIcon(iconRes)
-            .setContentTitle("${rlm}☀️ انتهت مدة واقي الشمس!")
-            .setContentText("${rlm}تلاشت طبقة الحماية تماماً (UV ~$uv). يُرجى إعادة الوضع فوراً.")
+            .setContentTitle("${rlm}☀️ انتهت فعالية واقي الشمس!")
+            .setContentText("${rlm}تلاشت طبقة الحماية تماماً (UV ~$uv). ضعي الواقي مجددا الآن.")
             .setStyle(NotificationCompat.BigTextStyle().bigText("${rlm}تلاشت طبقة الحماية تماماً (مستوى الأشعة الآن UV ~$uv). يُرجى إعادة وضع واقي الشمس فوراً لتجنب التصبغات وحروق الشمس."))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -330,13 +343,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         } catch (e: Exception) {
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
         }
-    }
-
-    private fun refreshAllWidgets(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val thisWidget = ComponentName(context, SpfNativeWidgetProvider::class.java)
-        val allIds = appWidgetManager.getAppWidgetIds(thisWidget)
-        for (id in allIds) updateAppWidget(context, appWidgetManager, id)
     }
 
     // ========================================================================
@@ -373,7 +379,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 applySolidTheme(views, "#1E293B", "#FFFFFF", "#94A3B8")
                 views.setTextViewText(R.id.widget_uv_text, "UV --")
                 views.setTextViewText(R.id.widget_static_hero_text, "...")
-                views.setTextViewText(R.id.widget_status_text, "جاري تحديد الأشعة")
+                views.setTextViewText(R.id.widget_status_text, "جار تحديد الأشعة")
                 views.setProgressBar(R.id.widget_progress_bar, 100, 0, true)
             }
 
@@ -398,7 +404,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
                 views.setTextViewText(R.id.widget_static_hero_text, "00:00")
-                views.setTextViewText(R.id.widget_status_text, "انتهت الحماية")
+                views.setTextViewText(R.id.widget_status_text, "انتهت الفعالية")
                 views.setProgressBar(R.id.widget_progress_bar, 100, 0, false)
             }
 
@@ -408,7 +414,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_moon)
 
                 views.setTextViewText(R.id.widget_static_hero_text, "راحة")
-                views.setTextViewText(R.id.widget_status_text, "تجدد خلايا البشرة")
+                views.setTextViewText(R.id.widget_status_text, "تصبحين على خير")
                 views.setViewVisibility(R.id.widget_progress_bar, View.GONE)
             }
 
@@ -474,7 +480,8 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             if (!isGpsEnabled && !isNetworkEnabled) return defaultAlgiers
 
             var bestLoc: Location? = null
-            for (p in lm.getProviders(true)) {
+            val providers = lm.getProviders(true)
+            for (p in providers) {
                 val l = lm.getLastKnownLocation(p) ?: continue
                 if (bestLoc == null || l.accuracy < bestLoc.accuracy) bestLoc = l
             }
@@ -486,7 +493,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                     var freshLoc: Location? = null
                     val provider = if (isGpsEnabled) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
                     val latch = CountDownLatch(1)
-                    lm.getCurrentLocation(provider, cancellationSignal, context.mainExecutor) { loc ->
+                    lm.getCurrentLocation(provider, cancellationSignal, ContextCompat.getMainExecutor(context)) { loc ->
                         freshLoc = loc
                         latch.countDown()
                     }
@@ -505,7 +512,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     }
 
     private fun getCityNameFromCoordinates(context: Context, lat: Double, lon: Double): String {
-        // 🌟 1. Tier 1: Native Android Geocoder in Arabic
         try {
             val geocoder = Geocoder(context, Locale("ar"))
             @Suppress("DEPRECATION")
@@ -519,7 +525,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             Log.w(TAG, "Native Geocoder failed, trying BigDataCloud...", e)
         }
 
-        // 🌟 2. Tier 2: BigDataCloud API (Arabic)
         try {
             val formattedUrl = String.format(
                 Locale.US,
@@ -527,8 +532,8 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 lat, lon
             )
             val conn = (URL(formattedUrl).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 3000
-                readTimeout = 3000
+                connectTimeout = 2500
+                readTimeout = 2500
                 setRequestProperty("User-Agent", "WathiqApp/2.0 (Android; com.wathiq.app)")
                 requestMethod = "GET"
             }
@@ -545,7 +550,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             Log.w(TAG, "BigDataCloud failed, trying OpenStreetMap Nominatim...", e)
         }
 
-        // 🌟 3. Tier 3: OpenStreetMap Nominatim (Restored from your code!)
         try {
             val formattedUrl = String.format(
                 Locale.US,
@@ -553,8 +557,8 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 lat, lon
             )
             val conn = (URL(formattedUrl).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 3000
-                readTimeout = 3000
+                connectTimeout = 2500
+                readTimeout = 2500
                 setRequestProperty("User-Agent", "WathiqWidget/1.0 (Android; com.wathiq.app)")
                 requestMethod = "GET"
             }
@@ -578,39 +582,40 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         return "موقعي"
     }
 
-    // 🌟 FIX: Safe Locale.US URL, User-Agent Header & Detailed Logging
+    // 🌟 DUAL PROTOCOL: Tries HTTPS, automatically falls back to HTTP if SSL fails (Clock-Glitch friendly)
     private fun fetchLiveUvFromApi(lat: Double, lon: Double): Float {
-        val apiUrl = String.format(
-            Locale.US,
-            "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=uv_index&timezone=auto",
-            lat, lon
-        )
-        Log.d(TAG, "Querying Satellite UV API: $apiUrl")
+        val protocols = listOf("https", "http")
 
-        try {
-            val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 4000
-                readTimeout = 4000
-                setRequestProperty("User-Agent", "WathiqApp/2.0 (Android; com.wathiq.app)")
-                setRequestProperty("Accept", "application/json")
-                requestMethod = "GET"
+        for (proto in protocols) {
+            val apiUrl = String.format(
+                Locale.US,
+                "$proto://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=uv_index&timezone=auto",
+                lat, lon
+            )
+            Log.d(TAG, "Querying Satellite UV API ($proto): $apiUrl")
+
+            try {
+                val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 3000
+                    readTimeout = 3000
+                    setRequestProperty("User-Agent", "WathiqApp/2.0 (Android; com.wathiq.app)")
+                    setRequestProperty("Accept", "application/json")
+                    requestMethod = "GET"
+                }
+
+                val statusCode = conn.responseCode
+                Log.d(TAG, "API Status ($proto): $statusCode")
+
+                if (statusCode == 200) {
+                    val res = BufferedReader(InputStreamReader(conn.inputStream)).readText()
+                    val uv = JSONObject(res).getJSONObject("current").getDouble("uv_index").toFloat()
+                    val finalUv = Math.max(0f, Math.round(uv * 10f) / 10f)
+                    Log.d(TAG, "Successfully parsed satellite UV: $finalUv")
+                    return finalUv
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "API attempt with $proto failed: ${e.message}")
             }
-
-            val statusCode = conn.responseCode
-            Log.d(TAG, "API HTTP Status Code: $statusCode")
-
-            if (statusCode == 200) {
-                val res = BufferedReader(InputStreamReader(conn.inputStream)).readText()
-                Log.d(TAG, "API Response: $res")
-                val uv = JSONObject(res).getJSONObject("current").getDouble("uv_index").toFloat()
-                val finalUv = Math.max(0f, Math.round(uv * 10f) / 10f)
-                Log.d(TAG, "Successfully parsed satellite UV: $finalUv")
-                return finalUv
-            } else {
-                Log.w(TAG, "API returned non-200 status: $statusCode")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect to Open-Meteo API", e)
         }
 
         val fallback = estimateSolarUv()
@@ -623,21 +628,19 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         return (h >= 19.5 || h < 6.5) || uv <= 0.2f
     }
 
-    // 🌟 RECALIBRATED: Realistic Mediterranean Solar Math (Peak ~7.5 in September)
+    // 🌟 Realistic Mediterranean Seasonal Solar Math
     private fun estimateSolarUv(): Float {
         val c = Calendar.getInstance()
         val h = c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) / 60f
         if (h < 6.5 || h >= 18.5) return 0f
 
-        val month = c.get(Calendar.MONTH) // 0-indexed (8 = September)
-        
-        // Realistic seasonal solar intensity multiplier for Algeria
+        val month = c.get(Calendar.MONTH)
         val seasonMultiplier = when (month) {
             5, 6, 7 -> 1.0f  // June, July, August (Peak Summer: Max ~10.5)
             4, 8 -> 0.72f    // May, September (Late Spring/Early Fall: Max ~7.5)
             3, 9 -> 0.52f    // April, October (Max ~5.5)
             2, 10 -> 0.38f   // March, November (Max ~4.0)
-            else -> 0.25f    // Dec, Jan, Feb (Winter: Max ~2.5)
+            else -> 0.25f    // Winter (Max ~2.5)
         }
 
         val solarNoon = 12.5f
