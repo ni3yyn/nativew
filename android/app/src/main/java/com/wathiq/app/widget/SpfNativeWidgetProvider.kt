@@ -60,6 +60,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     }
 
     data class WidgetPalette(
+        val bgDrawableRes: Int, // 🌟 NEW: The specific XML file for this theme
         val isGradient: Boolean,
         val bgHex: String,
         val textPrimaryHex: String,
@@ -102,24 +103,22 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     private fun handleUserTapStart(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // 1. Immediately render Loading State on widget
+        // 🌟 1. Dismiss old notifications immediately so they don't stick around
+        cancelExpirationNotification(context)
+        cancelOngoingNotification(context)
+
+        // 2. Show loading state on widget
         prefs.edit().putString("STATE", STATE_LOADING).apply()
         refreshAllWidgets(context)
 
         val startTimestamp = SystemClock.elapsedRealtime()
 
-        // 2. Fetch fresh coordinates, city, and real satellite UV
-        Log.d(TAG, "Fetching device location...")
+        // 3. Fetch coordinates, city and UV
         val coords = getNativeDeviceCoordinates(context)
-        Log.d(TAG, "Location resolved: lat=${coords.first}, lon=${coords.second}")
-
         val cityName = getCityNameFromCoordinates(context, coords.first, coords.second)
-        Log.d(TAG, "City resolved: $cityName")
-
         val liveUv = fetchLiveUvFromApi(coords.first, coords.second)
-        Log.d(TAG, "Live UV resolved: $liveUv")
-
         val isNight = checkIsNightTime(liveUv)
+        val durationMins = getDurationMinutes(liveUv) // 🌟 Checked early
 
         // Ensure minimum 600ms loading duration for smooth UX
         val elapsed = SystemClock.elapsedRealtime() - startTimestamp
@@ -128,15 +127,26 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         }
 
         if (isNight) {
-            cancelOngoingNotification(context)
             prefs.edit()
                 .putString("STATE", STATE_NIGHT)
                 .putFloat("LAST_UV", 0.0f)
                 .putString("LAST_CITY", cityName)
                 .putLong("WALL_CLOCK_END_TIME", 0L)
                 .apply()
+        } else if (durationMins <= 0) {
+            // 🌟 FIX: UV is safe (< 3.0) — do NOT schedule a 0ms alarm!
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            val pi = PendingIntent.getBroadcast(context, 0, Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_TIMER_EXPIRED }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            alarmManager?.cancel(pi)
+
+            prefs.edit()
+                .putString("STATE", STATE_IDLE)
+                .putFloat("LAST_UV", liveUv)
+                .putString("LAST_CITY", cityName)
+                .putLong("WALL_CLOCK_END_TIME", 0L)
+                .apply()
         } else {
-            val durationMins = getDurationMinutes(liveUv)
+            // 🌟 UV is dangerous (>= 3.0) — start real countdown
             val durationMillis = durationMins * 60 * 1000L
             val wallClockEnd = System.currentTimeMillis() + durationMillis
 
@@ -282,11 +292,26 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         notificationManager.cancel(NOTIFICATION_LIVE_ID)
     }
 
+    private fun cancelExpirationNotification(context: Context) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(NOTIFICATION_ALARM_ID)
+    }
+
     @SuppressLint("NotificationPermission")
     private fun showExpirationNotification(context: Context, uv: Float) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val rlm = "\u200F"
+
+        // 🌟 Load custom sound from res/raw/wathiq_sound.mp3 (falls back to default if file missing)
+        val customSoundResId = context.resources.getIdentifier("wathiq_sound", "raw", context.packageName)
+        val soundUri = if (customSoundResId != 0) {
+            android.net.Uri.parse("android.resource://${context.packageName}/$customSoundResId")
+        } else {
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        }
+
+        // 🌟 Bumping channel to v2 forces Android to register the new custom sound!
+        val alarmChannelId = "wathiq_spf_alarm_channel_v2"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val audioAttributes = AudioAttributes.Builder()
@@ -295,7 +320,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 .build()
 
             val alarmChannel = NotificationChannel(
-                CHANNEL_ALARM,
+                alarmChannelId,
                 "تنبيهات انتهاء واقي الشمس",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
@@ -313,17 +338,20 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val contentPendingIntent = PendingIntent.getActivity(
-            context, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            context, 301, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val restartIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
+        val restartIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { 
+            action = ACTION_START_TIMER 
+            flags = Intent.FLAG_RECEIVER_FOREGROUND
+        }
         val restartPi = PendingIntent.getBroadcast(
             context, 103, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val iconRes = try { R.drawable.notification_icon } catch (e: Exception) { R.mipmap.ic_launcher }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALARM)
+        val notification = NotificationCompat.Builder(context, alarmChannelId)
             .setSmallIcon(iconRes)
             .setContentTitle("${rlm}☀️ انتهت فعالية واقي الشمس!")
             .setContentText("${rlm}تلاشت طبقة الحماية تماماً (UV ~$uv). ضعي الواقي مجددا الآن.")
@@ -366,7 +394,8 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     private fun getPaletteForAppTheme(themeId: String): WidgetPalette {
         return when (themeId) {
             "original" -> WidgetPalette(
-                isGradient = false,
+                bgDrawableRes = R.drawable.widget_bg_gradient_original,
+                isGradient = true,
                 bgHex = "#1A2D27",
                 textPrimaryHex = "#F1F3F2",
                 textSecondaryHex = "#A8B8B3",
@@ -374,22 +403,25 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 buttonTextHex = "#1A2D27"
             )
             "baby_pink" -> WidgetPalette(
-                isGradient = false,
+                bgDrawableRes = R.drawable.widget_bg_gradient_pink,
+                isGradient = true,
                 bgHex = "#FFE6EE",
-                textPrimaryHex = "#4A172B",
+                textPrimaryHex = "#4a172b",
                 textSecondaryHex = "#71344C",
                 buttonBgHex = "#C83F70",
                 buttonTextHex = "#FFFFFF"
             )
             "clinical_blue" -> WidgetPalette(
-                isGradient = false,
+                bgDrawableRes = R.drawable.widget_bg_gradient_blue,
+                isGradient = true,
                 bgHex = "#15202E",
                 textPrimaryHex = "#F0F6FC",
                 textSecondaryHex = "#94A3B8",
                 buttonBgHex = "#6099C8",
                 buttonTextHex = "#0B111A"
             )
-            else -> WidgetPalette( // Default: "light" (Aurora Gradient)
+            else -> WidgetPalette( // Light Theme
+                bgDrawableRes = R.drawable.widget_bg_gradient_light,
                 isGradient = true,
                 bgHex = "#F5FAF5",
                 textPrimaryHex = "#18352D",
@@ -448,7 +480,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_uv_text, "UV --")
                 views.setTextViewText(R.id.widget_static_hero_text, "...")
                 views.setTextViewText(R.id.widget_status_text, "جار تحديد الأشعة")
-                views.setTextViewText(R.id.widget_btn_text, "جار التحديد... ⏳")
+                views.setTextViewText(R.id.widget_btn_text, "جار التحديد...")
             }
 
             state == STATE_RUNNING && end > now -> {
@@ -472,6 +504,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
             state == STATE_EXPIRED || (state == STATE_RUNNING && end <= now) -> {
                 val expiredPalette = WidgetPalette(
+                    bgDrawableRes = 0,
                     isGradient = false,
                     bgHex = "#7F1D1D",
                     textPrimaryHex = "#FFFFFF",
@@ -490,6 +523,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
             isNight -> {
                 val nightPalette = WidgetPalette(
+                    bgDrawableRes = 0,
                     isGradient = false,
                     bgHex = "#1E1B4B",
                     textPrimaryHex = "#FFFFFF",
@@ -528,9 +562,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
     private fun applyPalette(views: RemoteViews, palette: WidgetPalette, isAlert: Boolean) {
         if (palette.isGradient && !isAlert) {
-            views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_bg_gradient)
-            views.setInt(R.id.widget_bg_image, "setColorFilter", 0)
+            // 🌟 Load the specific gradient XML for this theme
+            views.setImageViewResource(R.id.widget_bg_image, palette.bgDrawableRes)
+            views.setInt(R.id.widget_bg_image, "setColorFilter", 0) // Clear tint
         } else {
+            // Solid fallback for Alerts (Red/Indigo)
             views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_base_shape)
             views.setInt(R.id.widget_bg_image, "setColorFilter", Color.parseColor(palette.bgHex))
         }
@@ -543,7 +579,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(palette.textPrimaryHex))
 
-        // Dynamic Button Colors
         views.setInt(R.id.widget_btn_bg_image, "setColorFilter", Color.parseColor(palette.buttonBgHex))
         views.setTextColor(R.id.widget_btn_text, Color.parseColor(palette.buttonTextHex))
     }

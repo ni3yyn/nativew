@@ -95,7 +95,7 @@ android {
         targetSdkVersion 36
         
         // IMPORTANT: Increment versionCode every time you upload a new version to Play Store
-        versionCode 25
+        versionCode 26
         versionName "2.0.2"
         resConfigs "en"
 
@@ -103,7 +103,7 @@ android {
         
         ndk {
             // These cover 99% of modern Android phones
-            abiFilters "arm64-v8a", "armeabi-v7a"
+            abiFilters "arm64-v8a"
         }
     }
 
