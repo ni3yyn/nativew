@@ -461,7 +461,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 val elapsedBase = SystemClock.elapsedRealtime() + (end - now)
                 views.setChronometer(R.id.widget_chronometer, elapsedBase, "%s", true)
 
-                views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
+                views.setTextViewText(R.id.widget_status_text, "صلّ على رسول اللّه")
 
                 views.setViewVisibility(R.id.widget_progress_bar, View.VISIBLE)
                 val p = if (total > 0) ((end - now).toFloat() / total * 100).toInt() else 100
@@ -503,7 +503,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
                 views.setTextViewText(R.id.widget_static_hero_text, "راحة")
                 views.setTextViewText(R.id.widget_status_text, "تصبحين على خير")
-                views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
+                views.setTextViewText(R.id.widget_btn_text, "صلّ على رسول اللّه 🌙")
             }
 
             else -> {
@@ -515,11 +515,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 if (duration == 0) {
                     views.setTextViewText(R.id.widget_static_hero_text, "آمن")
                     views.setTextViewText(R.id.widget_status_text, "أشعة آمنة")
-                    views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
+                    views.setTextViewText(R.id.widget_btn_text, "صلّ على رسول اللّه 🌙")
                 } else {
                     views.setTextViewText(R.id.widget_static_hero_text, "$duration د")
                     views.setTextViewText(R.id.widget_status_text, "بانتظار البدء")
-                    views.setTextViewText(R.id.widget_btn_text, "بدء الحماية")
+                    views.setTextViewText(R.id.widget_btn_text, "بدء المؤقت")
                 }
             }
         }
