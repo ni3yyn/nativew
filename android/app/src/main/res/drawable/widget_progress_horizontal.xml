@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Track Background (12% Dark Green) -->
     <item android:id="@android:id/background">
         <shape>
             <corners android:radius="8dp" />
-            <solid android:color="#40FFFFFF" /> <!-- 25% white -->
+            <solid android:color="#2018352D" />
         </shape>
     </item>
+    <!-- Active Progress Fill (Wathiq Accent Green) -->
     <item android:id="@android:id/progress">
         <clip>
             <shape>
                 <corners android:radius="8dp" />
-                <solid android:color="#FFFFFF" /> <!-- Solid white -->
+                <solid android:color="#3D9275" />
             </shape>
         </clip>
     </item>

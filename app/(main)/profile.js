@@ -1940,6 +1940,61 @@ const handleShelfViewChange = (newView) => {
     // ========================================================================
     const isWeatherFetchInProgress = useRef(false);
 
+    const fetchLocalizedCityName = async (lat, lon, lang = 'ar') => {
+        const isArabic = lang === 'ar';
+
+        // 1. الأولوية: BigDataCloud مع تحديد لغة الاستجابة بدقة
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+            const res = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${isArabic ? 'ar' : 'en'}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const data = await res.json();
+                const name = data.city || data.locality || data.principalSubdivision;
+                if (name) return name;
+            }
+        } catch (_) {}
+
+        // 2. بديل فوري: OpenStreetMap (Nominatim) المترجم لكل اللغات
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=${isArabic ? 'ar' : 'en'}`,
+                {
+                    headers: { 'User-Agent': 'WathiqApp/1.0' },
+                    signal: controller.signal,
+                }
+            );
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const data = await res.json();
+                const addr = data.address || {};
+                const name = addr.city || addr.town || addr.municipality || addr.state || addr.county;
+                if (name) return name;
+            }
+        } catch (_) {}
+
+        // 3. المحاولة الأخيرة عبر نظام الجهاز الأصلي
+        try {
+            const nativeGeo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
+            if (nativeGeo && nativeGeo.length > 0) {
+                const place = nativeGeo[0];
+                return place.city || place.subregion || place.district || place.region || place.name;
+            }
+        } catch (_) {}
+
+        return isArabic ? 'موقعي' : 'My Location';
+    };
+
     const runWeatherAnalysis = useCallback(async () => {
         if (isWeatherFetchInProgress.current) return;
         isWeatherFetchInProgress.current = true;
@@ -1947,68 +2002,81 @@ const handleShelfViewChange = (newView) => {
         setIsAnalyzingWeather(true);
         setWeatherErrorType(null);
 
+        const isArabic = language === 'ar';
+
         try {
-            // Default fallback coordinates (Algiers) to prevent permanent failure
-            let coords = { latitude: 36.7538, longitude: 3.0588 };
-            let cityName = t('location_my_position', language);
-            let hasRealPosition = false;
+            // 1. التحقق من إذن الوصول للموقع
+            let { status } = await Location.getForegroundPermissionsAsync();
+            setLocationPermission(status);
 
+            if (status !== 'granted') {
+                // ⚠️ لم يتم منح الصلاحية -> إظهار كارت التنبيه لتفعيل الصلاحية فوراً
+                setWeatherData([{
+                    id: 'weather_permission_required',
+                    title: isArabic ? 'صلاحية الموقع مطلوبة' : 'Location Permission Required',
+                    short_summary: isArabic ? 'اضغط هنا لتفعيل إذن الموقع وعرض طقس مدينتك' : 'Tap to enable location access',
+                    customData: {
+                        type: 'weather_dashboard',
+                        isPermissionError: true,
+                        theme: 'unknown',
+                        location: isArabic ? 'الموقع مغلق' : 'Location Off'
+                    }
+                }]);
+                setWeatherErrorType('permission');
+                setIsAnalyzingWeather(false);
+                isWeatherFetchInProgress.current = false;
+                return;
+            }
+
+            // 2. التحقق مما إذا كان الـ GPS في الهاتف مشغلاً أم مطفأ
+            const servicesEnabled = await Location.hasServicesEnabledAsync();
+            if (!servicesEnabled) {
+                // ⚠️ الـ GPS مقفل في الهاتف -> إظهار كارت ينبه المستخدم لتشغيل الـ GPS
+                setWeatherData([{
+                    id: 'weather_gps_disabled',
+                    title: isArabic ? 'خدمة الموقع (GPS) مغلقة' : 'GPS is Turned Off',
+                    short_summary: isArabic ? 'يرجى تشغيل الـ GPS من شريط هاتفك العلوي لحساب الطقس' : 'Please turn on GPS in your phone settings',
+                    customData: {
+                        type: 'weather_dashboard',
+                        isPermissionError: true,
+                        theme: 'unknown',
+                        location: isArabic ? 'GPS مغلق' : 'GPS Off'
+                    }
+                }]);
+                setWeatherErrorType('permission');
+                setIsAnalyzingWeather(false);
+                isWeatherFetchInProgress.current = false;
+                return;
+            }
+
+            // 3. جلب الإحداثيات الفعلية
+            let loc = null;
             try {
-                const { status } = await Location.getForegroundPermissionsAsync();
-                setLocationPermission(status);
-
-                if (status === 'granted') {
-                    const servicesEnabled = await Location.hasServicesEnabledAsync();
-                    if (servicesEnabled) {
-                        let loc = null;
-                        
-                        // 1. Try last known position (without arguments)
-                        try {
-                            loc = await Location.getLastKnownPositionAsync();
-                        } catch (_) {
-                            loc = null;
-                        }
-
-                        // 2. Try current position (without arguments to avoid Kotlin cast crash)
-                        if (!loc) {
-                            try {
-                                loc = await Location.getCurrentPositionAsync();
-                            } catch (_) {
-                                loc = null;
-                            }
-                        }
-
-                        if (loc?.coords?.latitude && loc?.coords?.longitude) {
-                            coords = {
-                                latitude: loc.coords.latitude,
-                                longitude: loc.coords.longitude
-                            };
-                            hasRealPosition = true;
-                        }
-                    }
-                }
-            } catch (locErr) {
-                console.log('[Weather] Device location skipped, using default coords:', locErr?.message);
+                loc = await Location.getLastKnownPositionAsync();
+            } catch (_) {
+                loc = null;
             }
 
-            // 3. Reverse geocode if we have real coordinates
-            if (hasRealPosition) {
+            if (!loc) {
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-                    const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=${language || 'ar'}`;
-                    const geoRes = await fetch(geoUrl, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    if (geoRes.ok) {
-                        const geoData = await geoRes.json();
-                        cityName = geoData.city || geoData.locality || geoData.principalSubdivision || cityName;
-                    }
-                } catch (_) {}
+                    loc = await Location.getCurrentPositionAsync({
+                        accuracy: Location.Accuracy.Balanced,
+                    });
+                } catch (_) {
+                    loc = null;
+                }
             }
 
-            // 4. Fetch Weather Insights from Backend
+            if (!loc?.coords) {
+                throw new Error('Unable to obtain GPS coordinates');
+            }
+
+            const { latitude, longitude } = loc.coords;
+
+            // 4. استخراج اسم المدينة بالعربية إجبارياً عبر الـ APIs
+            const cityName = await fetchLocalizedCityName(latitude, longitude, language || 'ar');
+
+            // 5. إرسال البيانات المكتملة للسيرفر
             const response = await fetch(`${PROFILE_API_URL}/analyze-weather`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2016,8 +2084,8 @@ const handleShelfViewChange = (newView) => {
                     products: savedProducts || [],
                     settings: userProfile?.settings || {},
                     location: {
-                        lat: coords.latitude,
-                        lon: coords.longitude,
+                        lat: latitude,
+                        lon: longitude,
                         city: cityName
                     }
                 })
@@ -2043,6 +2111,7 @@ const handleShelfViewChange = (newView) => {
             setIsAnalyzingWeather(false);
         }
     }, [savedProducts, userProfile, language]);
+
 
     useEffect(() => {
         const backAction = () => {

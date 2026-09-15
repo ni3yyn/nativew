@@ -161,8 +161,8 @@ export const AvatarSelectionModal = ({ visible, onClose, currentId, onSelect, la
                                     {/* Header */}
                                     <View style={[styles.headerRow, { flexDirection: rtl.flexDirection }]}>
                                         <Text style={[styles.headerTitle, { color: colors.textPrimary, textAlign: rtl.textAlign }]}>
-    {t('onboarding_avatar_select', language)}
-</Text>
+                                            {t('onboarding_avatar_select', language)}
+                                        </Text>
                                         <TouchableOpacity
                                             onPress={handleClose}
                                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -180,24 +180,24 @@ export const AvatarSelectionModal = ({ visible, onClose, currentId, onSelect, la
 
                                     {/* Description */}
                                     <Text style={[styles.headerDesc, { color: colors.textSecondary, textAlign: rtl.textAlign }]}>
-    {t('avatar_select_desc', language)}
-</Text>
+                                        {t('avatar_select_desc', language)}
+                                    </Text>
 
                                     {/* Avatar Grid */}
-                                   <View style={styles.gridContainer}>
-    {Object.keys(AVATARS)
-        .filter((id) => id !== 'avatar_wathiq')
-        .map((id) => (
-            <AvatarItem
-                key={id}
-                id={id}
-                source={AVATARS[id]}
-                isSelected={currentId === id}
-                onSelect={handleAvatarSelect}
-                colors={colors}
-            />
-        ))}
-</View>
+                                    <View style={styles.gridContainer}>
+                                        {Object.keys(AVATARS)
+                                            .filter((id) => !id.includes('wathiq'))
+                                            .map((id) => (
+                                                <AvatarItem
+                                                    key={id}
+                                                    id={id}
+                                                    source={AVATARS[id]}
+                                                    isSelected={currentId === id}
+                                                    onSelect={handleAvatarSelect}
+                                                    colors={colors}
+                                                />
+                                            ))}
+                                    </View>
                                 </View>
                             </ScrollView>
 
