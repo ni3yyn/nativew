@@ -3,7 +3,7 @@
     "name": "وثيق",
     "slug": "nativew",
     "scheme": "whathiq",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -47,7 +47,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK"
       ],
-      "runtimeVersion": "2.0.1"
+      "runtimeVersion": "2.0.2"
     },
     "androidNavigationBar": {
       "backgroundColor": "#00000000",
