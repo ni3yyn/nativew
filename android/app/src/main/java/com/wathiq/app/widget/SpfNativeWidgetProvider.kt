@@ -59,6 +59,17 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         const val STATE_NIGHT = "NIGHT"
     }
 
+    // Palette Definition
+    data class WidgetPalette(
+        val isGradient: Boolean,
+        val bgHex: String,
+        val textPrimaryHex: String,
+        val textSecondaryHex: String,
+        val buttonBgHex: String,
+        val buttonTextHex: String,
+        val accentHex: String
+    )
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (id in appWidgetIds) updateAppWidget(context, appWidgetManager, id)
     }
@@ -68,7 +79,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         val action = intent.action
         if (action == ACTION_START_TIMER || action == ACTION_STOP_TIMER || action == ACTION_TIMER_EXPIRED || action == Intent.ACTION_BOOT_COMPLETED || action == "android.intent.action.QUICKBOOT_POWERON") {
-            
             val pendingResult = goAsync()
 
             thread {
@@ -93,20 +103,32 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     // ========================================================================
     private fun handleUserTapStart(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val currentState = prefs.getString("STATE", STATE_IDLE)
 
-        // 1. Immediately show loading on widget
+        // Instant reset if already running
+        if (currentState == STATE_RUNNING) {
+            val totalMillis = prefs.getLong("TOTAL_DURATION_MILLIS", 75 * 60 * 1000L)
+            val currentUv = prefs.getFloat("LAST_UV", estimateSolarUv())
+            val newWallClockEnd = System.currentTimeMillis() + totalMillis
+
+            prefs.edit().putLong("WALL_CLOCK_END_TIME", newWallClockEnd).apply()
+
+            scheduleAlarm(context, newWallClockEnd)
+            showOngoingLiveTimerNotification(context, newWallClockEnd, currentUv)
+            refreshAllWidgets(context)
+            return
+        }
+
         prefs.edit().putString("STATE", STATE_LOADING).apply()
         refreshAllWidgets(context)
 
         val startTimestamp = SystemClock.elapsedRealtime()
 
-        // 2. Fetch coordinates, city and UV
         val coords = getNativeDeviceCoordinates(context)
         val cityName = getCityNameFromCoordinates(context, coords.first, coords.second)
         val liveUv = fetchLiveUvFromApi(coords.first, coords.second)
         val isNight = checkIsNightTime(liveUv)
 
-        // Ensure minimum 600ms loading duration for smooth UX
         val elapsed = SystemClock.elapsedRealtime() - startTimestamp
         if (elapsed < 600) {
             try { Thread.sleep(600 - elapsed) } catch (_: Exception) {}
@@ -346,14 +368,60 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     }
 
     // ========================================================================
-    // 🌟 3. WIDGET UI RENDERING
+    // 🌟 3. DYNAMIC THEME RESOLVER (MATCHES APP THEMES 1-TO-1)
     // ========================================================================
+    private fun getPaletteForAppTheme(themeId: String): WidgetPalette {
+        return when (themeId) {
+            "original" -> WidgetPalette(
+                isGradient = false,
+                bgHex = "#1A2D27",
+                textPrimaryHex = "#F1F3F2",
+                textSecondaryHex = "#A8B8B3",
+                buttonBgHex = "#5A9C84",
+                buttonTextHex = "#1A2D27",
+                accentHex = "#5A9C84"
+            )
+            "baby_pink" -> WidgetPalette(
+                isGradient = false,
+                bgHex = "#FFE6EE",
+                textPrimaryHex = "#4A172B",
+                textSecondaryHex = "#71344C",
+                buttonBgHex = "#C83F70",
+                buttonTextHex = "#FFFFFF",
+                accentHex = "#C83F70"
+            )
+            "clinical_blue" -> WidgetPalette(
+                isGradient = false,
+                bgHex = "#15202E",
+                textPrimaryHex = "#F0F6FC",
+                textSecondaryHex = "#94A3B8",
+                buttonBgHex = "#6099C8",
+                buttonTextHex = "#0B111A",
+                accentHex = "#6099C8"
+            )
+            else -> WidgetPalette( // Default: "light" (Aurora Gradient)
+                isGradient = true,
+                bgHex = "#F5FAF5",
+                textPrimaryHex = "#18352D",
+                textSecondaryHex = "#4A6B5F",
+                buttonBgHex = "#3D9275",
+                buttonTextHex = "#F0F5F0",
+                accentHex = "#3D9275"
+            )
+        }
+    }
 
+    // ========================================================================
+    // 🌟 4. WIDGET UI RENDERING
+    // ========================================================================
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_spf_timer)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         val state = prefs.getString("STATE", STATE_IDLE) ?: STATE_IDLE
+        val appTheme = prefs.getString("APP_THEME", "light") ?: "light"
+        val palette = getPaletteForAppTheme(appTheme)
+
         val end = prefs.getLong("WALL_CLOCK_END_TIME", 0L)
         val total = prefs.getLong("TOTAL_DURATION_MILLIS", 75 * 60 * 1000L)
         val city = prefs.getString("LAST_CITY", "وثيق") ?: "وثيق"
@@ -362,24 +430,32 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         val isNight = checkIsNightTime(uv)
         val now = System.currentTimeMillis()
 
-        // 🌟 Button click trigger attached to the bottom action button
-        val clickIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply { action = ACTION_START_TIMER }
-        val pendingClick = PendingIntent.getBroadcast(context, 0, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        // Click on Action Button (Foreground priority)
+        val clickIntent = Intent(context, SpfNativeWidgetProvider::class.java).apply {
+            action = ACTION_START_TIMER
+            flags = Intent.FLAG_RECEIVER_FOREGROUND
+        }
+        val pendingClick = PendingIntent.getBroadcast(
+            context, 201, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         views.setOnClickPendingIntent(R.id.widget_action_btn, pendingClick)
 
-        val openApp = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        // Click on Card Body ➔ Open App
+        val openApp = PendingIntent.getActivity(
+            context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         views.setOnClickPendingIntent(R.id.widget_root_layout, openApp)
 
         views.setTextViewText(R.id.widget_city_text, city)
 
-        // Reset default view states
+        // Reset visibility
         views.setViewVisibility(R.id.widget_chronometer, View.GONE)
         views.setViewVisibility(R.id.widget_static_hero_text, View.VISIBLE)
         views.setViewVisibility(R.id.widget_progress_bar, View.GONE)
 
         when {
             state == STATE_LOADING -> {
-                applySolidTheme(views, "#1E293B", "#FFFFFF", "#94A3B8")
+                applyPalette(views, palette, isAlert = false)
                 views.setTextViewText(R.id.widget_uv_text, "UV --")
                 views.setTextViewText(R.id.widget_static_hero_text, "...")
                 views.setTextViewText(R.id.widget_status_text, "جار تحديد الأشعة")
@@ -387,29 +463,37 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             }
 
             state == STATE_RUNNING && end > now -> {
-                applyGradientTheme(views, "#18352D", "#4A6B5F")
+                applyPalette(views, palette, isAlert = false)
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
-                // Show live Chronometer
                 views.setViewVisibility(R.id.widget_static_hero_text, View.GONE)
                 views.setViewVisibility(R.id.widget_chronometer, View.VISIBLE)
                 val elapsedBase = SystemClock.elapsedRealtime() + (end - now)
                 views.setChronometer(R.id.widget_chronometer, elapsedBase, "%s", true)
 
-                views.setTextViewText(R.id.widget_status_text, "حماية نشطة")
+                views.setTextViewText(R.id.widget_status_text, "صلّ على رسول اللّه")
                 
-                // Show Progress Bar only when active
+                // Show Progress Bar
                 views.setViewVisibility(R.id.widget_progress_bar, View.VISIBLE)
                 val p = if (total > 0) ((end - now).toFloat() / total * 100).toInt() else 100
                 views.setProgressBar(R.id.widget_progress_bar, 100, p, false)
 
-                // Button text
                 views.setTextViewText(R.id.widget_btn_text, "إعادة المؤقت ↻")
             }
 
             state == STATE_EXPIRED || (state == STATE_RUNNING && end <= now) -> {
-                applySolidTheme(views, "#7F1D1D", "#FFFFFF", "#FECACA") // Crimson Red
+                // Universal Red Expired Alert Card
+                val expiredPalette = WidgetPalette(
+                    isGradient = false,
+                    bgHex = "#7F1D1D",
+                    textPrimaryHex = "#FFFFFF",
+                    textSecondaryHex = "#FECACA",
+                    buttonBgHex = "#DC2626",
+                    buttonTextHex = "#FFFFFF",
+                    accentHex = "#F87171"
+                )
+                applyPalette(views, expiredPalette, isAlert = true)
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
@@ -419,18 +503,27 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
             }
 
             isNight -> {
-                applySolidTheme(views, "#1E1B4B", "#FFFFFF", "#A5B4FC") // Deep Indigo
+                // Indigo Sleep Recovery Card
+                val nightPalette = WidgetPalette(
+                    isGradient = false,
+                    bgHex = "#1E1B4B",
+                    textPrimaryHex = "#FFFFFF",
+                    textSecondaryHex = "#A5B4FC",
+                    buttonBgHex = "#4338CA",
+                    buttonTextHex = "#FFFFFF",
+                    accentHex = "#818CF8"
+                )
+                applyPalette(views, nightPalette, isAlert = true)
                 views.setTextViewText(R.id.widget_uv_text, "UV 0.0")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_moon)
 
                 views.setTextViewText(R.id.widget_static_hero_text, "راحة")
                 views.setTextViewText(R.id.widget_status_text, "تصبحين على خير")
-                views.setTextViewText(R.id.widget_btn_text, "أشعة آمنة 🌙")
+                views.setTextViewText(R.id.widget_btn_text, "لا تنسِ آية الكرسي🌙")
             }
 
             else -> {
-                // 🌟 IDLE: PROMINENT START BUTTON IS VISIBLE
-                applyGradientTheme(views, "#18352D", "#4A6B5F")
+                applyPalette(views, palette, isAlert = false)
                 views.setTextViewText(R.id.widget_uv_text, "UV $uv")
                 views.setImageViewResource(R.id.widget_uv_icon, R.drawable.ic_widget_sun)
 
@@ -449,34 +542,32 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun applyGradientTheme(views: RemoteViews, textMainHex: String, textSubHex: String) {
-        views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_bg_gradient)
-        views.setInt(R.id.widget_bg_image, "setColorFilter", 0)
+    private fun applyPalette(views: RemoteViews, palette: WidgetPalette, isAlert: Boolean) {
+        if (palette.isGradient && !isAlert) {
+            views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_bg_gradient)
+            views.setInt(R.id.widget_bg_image, "setColorFilter", 0) // Clears tint for clean gradient
+        } else {
+            views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_base_shape)
+            views.setInt(R.id.widget_bg_image, "setColorFilter", Color.parseColor(palette.bgHex))
+        }
 
-        views.setTextColor(R.id.widget_chronometer, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_static_hero_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_uv_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_city_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_status_text, Color.parseColor(textSubHex))
+        // Texts
+        views.setTextColor(R.id.widget_chronometer, Color.parseColor(palette.textPrimaryHex))
+        views.setTextColor(R.id.widget_static_hero_text, Color.parseColor(palette.textPrimaryHex))
+        views.setTextColor(R.id.widget_uv_text, Color.parseColor(palette.textPrimaryHex))
+        views.setTextColor(R.id.widget_city_text, Color.parseColor(palette.textPrimaryHex))
+        views.setTextColor(R.id.widget_status_text, Color.parseColor(palette.textSecondaryHex))
 
-        views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(textMainHex))
-    }
+        // Icons
+        views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(palette.textPrimaryHex))
 
-    private fun applySolidTheme(views: RemoteViews, bgHex: String, textMainHex: String, textSubHex: String) {
-        views.setImageViewResource(R.id.widget_bg_image, R.drawable.widget_base_shape)
-        views.setInt(R.id.widget_bg_image, "setColorFilter", Color.parseColor(bgHex))
-
-        views.setTextColor(R.id.widget_chronometer, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_static_hero_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_uv_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_city_text, Color.parseColor(textMainHex))
-        views.setTextColor(R.id.widget_status_text, Color.parseColor(textSubHex))
-
-        views.setInt(R.id.widget_uv_icon, "setColorFilter", Color.parseColor(textMainHex))
+        // Button Background & Text
+        views.setInt(R.id.widget_btn_bg_image, "setColorFilter", Color.parseColor(palette.buttonBgHex))
+        views.setTextColor(R.id.widget_btn_text, Color.parseColor(palette.buttonTextHex))
     }
 
     // ========================================================================
-    // 🌟 4. ROBUST LOCATION & SATELLITE UV FETCHING
+    // 🌟 5. LOCATION & SATELLITE API
     // ========================================================================
     @SuppressLint("MissingPermission")
     private fun getNativeDeviceCoordinates(context: Context): Pair<Double, Double> {
@@ -495,7 +586,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 if (bestLoc == null || l.accuracy < bestLoc.accuracy) bestLoc = l
             }
 
-            // Fresh GPS fix on Android 11+
             if (bestLoc == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 try {
                     val cancellationSignal = android.os.CancellationSignal()
@@ -508,15 +598,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                     }
                     latch.await(3500, TimeUnit.MILLISECONDS)
                     if (freshLoc != null) bestLoc = freshLoc
-                } catch (e: Exception) {
-                    Log.w(TAG, "Current location request timed out", e)
-                }
+                } catch (_: Exception) {}
             }
 
             if (bestLoc != null) return Pair(bestLoc.latitude, bestLoc.longitude)
-        } catch (e: Exception) {
-            Log.w(TAG, "Location manager exception", e)
-        }
+        } catch (e: Exception) {}
         return defaultAlgiers
     }
 
@@ -524,51 +610,40 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         try {
             val geocoder = Geocoder(context, Locale("ar"))
             @Suppress("DEPRECATION")
-            val addresses = geocoder.getFromLocation(lat, lon, 1)
+            val addresses = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                geocoder.getFromLocation(lat, lon, 1)
+            } else {
+                geocoder.getFromLocation(lat, lon, 1)
+            }
             if (!addresses.isNullOrEmpty()) {
                 val addr = addresses[0]
                 val name = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: addr.featureName
                 if (!name.isNullOrBlank()) return name
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Native Geocoder failed, trying BigDataCloud...", e)
-        }
+        } catch (e: Exception) {}
 
         try {
-            val formattedUrl = String.format(
-                Locale.US,
-                "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=ar",
-                lat, lon
-            )
-            val conn = (URL(formattedUrl).openConnection() as HttpURLConnection).apply {
+            val url = URL(String.format(Locale.US, "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=ar", lat, lon))
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 2500
                 readTimeout = 2500
-                setRequestProperty("User-Agent", "WathiqApp/2.0 (Android; com.wathiq.app)")
+                setRequestProperty("User-Agent", "WathiqApp/2.0")
                 requestMethod = "GET"
             }
             if (conn.responseCode == 200) {
                 val res = BufferedReader(InputStreamReader(conn.inputStream)).readText()
                 val json = JSONObject(res)
-                val city = json.optString("city")
-                    .ifEmpty { json.optString("locality") }
-                    .ifEmpty { json.optString("principalSubdivision") }
-
+                val city = json.optString("city").ifEmpty { json.optString("locality") }.ifEmpty { json.optString("principalSubdivision") }
                 if (city.isNotBlank()) return city
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "BigDataCloud failed, trying OpenStreetMap Nominatim...", e)
-        }
+        } catch (e: Exception) {}
 
         try {
-            val formattedUrl = String.format(
-                Locale.US,
-                "https://nominatim.openstreetmap.org/reverse?lat=%.4f&lon=%.4f&format=json&accept-language=ar",
-                lat, lon
-            )
-            val conn = (URL(formattedUrl).openConnection() as HttpURLConnection).apply {
+            val url = URL(String.format(Locale.US, "https://nominatim.openstreetmap.org/reverse?lat=%.4f&lon=%.4f&format=json&accept-language=ar", lat, lon))
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 2500
                 readTimeout = 2500
-                setRequestProperty("User-Agent", "WathiqWidget/1.0 (Android; com.wathiq.app)")
+                setRequestProperty("User-Agent", "WathiqWidget/1.0")
                 requestMethod = "GET"
             }
             if (conn.responseCode == 200) {
@@ -576,22 +651,15 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 val json = JSONObject(res)
                 val addr = json.optJSONObject("address")
                 if (addr != null) {
-                    val name = addr.optString("city")
-                        .ifEmpty { addr.optString("town") }
-                        .ifEmpty { addr.optString("municipality") }
-                        .ifEmpty { addr.optString("state") }
-
+                    val name = addr.optString("city").ifEmpty { addr.optString("town") }.ifEmpty { addr.optString("municipality") }.ifEmpty { addr.optString("state") }
                     if (name.isNotBlank()) return name
                 }
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "OpenStreetMap Nominatim failed", e)
-        }
+        } catch (e: Exception) {}
 
         return "موقعي"
     }
 
-    // 🌟 DUAL PROTOCOL: Tries HTTPS, automatically falls back to HTTP if SSL fails (Clock-Glitch friendly)
     private fun fetchLiveUvFromApi(lat: Double, lon: Double): Float {
         val protocols = listOf("https", "http")
 
@@ -601,7 +669,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 "$proto://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=uv_index&timezone=auto",
                 lat, lon
             )
-            Log.d(TAG, "Querying Satellite UV API ($proto): $apiUrl")
 
             try {
                 val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
@@ -612,24 +679,16 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                     requestMethod = "GET"
                 }
 
-                val statusCode = conn.responseCode
-                Log.d(TAG, "API Status ($proto): $statusCode")
-
-                if (statusCode == 200) {
+                if (conn.responseCode == 200) {
                     val res = BufferedReader(InputStreamReader(conn.inputStream)).readText()
                     val uv = JSONObject(res).getJSONObject("current").getDouble("uv_index").toFloat()
                     val finalUv = Math.max(0f, Math.round(uv * 10f) / 10f)
-                    Log.d(TAG, "Successfully parsed satellite UV: $finalUv")
                     return finalUv
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "API attempt with $proto failed: ${e.message}")
-            }
+            } catch (e: Exception) {}
         }
 
-        val fallback = estimateSolarUv()
-        Log.d(TAG, "Using fallback solar math UV: $fallback")
-        return fallback
+        return estimateSolarUv()
     }
 
     private fun checkIsNightTime(uv: Float): Boolean {
@@ -637,7 +696,6 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         return (h >= 19.5 || h < 6.5) || uv <= 0.2f
     }
 
-    // 🌟 Realistic Mediterranean Seasonal Solar Math
     private fun estimateSolarUv(): Float {
         val c = Calendar.getInstance()
         val h = c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) / 60f
@@ -645,11 +703,11 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
 
         val month = c.get(Calendar.MONTH)
         val seasonMultiplier = when (month) {
-            5, 6, 7 -> 1.0f  // June, July, August (Peak Summer: Max ~10.5)
-            4, 8 -> 0.72f    // May, September (Late Spring/Early Fall: Max ~7.5)
-            3, 9 -> 0.52f    // April, October (Max ~5.5)
-            2, 10 -> 0.38f   // March, November (Max ~4.0)
-            else -> 0.25f    // Winter (Max ~2.5)
+            5, 6, 7 -> 1.0f
+            4, 8 -> 0.72f
+            3, 9 -> 0.52f
+            2, 10 -> 0.38f
+            else -> 0.25f
         }
 
         val solarNoon = 12.5f

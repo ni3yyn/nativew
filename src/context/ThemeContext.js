@@ -7,6 +7,7 @@ import React, {
     useEffect,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModules, Platform  } from 'react-native';
 
 const ThemeContext = createContext();
 
@@ -289,6 +290,7 @@ export const ThemeProvider = ({ children }) => {
 
             if (saved && THEMES[saved]) {
                 setThemeId(saved);
+                syncWidgetTheme(saved);
             }
         } catch (e) {
             console.log('Failed to load theme', e);
@@ -303,6 +305,7 @@ export const ThemeProvider = ({ children }) => {
         }
 
         setThemeId(id);
+        syncWidgetTheme(id);
 
         try {
             await AsyncStorage.setItem('app_theme_id', id);

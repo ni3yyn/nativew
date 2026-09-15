@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Solid Background (Tinted dynamically in Kotlin) -->
+    <!-- Solid / Gradient Background (Tinted dynamically in Kotlin) -->
     <ImageView
         android:id="@+id/widget_bg_image"
         android:layout_width="match_parent"
@@ -18,7 +18,7 @@
         android:orientation="vertical"
         android:padding="13dp">
 
-        <!-- 🌟 TOP ROW: App Icon + City Name + UV Badge -->
+        <!-- 🌟 TOP ROW: UV on the Left, City & Logo on the Right -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,38 +26,7 @@
             android:gravity="center_vertical"
             android:layoutDirection="ltr">
 
-            <!-- Logo + City -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:id="@+id/widget_app_icon"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@mipmap/ic_launcher_round"
-                    android:layout_marginEnd="6dp" />
-
-                <TextView
-                    android:id="@+id/widget_city_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/tajawal_bold"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:text="وثيق" />
-            </LinearLayout>
-
-            <!-- Spacer -->
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <!-- UV & Icon -->
+            <!-- UV & Sun/Moon Icon -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -80,6 +49,37 @@
                     android:textSize="12.5sp"
                     android:textStyle="bold"
                     android:text="UV 8.5" />
+            </LinearLayout>
+
+            <!-- Middle Expanding Spacer -->
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <!-- City Name + App Logo -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/widget_city_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/tajawal_bold"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:text="وثيق" />
+
+                <ImageView
+                    android:id="@+id/widget_app_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@mipmap/ic_launcher_round"
+                    android:layout_marginStart="6dp" />
             </LinearLayout>
         </LinearLayout>
 
@@ -143,24 +143,30 @@
             android:progressDrawable="@drawable/widget_progress_horizontal"
             android:visibility="gone" />
 
-        <!-- 🌟 PROMINENT BOTTOM ACTION BUTTON ("بدء الحماية" / "إعادة المؤقت" / "تجديد الآن") -->
-        <LinearLayout
+        <!-- 🌟 DYNAMICALLY TINTABLE ACTION BUTTON -->
+        <RelativeLayout
             android:id="@+id/widget_action_btn"
             android:layout_width="match_parent"
-            android:layout_height="34dp"
-            android:background="@drawable/btn_bg"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:layout_height="34dp">
+
+            <!-- Button Background (Tinted dynamically in Kotlin) -->
+            <ImageView
+                android:id="@+id/widget_btn_bg_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/btn_bg"
+                android:scaleType="fitXY" />
 
             <TextView
                 android:id="@+id/widget_btn_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
                 android:fontFamily="@font/tajawal_bold"
                 android:textColor="#FFFFFF"
                 android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:text="بدء المؤقت" />
-        </LinearLayout>
+        </RelativeLayout>
     </LinearLayout>
 </RelativeLayout>
