@@ -348,7 +348,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
     // ========================================================================
     // 🌟 3. WIDGET UI RENDERING
     // ========================================================================
-    
+
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_spf_timer)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -442,7 +442,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 } else {
                     views.setTextViewText(R.id.widget_static_hero_text, "$duration د")
                     views.setTextViewText(R.id.widget_status_text, "بانتظار البدء")
-                    views.setTextViewText(R.id.widget_btn_text, "بدء الحماية")
+                    views.setTextViewText(R.id.widget_btn_text, "بدء المؤقت")
                 }
             }
         }
