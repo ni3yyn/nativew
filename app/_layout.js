@@ -20,6 +20,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GlobalAlertModal from '../src/components/common/GlobalAlertModal';
 import AppIntro from '../src/components/common/AppIntro';
+import ForceUpdateScreen from '../src/components/common/ForceUpdateScreen';
+import OptionalUpdateModal from '../src/components/common/OptionalUpdateModal';
+import MaintenanceScreen from '../src/components/common/MaintenanceScreen';
 import { t, normalizeLanguage } from '../src/i18n';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // ADJUST THIS PATH to match where your 'db' variable is exported in your app
@@ -267,77 +270,7 @@ const useAppOpenAd = () => {
   }, []);
 };
 
-// ============================================================================
-// 3. UI HELPER: FORCE UPDATE SCREEN (BLOCKING)
-// ============================================================================
-const ForceUpdateScreen = ({ url, message, language }) => (
-  <View style={styles.systemScreen}>
-    <StatusBar style="light" />
-    <LinearGradient colors={['#1A2D27', '#0F1C18']} style={StyleSheet.absoluteFill} />
-    <View style={styles.systemContent}>
-      <MaterialIcons name="system-update" size={70} color="#fbbf24" style={{ marginBottom: 20 }} />
-      <Text style={styles.systemTitle}>{t('force_update_title', language)}</Text>
-      <Text style={styles.systemMessage}>
-        {message || t('force_update_default_message', language)}
-      </Text>
-      {url ? (
-        <Pressable style={styles.updateButton} onPress={() => Linking.openURL(url)}>
-          <Text style={styles.updateButtonText}>{t('force_update_action', language)}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  </View>
-);
 
-// ============================================================================
-// 4. UI HELPER: OPTIONAL UPDATE MODAL
-// ============================================================================
-const OptionalUpdateModal = ({ visible, changelog, onUpdate, onSkip, language }) => {
-  return (
-    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
-      <View style={styles.modalOverlay}>
-        <View style={styles.optionalCard}>
-          <View style={styles.iconGlowContainer}>
-            <View style={styles.optionalIconBox}>
-              <Feather name="gift" size={32} color="#5A9C84" />
-            </View>
-          </View>
-          <Text style={styles.optionalTitle}>{t('optional_update_title', language)}</Text>
-          <Text style={styles.optionalSub}>{t('optional_update_subtitle', language)}</Text>
-
-          <View style={styles.changelogContainer}>
-            <Text style={styles.whatsNewHeader}>{t('optional_update_whats_new', language)}</Text>
-            <ScrollView style={styles.changelogList} contentContainerStyle={{ gap: 8 }}>
-              {changelog && changelog.length > 0 ? (
-                changelog.map((item, index) => (
-                  <View key={index} style={styles.changelogItem}>
-                    <FontAwesome5 name="check" size={12} color="#5A9C84" />
-                    <Text style={styles.changelogText}>{item}</Text>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.changelogItem}>
-                  <FontAwesome5 name="check" size={12} color="#5A9C84" />
-                  <Text style={styles.changelogText}>{t('optional_update_default_item', language)}</Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-
-          <View style={styles.optionalActions}>
-            <Pressable style={({ pressed }) => [styles.updateButtonSmall, { opacity: pressed ? 0.9 : 1 }]} onPress={onUpdate}>
-              <Text style={styles.updateButtonTextSmall}>{t('optional_update_action', language)}</Text>
-              <Feather name="download-cloud" size={18} color="#1A2D27" />
-            </Pressable>
-            <Pressable style={styles.skipButton} onPress={onSkip}>
-              <Text style={styles.skipText}>{t('optional_update_skip', language)}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
 
 // ============================================================================
 // 5. UI HELPER: NOTIFICATION PERMISSION MODAL
@@ -386,20 +319,6 @@ const NotificationRequestModal = ({ visible, onEnable, onDismiss, language }) =>
   );
 };
 
-// ============================================================================
-// 6. UI HELPER: MAINTENANCE SCREEN
-// ============================================================================
-const MaintenanceScreen = ({ message, language }) => (
-  <View style={styles.systemScreen}>
-    <StatusBar style="light" />
-    <LinearGradient colors={['#1A2D27', '#111']} style={StyleSheet.absoluteFill} />
-    <View style={styles.systemContent}>
-      <FontAwesome5 name="tools" size={60} color="#5A9C84" style={{ marginBottom: 20 }} />
-      <Text style={styles.systemTitle}>{t('maintenance_mode_title', language)}</Text>
-      <Text style={styles.systemMessage}>{message}</Text>
-    </View>
-  </View>
-);
 
 // ============================================================================
 // 7. UI HELPER: ANNOUNCEMENT MODAL
@@ -670,7 +589,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     return (
       <ForceUpdateScreen
         url={appConfig.latestVersionUrl}
-        message={appConfig.android?.critical_message}
+        message={appConfig.criticalMessage || appConfig.android?.critical_message}
+        changelog={appConfig.changelog}
+        latestVersion={appConfig.latestVersion}
         language={language}
       />
     );
@@ -686,6 +607,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
       <OptionalUpdateModal
         visible={showOptionalUpdate}
         changelog={appConfig.changelog}
+        latestVersion={appConfig.latestVersion}
         onUpdate={handleUpdateClick}
         onSkip={handleSkipUpdate}
         language={language}
@@ -733,19 +655,6 @@ export default function RootLayout() {
 // 10. STYLES
 // ============================================================================
 const styles = StyleSheet.create({
-  // --- SYSTEM SCREENS ---
-  systemScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0F5F0',
-  },
-  systemContent: { width: '80%', alignItems: 'center', padding: 20 },
-  systemTitle: { fontFamily: 'Tajawal-ExtraBold', fontSize: 24, color: '#F1F3F2', textAlign: 'center', marginBottom: 10 },
-  systemMessage: { fontFamily: 'Tajawal-Regular', fontSize: 16, color: '#A3B1AC', textAlign: 'center', lineHeight: 24 },
-  updateButton: { marginTop: 30, backgroundColor: '#fbbf24', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 12 },
-  updateButtonText: { fontFamily: 'Tajawal-Bold', color: '#1A2D27', fontSize: 16 },
-
   // --- MODAL COMMON ---
   modalOverlay: {
     flex: 1,

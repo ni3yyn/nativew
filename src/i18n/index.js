@@ -151,7 +151,7 @@ export const translations = {
     settings_theme_light: 'فاتح',
     settings_theme_pink: 'وردي',
     settings_theme_blue: 'ليلي',
-    settings_traits_title: 'السمات الأساسية',
+    settings_traits_title: 'نوع البشرة/الفروة',
     settings_skin_type: 'نوع بشرتي',
     settings_scalp_type: 'نوع فروة رأسي',
     settings_goals_title: 'الأهداف',

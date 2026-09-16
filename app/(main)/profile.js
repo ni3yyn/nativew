@@ -61,9 +61,8 @@ import { RoutineSection, AddStepModal } from '../../src/components/profile/routi
 import { NatureDock } from '../../src/components/profile/NatureDock';
 import PremiumShareButton from '../../src/components/oilguard/ShareComponent';
 import { RemindersScreen } from '../../src/components/profile/routine/RemindersScreen';
-
+import { useRTL } from '../../src/hooks/useRTL';
 // --- 1. SYSTEM CONFIG ---
-
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
 const { width, height } = Dimensions.get('window');
@@ -353,7 +352,8 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
     const heightAnim = useRef(new Animated.Value(0)).current;
     const rotateAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
 
     useEffect(() => {
         Animated.parallel([
@@ -411,7 +411,8 @@ const Accordion = ({ title, icon, children, isOpen, onPress }) => {
 
 const SkeletonProductCard = ({ index }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const shimmerAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -445,7 +446,8 @@ const SkeletonProductCard = ({ index }) => {
 
 const ProductListItem = React.memo(({ product, onPress, onDelete }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const language = useCurrentLanguage();
     const translateX = useRef(new Animated.Value(0)).current;
     const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -659,7 +661,8 @@ const GlobalInput = (props) => {
 
 const ShelfSection = ({ products, loading, onDelete, onRefresh, router, userProfile }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const { user, setSavedProducts } = useAppContext();
 
@@ -770,7 +773,8 @@ const IngredientCard = React.memo(({ item, index, onPress, styles }) => {
 
 const IngredientsSection = ({ products, userProfile, cacheRef }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const language = useCurrentLanguage();
 
     const [search, setSearch] = useState('');
@@ -932,7 +936,8 @@ const IngredientsSection = ({ products, userProfile, cacheRef }) => {
 
 const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaining }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const language = useCurrentLanguage();
     const animController = useRef(new Animated.Value(0)).current;
     const hasData = ingredient && visible;
@@ -1084,7 +1089,8 @@ const IngredientDetailsModal = ({ visible, onClose, ingredient, productsContaini
 
 const MigrationSection = ({ products }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const language = useCurrentLanguage();
     const [syntheticIngredients] = useState(['Paraben', 'Sulfate', 'Silicon', 'Fragrance', 'Alcohol', 'Mineral Oil']);
     const flagged = products.filter(p =>
@@ -1173,7 +1179,8 @@ const MigrationSection = ({ products }) => {
 
 const SettingChip = ({ label, icon, isSelected, onPress }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     return (
         <PressableScale onPress={onPress}>
             <View style={[styles.chip, isSelected && styles.chipActive]}>
@@ -1189,7 +1196,8 @@ const SettingChip = ({ label, icon, isSelected, onPress }) => {
 const SingleSelectGroup = ({ title, options, selectedValue, onSelect }) => {
     const { colors: C } = useTheme();
     const language = useCurrentLanguage();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     return (
         <View style={styles.settingGroup}>
             <Text style={styles.groupLabel}>{title}</Text>
@@ -1212,7 +1220,8 @@ const MultiSelectGroup = ({ title, options, selectedValues, onToggle }) => {
     const currentSelected = Array.isArray(selectedValues) ? selectedValues : [];
     const language = useCurrentLanguage();
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     return (
         <View style={styles.settingGroup}>
             <Text style={styles.groupLabel}>{title}</Text>
@@ -1234,7 +1243,8 @@ const SettingsSection = ({ profile, onLogout }) => {
     const { user } = useAppContext();
     const language = useCurrentLanguage();
     const { colors: C, activeThemeId, changeTheme } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const [openAccordion, setOpenAccordion] = useState(null);
 
     const [form, setForm] = useState(() => ({
@@ -1486,7 +1496,8 @@ const SettingsSection = ({ profile, onLogout }) => {
 
 const InsightDetailsModal = ({ visible, onClose, insight }) => {
     const { colors: C } = useTheme();
-    const styles = useMemo(() => createStyles(C), [C]);
+    const rtl = useRTL();
+    const styles = useMemo(() => createStyles(C, rtl), [C, rtl]);
     const animController = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -1808,8 +1819,9 @@ export default function ProfileScreen() {
     const { user, userProfile, savedProducts, setSavedProducts, loading, logout, appConfig } = useAppContext();
     const isAdmin = !!(user && appConfig?.adminUid && user.uid === appConfig.adminUid);
     const language = useCurrentLanguage();
+    const rtl = useRTL();
     const { colors: COLORS, activeThemeId, changeTheme } = useTheme();
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const styles = useMemo(() => createStyles(COLORS, rtl), [COLORS, rtl]);
 
 
     const router = useRouter();
@@ -3891,5 +3903,132 @@ const getStylesContent = (C) => ({
         color: C.textOnAccent,
     },
 });
+
+const flipDirectional = (style, isRTL) => {
+    if (isRTL || !style || typeof style !== 'object') {
+        return style;
+    }
+
+    const flipped = { ...style };
+
+    // flexDirection: 'row-reverse' -> 'row', 'row' stays 'row'
+    if (flipped.flexDirection === 'row-reverse') {
+        flipped.flexDirection = 'row';
+    }
+
+    // textAlign: 'right' <-> 'left'
+    if (flipped.textAlign === 'right') {
+        flipped.textAlign = 'left';
+    } else if (flipped.textAlign === 'left') {
+        flipped.textAlign = 'right';
+    }
+
+    // alignSelf: 'flex-end' <-> 'flex-start'
+    if (flipped.alignSelf === 'flex-end') {
+        flipped.alignSelf = 'flex-start';
+    } else if (flipped.alignSelf === 'flex-start') {
+        flipped.alignSelf = 'flex-end';
+    }
+
+    // marginLeft <-> marginRight
+    const hasMarginLeft = 'marginLeft' in flipped;
+    const hasMarginRight = 'marginRight' in flipped;
+    if (hasMarginLeft || hasMarginRight) {
+        const ml = flipped.marginLeft;
+        const mr = flipped.marginRight;
+        if (hasMarginLeft) {
+            flipped.marginRight = ml;
+            delete flipped.marginLeft;
+        } else {
+            delete flipped.marginRight;
+        }
+        if (hasMarginRight) {
+            flipped.marginLeft = mr;
+        }
+    }
+
+    // paddingLeft <-> paddingRight
+    const hasPaddingLeft = 'paddingLeft' in flipped;
+    const hasPaddingRight = 'paddingRight' in flipped;
+    if (hasPaddingLeft || hasPaddingRight) {
+        const pl = flipped.paddingLeft;
+        const pr = flipped.paddingRight;
+        if (hasPaddingLeft) {
+            flipped.paddingRight = pl;
+            delete flipped.paddingLeft;
+        } else {
+            delete flipped.paddingRight;
+        }
+        if (hasPaddingRight) {
+            flipped.paddingLeft = pr;
+        }
+    }
+
+    // left <-> right (only when position: 'absolute')
+    if (flipped.position === 'absolute') {
+        const hasLeft = 'left' in flipped;
+        const hasRight = 'right' in flipped;
+        if (hasLeft || hasRight) {
+            const l = flipped.left;
+            const r = flipped.right;
+            if (hasLeft) {
+                flipped.right = l;
+                delete flipped.left;
+            } else {
+                delete flipped.right;
+            }
+            if (hasRight) {
+                flipped.left = r;
+            }
+        }
+    }
+
+    // borderLeftWidth <-> borderRightWidth
+    const hasBorderLeftWidth = 'borderLeftWidth' in flipped;
+    const hasBorderRightWidth = 'borderRightWidth' in flipped;
+    if (hasBorderLeftWidth || hasBorderRightWidth) {
+        const blw = flipped.borderLeftWidth;
+        const brw = flipped.borderRightWidth;
+        if (hasBorderLeftWidth) {
+            flipped.borderRightWidth = blw;
+            delete flipped.borderLeftWidth;
+        } else {
+            delete flipped.borderRightWidth;
+        }
+        if (hasBorderRightWidth) {
+            flipped.borderLeftWidth = brw;
+        }
+    }
+
+    // borderLeftColor <-> borderRightColor
+    const hasBorderLeftColor = 'borderLeftColor' in flipped;
+    const hasBorderRightColor = 'borderRightColor' in flipped;
+    if (hasBorderLeftColor || hasBorderRightColor) {
+        const blc = flipped.borderLeftColor;
+        const brc = flipped.borderRightColor;
+        if (hasBorderLeftColor) {
+            flipped.borderRightColor = blc;
+            delete flipped.borderLeftColor;
+        } else {
+            delete flipped.borderRightColor;
+        }
+        if (hasBorderRightColor) {
+            flipped.borderLeftColor = brc;
+        }
+    }
+
+    return flipped;
+};
+
+const createStyles = (c, rtl) => {
+    const raw = getStylesContent(c);
+    const isRTL = typeof rtl === 'boolean' ? rtl : (!rtl || rtl.isRTL);
+    if (isRTL) return StyleSheet.create(raw);
+    const flipped = {};
+    for (const key of Object.keys(raw)) {
+        flipped[key] = flipDirectional(raw[key], false);
+    }
+    return StyleSheet.create(flipped);
+};
+
 const styles = StyleSheet.create(getStylesContent(THEMES.original.colors));
-const createStyles = (c) => StyleSheet.create(getStylesContent(c));

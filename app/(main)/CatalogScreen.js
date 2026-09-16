@@ -60,6 +60,45 @@ const isAlgerianProduct = (product) => {
     );
 };
 
+// Normalize text for accent-, diacritic-, and Arabic-variant-insensitive matching.
+// Keeps search working when users type "touche" instead of "touché",
+// "احمد" instead of "أحمد", "ايران" instead of "إيران", etc.
+const normalizeSearch = (str) => {
+  if (!str) return '';
+  let s = String(str).toLowerCase();
+
+  // 1. Strip Latin diacritics: touché → touche, café → cafe, naïve → naive
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // 2. Collapse Arabic letter variants to a common form
+  s = s
+    .replace(/[أإآٱ]/g, 'ا')   // alef variants → bare alef
+    .replace(/ى/g, 'ي')        // alef maksura → ya
+    .replace(/ؤ/g, 'و')        // waw with hamza → waw
+    .replace(/ئ/g, 'ي')        // ya with hamza → ya
+    .replace(/ة/g, 'ه')        // ta marbuta → ha
+    .replace(/ک/g, 'ك');       // Persian kaf → Arabic kaf
+
+  // 3. Strip Arabic diacritics (tashkeel)
+  s = s.replace(/[\u064B-\u065F\u0670]/g, '');
+
+  // 4. Collapse whitespace and trim
+  s = s.replace(/\s+/g, ' ').trim();
+
+  return s;
+};
+
+// Detect if a string is predominantly Latin script (vs Arabic).
+// Used to auto-align the search input LTR when the user types Latin text.
+const isLatinQuery = (str) => {
+  if (!str) return false;
+  // Count Arabic vs Latin letters
+  const arabic = (str.match(/[\u0600-\u06FF]/g) || []).length;
+  const latin = (str.match(/[A-Za-z]/g) || []).length;
+  // Latin wins only if there are more Latin letters than Arabic ones
+  return latin > arabic;
+};
+
 export default function CatalogScreen() {
   const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
@@ -201,6 +240,17 @@ export default function CatalogScreen() {
     }).start();
   }, [isCompareMode, compareBannerAnim]);
 
+  // 5. Sync search from route params (e.g. tapping a brand on a ProductCard)
+const lastAppliedSearchRef = useRef(null);
+
+useEffect(() => {
+  if (params.search && params.search !== lastAppliedSearchRef.current) {
+    lastAppliedSearchRef.current = params.search;
+    setSearch(String(params.search));
+    setDebouncedSearch(String(params.search)); // bypass 400ms debounce
+  }
+}, [params.search]);
+
   // Handler Optimizations
   const handleIntroFinish = useCallback(async () => {
     try {
@@ -241,6 +291,15 @@ export default function CatalogScreen() {
       const brands = new Set(products.map(p => p.brand).filter(Boolean));
       return ['all', ...Array.from(brands).sort()];
   }, [products]);
+
+  // Pre-lowercased search keys so we don't reallocate strings on every keystroke
+const searchableProducts = useMemo(() => {
+  if (!Array.isArray(products)) return [];
+  return products.map(p => ({
+    ...p,
+    _searchKey: normalizeSearch(`${p.name || ''} ${p.brand || ''}`),
+  }));
+}, [products]);
 
   // Alias maps for fuzzy matching skin types & claims
   const SKIN_TYPE_ALIASES = {
@@ -299,13 +358,12 @@ export default function CatalogScreen() {
       return [];
     }
     
-    const searchLower = debouncedSearch.trim().toLowerCase();
+    const searchLower = normalizeSearch(debouncedSearch);
     
-    let result = products.filter(p => {
+    let result = searchableProducts.filter(p => {
       // 1. Search Query Match
-      const matchSearch = searchLower === '' || 
-                          (p.name || "").toLowerCase().includes(searchLower) || 
-                          (p.brand || "").toLowerCase().includes(searchLower);
+      const matchSearch = searchLower === '' || p._searchKey.includes(searchLower);
+
       
       // 2. Category Filter
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
@@ -364,17 +422,15 @@ export default function CatalogScreen() {
     } else if (advancedFilters.sort === 'price_desc') {
         result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
     } else {
-        result.sort((a, b) => {
-            const aIsAlg = isAlgerianProduct(a);
-            const bIsAlg = isAlgerianProduct(b);
-            if (aIsAlg && !bIsAlg) return -1;
-            if (!aIsAlg && bIsAlg) return 1;
-            return 0;
-        });
+        // Pre-compute the Algerian flag once per product (not per comparison).
+    // Turns ~70k string checks into ~3k.
+    const decorated = result.map(p => ({ p, alg: isAlgerianProduct(p) }));
+    decorated.sort((a, b) => (b.alg ? 1 : 0) - (a.alg ? 1 : 0));
+    result = decorated.map(d => d.p);
     }
 
     return result;
-  }, [debouncedSearch, activeCat, products, advancedFilters]);
+  }, [debouncedSearch, activeCat, searchableProducts, advancedFilters]);
 
   // Pulse animation for plus button when empty state
   useEffect(() => {
@@ -749,18 +805,32 @@ export default function CatalogScreen() {
           >
             <FontAwesome5 name="search" size={16} color={C.textSecondary} />
             <TextInput 
-              ref={inputRef}
-              style={[styles.input, { color: C.textPrimary }]} 
-              value={search} 
-              onChangeText={setSearch} 
-              textAlign={rtl.textAlign}
-              textAlignVertical="center"
-              paddingVertical={0}
-              paddingHorizontal={0}
-              height="100%"
-              includeFontPadding={false}
-            />
-          </TouchableOpacity>
+    ref={inputRef}
+    style={[styles.input, { color: C.textPrimary }]} 
+    value={search} 
+    onChangeText={setSearch} 
+    textAlign={isLatinQuery(search) ? 'left' : rtl.textAlign}
+    textAlignVertical="center"
+    paddingVertical={0}
+    paddingHorizontal={0}
+    height="100%"
+    includeFontPadding={false}
+  />
+          {search.length > 0 && (
+    <TouchableOpacity
+      onPress={() => {
+        Haptics.selectionAsync();
+        setSearch('');
+        setDebouncedSearch(''); // clear instantly, skip debounce
+        inputRef.current?.focus();
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={styles.clearBtn}
+    >
+      <Feather name="x-circle" size={16} color={C.textSecondary} />
+    </TouchableOpacity>
+  )}
+</TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: C.border }]} />
 
@@ -898,8 +968,7 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     flex: 1, 
     height: '100%',     // 🌟 Fills entire search side for instant tap response
     fontFamily: 'Tajawal-Regular', 
-    fontSize: isEn ? 20 : 20, 
-    textAlign: rtl.textAlign,
+    fontSize: isEn ? 18 : 18,
     textAlignVertical: 'center',
     paddingVertical: 0,
     paddingHorizontal: 0,
@@ -985,5 +1054,17 @@ const createStyles = (C, rtl, isEn) => StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingBottom: 0,
-  }
+  },
+  clearBtn: {
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.85,
+  },
+  clearBtn: {
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.85,
+  },
 });

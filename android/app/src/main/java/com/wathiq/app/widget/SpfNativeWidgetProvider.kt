@@ -408,7 +408,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
                 bgHex = "#FFE6EE",
                 textPrimaryHex = "#4a172b",
                 textSecondaryHex = "#71344C",
-                buttonBgHex = "#C83F70",
+                buttonBgHex = "#E65A8A",
                 buttonTextHex = "#FFFFFF"
             )
             "clinical_blue" -> WidgetPalette(
