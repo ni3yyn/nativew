@@ -619,7 +619,7 @@ export default function CommunityScreen() {
                             data={filteredPosts}
                             onRefresh={handleRefresh}
                             loading={loading}
-                            keyExtractor={item => item.id}
+                            keyExtractor={(item, index) => item?.id ? String(item.id) : `post_${index}`}
                             contentContainerStyle={{ 
                                 paddingBottom: 120, 
                                 paddingTop: maxHeight + FILTER_BAR_HEIGHT + 24 
@@ -632,7 +632,7 @@ export default function CommunityScreen() {
                             initialNumToRender={5}
                             maxToRenderPerBatch={5}
                             windowSize={5}
-                            removeClippedSubviews={true}
+                            removeClippedSubviews={false}
                             renderItem={({ item }) => (
                                 <PostCard
                                     post={item}

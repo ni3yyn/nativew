@@ -1115,13 +1115,13 @@ export default function ComparisonPage() {
                 <Animated.FlatList
                     data={displayedClaims}
                     renderItem={renderClaimItem}
-                    keyExtractor={(item) => item}
+                    keyExtractor={(item, index) => `${item}_${index}`}
                     extraData={claims} 
 
                     initialNumToRender={12}     
                     maxToRenderPerBatch={10}    
                     windowSize={5}              
-                    removeClippedSubviews={true} 
+                    removeClippedSubviews={false} // Disabled to prevent ReactClippingViewManager crash on Android
                     getItemLayout={getItemLayout} 
                     updateCellsBatchingPeriod={50} 
 

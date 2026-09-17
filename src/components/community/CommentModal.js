@@ -626,7 +626,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                             <FlatList
                                 horizontal
                                 data={QUICK_REPLIES}
-                                keyExtractor={(item) => item}
+                                keyExtractor={(item, index) => `${item}_${index}`}
                                 renderItem={({ item }) => (
                                     <TouchableOpacity style={styles.chip} onPress={() => handleSend(t(item, language))}>
                                         <Text style={styles.chipText}>{t(item, language)}</Text>

@@ -630,7 +630,7 @@ const searchableProducts = useMemo(() => {
   }, [plusScaleAnim]);
 
   // FlatList performance extractions
-  const keyExtractor = useCallback(item => item.id?.toString() || Math.random().toString(), []);
+  const keyExtractor = useCallback((item, index) => item?.id ? String(item.id) : `prod_${index}`, []);
   
   const renderProduct = useCallback(({ item, index }) => (
       <ProductCard 
@@ -867,7 +867,7 @@ const searchableProducts = useMemo(() => {
         initialNumToRender={ITEMS_PER_PAGE}
         maxToRenderPerBatch={ITEMS_PER_PAGE}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }

@@ -68,7 +68,7 @@ const CommunityRefreshHandler = ({
                 ListEmptyComponent={!loading ? ListEmptyComponent : null}
 
                 // Performance Props
-                removeClippedSubviews={Platform.OS === 'android'}
+                removeClippedSubviews={false}
                 initialNumToRender={5}
                 maxToRenderPerBatch={10}
                 windowSize={10}

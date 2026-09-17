@@ -2744,14 +2744,14 @@ export default function OilGuardEngine() {
                 <Animated.FlatList
                     data={displayedClaims}
                     renderItem={renderClaimItem}
-                    keyExtractor={(item) => item}
+                    keyExtractor={(item, index) => `${item}_${index}`}
                     extraData={selectedClaims} // <--- CRITICAL: Tells list to update when selection changes
 
                     // --- PERFORMANCE PROPS ---
                     initialNumToRender={12}     // How many items to show immediately
                     maxToRenderPerBatch={10}    // How many to render per scroll batch
                     windowSize={5}              // Reduced from default (21) to save memory
-                    removeClippedSubviews={true} // Unmounts off-screen items (Huge speedup)
+                    removeClippedSubviews={false} // Disabled to prevent ReactClippingViewManager crash on Android
                     getItemLayout={getItemLayout} // Skips measurement calculations
                     updateCellsBatchingPeriod={50} // Delays updates slightly to batch them
 
