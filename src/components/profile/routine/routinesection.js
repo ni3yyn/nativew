@@ -766,11 +766,13 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
     const [isBuilding, setIsBuilding] = useState(false);
 
     useEffect(() => {
-        const initialRoutines = userProfile?.routines || { am: [], pm: [], weekly: [] };
+        const raw = userProfile?.routines || {};
+        const initialRoutines = {
+            am:     Array.isArray(raw.am)     ? raw.am     : [],
+            pm:     Array.isArray(raw.pm)     ? raw.pm     : [],
+            weekly: Array.isArray(raw.weekly) ? raw.weekly : [],
+        };
         setRoutines(initialRoutines);
-        if (!userProfile?.routines || (initialRoutines.am.length === 0 && initialRoutines.pm.length === 0)) {
-            setShowOnboarding(true);
-        }
     }, [userProfile]);
 
     const saveRoutines = async (newRoutines) => {
@@ -792,9 +794,9 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 
     const handleAddStep = (stepName) => {
         if (stepName) {
-            const newStep = { id: `step-${Date.now()}`, name: stepName, productIds:[] };
+            const newStep = { id: `step-${Date.now()}`, name: stepName, productIds: [] };
             const newRoutines = JSON.parse(JSON.stringify(routines));
-            if (!newRoutines[activePeriod]) newRoutines[activePeriod] =[];
+            if (!Array.isArray(newRoutines[activePeriod])) newRoutines[activePeriod] = [];
             newRoutines[activePeriod].push(newStep);
             saveRoutines(newRoutines);
         }
@@ -806,6 +808,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
             t('routine_delete_step_confirm_message', language),
             async () => {
                 const newRoutines = JSON.parse(JSON.stringify(routines));
+                if (!Array.isArray(newRoutines[activePeriod])) newRoutines[activePeriod] = [];
                 newRoutines[activePeriod] = newRoutines[activePeriod].filter(s => s.id !== stepId);
                 saveRoutines(newRoutines);
             }
@@ -814,6 +817,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
 
     const handleUpdateStep = (stepId, newName, newProductIds) => {
         const newRoutines = JSON.parse(JSON.stringify(routines));
+        if (!Array.isArray(newRoutines[activePeriod])) newRoutines[activePeriod] = [];
         const stepIndex = newRoutines[activePeriod].findIndex(s => s.id === stepId);
         
         if (stepIndex !== -1) {
@@ -844,10 +848,13 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "Server Error");
 
-                const newRoutines = { 
-                    am: data.am || [], 
-                    pm: data.pm || [], 
-                    weekly: data.weekly || routines.weekly || [] 
+                // Read all four periods from backend; fall back to existing state if a key is missing.
+                const newRoutines = {
+                    am:     Array.isArray(data.am)     ? data.am     : [],
+                    pm:     Array.isArray(data.pm)     ? data.pm     : [],
+                    weekly: Array.isArray(data.weekly) ? data.weekly : (routines.weekly || []),
+                    hair:   Array.isArray(data.hair)   ? data.hair   : (routines.hair   || []),
+                    body:   Array.isArray(data.body)   ? data.body   : (routines.body   || []),
                 };
                 await saveRoutines(newRoutines);
                 if (data.logs && Array.isArray(data.logs)) setRoutineLogs(data.logs);
@@ -868,7 +875,7 @@ export const RoutineSection = ({ savedProducts, userProfile, onOpenAddStepModal 
         );
     };
 
-    const currentSteps = routines[activePeriod] ||[];
+    const currentSteps = Array.isArray(routines[activePeriod]) ? routines[activePeriod] : [];
 
     return (
         <View style={{ flex: 1, backgroundColor: 'transparent' }}>

@@ -358,9 +358,41 @@ const createStyles = (C) => StyleSheet.create({
   modalSubtitle: { fontFamily: 'Tajawal-Regular', fontSize: 13, color: C.textSecondary, textAlign: 'right', marginTop: 4 },
   
   // Filled Unfocused State (No dark borders)
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, position: 'relative' },
-  input: { flex: 1, backgroundColor: C.textDim + '15', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 15, paddingRight: 45, color: C.textPrimary, fontSize: 15, textAlign: 'right' },
-  inputIcon: { position: 'absolute', right: 15, zIndex: 1 },
+  // Input Container
+inputWrapper: { 
+  flexDirection: 'row-reverse',        // RTL aware
+  alignItems: 'center', 
+  marginBottom: 20, 
+  position: 'relative',
+},
+
+// Input Field
+input: { 
+  flex: 1, 
+  backgroundColor: C.textDim + '12',
+  borderRadius: 16, 
+  paddingVertical: 16, 
+  paddingHorizontal: 16,
+  paddingRight: 48,                    // room for icon (RTL: right is start)
+  color: C.textPrimary, 
+  fontSize: 15, 
+  textAlign: 'right',
+  borderWidth: 1,
+  borderColor: C.textDim + '25',       // subtle visible border
+  minHeight: 54,                       // consistent tap target
+  writingDirection: 'rtl',
+},
+
+// Icon inside input
+inputIcon: { 
+  position: 'absolute', 
+  right: 16,                           // match paddingRight
+  zIndex: 1,
+  width: 24,
+  height: 24,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
   
   // Filled Segments
   segmentContainer: { flexDirection: 'row-reverse', backgroundColor: C.textDim + '15', borderRadius: 14, padding: 4, marginBottom: 15 },

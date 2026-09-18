@@ -4,6 +4,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
+import { useRTL } from '../../../hooks/useRTL';   // <-- ADD THIS
+
 
 const FALLBACK_COLORS = {
     background: '#1A2D27',
@@ -25,6 +27,7 @@ export const RoutineLogViewer = ({ logs }) => {
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const language = useCurrentLanguage();
     const [expanded, setExpanded] = useState(false);
+    const { isRTL } = useRTL(); 
 
     if (!logs || logs.length === 0) return null;
 

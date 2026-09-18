@@ -150,4 +150,3 @@ const AppTextInput = React.forwardRef(({
 AppTextInput.displayName = 'AppTextInput';
 
 export default AppTextInput;
-
