@@ -45,7 +45,7 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         const val ACTION_TIMER_EXPIRED = "com.wathiq.app.ACTION_TIMER_EXPIRED"
 
         const val CHANNEL_LIVE_TIMER = "wathiq_live_timer_channel"
-        const val CHANNEL_ALARM = "wathiq_spf_alarm_channel"
+        const val CHANNEL_ALARM = "wathiq_spf_alarm_channel_v3"
 
         const val NOTIFICATION_LIVE_ID = 1002
         const val NOTIFICATION_ALARM_ID = 1001
@@ -305,13 +305,13 @@ class SpfNativeWidgetProvider : AppWidgetProvider() {
         // 🌟 Load custom sound from res/raw/wathiq_sound.mp3 (falls back to default if file missing)
         val customSoundResId = context.resources.getIdentifier("wathiq_sound", "raw", context.packageName)
         val soundUri = if (customSoundResId != 0) {
-            android.net.Uri.parse("android.resource://${context.packageName}/$customSoundResId")
+            android.net.Uri.parse("android.resource://${context.packageName}/raw/wathiq_sound")
         } else {
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         }
 
-        // 🌟 Bumping channel to v2 forces Android to register the new custom sound!
-        val alarmChannelId = "wathiq_spf_alarm_channel_v2"
+        // 🌟 Bumping channel to v3 forces Android to register the new custom sound on update!
+        val alarmChannelId = CHANNEL_ALARM
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val audioAttributes = AudioAttributes.Builder()
