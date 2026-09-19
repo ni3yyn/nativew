@@ -251,7 +251,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
-    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT + 150)).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -266,7 +266,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const handleClose = () => {
         Keyboard.dismiss();
         Animated.parallel([
-            Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT + 150, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
             Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
         ]).start(({ finished }) => {
             if (finished && onClose) onClose();
@@ -539,7 +539,18 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     <Pressable style={{ flex: 1 }} onPress={handleClose} />
                 </Animated.View>
 
-                <Animated.View style={[{ height: '88%', backgroundColor: COLORS.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', transform: [{ translateY: slideAnim }], marginBottom: -150, paddingBottom: 150 }]}>
+                <Animated.View 
+    style={[{ 
+        height: SCREEN_HEIGHT * 0.93 + 150, // 👈 Expands modal to 93% visible screen height
+        backgroundColor: COLORS.background, 
+        borderTopLeftRadius: 28, 
+        borderTopRightRadius: 28, 
+        overflow: 'hidden', 
+        transform: [{ translateY: slideAnim }], 
+        marginBottom: -150, 
+        paddingBottom: 150 
+    }]}
+>
                     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
                         {/* HEADER */}
                         <View style={styles.header}>

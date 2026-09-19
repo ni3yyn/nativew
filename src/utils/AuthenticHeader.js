@@ -326,6 +326,19 @@ const AuthenticHeader = ({
 
   // 🌟 LIVE POINTS FEEDBACK ANIMATIONS
   const avatarShakeAnim = useRef(new Animated.Value(0)).current;
+  const promptBounceAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!avatarId) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(promptBounceAnim, { toValue: -3, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(promptBounceAnim, { toValue: 2, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [avatarId]);
+
   const pointsPopupAnim = useRef(new Animated.Value(0)).current;
   const [gainedPoints, setGainedPoints] = useState(0);
   const prevPointsRef = useRef(effectiveProfile?.points);
@@ -433,6 +446,7 @@ const AuthenticHeader = ({
     extrapolate: 'clamp',
   });
 
+
   const avatarId = effectiveProfile?.settings?.avatarId;
   const userName = effectiveProfile?.settings?.name;
   const firstName = userName?.split(' ')[0] || t('welcome_back_fallback', language);
@@ -499,12 +513,11 @@ const AuthenticHeader = ({
             )}
           </View>
 
-          {/* Expanded Avatar Container */}
           <TouchableOpacity
             activeOpacity={0.8}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={handleOpenProfile}
-            style={{ position: 'relative' }}
+            style={{ position: 'relative', alignItems: 'center' }}
           >
             <Animated.View style={{ transform: [{ rotate: avatarRotate }, { scale: avatarScale }] }}>
               <View
@@ -513,17 +526,36 @@ const AuthenticHeader = ({
                   !avatarId && {
                     borderColor: COLORS.accentGreen,
                     borderWidth: 2,
-                    backgroundColor: COLORS.accentGreen + '33',
+                    backgroundColor: COLORS.accentGreen + '20',
                   },
                 ]}
               >
                 {avatarId ? (
                   <Image source={AVATARS[avatarId]} style={styles.avatarImage} />
                 ) : (
-                  <Text style={{ fontSize: 20 }}>✨</Text>
+                  <FontAwesome5 name="user-plus" size={20} color={COLORS.accentGreen} />
                 )}
               </View>
             </Animated.View>
+
+            {/* 🌟 FLOATING "CHOOSE AVATAR" PROMPT BUBBLE FOR OLD USERS 🌟 */}
+            {!avatarId && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.avatarPromptBubble,
+                  {
+                    transform: [{ translateY: promptBounceAnim }],
+                    backgroundColor: COLORS.card,
+                    borderColor: COLORS.accentGreen + '80',
+                  },
+                ]}
+              >
+                <Text style={[styles.avatarPromptText, { color: COLORS.accentGreen }]}>
+                  {language === 'ar' ? 'اختاري صورتكِ' : 'Pick avatar'}
+                </Text>
+              </Animated.View>
+            )}
 
             {/* 🌟 1ج FIRST GEN BADGE 🌟 */}
             {effectiveProfile?.isFirstGen && (
@@ -834,6 +866,29 @@ const createStyles = (COLORS, isRTL) =>
       borderRadius: 7,
       borderWidth: 1,
       borderColor: COLORS.border,
+    },
+    avatarPromptBubble: {
+      position: 'absolute',
+      bottom: -16,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 20,
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+      minWidth: 80,
+    },
+    avatarPromptText: {
+      fontFamily: 'Tajawal-Bold',
+      fontSize: 10,
+      textAlign: 'center',
+      includeFontPadding: false,
     },
   });
 

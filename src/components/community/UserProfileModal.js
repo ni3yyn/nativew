@@ -80,6 +80,8 @@ const [activeBadgeIndex, setActiveBadgeIndex] = useState(0);
     const shelfAnim = useRef(new Animated.Value(0)).current;
 
     const isMe = currentUser?.uid === targetUserId?.id || currentUser?.uid === targetUserId;
+    const hasAvatar = Boolean(profile?.settings?.avatarId || profile?.avatarId);
+
 
     useEffect(() => {
         if (visible) Animated.spring(animState, { toValue: 1, friction: 9, tension: 50, useNativeDriver: true }).start();
@@ -416,17 +418,17 @@ const [activeBadgeIndex, setActiveBadgeIndex] = useState(0);
                                             activeOpacity={0.8}
                                             style={styles.avatarWrapper}
                                         >
-                                            <View style={[styles.avatarGlow, { borderColor: currentLevel.color }]} />
+                                            <View style={[styles.avatarGlow, { borderColor: !hasAvatar ? COLORS.accentGreen : currentLevel.color }]} />
                                             <View style={[styles.avatar, { backgroundColor: COLORS.background, overflow: 'hidden' }]}>
-                                                {AVATARS[profile?.settings?.avatarId || profile?.avatarId] ? (
+                                                {hasAvatar ? (
                                                     <Image 
                                                         source={AVATARS[profile?.settings?.avatarId || profile?.avatarId]} 
                                                         style={{ width: '100%', height: '100%', borderRadius: 35 }} 
                                                     />
                                                 ) : (
-                                                    <Text style={[styles.avatarText, { color: currentLevel.color }]}>
-                                                        {profile?.settings?.name ? profile.settings.name.charAt(0).toUpperCase() : 'U'}
-                                                    </Text>
+                                                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                                        <FontAwesome5 name="user-plus" size={22} color={COLORS.accentGreen} />
+                                                    </View>
                                                 )}
                                             </View>
                                             
@@ -439,11 +441,19 @@ const [activeBadgeIndex, setActiveBadgeIndex] = useState(0);
                                                 </View>
                                             )}
 
-                                            {/* Clear Editable Pen Icon (Bottom-Left) */}
+                                            {/* Editable Badge / Choose Prompt */}
                                             {isMe && (
-                                                <View style={[styles.avatarEditPenBadge, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.background }]}>
-                                                    <Feather name="edit-2" size={11} color="#FFF" />
-                                                </View>
+                                                !hasAvatar ? (
+                                                    <View style={[styles.avatarPromptTag, { backgroundColor: COLORS.accentGreen }]}>
+                                                        <Text style={styles.avatarPromptTagText}>
+                                                            {language === 'ar' ? 'اختاري صورتكِ' : 'Choose'}
+                                                        </Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={[styles.avatarEditPenBadge, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.background }]}>
+                                                        <Feather name="edit-2" size={11} color="#FFF" />
+                                                    </View>
+                                                )
                                             )}
                                         </TouchableOpacity>
                                     </View>
@@ -789,6 +799,28 @@ dot: {
     height: 6,
     borderRadius: 3,
 },
+avatarPromptTag: {
+        position: 'absolute',
+        bottom: -10,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: '#FFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    avatarPromptTagText: {
+        fontFamily: 'Tajawal-ExtraBold',
+        fontSize: 9.5,
+        color: '#FFF',
+        includeFontPadding: false,
+    },
 });
 
 export default UserProfileModal;
