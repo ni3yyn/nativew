@@ -1,6 +1,8 @@
+// --- START OF FILE RoutineSegmentedControl.js ---
+
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../context/ThemeContext';
 import { t } from '../../../i18n';
@@ -15,12 +17,15 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
 
     const [containerWidth, setContainerWidth] = useState(0);
     
-    const tabWidth = containerWidth > 0 ? containerWidth / 3 : 0; 
+    // Now dividing by 5 to support AM, PM, Weekly, Hair, Body
+    const tabWidth = containerWidth > 0 ? containerWidth / 5 : 0; 
 
     const getIndex = (period) => {
         if (period === 'am') return 0;
         if (period === 'pm') return 1;
         if (period === 'weekly') return 2;
+        if (period === 'hair') return 3;
+        if (period === 'body') return 4;
         return 0;
     };
 
@@ -44,17 +49,21 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
     };
 
     const translateX = animValue.interpolate({
-        inputRange: [0, 1, 2],
+        inputRange: [0, 1, 2, 3, 4],
         outputRange: [
             0, 
             isRTL ? -tabWidth : tabWidth, 
-            isRTL ? -tabWidth * 2 : tabWidth * 2
+            isRTL ? -tabWidth * 2 : tabWidth * 2,
+            isRTL ? -tabWidth * 3 : tabWidth * 3,
+            isRTL ? -tabWidth * 4 : tabWidth * 4
         ]
     });
 
     const isAm = activePeriod === 'am';
     const isPm = activePeriod === 'pm';
     const isWeekly = activePeriod === 'weekly';
+    const isHair = activePeriod === 'hair';
+    const isBody = activePeriod === 'body';
 
     return (
         <View 
@@ -73,9 +82,9 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
 
             {/* Morning (AM) */}
             <Pressable style={styles.tab} onPress={() => handlePress('am')}>
-                <View style={[styles.tabContent, { flexDirection }]}>
-                    <Feather name="sun" size={13} color={isAm ? C.textOnAccent : C.textSecondary} />
-                    <Text style={[styles.tabText, isAm && styles.tabTextActive]} numberOfLines={1}>
+                <View style={styles.tabContent}>
+                    <Feather name="sun" size={14} color={isAm ? C.textOnAccent : C.textSecondary} />
+                    <Text style={[styles.tabText, isAm && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit>
                         {t('routine_period_morning', language)}
                     </Text>
                 </View>
@@ -83,9 +92,9 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
 
             {/* Evening (PM) */}
             <Pressable style={styles.tab} onPress={() => handlePress('pm')}>
-                <View style={[styles.tabContent, { flexDirection }]}>
-                    <Feather name="moon" size={13} color={isPm ? C.textOnAccent : C.textSecondary} />
-                    <Text style={[styles.tabText, isPm && styles.tabTextActive]} numberOfLines={1}>
+                <View style={styles.tabContent}>
+                    <Feather name="moon" size={14} color={isPm ? C.textOnAccent : C.textSecondary} />
+                    <Text style={[styles.tabText, isPm && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit>
                         {t('routine_period_evening', language)}
                     </Text>
                 </View>
@@ -93,10 +102,30 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
 
             {/* Weekly */}
             <Pressable style={styles.tab} onPress={() => handlePress('weekly')}>
-                <View style={[styles.tabContent, { flexDirection }]}>
-                    <Feather name="calendar" size={13} color={isWeekly ? C.textOnAccent : C.textSecondary} />
-                    <Text style={[styles.tabText, isWeekly && styles.tabTextActive]} numberOfLines={1}>
+                <View style={styles.tabContent}>
+                    <Feather name="calendar" size={14} color={isWeekly ? C.textOnAccent : C.textSecondary} />
+                    <Text style={[styles.tabText, isWeekly && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit>
                         {t('routine_period_weekly', language)}
+                    </Text>
+                </View>
+            </Pressable>
+
+            {/* Hair */}
+            <Pressable style={styles.tab} onPress={() => handlePress('hair')}>
+                <View style={styles.tabContent}>
+                    <MaterialCommunityIcons name="hair-dryer-outline" size={15} color={isHair ? C.textOnAccent : C.textSecondary} />
+                    <Text style={[styles.tabText, isHair && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit>
+                        {t('routine_period_hair', language) || (language === 'ar' ? 'الشعر' : 'Hair')}
+                    </Text>
+                </View>
+            </Pressable>
+
+            {/* Body */}
+            <Pressable style={styles.tab} onPress={() => handlePress('body')}>
+                <View style={styles.tabContent}>
+                    <Feather name="droplet" size={14} color={isBody ? C.textOnAccent : C.textSecondary} />
+                    <Text style={[styles.tabText, isBody && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit>
+                        {t('routine_period_body', language) || (language === 'ar' ? 'الجسم' : 'Body')}
                     </Text>
                 </View>
             </Pressable>
@@ -107,7 +136,7 @@ export default function RoutineSegmentedControl({ activePeriod, onPeriodChange }
 const createStyles = (C) => StyleSheet.create({
     container: {
         backgroundColor: C.card,
-        height: 42, 
+        height: 52, // Slightly taller to stack icon & text comfortably
         borderRadius: 14, 
         padding: 0, 
         marginBottom: 10,
@@ -137,16 +166,15 @@ const createStyles = (C) => StyleSheet.create({
     tabContent: {
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 5,
-        paddingHorizontal: 2,
+        flexDirection: 'column', // explicitly stacked to fit 5 items
     },
     tabText: {
         fontFamily: 'Tajawal-Bold',
-        fontSize: 12,
+        fontSize: 10, // Adjusted for 5-tabs layout
         color: C.textSecondary,
-        marginTop: 1, 
+        marginTop: 4, 
     },
     tabTextActive: {
-        color: C.textOnAccent,
+        color: C.textOnAccent || C.background,
     }
 });

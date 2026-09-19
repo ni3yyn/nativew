@@ -99,6 +99,9 @@ export default function CommunityScreen() {
     const loadingMoreRef = useRef(false);
     const isAdmin = !!(user && appConfig?.adminUid && user.uid === appConfig.adminUid);
 
+    // 🌟 ALERT DEDUPLICATION REF (Prevents repeated network error modal spam)
+    const hasShownNetworkAlertRef = useRef(false);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [isBioFilterActive, setIsBioFilterActive] = useState(false);
@@ -122,19 +125,16 @@ export default function CommunityScreen() {
     }, [searchQuery]);
 
     // 🌟 FULLY FIXED DEEP LINKING (NO INFINITE LOOPS, FETCHES OLD POSTS)
-    const processedPostId = useRef(null); // Hardware lock to prevent infinite re-renders
+    const processedPostId = useRef(null);
 
     useEffect(() => {
         const handleDeepLinkPost = async () => {
             if (!openPostId || openPostId === processedPostId.current) return;
             
-            // 1. Lock immediately to prevent loops
             processedPostId.current = openPostId;
             
-            // 2. Check if it's already in memory
             let targetPost = allPosts.find(p => p.id === openPostId);
             
-            // 3. If it's an old post not in the first 15 loaded, fetch it directly
             if (!targetPost) {
                 try {
                     const { data, error } = await supabase
@@ -165,7 +165,6 @@ export default function CommunityScreen() {
                             likes: []
                         };
                         
-                        // Silently prepend to feed
                         setAllPosts(prev => {
                             if (prev.some(p => p.id === targetPost.id)) return prev;
                             return [targetPost, ...prev];
@@ -176,7 +175,6 @@ export default function CommunityScreen() {
                 }
             }
 
-            // 4. Open the modal securely
             if (targetPost) {
                 if (viewMode === 'menu') {
                     const cat = CATEGORIES.find(c => c.id === targetPost.type);
@@ -184,8 +182,6 @@ export default function CommunityScreen() {
                     setViewMode('feed');
                 }
                 setCommentingPost(targetPost);
-                
-                // Clear the param safely so a regular page refresh doesn't trigger it again
                 router.setParams({ openPostId: '' });
             }
         };
@@ -290,6 +286,9 @@ export default function CommunityScreen() {
             const { data: postsData, error: postsError } = await query.range(offset, offset + PAGE_SIZE - 1);
             if (postsError) throw postsError;
 
+            // Successful fetch -> reset alert guard
+            hasShownNetworkAlertRef.current = false;
+
             if (!postsData || postsData.length < PAGE_SIZE) {
                 setHasMore(false);
             }
@@ -356,7 +355,40 @@ export default function CommunityScreen() {
 
         } catch (error) {
             console.error("Feed Error:", error);
-            if (!isBackground) AlertService.error(t('community_error_title', language), t('community_load_posts_error', language));
+            
+            // Only trigger for non-background initial or manual user actions
+            const isUserInitiated = !isBackground && !isLoadMore;
+
+            if (isUserInitiated && !hasShownNetworkAlertRef.current) {
+                hasShownNetworkAlertRef.current = true;
+
+                // Detect if the error is network/offline related
+                const errStr = (error?.message || '').toLowerCase();
+                const isNetworkError = 
+                    !error || 
+                    errStr.includes('network') || 
+                    errStr.includes('fetch') || 
+                    errStr.includes('failed') || 
+                    errStr.includes('offline') ||
+                    errStr.includes('connection');
+
+                const alertTitle = isNetworkError
+                    ? (language === 'ar' ? 'لا يوجد اتصال بالإنترنت' : 'No Internet Connection')
+                    : (t('community_error_title', language) || 'تعذر التحديث');
+
+                const alertMessage = isNetworkError
+                    ? (language === 'ar' 
+                        ? 'تعذر الاتصال بالخادم لتحميل المنشورات. يُرجى التأكد من اتصال هاتفك بالإنترنت ثم المحاولة مرة أخرى.'
+                        : 'Unable to connect to the server. Please check your internet connection and try again.')
+                    : (t('community_load_posts_error', language) || 'حدث خطأ أثناء تحميل المنشورات.');
+
+                AlertService.error(alertTitle, alertMessage);
+            }
+
+            // Stop pagination so FlatList doesn't keep looping while offline
+            if (isLoadMore) {
+                setHasMore(false);
+            }
         } finally {
             if (isLoadMore) {
                 loadingMoreRef.current = false;
@@ -372,6 +404,7 @@ export default function CommunityScreen() {
 
     const handleSortChange = (newMode) => {
         if (newMode === sortBy) return;
+        hasShownNetworkAlertRef.current = false; // Reset on intentional action
         Haptics.selectionAsync();
         setSortBy(newMode);
         loadNewPosts(true, newMode);
@@ -398,6 +431,7 @@ export default function CommunityScreen() {
     };
 
     const navigateToFeed = (cat) => {
+        hasShownNetworkAlertRef.current = false; // Reset on intentional action
         Haptics.selectionAsync();
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setSelectedCategory(cat);
@@ -504,6 +538,8 @@ export default function CommunityScreen() {
     };
 
     const handleRefresh = async () => {
+        hasShownNetworkAlertRef.current = false; // Reset on manual refresh
+        setHasMore(true);
         if (sortBy === 'popular') {
             await loadNewPosts(false, 'popular');
             return;
@@ -547,7 +583,7 @@ export default function CommunityScreen() {
                         showsVerticalScrollIndicator={false}
                         onScroll={Animated.event(
                             [{ nativeEvent: { contentOffset: { y: menuScrollY } } }],
-                            { useNativeDriver: false } // Avoids VirtualizedList driver mismatch
+                            { useNativeDriver: false }
                         )}
                         scrollEventThrottle={16}
                     >
@@ -626,7 +662,7 @@ export default function CommunityScreen() {
                             }}
                             onScroll={Animated.event(
                                 [{ nativeEvent: { contentOffset: { y: feedScrollY } } }],
-                                { useNativeDriver: false } // Resolves VirtualizedList invariant violation
+                                { useNativeDriver: false }
                             )}
                             scrollEventThrottle={16}
                             initialNumToRender={5}
@@ -646,7 +682,9 @@ export default function CommunityScreen() {
                                 />
                             )}
                             onEndReached={() => {
-                                loadNewPosts(false, null, false, true);
+                                if (!loading && !loadingMore && hasMore && !loadingMoreRef.current) {
+                                    loadNewPosts(false, null, false, true);
+                                }
                             }}
                             onEndReachedThreshold={0.5}
                             ListFooterComponent={
@@ -707,7 +745,7 @@ export default function CommunityScreen() {
                 visible={!!commentingPost}
                 onClose={() => {
                     setCommentingPost(null);
-                    router.setParams({ openPostId: '' }); // 🌟 SAFE RESET (NO LOOPS)
+                    router.setParams({ openPostId: '' });
                 }}
                 post={commentingPost}
                 currentUser={currentUserObj}
