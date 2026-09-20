@@ -1,12 +1,12 @@
-// AddProductModal.js
+// src/components/catalog/AddProductModal.js
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-    View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
+    View, Text, StyleSheet, Modal, TouchableOpacity,
     ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions,
     Animated, Pressable, Easing, Image
 } from 'react-native';
-import { Feather, FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -205,7 +205,7 @@ const CustomDropdown = ({ icon, title, subtitle, items, selectedItems, onSelect,
                                             backgroundColor: isSelected ? C.accentGreen : 'transparent'
                                         }
                                     ]}>
-                                        {isSelected && <Feather name="check" size={12} color="#FFF" />}
+                                        {isSelected && <Feather name="check" size={12} color={C.textOnAccent || '#FFF'} />}
                                     </View>
                                 </TouchableOpacity>
                             );
@@ -249,6 +249,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     const [uploadingInci, setUploadingInci] = useState(false);
     const [quickBrand, setQuickBrand] = useState('');
     const [quickName, setQuickName] = useState('');
+    const [quickPrice, setQuickPrice] = useState('');
 
     // Shared Camera / Modal State
     const [cameraVisible, setCameraVisible] = useState(false);
@@ -331,7 +332,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         }
     };
 
-    // Gallery Picker Dispatcher (Fixed Deprecated MediaType)
+    // Gallery Picker Dispatcher
     const pickFromGallery = async (target = 'manual') => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -434,14 +435,35 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
     };
 
     const handleSave = async () => {
-        // ── 1. FAST MODE (PHOTOS ONLY) ──────────────────────────────────
+        // ── 1. FAST MODE (PHOTOS + BRAND + NAME + MANDATORY PRICE) ──────────
         if (activeTab === 'photos') {
             if (!quickFrontImage || !quickInciImage) {
                 AlertService.error(
                     language === 'ar' ? 'صور ناقصة' : 'Missing Photos',
                     language === 'ar'
-                        ? 'يرجى رفع صورة واجهة المنتج وصورة قائمة المكونات (INCI) معاً للمتابعة.'
-                        : 'Please provide both the front product photo and the INCI ingredients list photo.'
+                        ? 'يرجى رفع صورة واجهة المنتج وصورة قائمة المكونات (INCI) معاً.'
+                        : 'Please provide both the front product photo and the INCI ingredients photo.'
+                );
+                return;
+            }
+
+            if (!quickBrand.trim() || !quickName.trim()) {
+                AlertService.error(
+                    language === 'ar' ? 'بيانات ناقصة' : 'Missing Fields',
+                    language === 'ar'
+                        ? 'يرجى كتابة الماركة واسم المنتج للمتابعة.'
+                        : 'Please enter both the brand and product name.'
+                );
+                return;
+            }
+
+            const numericPrice = parseInt(quickPrice.trim(), 10);
+            if (!quickPrice.trim() || isNaN(numericPrice) || numericPrice <= 0) {
+                AlertService.error(
+                    language === 'ar' ? 'السعر مطلوب' : 'Price Required',
+                    language === 'ar'
+                        ? 'يرجى إدخال السعر التقديري للمنتج بالدينار الجزائري (DZD).'
+                        : 'Please enter a valid estimated product price in DZD.'
                 );
                 return;
             }
@@ -452,10 +474,14 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                 frontImage: quickFrontImage,
                 inciImage: quickInciImage,
                 image: quickFrontImage,
-                brand: quickBrand.trim() || 'قيد المراجعة',
-                name: quickName.trim() || 'منتج جديد عبر الصور',
+                brand: quickBrand.trim(),
+                name: quickName.trim(),
+                price: { min: numericPrice, max: null, currency: 'DZD' },
                 country: 'Unknown',
                 category: null,
+                ingredients: '',
+                targetTypes: [],
+                marketingClaims: [],
                 status: 'pending',
                 source: 'quick_photos_submission',
                 createdAt: new Date().toISOString(),
@@ -497,7 +523,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
             country: country || "Unknown",
             category: { id: catObj.id, label: t(catObj.labelKey, language), icon: catObj.icon },
             quantity: qtyValue ? `${qtyValue} ${qtyUnit}` : "null",
-            price: { min: parseInt(priceMin) || null, max: null, currency: "DZD" },
+            price: { min: parseInt(priceMin, 10) || null, max: null, currency: "DZD" },
             targetTypes: selectedTargets,
             marketingClaims: selectedClaims
         };
@@ -535,6 +561,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
         setQuickInciImage(null);
         setQuickBrand('');
         setQuickName('');
+        setQuickPrice('');
     };
 
     const isUploadingAny = uploadingImage || uploadingFront || uploadingInci;
@@ -565,11 +592,11 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                             {/* Top Notch Badge */}
                             <View style={styles.topNotch}>
                                 <LinearGradient
-                                    colors={[C.accentGreen, '#2E8062']}
+                                    colors={[C.accentGreen, C.primary]}
                                     style={styles.rewardBadge}
                                 >
-                                    <FontAwesome5 name="medal" size={12} color="#FFF" />
-                                    <Text style={styles.rewardText}>+200 نقطة</Text>
+                                    <FontAwesome5 name="medal" size={12} color={C.textOnAccent || '#FFF'} />
+                                    <Text style={[styles.rewardText, { color: C.textOnAccent || '#FFF' }]}>+200 نقطة</Text>
                                 </LinearGradient>
                             </View>
 
@@ -586,8 +613,8 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                     </Text>
                                 </View>
 
-                                {/* 🌟 CLEAN, MERGED FULL-WIDTH TAB BAR */}
-                                <View style={[styles.cleanTabBar, { flexDirection: rtl.flexDirection, borderBottomColor: C.border + '50' }]}>
+                                {/* 🌟 CLEAN TAB BAR */}
+                                <View style={[styles.cleanTabBar, { flexDirection: rtl.flexDirection, borderBottomColor: C.border }]}>
                                     <TouchableOpacity
                                         style={[
                                             styles.cleanTabBtn,
@@ -644,33 +671,33 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                 </View>
 
                                 {/* ─────────────────────────────────────────────────────────────
-                                    🌟 TAB 1: FAST MODE (SIDE-BY-SIDE SLOTS)
+                                    🌟 TAB 1: FAST MODE (CLEAN, UNBOXED & THEME-BASED)
                                 ────────────────────────────────────────────────────────────── */}
                                 {activeTab === 'photos' && (
-                                    <View style={{ gap: 14 }}>
-                                        <View style={[styles.fastTipRow, { flexDirection: rtl.flexDirection }]}>
-                                            <Ionicons name="sparkles" size={15} color={C.accentGreen} />
-                                            <Text style={[styles.fastTipText, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
+                                    <View style={styles.fastWrapper}>
+                                        {/* Clean Inline Note (Theme-driven, no boxes) */}
+                                        <View style={[styles.cleanNoticeRow, { flexDirection: rtl.flexDirection }]}>
+                                            <Feather name="info" size={15} color={C.accentGreen} style={{ marginTop: 2 }} />
+                                            <Text style={[styles.cleanNoticeText, { color: C.textSecondary, textAlign: rtl.textAlign }]}>
                                                 {language === 'ar'
-                                                    ? 'التقطي صورتين فقط: واجهة المنتج وقائمة المكونات، وسيتولى الذكاء الاصطناعي استخراج التفاصيل.'
-                                                    : 'Capture 2 photos: front label and ingredients list. AI extracts the rest.'}
+                                                    ? 'صوّري إطار قائمة المكونات (INCI) فقط عن قرب دون كامل العبوة لضمان وضوح النص.'
+                                                    : 'Frame only the ingredients list (INCI) closely. Do not capture the whole bottle.'}
                                             </Text>
                                         </View>
 
-                                        {/* Dual Compact Photo Slots */}
+                                        {/* Dual Modern Slots */}
                                         <View style={[styles.dualSlotsRow, { flexDirection: rtl.flexDirection }]}>
                                             {/* 1. FRONT PHOTO */}
                                             <TouchableOpacity
                                                 style={[
-                                                    styles.slotCard,
+                                                    styles.cleanSlot,
                                                     { 
-                                                        backgroundColor: C.card, 
+                                                        backgroundColor: C.inputBg, 
                                                         borderColor: quickFrontImage ? C.accentGreen : C.border,
-                                                        borderWidth: quickFrontImage ? 0.5 : 0.5,
                                                     }
                                                 ]}
                                                 onPress={() => showImageOptions('quick_front')}
-                                                activeOpacity={0.8}
+                                                activeOpacity={0.7}
                                             >
                                                 {uploadingFront ? (
                                                     <View style={styles.slotLoading}>
@@ -683,26 +710,26 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                     <View style={styles.slotFilled}>
                                                         <Image source={{ uri: quickFrontImage }} style={styles.slotImage} resizeMode="cover" />
                                                         <View style={[styles.slotCheckBadge, { backgroundColor: C.accentGreen }]}>
-                                                            <Feather name="check" size={11} color="#FFF" />
+                                                            <Feather name="check" size={12} color={C.textOnAccent || '#FFF'} />
                                                         </View>
                                                         <TouchableOpacity
-                                                            style={styles.slotRemoveBtn}
+                                                            style={[styles.slotRemoveBtn, { backgroundColor: C.background }]}
                                                             onPress={() => setQuickFrontImage(null)}
                                                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                         >
-                                                            <Ionicons name="close" size={13} color="#FFF" />
+                                                            <Feather name="x" size={13} color={C.textPrimary} />
                                                         </TouchableOpacity>
                                                     </View>
                                                 ) : (
                                                     <View style={styles.slotEmpty}>
-                                                        <View style={[styles.slotIconCircle, { backgroundColor: C.accentGreen + '14' }]}>
-                                                            <Feather name="image" size={20} color={C.accentGreen} />
+                                                        <View style={[styles.cleanIconBox, { backgroundColor: C.card }]}>
+                                                            <Feather name="image" size={18} color={C.accentGreen} />
                                                         </View>
-                                                        <Text style={[styles.slotTitle, { color: C.textPrimary }]}>
-                                                            {language === 'ar' ? '1. واجهة المنتج' : '1. Front Photo'} *
+                                                        <Text style={[styles.cleanSlotTitle, { color: C.textPrimary }]}>
+                                                            {language === 'ar' ? 'واجهة المنتج' : 'Front Label'}
                                                         </Text>
-                                                        <Text style={[styles.slotSub, { color: C.textDim }]}>
-                                                            {language === 'ar' ? 'الاسم والماركة' : 'Brand & Name'}
+                                                        <Text style={[styles.cleanSlotSub, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'صورة الواجهة' : 'Front view'}
                                                         </Text>
                                                     </View>
                                                 )}
@@ -711,19 +738,18 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                             {/* 2. INCI PHOTO */}
                                             <TouchableOpacity
                                                 style={[
-                                                    styles.slotCard,
+                                                    styles.cleanSlot,
                                                     { 
-                                                        backgroundColor: C.card, 
-                                                        borderColor: quickInciImage ? (C.purple || '#8B5CF6') : C.border,
-                                                        borderWidth: quickInciImage ? 0.5 : 0.5,
+                                                        backgroundColor: C.inputBg, 
+                                                        borderColor: quickInciImage ? C.accentGreen : C.border,
                                                     }
                                                 ]}
                                                 onPress={() => showImageOptions('quick_inci')}
-                                                activeOpacity={0.8}
+                                                activeOpacity={0.7}
                                             >
                                                 {uploadingInci ? (
                                                     <View style={styles.slotLoading}>
-                                                        <ActivityIndicator size="small" color={C.purple || '#8B5CF6'} />
+                                                        <ActivityIndicator size="small" color={C.accentGreen} />
                                                         <Text style={[styles.slotLoadingText, { color: C.textDim }]}>
                                                             {language === 'ar' ? 'جاري الرفع...' : 'Uploading...'}
                                                         </Text>
@@ -731,53 +757,77 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                 ) : quickInciImage ? (
                                                     <View style={styles.slotFilled}>
                                                         <Image source={{ uri: quickInciImage }} style={styles.slotImage} resizeMode="cover" />
-                                                        <View style={[styles.slotCheckBadge, { backgroundColor: C.purple || '#8B5CF6' }]}>
-                                                            <Feather name="check" size={11} color="#FFF" />
+                                                        <View style={[styles.slotCheckBadge, { backgroundColor: C.accentGreen }]}>
+                                                            <Feather name="check" size={12} color={C.textOnAccent || '#FFF'} />
                                                         </View>
                                                         <TouchableOpacity
-                                                            style={styles.slotRemoveBtn}
+                                                            style={[styles.slotRemoveBtn, { backgroundColor: C.background }]}
                                                             onPress={() => setQuickInciImage(null)}
                                                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                         >
-                                                            <Ionicons name="close" size={13} color="#FFF" />
+                                                            <Feather name="x" size={13} color={C.textPrimary} />
                                                         </TouchableOpacity>
                                                     </View>
                                                 ) : (
                                                     <View style={styles.slotEmpty}>
-                                                        <View style={[styles.slotIconCircle, { backgroundColor: (C.purple || '#8B5CF6') + '14' }]}>
-                                                            <MaterialCommunityIcons name="flask-outline" size={20} color={C.purple || '#8B5CF6'} />
+                                                        <View style={[styles.cleanIconBox, { backgroundColor: C.card }]}>
+                                                            <MaterialCommunityIcons name="text-box-search-outline" size={18} color={C.accentGreen} />
                                                         </View>
-                                                        <Text style={[styles.slotTitle, { color: C.textPrimary }]}>
-                                                            {language === 'ar' ? '2. قائمة المكونات' : '2. INCI Photo'} *
+                                                        <Text style={[styles.cleanSlotTitle, { color: C.textPrimary }]}>
+                                                            {language === 'ar' ? 'قائمة المكونات' : 'INCI List'}
                                                         </Text>
-                                                        <Text style={[styles.slotSub, { color: C.textDim }]}>
-                                                            {language === 'ar' ? 'نص المكونات كامل' : 'Ingredients text'}
+                                                        <Text style={[styles.cleanSlotSub, { color: C.textDim }]}>
+                                                            {language === 'ar' ? 'النص فقط عن قرب' : 'Text frame only'}
                                                         </Text>
                                                     </View>
                                                 )}
                                             </TouchableOpacity>
                                         </View>
 
-                                        {/* Optional Info Row */}
-                                        <View style={[styles.fastHelperCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                                            <Text style={[styles.fastHelperTitle, { color: C.textDim, textAlign: rtl.textAlign }]}>
-                                                {language === 'ar' ? 'معلومات اختيارية لتسريع اعتماد النقاط:' : 'Optional info to speed up approval:'}
-                                            </Text>
-                                            <View style={[styles.fastHelperRow, { flexDirection: rtl.flexDirection }]}>
-                                                <AppTextInput
-                                                    style={[styles.fastHelperInput, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
-                                                    placeholder={language === 'ar' ? 'الماركة (اختياري)' : 'Brand (optional)'}
-                                                    placeholderTextColor={C.textDim}
-                                                    value={quickBrand}
-                                                    onChangeText={setQuickBrand}
-                                                />
-                                                <AppTextInput
-                                                    style={[styles.fastHelperInput, { color: C.textPrimary, backgroundColor: C.background, borderColor: C.border, textAlign: rtl.textAlign }]}
-                                                    placeholder={language === 'ar' ? 'اسم المنتج (اختياري)' : 'Product Name (optional)'}
-                                                    placeholderTextColor={C.textDim}
-                                                    value={quickName}
-                                                    onChangeText={setQuickName}
-                                                />
+                                        {/* Spacious Unboxed Inputs */}
+                                        <View style={styles.cleanFormSection}>
+                                            <View style={[styles.cleanInputRow, { flexDirection: rtl.flexDirection }]}>
+                                                <View style={styles.flex1}>
+                                                    <Text style={[styles.cleanLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                        {language === 'ar' ? 'الماركة *' : 'Brand *'}
+                                                    </Text>
+                                                    <AppTextInput
+                                                        style={[styles.cleanInput, { color: C.textPrimary, backgroundColor: C.inputBg, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                                        placeholder={language === 'ar' ? 'مثال: The Ordinary' : 'e.g. The Ordinary'}
+                                                        placeholderTextColor={C.textDim}
+                                                        value={quickBrand}
+                                                        onChangeText={setQuickBrand}
+                                                    />
+                                                </View>
+                                                <View style={styles.flex1}>
+                                                    <Text style={[styles.cleanLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                        {language === 'ar' ? 'اسم المنتج *' : 'Product Name *'}
+                                                    </Text>
+                                                    <AppTextInput
+                                                        style={[styles.cleanInput, { color: C.textPrimary, backgroundColor: C.inputBg, borderColor: C.border, textAlign: rtl.textAlign }]}
+                                                        placeholder={language === 'ar' ? 'مثال: Niacinamide 10%' : 'e.g. Niacinamide 10%'}
+                                                        placeholderTextColor={C.textDim}
+                                                        value={quickName}
+                                                        onChangeText={setQuickName}
+                                                    />
+                                                </View>
+                                            </View>
+
+                                            <View style={styles.cleanPriceSection}>
+                                                <Text style={[styles.cleanLabel, { color: C.textDim, textAlign: rtl.textAlign }]}>
+                                                    {language === 'ar' ? 'السعر التقديري (DZD) *' : 'Estimated Price (DZD) *'}
+                                                </Text>
+                                                <View style={[styles.cleanPriceField, { backgroundColor: C.inputBg, borderColor: quickPrice ? C.accentGreen : C.border, flexDirection: rtl.flexDirection }]}>
+                                                    <AppTextInput
+                                                        style={[styles.cleanPriceTextInput, { color: C.textPrimary, textAlign: rtl.textAlign }]}
+                                                        placeholder="00"
+                                                        placeholderTextColor={C.textDim}
+                                                        keyboardType="numeric"
+                                                        value={quickPrice}
+                                                        onChangeText={setQuickPrice}
+                                                    />
+                                                    <Text style={[styles.cleanPriceTag, { color: C.textDim }]}>DZD</Text>
+                                                </View>
                                             </View>
                                         </View>
                                     </View>
@@ -887,7 +937,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                                 >
                                                                     <Text style={{
                                                                         fontSize: 11,
-                                                                        color: qtyUnit === u ? '#FFF' : C.textDim,
+                                                                        color: qtyUnit === u ? (C.textOnAccent || '#FFF') : C.textDim,
                                                                         fontWeight: 'bold'
                                                                     }}>
                                                                         {u}
@@ -934,7 +984,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
 
                                         <View style={[styles.glassCard, { backgroundColor: C.card, borderColor: C.border }]}>
                                             <View style={[styles.sectionHeaderSimple, { flexDirection: rtl.flexDirection }]}>
-                                                <MaterialCommunityIcons name="text-box-search-outline" size={18} color="#8b5cf6" />
+                                                <MaterialCommunityIcons name="text-box-search-outline" size={18} color={C.purple} />
                                                 <Text style={[styles.sectionTitle, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
                                                     {t('ingredients_list', language)}
                                                 </Text>
@@ -987,7 +1037,7 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                                             resizeMode="contain"
                                                         />
                                                         <TouchableOpacity
-                                                            style={styles.removeImageBtn}
+                                                            style={[styles.removeImageBtn, { backgroundColor: C.danger }]}
                                                             onPress={() => {
                                                                 setSelectedImage(null);
                                                                 setImageUrl('');
@@ -1029,21 +1079,21 @@ export default function AddProductModal({ visible, onClose, onSubmit }) {
                                     activeOpacity={0.8}
                                 >
                                     <LinearGradient
-                                        colors={[C.accentGreen, '#2E8062']}
+                                        colors={[C.accentGreen, C.primary]}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
                                         style={styles.submitGradient}
                                     >
                                         {isSubmitting ? (
-                                            <ActivityIndicator color="#FFF" />
+                                            <ActivityIndicator color={C.textOnAccent || '#FFF'} />
                                         ) : (
                                             <View style={[styles.submitInnerRow, { flexDirection: rtl.flexDirection }]}>
-                                                <Text style={styles.submitText}>
+                                                <Text style={[styles.submitText, { color: C.textOnAccent || '#FFF' }]}>
                                                     {activeTab === 'photos'
-                                                        ? (language === 'ar' ? 'إرسال الصور للمراجعة' : 'Submit Photos')
+                                                        ? (language === 'ar' ? 'إرسال المنتج للاعتماد' : 'Submit Product')
                                                         : t('submit_for_review', language)}
                                                 </Text>
-                                                <Feather name="check" size={18} color="#FFF" />
+                                                <Feather name="check" size={18} color={C.textOnAccent || '#FFF'} />
                                             </View>
                                         )}
                                     </LinearGradient>
@@ -1098,7 +1148,6 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     rewardText: {
-        color: '#FFF',
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 12,
     },
@@ -1116,7 +1165,7 @@ const styles = StyleSheet.create({
         fontSize: 21,
     },
 
-    // 🌟 CLEAN, BORDERLESS FULL-WIDTH TABS
+    // 🌟 CLEAN TAB BAR
     cleanTabBar: {
         width: '100%',
         backgroundColor: 'transparent',
@@ -1133,21 +1182,22 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2.5,
         borderBottomColor: 'transparent',
     },
-    cleanTabBtnActive: {
-        // dynamic borderBottomColor via prop
-    },
+    cleanTabBtnActive: {},
     cleanTabBtnText: {
         fontSize: 13,
     },
 
-    // 🌟 FAST MODE (DUAL COMPACT SLOTS)
-    fastTipRow: {
-        alignItems: 'center',
+    // 🌟 FAST MODE (CLEAN, UNBOXED, THEME-BASED)
+    fastWrapper: {
+        gap: 16,
+        paddingTop: 4,
+    },
+    cleanNoticeRow: {
+        alignItems: 'flex-start',
         gap: 8,
         paddingHorizontal: 4,
-        marginBottom: 2,
     },
-    fastTipText: {
+    cleanNoticeText: {
         fontFamily: 'Tajawal-Regular',
         fontSize: 12,
         lineHeight: 18,
@@ -1157,38 +1207,38 @@ const styles = StyleSheet.create({
         gap: 12,
         width: '100%',
     },
-    slotCard: {
+    cleanSlot: {
         flex: 1,
-        height: 155,
-        borderRadius: 18,
+        height: 140,
+        borderRadius: 16,
+        borderWidth: 1,
         overflow: 'hidden',
-        borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    cleanIconBox: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    cleanSlotTitle: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        textAlign: 'center',
+    },
+    cleanSlotSub: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 10,
+        textAlign: 'center',
+        marginTop: 2,
     },
     slotEmpty: {
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
         padding: 8,
-    },
-    slotIconCircle: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 2,
-    },
-    slotTitle: {
-        fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 12.5,
-        textAlign: 'center',
-    },
-    slotSub: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 10.5,
-        textAlign: 'center',
     },
     slotFilled: {
         width: '100%',
@@ -1208,7 +1258,6 @@ const styles = StyleSheet.create({
         borderRadius: 11,
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 3,
     },
     slotRemoveBtn: {
         position: 'absolute',
@@ -1217,9 +1266,13 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: 'rgba(0,0,0,0.65)',
         alignItems: 'center',
         justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 2,
     },
     slotLoading: {
         alignItems: 'center',
@@ -1229,30 +1282,50 @@ const styles = StyleSheet.create({
         fontFamily: 'Tajawal-Bold',
         fontSize: 10.5,
     },
-
-    fastHelperCard: {
-        borderRadius: 16,
-        padding: 12,
-        borderWidth: 0.5,
-        gap: 8,
+    cleanFormSection: {
+        gap: 14,
+        marginTop: 2,
     },
-    fastHelperTitle: {
+    cleanInputRow: {
+        gap: 12,
+    },
+    cleanLabel: {
         fontFamily: 'Tajawal-Bold',
         fontSize: 11,
+        marginBottom: 6,
+        paddingHorizontal: 2,
     },
-    fastHelperRow: {
-        gap: 8,
-    },
-    fastHelperInput: {
-        flex: 1,
-        height: 40,
-        borderRadius: 10,
-        borderWidth: 0.5,
-        paddingHorizontal: 10,
-        fontSize: 12,
+    cleanInput: {
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        paddingHorizontal: 12,
+        fontSize: 13,
         fontFamily: 'Tajawal-Regular',
     },
+    cleanPriceSection: {
+        width: '100%',
+    },
+    cleanPriceField: {
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        paddingHorizontal: 12,
+    },
+    cleanPriceTextInput: {
+        flex: 1,
+        height: '100%',
+        fontSize: 14,
+        fontFamily: 'Tajawal-Bold',
+    },
+    cleanPriceTag: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        paddingHorizontal: 4,
+    },
 
+    // MANUAL FORM STYLES
     glassCard: {
         borderRadius: 20,
         padding: 16,
@@ -1456,7 +1529,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -6,
         right: -6,
-        backgroundColor: '#ef4444',
         borderRadius: 14,
         width: 28,
         height: 28,
@@ -1509,7 +1581,6 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     submitText: {
-        color: '#FFF',
         fontFamily: 'Tajawal-ExtraBold',
         fontSize: 15,
     },
