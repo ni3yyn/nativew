@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     View, Text, TouchableOpacity, Modal, ActivityIndicator,
     FlatList, KeyboardAvoidingView, Platform, StyleSheet,
     Animated, LayoutAnimation, Pressable, Keyboard, Image, Dimensions, Easing
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppTextInput from '../common/AppTextInput';
 import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -250,6 +251,9 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const insets = useSafeAreaInsets();
+    // Base bottom padding: navbar height on button-nav, 12px fallback on gesture-nav
+    const navbarBottom = Platform.OS === 'android' ? Math.max(insets.bottom, 0) : 0;
 
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT + 150)).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -277,10 +281,24 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const [loading, setLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState(null);
 
-    // --- NEW STATE FOR IMAGES ---
     const [selectedImage, setSelectedImage] = useState(null);
     const [isSending, setIsSending] = useState(false);
     const [viewingImage, setViewingImage] = useState(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    useEffect(() => {
+        if (Platform.OS !== 'android') return;
+        const show = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const hide = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardHeight(0);
+        });
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, []);
 
     const flatListRef = useRef();
     const inputRef = useRef();
@@ -551,7 +569,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
         paddingBottom: 150 
     }]}
 >
-                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
                         {/* HEADER */}
                         <View style={styles.header}>
                             <View style={styles.grabber} />
@@ -604,7 +622,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 </View>
 
                 {/* FOOTER */}
-                <View style={styles.footer}>
+                <View style={[styles.footer, Platform.OS === 'android' && { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : navbarBottom + 12 }]}>
                     {/* Reply Context Banner */}
                     {replyingTo && (
                         <Animated.View style={styles.replyBanner}>
@@ -755,7 +773,7 @@ avatarWrapSmall: {
     timeText: { color: COLORS.textDim, fontSize: 11, fontFamily: 'Tajawal-Regular' },
     actionBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
     actionText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'Tajawal-Bold' },
-    footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: Platform.OS === 'ios' ? 40 : 15 },
+    footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: Platform.OS === 'ios' ? 34 : 0 },
     replyBanner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.accentGreen + '14', paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: 12, marginTop: 12, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.accentGreen + '33' },
     replyBannerContent: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
     replyVerticalLine: { width: 2, height: 24, backgroundColor: COLORS.accentGreen, borderRadius: 2 },

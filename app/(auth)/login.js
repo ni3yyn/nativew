@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { t } from '../../src/i18n';
 import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 import { useTheme } from '../../src/context/ThemeContext';
+import AppTextInput from '../../src/components/common/AppTextInput';
 
 const { width, height } = Dimensions.get('window');
 
@@ -92,7 +93,7 @@ const FloatingToast = ({ visible, title, message, type, lang, COLORS, isDark, st
     );
 };
 
-// --- ARCHITECTURAL INPUT (RTL PLACEHOLDER WHEN ARABIC, LTR INPUT) ---
+// --- ARCHITECTURAL INPUT (RTL PLACEHOLDER, LTR INPUT, CUSTOM FONT-SAFE PLACEHOLDER) ---
 const BioInput = ({ icon, COLORS, isDark, styles, placeholder, value, isRTL, ...props }) => {
     const [focused, setFocused] = useState(false);
     const focusAnim = useRef(new Animated.Value(0)).current;
@@ -137,34 +138,13 @@ const BioInput = ({ icon, COLORS, isDark, styles, placeholder, value, isRTL, ...
                 />
             </Animated.View>
 
-            {/* Field Area: Placeholder aligns to RTL when Arabic, Input is strictly LTR */}
+            {/* Field Area — uses AppTextInput for font-safe, centered placeholder */}
             <View style={styles.inputFieldWrapper}>
-                {!value && !focused && (
-                    <View 
-                        pointerEvents="none" 
-                        style={[
-                            styles.placeholderOverlay,
-                            { alignItems: isRTL ? 'flex-end' : 'flex-start' }
-                        ]}
-                    >
-                        <Text
-                            numberOfLines={1}
-                            style={[
-                                styles.placeholderText,
-                                { 
-                                    color: COLORS.textDim,
-                                    textAlign: isRTL ? 'right' : 'left',
-                                    writingDirection: isRTL ? 'rtl' : 'ltr',
-                                }
-                            ]}
-                        >
-                            {placeholder}
-                        </Text>
-                    </View>
-                )}
-                <TextInput
-                    placeholder=""
+                <AppTextInput
+                    placeholder={placeholder}
+                    placeholderTextColor={COLORS.textDim}
                     value={value}
+                    containerStyle={styles.textInputWrapper}
                     style={[
                         styles.textInput,
                         { 
@@ -173,6 +153,10 @@ const BioInput = ({ icon, COLORS, isDark, styles, placeholder, value, isRTL, ...
                             writingDirection: 'ltr',
                         }
                     ]}
+                    placeholderStyle={{
+                        textAlign: isRTL ? 'right' : 'left',
+                        writingDirection: isRTL ? 'rtl' : 'ltr',
+                    }}
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     selectionColor={COLORS.accentGreen}
@@ -740,21 +724,15 @@ const createLoginStyles = (COLORS, isDark) => StyleSheet.create({
     },
     inputFieldWrapper: {
         flex: 1,
-        height: '100%',
+        alignSelf: 'stretch',
         justifyContent: 'center',
         position: 'relative',
         paddingHorizontal: 8,
     },
-    placeholderOverlay: {
-        ...StyleSheet.absoluteFillObject,
+    textInputWrapper: {
+        width: '100%',
+        height: '100%',
         justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    placeholderText: {
-        fontFamily: 'Tajawal-Regular',
-        fontSize: 16,
-        includeFontPadding: false,
-        textAlignVertical: 'center',
     },
     textInput: { 
         width: '100%',

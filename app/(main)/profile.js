@@ -62,6 +62,7 @@ import { NatureDock } from '../../src/components/profile/NatureDock';
 import PremiumShareButton from '../../src/components/oilguard/ShareComponent';
 import { RemindersScreen } from '../../src/components/profile/routine/RemindersScreen';
 import { useRTL } from '../../src/hooks/useRTL';
+import { isAdMobAvailable, getAdMob } from '../../src/utils/safeAdMob';
 // --- 1. SYSTEM CONFIG ---
 const PROFILE_API_URL = "https://oilguard-backend.vercel.app/api";
 
@@ -70,18 +71,17 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 let AdsConsent;
-try {
-    if (Platform.OS !== 'web') {
-        const mobileAds = require('react-native-google-mobile-ads');
-        AdsConsent = mobileAds.AdsConsent;
-    } else {
-        throw new Error('AdMob not supported on web');
-    }
-} catch (e) {
-    console.log('AdMob native module not found (running in Expo Go). Using Mock.');
+if (isAdMobAvailable()) {
+    try {
+        const mobileAds = getAdMob();
+        AdsConsent = mobileAds?.AdsConsent;
+    } catch (_) {}
+}
+
+if (!AdsConsent) {
     AdsConsent = {
         showPrivacyOptionsForm: async () => {
-            console.log('Privacy Form Mock triggered');
+            console.log('Privacy Form Mock triggered (AdMob not available in Expo Go)');
             return { status: 'mocked' };
         }
     };

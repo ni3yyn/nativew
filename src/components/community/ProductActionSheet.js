@@ -15,6 +15,7 @@ import { getClaimsByProductType } from '../../constants/productData';
 import { t } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { AlertService } from '../../services/alertService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Full Screen Image Viewer
 import FullImageViewer from '../common/FullImageViewer';
@@ -82,6 +83,8 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const { userProfile } = useAppContext();
+    const insets = useSafeAreaInsets();
+    const bottomInset = Math.max(insets.bottom, 0);
 
     const [personalScore, setPersonalScore] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
@@ -413,7 +416,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
             <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
                 <Animated.View style={[styles.sheetBackdrop, { opacity: overlayOpacity }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-                    <Animated.View style={[styles.sheetContainer, isEditingClaims && { maxHeight: '90%' }, { transform: [{ translateY: modalTranslateY }] }]}>
+                    <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: modalTranslateY }] }]}>
                         <View style={styles.sheetHandle} />
                         
                         {/* CLICKABLE PRODUCT IMAGE */}
@@ -439,6 +442,7 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                             </StaggeredView>
                         )}
                         
+                        {/* SCROLLABLE CONTENT AREA */}
                         <View style={styles.content}>
                             <StaggeredView index={1}>
                                 <View style={styles.tabContainer}>
@@ -484,31 +488,32 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                                     <ScrollHint visible={showScrollHint && !isCalculating && !!personalScore && activeTab === 'personal'} color={COLORS.textPrimary} containerStyle={styles.scrollHintContainer} />
                                 </View>
                             )}
-                            
-                            <StaggeredView index={5}>
-                                <View style={styles.sheetActions}>
-                                    <TouchableOpacity style={styles.sheetBtnSecondary} onPress={handleClose}>
-                                        <Text style={styles.sheetBtnTextSec}>{t('community_close', language)}</Text>
-                                    </TouchableOpacity>
-                                    
-                                    <TouchableOpacity 
-                                        style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} 
-                                        onPress={handleSaveClick}
-                                        disabled={isSavingToShelf}
-                                        activeOpacity={0.8}
-                                    >
-                                        {isSavingToShelf ? (
-                                            <ActivityIndicator color={COLORS.textOnAccent} size="small" />
-                                        ) : (
-                                            <>
-                                                <Text style={styles.sheetBtnTextPrim}>{t('community_sheet_save_to_shelf', language)}</Text>
-                                                <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
-                            </StaggeredView>
                         </View>
+
+                        {/* PINNED ACTION BUTTONS — always visible at the bottom */}
+                        <StaggeredView index={5}>
+                            <View style={[styles.sheetActions, { paddingBottom: bottomInset + 16 }]}>
+                                <TouchableOpacity style={styles.sheetBtnSecondary} onPress={handleClose}>
+                                    <Text style={styles.sheetBtnTextSec}>{t('community_close', language)}</Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity 
+                                    style={[styles.sheetBtnPrimary, { backgroundColor: verdictColor }]} 
+                                    onPress={handleSaveClick}
+                                    disabled={isSavingToShelf}
+                                    activeOpacity={0.8}
+                                >
+                                    {isSavingToShelf ? (
+                                        <ActivityIndicator color={COLORS.textOnAccent} size="small" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.sheetBtnTextPrim}>{t('community_sheet_save_to_shelf', language)}</Text>
+                                            <FontAwesome5 name="bookmark" size={14} color={COLORS.textOnAccent} style={{ marginLeft: 8 }} />
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </StaggeredView>
                     </Animated.View>
                 </Animated.View>
             </Modal>
@@ -525,7 +530,15 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
 const createStyles = (COLORS) => StyleSheet.create({
     sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-    sheetContainer: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 180, marginBottom: -150, maxHeight: '90%' },
+    sheetContainer: {
+        backgroundColor: COLORS.card,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        height: '85%',
+        // Use flex column so content scrolls and buttons stay pinned
+        display: 'flex',
+        flexDirection: 'column',
+    },
     sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginTop: 15, marginBottom: 10 },
     imageHeader: { width: '100%', height: 160, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', marginTop: -29, marginBottom: 0, position: 'relative' },
     sheetMainImage: { width: '100%', height: '100%' },
@@ -540,7 +553,7 @@ const createStyles = (COLORS) => StyleSheet.create({
     },
     comparisonBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.border },
     compText: { color: '#FFF', fontFamily: 'Tajawal-Bold', fontSize: 11 },
-    content: { padding: 25, paddingTop: 15 },
+    content: { padding: 25, paddingTop: 15, flex: 1, minHeight: 0 },
     tabContainer: { flexDirection: 'row-reverse', backgroundColor: COLORS.background, borderRadius: 12, padding: 4, marginBottom: 15 },
     tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10 },
     activeTab: { backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.border },
@@ -570,13 +583,13 @@ const createStyles = (COLORS) => StyleSheet.create({
     claimText: { color: COLORS.textSecondary, fontSize: 12, fontFamily: 'Tajawal-Regular' },
     applyBtn: { backgroundColor: COLORS.accentGreen, padding: 10, borderRadius: 8, alignItems: 'center', marginTop: 15 },
     applyBtnText: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold', fontSize: 14 },
-    sheetActions: { flexDirection: 'row', gap: 15, marginTop: 10 },
+    sheetActions: { flexDirection: 'row', gap: 15, marginTop: -25, paddingHorizontal: 25, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border },
     sheetBtnPrimary: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
     sheetBtnSecondary: { flex: 0.5, padding: 15, borderRadius: 12, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.border },
     sheetBtnTextPrim: { color: COLORS.textOnAccent, fontFamily: 'Tajawal-Bold' },
     sheetBtnTextSec: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Bold' },
     scrollContainer: {
-        maxHeight: 250,
+        flex: 1,
         position: 'relative',
     },
     scrollHintContainer: {

@@ -15,6 +15,7 @@ import { setupNotificationChannelsAsync } from '../../../utils/notificationHelpe
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import AppTextInput from '../../common/AppTextInput';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,6 +23,8 @@ export const RemindersScreen = () => {
   const { colors: C } = useTheme();
   const styles = useMemo(() => createStyles(C),[C]);
   const language = useCurrentLanguage();
+  const insets = useSafeAreaInsets();
+  const floatingBottom = Math.max(insets.bottom, 16) + 14;
   
   const { reminders, addReminder, toggleReminder, deleteReminder, syncActiveReminders } = useRemindersStore();
 
@@ -289,7 +292,7 @@ export const RemindersScreen = () => {
       </ScrollView>
 
       {/* FLOATING ACTION CAPSULE */}
-      <View style={styles.floatingControlsContainer}>
+      <View style={[styles.floatingControlsContainer, { bottom: floatingBottom }]}>
           <TouchableOpacity 
               activeOpacity={0.9} 
               style={styles.floatingCapsule}

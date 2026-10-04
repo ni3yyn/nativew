@@ -13,6 +13,7 @@ import {
     Easing,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -726,6 +727,10 @@ export const NatureDock = ({
 
     const language = useCurrentLanguage();
 
+    // Respect system navigation bar height so the dock clears 3-button nav bars
+    const insets = useSafeAreaInsets();
+    const dockBottomOffset = Math.max(insets.bottom, 16) + 19;
+
     const theme = useMemo(
         () => getThemeTokens(COLORS, activeThemeId),
         [COLORS, activeThemeId]
@@ -820,7 +825,7 @@ export const NatureDock = ({
             ================================================================ */}
 
             <View
-                style={styles.dockPosition}
+                style={[styles.dockPosition, { bottom: dockBottomOffset }]}
                 pointerEvents="box-none"
             >
                 {/* ============================================================
@@ -1001,7 +1006,7 @@ const createStyles = (theme) =>
 
         dockPosition: {
             position: 'absolute',
-            bottom: 35,
+            bottom: 35, // overridden dynamically by dockBottomOffset
             left: 0,
             right: 0,
             alignItems: 'center',

@@ -9,7 +9,7 @@ export const isAdMobAvailable = () => {
   if (Platform.OS === 'web') return false;
 
   try {
-    // 1. Check New Architecture TurboModuleRegistry
+    // 1. Check New Architecture TurboModuleRegistry (returns null if not registered, does NOT throw)
     if (TurboModuleRegistry?.get && TurboModuleRegistry.get('RNGoogleMobileAdsModule')) {
       return true;
     }
@@ -17,9 +17,7 @@ export const isAdMobAvailable = () => {
     if (NativeModules?.RNGoogleMobileAdsModule) {
       return true;
     }
-    // 3. Fallback: try requiring the module directly
-    const adMob = require('react-native-google-mobile-ads');
-    return Boolean(adMob && adMob.default);
+    return false;
   } catch (_) {
     return false;
   }

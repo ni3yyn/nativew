@@ -1372,7 +1372,7 @@ const createStyles = (COLORS, rtl, insets) => StyleSheet.create({
     footer: {
         paddingHorizontal: 20,
         paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? Math.max(insets?.bottom || 0, 20) + 6 : 16,
+        paddingBottom: Platform.OS === 'ios' ? Math.max(insets?.bottom || 0, 20) + 6 : Math.max(insets?.bottom || 0, 0) + 16,
         borderTopWidth: 0.8,
     },
     submitButton: {
