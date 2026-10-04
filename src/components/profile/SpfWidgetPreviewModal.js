@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import Notifications from '../../utils/safeNotifications';
+import { setupNotificationChannelsAsync } from '../../utils/notificationHelper';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
@@ -463,6 +464,7 @@ export const SpfWidgetPreviewModal = ({ visible, onClose }) => {
     const scheduleBackgroundNotification = async (durationSec) => {
         try {
             if (Platform.OS === 'web') return;
+            await setupNotificationChannelsAsync();
             const { status } = await Notifications.requestPermissionsAsync();
             if (status === 'granted') {
                 const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -482,6 +484,7 @@ export const SpfWidgetPreviewModal = ({ visible, onClose }) => {
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DATE,
                         date: triggerDate,
+                        channelId: 'oilguard-smart',
                     },
                 });
             }

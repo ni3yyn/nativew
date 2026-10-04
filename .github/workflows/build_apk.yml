@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout Code
-      - name: ?? Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       # 2. Setup Java

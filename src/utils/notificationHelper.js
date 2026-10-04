@@ -100,6 +100,12 @@ const generateSmartMessage = (type, date, name, savedProducts, settings, lang) =
 export async function setupNotificationChannelsAsync() {
   if (Platform.OS === 'android') {
     try {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'General Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+      });
       await Notifications.setNotificationChannelAsync('oilguard-smart', {
         name: 'Smart Skincare Reminders',
         importance: Notifications.AndroidImportance.MAX,
