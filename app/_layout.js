@@ -25,6 +25,7 @@ import { db } from '../src/config/firebase';
 // Import Notification Helper
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 import * as NavigationBar from 'expo-navigation-bar';
+import { isAdMobAvailable, getAdMob, getAppOpenAdUnitId, initializeAdMobAsync, interpretAdError } from '../src/utils/safeAdMob';
 
 // Disable native OS-level RTL mirroring so the layout is not double-inverted on Arabic devices
 try {
@@ -194,72 +195,102 @@ export const useSilentUpdates = () => {
 
 const useAppOpenAd = () => {
   useEffect(() => {
-    const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
-    if (!isAdMobLinked) return;
+    if (!isAdMobAvailable()) {
+      return;
+    }
 
     try {
-      const adMob = require('react-native-google-mobile-ads');
+      const adMob = getAdMob();
+      if (!adMob) return;
       const { AppOpenAd, AdEventType } = adMob;
-      const adUnitId = 'ca-app-pub-6010052879824695/8213348420';
+      const adUnitId = getAppOpenAdUnitId();
 
-      const appOpenAd = AppOpenAd.createForAdRequest(adUnitId, {
-        requestNonPersonalizedAdsOnly: true,
-      });
+      let appOpenAd = null;
+      let isFirstLaunch = true;
+      let isAdLoaded = false;
+      let isAdShowing = false;
+      let unsubscribeLoaded = null;
+      let unsubscribeClosed = null;
+      let unsubscribeError = null;
 
-      let isFirstLaunch = true; // Track if it's the first time opening the app
+      const loadNextAd = () => {
+        try {
+          if (unsubscribeLoaded) unsubscribeLoaded();
+          if (unsubscribeClosed) unsubscribeClosed();
+          if (unsubscribeError) unsubscribeError();
 
-      // 1. When loaded, ONLY show if it's the very first app launch
-      const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-        console.log('App Open Ad Loaded');
-        if (isFirstLaunch) {
-          adIsVisibleRef.current = true;
-          appOpenAd.show();
-          isFirstLaunch = false;
-        }
-      });
+          isAdLoaded = false;
+          // Re-create ad instance for next request (required by Mobile Ads SDK)
+          appOpenAd = AppOpenAd.createForAdRequest(adUnitId);
 
-      // 2. When closed, SILENTLY load the next ad so it's ready for later
-      const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-        console.log('App Open Ad Closed - Preloading next');
-        adIsVisibleRef.current = false;
-        appOpenAd.load();
-        // Notice we do NOT show it here.
-      });
-
-      const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
-        console.log('App Open Ad Error:', error);
-        adIsVisibleRef.current = false;
-      });
-
-      // 3. Initial Load
-      appOpenAd.load();
-
-      // 4. Show the preloaded ad ONLY when the app comes back from the background
-      const appStateSub = AppState.addEventListener('change', (nextAppState) => {
-        if (nextAppState === 'active') {
-          try {
-            if (appOpenAd.loaded) {
-              adIsVisibleRef.current = true;
-              appOpenAd.show();
-            } else {
-              appOpenAd.load();
+          unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+            console.log('✅ [AdMob] App Open Ad Loaded');
+            isAdLoaded = true;
+            if (isFirstLaunch) {
+              isFirstLaunch = false;
+              showCurrentAd();
             }
-          } catch (error) {
-            console.log("Error showing App Open Ad on resume", error);
+          });
+
+          unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+            console.log('🔄 [AdMob] App Open Ad Closed - Preloading next');
             adIsVisibleRef.current = false;
+            isAdShowing = false;
+            isAdLoaded = false;
+            setTimeout(loadNextAd, 1000);
+          });
+
+          unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
+            console.warn('⚠️ [AdMob] App Open Ad Error:', interpretAdError(error));
+            adIsVisibleRef.current = false;
+            isAdShowing = false;
+            isAdLoaded = false;
+            // Retry after delay
+            setTimeout(loadNextAd, 15000);
+          });
+
+          appOpenAd.load();
+        } catch (err) {
+          console.warn('⚠️ [AdMob] Failed to create AppOpenAd instance:', err);
+        }
+      };
+
+      const showCurrentAd = () => {
+        if (!appOpenAd || !isAdLoaded || isAdShowing) return;
+        try {
+          adIsVisibleRef.current = true;
+          isAdShowing = true;
+          appOpenAd.show();
+        } catch (error) {
+          console.warn('⚠️ [AdMob] Error showing App Open Ad:', error);
+          adIsVisibleRef.current = false;
+          isAdShowing = false;
+        }
+      };
+
+      // Initial Load
+      loadNextAd();
+
+      // Show the preloaded ad when the app comes back from the background
+      const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'active' && !isAdShowing) {
+          if (isAdLoaded) {
+            showCurrentAd();
+          } else {
+            loadNextAd();
           }
         }
       });
 
       return () => {
-        unsubscribeLoaded();
-        unsubscribeClosed();
-        unsubscribeError();
+        if (unsubscribeLoaded) unsubscribeLoaded();
+        if (unsubscribeClosed) unsubscribeClosed();
+        if (unsubscribeError) unsubscribeError();
         appStateSub.remove();
       };
 
     } catch (e) {
-      console.log("AdMob Init Error:", e);
+      console.warn("⚠️ [AdMob] useAppOpenAd Init Error:", e);
     }
   }, []);
 };
@@ -401,16 +432,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
   // --- INIT ADMOB ---
   useEffect(() => {
-    try {
-      const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
-      if (isAdMobLinked) {
-        const adMob = require('react-native-google-mobile-ads');
-        const mobileAds = adMob.default;
-        mobileAds().initialize();
-      }
-    } catch (e) {
-      console.warn("AdMob initialize failed", e);
-    }
+    initializeAdMobAsync();
   }, []);
 
   // --- CHECK OPTIONAL UPDATE ---

@@ -41,6 +41,7 @@ import { VerifiedChoiceCard } from '../../src/components/oilguard/VerifiedChoice
 import { VerifiedDetailModal } from '../../src/components/oilguard/VerifiedDetailModal';
 import { scheduleAuthenticNotifications } from '../../src/utils/notificationHelper';
 import ProductResultHeader from '../../src/components/oilguard/ProductResultHeader';
+import { isAdMobAvailable, getAdMob, getInterstitialAdUnitId, interpretAdError } from '../../src/utils/safeAdMob';
 
 // --- DATA IMPORTS REMOVED: LOGIC IS NOW ON SERVER ---
 
@@ -72,20 +73,21 @@ const normalizeForMatching = (name) => {
 };
 
 
-// 🔥 YOUR REAL INTERSTITIAL ID
-const INTERSTITIAL_ID = 'ca-app-pub-6010052879824695/5539413194';
-
 let useInterstitialAd;
-const isAdMobLinked = Platform.OS !== 'web' && !!NativeModules.RNGoogleMobileAdsModule;
+const isAdMobLinked = isAdMobAvailable();
 
 if (isAdMobLinked) {
-    // ✅ REAL ADMOB (For APK)
+    // ✅ REAL ADMOB (For APK / Dev Client)
     try {
-        const adMob = require('react-native-google-mobile-ads');
-        useInterstitialAd = adMob.useInterstitialAd;
-
-        // Initialize the SDK immediately (Prevents "Not Initialized" errors)
-        adMob.default().initialize();
+        const adMob = getAdMob();
+        if (adMob && adMob.useInterstitialAd) {
+            useInterstitialAd = adMob.useInterstitialAd;
+            if (adMob.default) {
+                adMob.default().initialize().catch(() => {});
+            }
+        } else {
+            setupMockAds();
+        }
     } catch (e) {
         console.warn("Failed to load Google Mobile Ads:", e);
         setupMockAds();
@@ -1890,25 +1892,30 @@ export default function OilGuardEngine() {
     // --- ADS ENABLED: INTERSTITIAL LOGIC ---------------------
     // ---------------------------------------------------------
 
-    const { isLoaded, isClosed, load, show, error } = useInterstitialAd(INTERSTITIAL_ID, {
-        requestNonPersonalizedAdsOnly: true,
-    });
+    const interstitialUnitId = getInterstitialAdUnitId();
+    const { isLoaded, isClosed, load, show, error } = useInterstitialAd(interstitialUnitId, {});
 
-    // 🔥 NEW: Create a Ref to track ad status instantly
+    // 🔥 Create a Ref to track ad status instantly
     const isAdReadyRef = useRef(false);
 
     // 1. Sync the Ref with the State whenever it changes
     useEffect(() => {
         isAdReadyRef.current = isLoaded; // Update the Ref
-        if (isLoaded) console.log("✅ Ad is Ready (Ref Updated)!");
+        if (isLoaded) console.log("✅ [OilGuard Ad] Interstitial is Ready (Ref Updated)!");
     }, [isLoaded]);
 
+    // 1b. Diagnose errors (e.g. no-fill, network, invalid unit)
+    useEffect(() => {
+        if (error) {
+            console.warn("⚠️ [OilGuard Ad] Interstitial Load Error:", interpretAdError(error));
+        }
+    }, [error]);
 
     // 2. Load Ad on Mount
     useEffect(() => {
-        console.log("🔄 Initial Ad Request...");
+        console.log("🔄 [OilGuard Ad] Initial Interstitial Request with unit:", interstitialUnitId);
         load();
-    }, []);
+    }, [load, interstitialUnitId]);
 
     // 2b. Automatically parse catalog ingredients via AI on mount if isAutoStart is true
     useEffect(() => {
@@ -1988,13 +1995,26 @@ export default function OilGuardEngine() {
         }
     }, [isAutoStart, params?.ingredients, changeStep]);
 
-    // 3. Reload Ad after it closes
+    // 3. Reload Ad after it closes or after error
     useEffect(() => {
         if (isClosed) {
-            console.log("🔄 Ad closed. Loading next one...");
-            load();
+            console.log("🔄 [OilGuard Ad] Ad closed. Preloading next one...");
+            const timer = setTimeout(() => {
+                load();
+            }, 1000);
+            return () => clearTimeout(timer);
         }
-    }, [isClosed]);
+    }, [isClosed, load]);
+
+    useEffect(() => {
+        if (error) {
+            console.log("🔄 [OilGuard Ad] Retrying ad load in 15s after error...");
+            const timer = setTimeout(() => {
+                load();
+            }, 15000);
+            return () => clearTimeout(timer);
+        }
+    }, [error, load]);
 
     // ---------------------------------------------------------
     // --- ADS END ------------------------------------
