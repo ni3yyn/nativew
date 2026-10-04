@@ -4,7 +4,6 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, orderBy, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { auth, db } from '../config/firebase'; 
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { 
   setSavedProductsCache, 
@@ -12,6 +11,7 @@ import {
   setSelfProfileCache,   
   getSelfProfileCache    
 } from '../services/cachingService'; 
+import Notifications from '../utils/safeNotifications';
 
 const AppContext = createContext();
 

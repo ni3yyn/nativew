@@ -1,19 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, NativeModules, Pressable, Linking, ScrollView, Animated, AppState, Platform, I18nManager } from 'react-native';
 import { Stack, useRouter } from "expo-router";
-
-// Disable native OS-level RTL mirroring so the layout is not double-inverted on Arabic devices
-try {
-  I18nManager.allowRTL(false);
-  I18nManager.forceRTL(false);
-} catch (e) {}
 import { AppProvider, useAppContext } from "../src/context/AppContext";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
+import Notifications from '../src/utils/safeNotifications';
 import * as Updates from 'expo-updates';
 import { FontAwesome5, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,14 +26,14 @@ import { db } from '../src/config/firebase';
 import { scheduleAuthenticNotifications } from '../src/utils/notificationHelper';
 import * as NavigationBar from 'expo-navigation-bar';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    
-  }),
-});
+// Disable native OS-level RTL mirroring so the layout is not double-inverted on Arabic devices
+try {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+} catch (e) {}
+
+// Note: Notifications.setNotificationHandler is configured in AppContext.js
+// with a safe lazy require() that doesn't crash in Expo Go.
 
 SplashScreen.preventAutoHideAsync();
 
@@ -520,7 +514,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
 
         // B. CHECK STATUS
         if (finalStatus !== 'granted') {
-          // If the user still hasn't granted permission, check if we should show the custom modal
+          notificationScheduleLock.current = false; // Allow retry when permission is granted
           const hasSkipped = await AsyncStorage.getItem('skipped_notif_permission');
           if (hasSkipped !== 'true') {
             setShowNotificationModal(true);

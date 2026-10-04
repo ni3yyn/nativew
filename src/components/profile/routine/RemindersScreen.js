@@ -2,13 +2,16 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Switch, Modal, TextInput, Dimensions, KeyboardAvoidingView, Platform,
-  Animated, Pressable, Easing, Alert
+  Animated, Pressable, Easing, Alert, AppState
 } from 'react-native';
 import { MaterialIcons, Feather, FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useRemindersStore } from '../useRemindersStore';
+import Notifications from '../../../utils/safeNotifications';
+import { setupNotificationChannelsAsync } from '../../../utils/notificationHelper';
 import { t } from '../../../i18n';
 import { useCurrentLanguage } from '../../../hooks/useCurrentLanguage';
 import AppTextInput from '../../common/AppTextInput';
@@ -20,18 +23,67 @@ export const RemindersScreen = () => {
   const styles = useMemo(() => createStyles(C),[C]);
   const language = useCurrentLanguage();
   
-  const { reminders, addReminder, toggleReminder, deleteReminder } = useRemindersStore();
+  const { reminders, addReminder, toggleReminder, deleteReminder, syncActiveReminders } = useRemindersStore();
 
-  const[isModalVisible, setModalVisible] = useState(false);
+  const [hasPermission, setHasPermission] = useState(true);
+  const [isModalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('daily');
   const [selectedDay, setSelectedDay] = useState(6); 
   
   const [time, setTime] = useState(new Date(new Date().setHours(20, 0, 0, 0)));
-  const[showTimePicker, setShowTimePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Animation Controllers
   const animController = useRef(new Animated.Value(0)).current;
+
+  // Check permission and sync active reminders on mount & app foreground
+  const checkPermissionAndSync = async () => {
+    try {
+      await setupNotificationChannelsAsync();
+      const { status } = await Notifications.getPermissionsAsync();
+      const granted = status === 'granted';
+      setHasPermission(granted);
+      if (granted && syncActiveReminders) {
+        await syncActiveReminders();
+      }
+      return granted;
+    } catch (e) {
+      console.warn('Error checking permissions in RemindersScreen:', e);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    checkPermissionAndSync();
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        checkPermissionAndSync();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleRequestPermission = async () => {
+    try {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          setHasPermission(true);
+          if (syncActiveReminders) await syncActiveReminders();
+          return;
+        }
+      }
+      Linking.openSettings();
+    } catch (_) {
+      Linking.openSettings();
+    }
+  };
 
   useEffect(() => {
     if (isModalVisible) {
@@ -75,13 +127,11 @@ export const RemindersScreen = () => {
 
   const handleSave = async () => {
     if (!title.trim()) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        return; 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return; 
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    await addReminder({
+    const notifId = await addReminder({
       title: title.trim(),
       body: t('reminders_body', language),
       type,
@@ -90,9 +140,48 @@ export const RemindersScreen = () => {
       minute: time.getMinutes(),
     });
 
+    if (notifId) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      const granted = await checkPermissionAndSync();
+      if (!granted) {
+        Alert.alert(
+          language === 'ar' ? 'تنبيه: الإشعارات معطلة' : 'Notifications Disabled',
+          language === 'ar'
+            ? 'تم حفظ التذكير، لكن لن يصلك إشعار في الموعد المحدد لأن إشعارات التطبيق معطلة في هاتفك. يرجى تفعيلها من الإعدادات.'
+            : 'Reminder saved, but notifications are disabled on your device. Please enable them in Settings to receive alerts.',
+          [
+            { text: t('alert_cancel', language), style: 'cancel' },
+            { text: language === 'ar' ? 'الإعدادات' : 'Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+      }
+    }
+
     setTitle('');
     setType('daily');
     handleCloseModal();
+  };
+
+  const handleToggleReminder = async (reminder) => {
+    Haptics.selectionAsync();
+    const success = await toggleReminder(reminder.id);
+    if (!success && !reminder.isActive) {
+      const granted = await checkPermissionAndSync();
+      if (!granted) {
+        Alert.alert(
+          language === 'ar' ? 'تفعيل الإشعارات مطلوب' : 'Permission Required',
+          language === 'ar'
+            ? 'يرجى السماح بالإشعارات في هاتفك لتشغيل هذا التذكير.'
+            : 'Please enable notifications on your phone to activate this reminder.',
+          [
+            { text: t('alert_cancel', language), style: 'cancel' },
+            { text: language === 'ar' ? 'الإعدادات' : 'Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+      }
+    }
   };
 
   const handleDelete = (id) => {
@@ -123,6 +212,29 @@ export const RemindersScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+        {!hasPermission && (
+          <TouchableOpacity
+            style={styles.permissionWarningBanner}
+            activeOpacity={0.8}
+            onPress={handleRequestPermission}
+          >
+            <View style={styles.permissionIconCircle}>
+              <Feather name="bell-off" size={20} color="#FF9800" />
+            </View>
+            <View style={styles.permissionWarningTextWrap}>
+              <Text style={styles.permissionWarningTitle}>
+                {language === 'ar' ? 'الإشعارات معطلة في جهازك' : 'Notifications are Disabled'}
+              </Text>
+              <Text style={styles.permissionWarningText}>
+                {language === 'ar'
+                  ? 'اضغط هنا لتفعيل إشعارات التطبيق لكي تنبهك التذكيرات'
+                  : 'Tap here to enable notifications so reminders can alert you'}
+              </Text>
+            </View>
+            <Feather name={language === 'ar' ? 'chevron-left' : 'chevron-right'} size={18} color={C.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         {reminders.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconBox}>
@@ -150,10 +262,7 @@ export const RemindersScreen = () => {
                 <Switch
                   trackColor={{ false: C.textDim + '40', true: C.primary + '80' }}
                   thumbColor={reminder.isActive ? C.primary : C.card}
-                  onValueChange={() => {
-                      Haptics.selectionAsync();
-                      toggleReminder(reminder.id);
-                  }}
+                  onValueChange={() => handleToggleReminder(reminder)}
                   value={reminder.isActive}
                 />
               </View>
@@ -429,4 +538,43 @@ inputIcon: {
   // Soft Solid Disabled State
   promptButtonDisabled: { backgroundColor: C.textDim + '15' },
   promptButtonTextDisabled: { fontFamily: 'Tajawal-Bold', fontSize: 15, color: C.textDim },
+
+  // Permission warning banner
+  permissionWarningBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#FF980018',
+    borderColor: '#FF980040',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  permissionIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FF980025',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionWarningTextWrap: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  permissionWarningTitle: {
+    fontFamily: 'Tajawal-Bold',
+    fontSize: 14,
+    color: '#FF9800',
+    marginBottom: 2,
+    textAlign: 'right',
+  },
+  permissionWarningText: {
+    fontFamily: 'Tajawal-Medium',
+    fontSize: 12,
+    color: C.textSecondary,
+    textAlign: 'right',
+    lineHeight: 16,
+  },
 });

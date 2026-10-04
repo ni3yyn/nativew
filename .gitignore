@@ -15,6 +15,7 @@ android/build/
 android/.gradle
 android/local.properties
 android/app/build/
+android/app/src/main/java/inline/
 ios/build/
 ios/Pods/
 *.orig.*

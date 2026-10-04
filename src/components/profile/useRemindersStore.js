@@ -19,14 +19,16 @@ export const useRemindersStore = create(
         // Schedule it and save the generated Expo notification ID
         const notifId = await scheduleCustomReminder(newReminder);
         newReminder.notificationId = notifId;
+        newReminder.isActive = Boolean(notifId);
 
         set((state) => ({ reminders: [...state.reminders, newReminder] }));
+        return notifId;
       },
 
       toggleReminder: async (id) => {
         const state = get();
         const reminder = state.reminders.find(r => r.id === id);
-        if (!reminder) return;
+        if (!reminder) return false;
 
         const newIsActive = !reminder.isActive;
         let newNotifId = reminder.notificationId;
@@ -34,6 +36,10 @@ export const useRemindersStore = create(
         if (newIsActive) {
           // Re-schedule
           newNotifId = await scheduleCustomReminder({ ...reminder, isActive: true });
+          if (!newNotifId) {
+            // Failed to schedule (e.g. permission denied)
+            return false;
+          }
         } else {
           // Cancel
           if (reminder.notificationId) {
@@ -47,6 +53,7 @@ export const useRemindersStore = create(
             r.id === id ? { ...r, isActive: newIsActive, notificationId: newNotifId } : r
           )
         }));
+        return true;
       },
 
       deleteReminder: async (id) => {
@@ -60,6 +67,22 @@ export const useRemindersStore = create(
         set((state) => ({
           reminders: state.reminders.filter(r => r.id !== id)
         }));
+      },
+
+      syncActiveReminders: async () => {
+        const state = get();
+        if (!state.reminders || state.reminders.length === 0) return;
+
+        const updated = await Promise.all(
+          state.reminders.map(async (r) => {
+            if (r.isActive) {
+              const notifId = await scheduleCustomReminder(r);
+              return { ...r, notificationId: notifId || r.notificationId };
+            }
+            return r;
+          })
+        );
+        set({ reminders: updated });
       }
     }),
     {

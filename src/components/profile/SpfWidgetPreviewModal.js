@@ -16,7 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5, MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import * as Notifications from 'expo-notifications';
+import Notifications from '../../utils/safeNotifications';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
@@ -465,13 +465,19 @@ export const SpfWidgetPreviewModal = ({ visible, onClose }) => {
             if (Platform.OS === 'web') return;
             const { status } = await Notifications.requestPermissionsAsync();
             if (status === 'granted') {
-                await Notifications.cancelAllScheduledNotificationsAsync();
+                const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+                for (const notif of scheduled) {
+                    if (notif.content?.data?.type === 'spf') {
+                        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+                    }
+                }
                 const triggerDate = new Date(Date.now() + durationSec * 1000);
                 await Notifications.scheduleNotificationAsync({
                     content: {
                         title: '☀️ حان وقت تجديد واقي الشمس!',
                         body: `مستوى الأشعة الآن (UV ${uvProfile.level}). تلاشت طبقة الحماية، يُرجى التجديد للحفاظ على بشرتك.`,
                         sound: 'default',
+                        data: { type: 'spf' },
                     },
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DATE,

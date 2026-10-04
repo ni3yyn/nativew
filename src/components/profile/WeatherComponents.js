@@ -23,7 +23,6 @@ import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { PressableScale, StaggeredItem } from '../common/Animations';
-import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
 import { AlertService } from '../../services/alertService';
 import { useTheme } from '../../context/ThemeContext';
@@ -51,15 +50,7 @@ const ARC_CONFIG = {
 
 const { width } = Dimensions.get('window');
 
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowAlert: true,
-    }),
-});
+// Note: setNotificationHandler is managed centrally in AppContext.js.
 
 // ============================================================================
 //                       1. SKELETON LOADER

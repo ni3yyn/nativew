@@ -1,20 +1,12 @@
-import * as Notifications from 'expo-notifications';
+import Notifications from './safeNotifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 // ==============================================================================
 // 1. CONFIGURATION & HANDLERS
 // ==============================================================================
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true, // FIXED: No more deprecated warnings
-    shouldShowList: true,   // FIXED: iOS 14+ requirement
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowAlert: true,
-  }),
-});
+// Note: setNotificationHandler is managed centrally in AppContext.js.
+// Do not call it here to avoid duplicate handler registration.
 
 // ==============================================================================
 // 2. INTELLIGENCE HELPERS
@@ -105,21 +97,31 @@ const generateSmartMessage = (type, date, name, savedProducts, settings, lang) =
   return seasonBank[Math.floor(Math.random() * seasonBank.length)];
 };
 
-export async function registerForPushNotificationsAsync() {
+export async function setupNotificationChannelsAsync() {
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('oilguard-smart', {
-      name: 'Smart Skincare Reminders',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#5A9C84',
-    });
-    await Notifications.setNotificationChannelAsync('wathiq-custom', {
+    try {
+      await Notifications.setNotificationChannelAsync('oilguard-smart', {
+        name: 'Smart Skincare Reminders',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#5A9C84',
+        sound: 'default',
+      });
+      await Notifications.setNotificationChannelAsync('wathiq-custom', {
         name: 'My Custom Reminders',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 500, 200, 500],
         lightColor: '#FFD700',
-    });
+        sound: 'default',
+      });
+    } catch (e) {
+      console.warn('Failed to setup notification channels:', e);
+    }
   }
+}
+
+export async function registerForPushNotificationsAsync() {
+  await setupNotificationChannelsAsync();
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -179,7 +181,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
             title: isWeekend ? t('notif_morning_title_weekend', lang) : t('notif_morning_title_standard', lang),
             body: msg,
             data: { screen: 'routine', period: 'am', type: 'smart' },
-            sound: true,
+            sound: 'default',
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -199,7 +201,7 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
             title: t('notif_evening_title', lang),
             body: msg,
             data: { screen: 'routine', period: 'pm', type: 'smart' },
-            sound: true,
+            sound: 'default',
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -216,9 +218,31 @@ export async function scheduleAuthenticNotifications(userName, savedProducts, se
 // ==============================================================================
 
 export async function scheduleCustomReminder(reminder) {
-  if (!reminder.isActive) return null;
+  if (!reminder || !reminder.isActive) return null;
 
   try {
+      // 1. Ensure channel is created on Android
+      await setupNotificationChannelsAsync();
+
+      // 2. Ensure permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+          console.warn("[scheduleCustomReminder] Notification permission not granted:", finalStatus);
+          return null;
+      }
+
+      // 3. Cancel previous scheduled notification if exists to avoid duplicates
+      if (reminder.notificationId) {
+          try {
+              await Notifications.cancelScheduledNotificationAsync(reminder.notificationId);
+          } catch (_) {}
+      }
+
       const h = parseInt(reminder.hour, 10);
       const m = parseInt(reminder.minute, 10);
 
@@ -226,7 +250,7 @@ export async function scheduleCustomReminder(reminder) {
 
       if (reminder.type === 'weekly') {
           trigger = {
-              type: Notifications.SchedulableTriggerInputTypes.WEEKLY, // EXPLICITLY SET
+              type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
               weekday: parseInt(reminder.weekday, 10),
               hour: h,
               minute: m,
@@ -235,7 +259,7 @@ export async function scheduleCustomReminder(reminder) {
       } else {
           // Default to Daily
           trigger = {
-              type: Notifications.SchedulableTriggerInputTypes.DAILY, // EXPLICITLY SET
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
               hour: h,
               minute: m,
               channelId: 'wathiq-custom',
@@ -245,13 +269,14 @@ export async function scheduleCustomReminder(reminder) {
       const id = await Notifications.scheduleNotificationAsync({
           content: {
               title: reminder.title || t('notif_custom_title'),
-              body: reminder.body || t('notif_custom_body'),
+              body: reminder.body || t('reminders_body'),
               data: { screen: 'routine', type: 'custom', reminderId: reminder.id },
-              sound: true,
+              sound: 'default',
           },
           trigger: trigger
       });
       
+      console.log(`🔔 [scheduleCustomReminder] Scheduled reminder "${reminder.title}" (${reminder.type}) at ${h}:${m}, ID: ${id}`);
       return id;
   } catch (error) {
       console.error("Failed to schedule custom reminder:", error);
@@ -261,7 +286,11 @@ export async function scheduleCustomReminder(reminder) {
 
 export async function cancelCustomReminder(notificationId) {
   if (notificationId) {
-      await Notifications.cancelScheduledNotificationAsync(notificationId);
+      try {
+          await Notifications.cancelScheduledNotificationAsync(notificationId);
+      } catch (e) {
+          console.warn("Failed to cancel custom reminder:", e);
+      }
   }
 }
 
@@ -271,14 +300,15 @@ export async function cancelCustomReminder(notificationId) {
 
 export async function testInstantNotification() {
   try {
+      await setupNotificationChannelsAsync();
       await Notifications.scheduleNotificationAsync({
           content: {
               title: t('notif_test_title'),
               body: t('notif_test_body'),
-              sound: true,
+              sound: 'default',
           },
           trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, // EXPLICITLY SET
+              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
               seconds: 10,
               channelId: 'wathiq-custom',
           }
