@@ -31,7 +31,9 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
     const { colors: C } = useTheme();
     const styles = useMemo(() => createStyles(C), [C]);
     const language = useCurrentLanguage();
+    const insets = useSafeAreaInsets();
     const animController = useRef(new Animated.Value(0)).current;
+    const keyboardAnim = useRef(new Animated.Value(0)).current;
     const [stepName, setStepName] = useState('');
     const [isMounted, setIsMounted] = useState(false);
     const inputRef = useRef(null);
@@ -54,6 +56,48 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
         }
     }, [isVisible]);
 
+    // Manual keyboard tracking. On iOS the reported height already includes the
+    // safe-area / home indicator, so we subtract the bottom inset to avoid
+    // overshooting. On Android the reported height is the raw IME height and
+    // the sheet already sits above the nav bar, so we use it as-is.
+    useEffect(() => {
+        if (!isVisible) return;
+
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e) => {
+            const rawHeight = e.endCoordinates?.height || 0;
+            const offset = Platform.OS === 'ios'
+                ? Math.max(rawHeight - insets.bottom, 0)
+                : rawHeight;
+            Animated.timing(keyboardAnim, {
+                toValue: offset,
+                duration: Platform.OS === 'ios' ? (e.duration || 250) : 200,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const onHide = (e) => {
+            Animated.timing(keyboardAnim, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration || 250) : 200,
+                easing: Easing.in(Easing.ease),
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+            keyboardAnim.setValue(0);
+        };
+    }, [isVisible, insets.bottom]);
+
     const handleClose = () => {
         Keyboard.dismiss();
         Animated.timing(animController, { toValue: 0, duration: 220, useNativeDriver: true })
@@ -70,6 +114,7 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
 
     const translateY = animController.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
     const backdropOpacity = animController.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] });
+    const keyboardOffset = Animated.multiply(keyboardAnim, -1);
 
     if (!isVisible && !isMounted) return null;
 
@@ -79,10 +124,26 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                 <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
             </Animated.View>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }} pointerEvents="box-none">
-                <Animated.View style={{ transform: [{ translateY }], width: '100%', marginBottom: -150, backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0.5, borderColor: C.border, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 20 }}>
+            <View style={{ flex: 1, justifyContent: 'flex-end', zIndex: 100 }} pointerEvents="box-none">
+                <Animated.View
+                    style={{
+                        transform: [{ translateY }, { translateY: keyboardOffset }],
+                        width: '100%',
+                        backgroundColor: C.card,
+                        borderTopLeftRadius: 28,
+                        borderTopRightRadius: 28,
+                        borderWidth: 0.5,
+                        borderColor: C.border,
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: -8 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 16,
+                        elevation: 20,
+                    }}
+                >
                     <View style={styles.sheetHandleBar}><View style={styles.sheetHandle} /></View>
-                    <View style={{ padding: 25, paddingBottom: 170 }}>
+                    <View style={{ padding: 25, paddingBottom: 30 }}>
                         <View style={{ alignItems: 'center', marginBottom: 20 }}>
                             <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.accentGreen + '20', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
                                 <FontAwesome5 name="layer-group" size={24} color={C.accentGreen} />
@@ -90,21 +151,54 @@ export const AddStepModal = ({ isVisible, onClose, onAdd }) => {
                             <Text style={styles.modalTitle}>{t('routine_add_step_title', language)}</Text>
                             <Text style={styles.modalDescription}>{t('routine_add_step_desc', language)}</Text>
                         </View>
-                        <View style={styles.inputWrapper}>
-                            <AppTextInput ref={inputRef} placeholder={t('routine_step_name_placeholder', language)} placeholderTextColor={C.textDim} style={[styles.enhancedInput, { fontFamily: stepName.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular', fontWeight: 'normal' }]} value={stepName} onChangeText={setStepName} textAlign="right" />
-                            <View style={styles.inputIcon}><Feather name="edit-3" size={16} color={C.accentGreen} /></View>
+
+                        {/* Styled input container — styling lives on the wrapper, input fills it */}
+                        <View style={styles.enhancedInputWrapper}>
+                            <AppTextInput
+                                ref={inputRef}
+                                placeholder={t('routine_step_name_placeholder', language)}
+                                placeholderTextColor={C.textDim}
+                                style={{
+                                    flex: 1,
+                                    height: 54,
+                                    color: C.textPrimary,
+                                    fontSize: 16,
+                                    lineHeight: 20,
+                                    textAlign: 'right',
+                                    textAlignVertical: 'center',
+                                    paddingTop: 0,
+                                    paddingBottom: 0,
+                                    paddingLeft: 0,
+                                    paddingRight: 0,
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 0,
+                                    fontFamily: stepName.length > 0 ? 'Tajawal-Bold' : 'Tajawal-Regular',
+                                    fontWeight: 'normal',
+                                }}
+                                value={stepName}
+                                onChangeText={setStepName}
+                                textAlign="right"
+                            />
+                            <View style={styles.inputIcon} pointerEvents="none">
+                                <Feather name="edit-3" size={16} color={C.accentGreen} />
+                            </View>
                         </View>
+
                         <View style={styles.promptButtonRow}>
-                            <PressableScale style={[styles.promptButton, styles.promptButtonSecondary]} onPress={handleClose}>
+                            <PressableScale style={styles.promptButtonSecondary} onPress={handleClose}>
                                 <Text style={styles.promptButtonTextSecondary}>{t('alert_cancel', language)}</Text>
                             </PressableScale>
-                            <PressableScale style={[styles.promptButton, styles.promptButtonPrimary, !stepName.trim() && { opacity: 0.5 }, { marginLeft: 10 }]} onPress={handleAdd} disabled={!stepName.trim()}>
+                            <PressableScale
+                                style={[styles.promptButtonPrimary, !stepName.trim() && { opacity: 0.5 }]}
+                                onPress={handleAdd}
+                                disabled={!stepName.trim()}
+                            >
                                 <Text style={styles.promptButtonTextPrimary}>{t('action_add', language)}</Text>
                             </PressableScale>
                         </View>
                     </View>
                 </Animated.View>
-            </KeyboardAvoidingView>
+            </View>
         </Modal>
     );
 };
@@ -616,12 +710,62 @@ const getStylesContent = (C) => ({
     inputWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, position: 'relative' },
     enhancedInput: { flex: 1, backgroundColor: C.background, borderWidth: 0.5, borderColor: C.border, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 15, paddingRight: 45, color: C.textPrimary, fontSize: 16, textAlign: 'right' },
     inputIcon: { position: 'absolute', right: 15, zIndex: 1 },
-    promptButtonRow: { flexDirection: 'row-reverse', marginHorizontal: 20 },
-    promptButton: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
-    promptButtonPrimary: { backgroundColor: C.accentGreen },
-    promptButtonSecondary: { backgroundColor: 'transparent', borderWidth: 0.5, borderColor: C.border },
-    promptButtonTextPrimary: { color: C.textOnAccent || C.background, fontFamily: 'Tajawal-Bold' },
-    promptButtonTextSecondary: { color: C.textSecondary, fontFamily: 'Tajawal-Bold' },
+    // Styled wrapper — visual styling lives here, input is bare inside
+    enhancedInputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: C.background,
+        borderWidth: 0.5,
+        borderColor: C.border,
+        borderRadius: 16,
+        height: 54,
+        paddingHorizontal: 15,
+        paddingRight: 45,
+        marginBottom: 25,
+        position: 'relative',
+    },
+    // Button row — proper gap + full width
+    promptButtonRow: {
+        flexDirection: 'row-reverse',
+        width: '100%',
+        gap: 12,
+        marginTop: 4,
+    },
+    promptButton: {
+        flex: 1,
+        height: 52,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+    },
+    promptButtonPrimary: {
+        flex: 1,
+        height: 52,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        backgroundColor: C.accentGreen,
+        shadowColor: C.accentGreen,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    promptButtonSecondary: {
+        flex: 1,
+        height: 52,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: C.border,
+    },
+    promptButtonTextPrimary: { color: C.textOnAccent || C.background, fontFamily: 'Tajawal-Bold', fontSize: 15 },
+    promptButtonTextSecondary: { color: C.textSecondary, fontFamily: 'Tajawal-Bold', fontSize: 15 },
     stepModalHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     stepModalTitle: { fontFamily: 'Tajawal-Bold', fontSize: 18, color: C.textPrimary },
     addProductButton: { flexDirection: 'row-reverse', backgroundColor: C.accentGreen, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },

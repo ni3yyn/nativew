@@ -181,27 +181,31 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
 
             const baseData = finalAnalysis || displayData;
 
-            const ingredientsRaw = product.analysisData?.detected_ingredients || 
+            const rawIngredients = product.analysisData?.detected_ingredients || 
                                    product.ingredients || 
                                    (Array.isArray(product.analysisData?.raw_ingredients_list) ? product.analysisData.raw_ingredients_list : []);
+
+            const ingredientsArray = Array.isArray(rawIngredients) 
+                ? rawIngredients 
+                : (typeof rawIngredients === 'string' ? rawIngredients.split(',').map(s => s.trim()) : []);
 
             const unknownIngs = product.analysisData?.unknown_ingredients || [];
 
             const completeAnalysisData = {
-                ...product.analysisData,
-                ...baseData,
-                oilGuardScore: baseData.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0,
-                finalVerdict: baseData.finalVerdict || baseData.verdict || product.analysisData?.finalVerdict || (language === 'ar' ? 'تم التقييم بنجاح' : 'Evaluated'),
-                efficacy: baseData.efficacy || product.analysisData?.efficacy || { score: baseData.oilGuardScore || 0 },
-                safety: baseData.safety || product.analysisData?.safety || { score: baseData.oilGuardScore || 0 },
+                ...(product.analysisData || {}),
+                ...(baseData || {}),
+                oilGuardScore: baseData?.oilGuardScore || product.score || product.analysisData?.oilGuardScore || 0,
+                finalVerdict: baseData?.finalVerdict || baseData?.verdict || product.analysisData?.finalVerdict || (language === 'ar' ? 'تم التقييم بنجاح' : 'Evaluated'),
+                efficacy: baseData?.efficacy || product.analysisData?.efficacy || { score: baseData?.oilGuardScore || 0 },
+                safety: baseData?.safety || product.analysisData?.safety || { score: baseData?.oilGuardScore || 0 },
                 product_type: resolvedProductType,
-                detected_ingredients: ingredientsRaw,
-                raw_ingredients_list: ingredientsRaw,
+                detected_ingredients: ingredientsArray,
+                raw_ingredients_list: ingredientsArray,
                 unknown_ingredients: unknownIngs,
-                user_specific_alerts: baseData.user_specific_alerts || baseData.personalMatch?.reasons || product.analysisData?.user_specific_alerts || [],
+                user_specific_alerts: baseData?.user_specific_alerts || baseData?.personalMatch?.reasons || product.analysisData?.user_specific_alerts || [],
                 marketingClaims: currentClaims,
-                marketing_results: baseData.marketing_results || product.analysisData?.marketing_results || [],
-                evaluated_claims: baseData.marketing_results || baseData.evaluated_claims || product.analysisData?.evaluated_claims || currentClaims
+                marketing_results: baseData?.marketing_results || product.analysisData?.marketing_results || [],
+                evaluated_claims: baseData?.marketing_results || baseData?.evaluated_claims || product.analysisData?.evaluated_claims || currentClaims
             };
 
             const savedPayload = {
@@ -212,10 +216,13 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
                 type: resolvedProductType,
                 productImage: displayImage,
                 imageUrl: displayImage,
+                image: displayImage,
                 marketingClaims: currentClaims,
                 claims: currentClaims,
                 analysisData: completeAnalysisData
             };
+            
+            console.log("[DEBUG ActionSheet] Final Save Payload:", savedPayload);
 
             Animated.timing(animState, {
                 toValue: 0,
@@ -229,10 +236,10 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
             });
 
         } catch (error) {
-            console.error("Save to shelf error:", error);
+            console.error("[DEBUG ActionSheet] Save to shelf error:", error);
             AlertService.error(
                 t('status_error', language),
-                t('error_save_product', language) || "Failed to save product to shelf"
+                `Save Failed: ${String(error.message || error)}`
             );
         } finally {
             setIsSavingToShelf(false);
@@ -242,26 +249,40 @@ const ProductActionSheet = ({ product, visible, onClose, onSave }) => {
     const calculatePersonalScore = async (claimsToUse) => {
         setIsCalculating(true);
         try {
-            const ingredientsRaw = product.analysisData?.detected_ingredients || product.ingredients || [];
+            console.log("[DEBUG ActionSheet] Calculating score for product:", product);
+            const rawIngredients = product.analysisData?.detected_ingredients || product.ingredients || [];
+            
+            if (!rawIngredients || rawIngredients.length === 0) {
+                console.warn("[DEBUG ActionSheet] No ingredients found to calculate score.");
+                setIsCalculating(false);
+                return;
+            }
+
+            const ingredientsArray = Array.isArray(rawIngredients) 
+                ? rawIngredients 
+                : (typeof rawIngredients === 'string' ? rawIngredients.split(',').map(s => s.trim()) : []);
+
             const tempProduct = {
                 ...product,
                 productType: resolvedProductType,
                 marketingClaims: claimsToUse,
                 analysisData: {
                     ...(product.analysisData || {}),
-                    detected_ingredients: ingredientsRaw,
+                    detected_ingredients: ingredientsArray,
                     product_type: resolvedProductType
                 }
             };
 
             const newAnalysis = await reevaluateProductForUser(tempProduct, userProfile);
+            console.log("[DEBUG ActionSheet] Evaluation result:", newAnalysis);
 
             if (newAnalysis) {
                 setPersonalScore(newAnalysis);
                 setActiveTab('personal');
             }
         } catch (e) {
-            console.error("Re-evaluation API Error:", e);
+            console.error("[DEBUG ActionSheet] Re-evaluation API Error:", e);
+            AlertService.error("Evaluation Error", String(e.message || e));
         } finally {
             setIsCalculating(false);
         }

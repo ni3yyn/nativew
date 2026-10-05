@@ -487,9 +487,9 @@ const RootLayoutNav = ({ fontsLoaded }) => {
     const handleNotificationNavigation = (response) => {
       const data = response.notification.request.content.data;
       setTimeout(() => {
-        if (data?.screen === 'oilguard') router.push('/oilguard');
-        else if (data?.screen === 'routine') router.push('/profile');
-        else if (data?.postId) router.push({ pathname: "/community", params: { openPostId: data.postId } });
+        if (data?.screen === 'oilguard') router.navigate('/oilguard');
+        else if (data?.screen === 'routine') router.navigate('/profile');
+        else if (data?.postId) router.navigate({ pathname: "/community", params: { openPostId: data.postId } });
       }, 800);
     };
 

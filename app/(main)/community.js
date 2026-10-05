@@ -176,17 +176,19 @@ export default function CommunityScreen() {
             }
 
             if (targetPost) {
-                if (viewMode === 'menu') {
-                    const cat = CATEGORIES.find(c => c.id === targetPost.type);
-                    if (cat) setSelectedCategory(cat);
-                    setViewMode('feed');
+                    if (viewMode === 'menu') {
+                        const cat = CATEGORIES.find(c => c.id === targetPost.type);
+                        if (cat) setSelectedCategory(cat);
+                        setViewMode('feed');
+                    }
+                    setCommentingPost(targetPost);
+                    // ❌ REMOVED router.setParams({ openPostId: '' })
+                    // processedPostId.current already prevents infinite loops. 
+                    // Modifying params here causes Expo Router to stack ghost screens.
                 }
-                setCommentingPost(targetPost);
-                router.setParams({ openPostId: '' });
-            }
-        };
+            };
 
-        handleDeepLinkPost();
+            handleDeepLinkPost();
     }, [openPostId, allPosts, viewMode, language]);
 
 
@@ -745,7 +747,7 @@ export default function CommunityScreen() {
                 visible={!!commentingPost}
                 onClose={() => {
                     setCommentingPost(null);
-                    router.setParams({ openPostId: '' });
+                    // ❌ REMOVED router.setParams({ openPostId: '' })
                 }}
                 post={commentingPost}
                 currentUser={currentUserObj}

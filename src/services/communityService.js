@@ -326,7 +326,10 @@ const EVALUATE_ENDPOINT = "https://oilguard-backend.vercel.app/api/evaluate.js";
 
 export const reevaluateProductForUser = async (product, userProfile) => {
   try {
-      const ingredientsList = product.analysisData?.detected_ingredients?.map(i => typeof i === 'string' ? i : i.name) 
+      const rawDetected = product.analysisData?.detected_ingredients;
+      const detectedArray = Array.isArray(rawDetected) ? rawDetected : (typeof rawDetected === 'string' ? rawDetected.split(',') : null);
+      
+      const ingredientsList = detectedArray?.map(i => typeof i === 'string' ? i.trim() : (i.name || '').trim()) 
                            || (Array.isArray(product.ingredients) ? product.ingredients : (typeof product.ingredients === 'string' ? product.ingredients.split(',').map(s => s.trim()) : []))
                            || [];
       

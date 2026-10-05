@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     View, Text, TouchableOpacity, Modal, ActivityIndicator,
-    FlatList, KeyboardAvoidingView, Platform, StyleSheet,
+    FlatList, Platform, StyleSheet,
     Animated, LayoutAnimation, Pressable, Keyboard, Image, Dimensions, Easing
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,9 +20,12 @@ import { doc, getDoc } from 'firebase/firestore';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { AlertService } from '../../services/alertService';
-import { deleteComment, awardInstantPoints, COMMUNITY_POINTS } from '../../services/communityService';
+import { deleteComment, awardInstantPoints, COMMUNITY_POINTS, saveProductToShelf } from '../../services/communityService';
 import { uploadImageToCloudinary } from '../../services/imageService';
 import FullImageViewer from '../common/FullImageViewer';
+import CatalogProductPickerModal from '../catalog/CatalogProductPickerModal';
+import ProductActionSheet from './ProductActionSheet';
+import WathiqScoreBadge from '../common/WathiqScoreBadge';
 import { t, interpolate } from '../../i18n';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { AVATARS } from '../../constants/avatars';
@@ -68,7 +71,7 @@ const QUICK_REPLIES = ["quick_reply_1", "quick_reply_2", "quick_reply_3", "quick
 // 2. COMPONENT: COMMENT ROW (Updated for Images)
 // ==================================================================
 
-const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false, onImagePress, COLORS, styles }) => {
+const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false, onImagePress, onProductPress, COLORS, styles }) => {
     const C = COLORS || DEFAULT_COLORS;
     const language = useCurrentLanguage();
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
@@ -204,6 +207,38 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
                     {/* --- TEXT CONTENT --- */}
                     {item.text ? <Text style={styles.commentText}>{item.text}</Text> : null}
 
+                    {/* --- ATTACHED PRODUCT CARD --- */}
+                    {item.product && (
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={() => onProductPress && onProductPress(item.product)}
+                            style={styles.commentProductCard}
+                        >
+                            <View style={styles.commentProductThumbWrap}>
+                                {item.product.image ? (
+                                    <Image source={{ uri: item.product.image }} style={styles.commentProductThumb} resizeMode="contain" />
+                                ) : (
+                                    <FontAwesome5 name="pump-soap" size={16} color={C.textDim} />
+                                )}
+                            </View>
+
+                            <View style={styles.commentProductMeta}>
+                                {item.product.brand ? (
+                                    <Text style={styles.commentProductBrand} numberOfLines={1}>{item.product.brand}</Text>
+                                ) : null}
+                                <Text style={styles.commentProductName} numberOfLines={2}>{item.product.name}</Text>
+                                <View style={styles.commentProductActionHint}>
+                                    <Text style={styles.commentProductActionText}>{language === 'ar' ? 'معاينة التحليل' : 'View analysis'}</Text>
+                                    <Feather name={language === 'ar' ? 'arrow-left' : 'arrow-right'} size={11} color={C.accentGreen} />
+                                </View>
+                            </View>
+
+                            {item.product.score ? (
+                                <WathiqScoreBadge score={item.product.score} size={36} />
+                            ) : null}
+                        </TouchableOpacity>
+                    )}
+
                     {/* --- IMAGE CONTENT (NEW) --- */}
                     {item.imageUrl && (
                         <TouchableOpacity
@@ -246,16 +281,13 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
 // ==================================================================
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) => {
+const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress, onViewProduct }) => {
     const { colors } = useTheme();
     const language = useCurrentLanguage();
     const COLORS = colors || DEFAULT_COLORS;
     const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const insets = useSafeAreaInsets();
-    // Base bottom padding: navbar height on button-nav, 12px fallback on gesture-nav
-    const navbarBottom = Platform.OS === 'android' ? Math.max(insets.bottom, 0) : 0;
-
-    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT + 150)).current;
+    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -270,7 +302,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const handleClose = () => {
         Keyboard.dismiss();
         Animated.parallel([
-            Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT + 150, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }),
             Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
         ]).start(({ finished }) => {
             if (finished && onClose) onClose();
@@ -282,23 +314,80 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const [replyingTo, setReplyingTo] = useState(null);
 
     const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isProductPickerVisible, setIsProductPickerVisible] = useState(false);
+    const [viewingProduct, setViewingProduct] = useState(null);
     const [isSending, setIsSending] = useState(false);
     const [viewingImage, setViewingImage] = useState(null);
     const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+    const handleProductPress = useCallback((product) => {
+        if (!product) return;
+        
+        console.log("[DEBUG CommentModal] Tapped product:", product);
+
+        const resolvedType = product.productType || product.type || product.category?.id || product.analysisData?.product_type || 'other';
+        
+        const formattedProduct = {
+            ...product,
+            id: product.id || 'unknown',
+            name: product.name || product.productName || t('community_product', language),
+            productName: product.productName || product.name || t('community_product', language),
+            image: product.imageUrl || product.productImage || product.image || null,
+            imageUrl: product.imageUrl || product.productImage || product.image || null,
+            productImage: product.productImage || product.imageUrl || product.image || null,
+            score: product.score || product.real_score || product.analysisData?.oilGuardScore || 0,
+            productType: resolvedType,
+            type: resolvedType,
+            marketingClaims: product.marketingClaims || product.claims || [],
+            ingredients: product.ingredients || product.analysisData?.detected_ingredients || [],
+            analysisData: product.analysisData || null
+        };
+        
+        console.log("[DEBUG CommentModal] Formatted for ActionSheet:", formattedProduct);
+
+        if (onViewProduct) {
+            onViewProduct(formattedProduct);
+        }
+        setViewingProduct(formattedProduct);
+    }, [onViewProduct, language]);
+
+    const handleSaveToShelf = useCallback(async (productToSave) => {
+        if (!currentUser?.uid || !productToSave) return;
+        try {
+            await saveProductToShelf(currentUser.uid, productToSave);
+            AlertService.success(t('community_saved_title', language), t('community_saved_message', language));
+            setViewingProduct(null);
+        } catch (e) {
+            console.error("Failed to save to shelf from comment:", e);
+        }
+    }, [currentUser?.uid, language]);
+
     useEffect(() => {
-        if (Platform.OS !== 'android') return;
-        const show = Keyboard.addListener('keyboardDidShow', (e) => {
-            setKeyboardHeight(e.endCoordinates.height);
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const showSub = Keyboard.addListener(showEvent, (e) => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            const h = Platform.OS === 'ios'
+                ? e.endCoordinates.height
+                : SCREEN_HEIGHT - e.endCoordinates.screenY;
+            setKeyboardHeight(h);
         });
-        const hide = Keyboard.addListener('keyboardDidHide', () => {
+        const hideSub = Keyboard.addListener(hideEvent, () => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setKeyboardHeight(0);
         });
+
         return () => {
-            show.remove();
-            hide.remove();
+            showSub.remove();
+            hideSub.remove();
         };
     }, []);
+
+    const footerBottomPadding = keyboardHeight > 0
+        ? 8
+        : Math.max(insets.bottom, 10);
 
     const flatListRef = useRef();
     const inputRef = useRef();
@@ -319,10 +408,12 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const normalizeComment = (row, myLikesSet = null) => {
         let isLiked = false;
         if (myLikesSet) isLiked = myLikesSet.has(row.id);
+        const taggedProduct = row.author_snapshot?.taggedProduct || row.product_snapshot || row.product_data || row.product || null;
         return {
             id: row.id,
             text: row.content,
-            imageUrl: row.image_url, // <--- MAP FROM DB
+            imageUrl: row.image_url,
+            product: taggedProduct,
             createdAt: row.created_at,
             userId: row.firebase_user_id,
             parentId: row.parent_id,
@@ -387,9 +478,8 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const handlePickImage = async () => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
+                mediaTypes: ['images'],
+                allowsEditing: false, // <-- Disabled cropping
                 quality: 0.7,
             });
             if (!result.canceled) {
@@ -416,6 +506,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const clearInput = () => {
         setComment('');
         setSelectedImage(null);
+        setSelectedProduct(null);
         cancelReply();
     };
 
@@ -423,23 +514,45 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     const handleSend = async (quickText = null) => {
         const textInput = quickText || comment;
 
-        // 1. Validation: Don't send if both are empty
-        if (!textInput.trim() && !selectedImage) return;
+        // 1. Validation: Don't send if text, image, and product are all empty
+        if (!textInput.trim() && !selectedImage && !selectedProduct) return;
 
         setIsSending(true);
 
         // 2. Prepare Data
-        // Since you updated the RLS, we can send an empty string "" for image-only comments.
         const finalContent = textInput.trim();
         const tempImageUri = selectedImage;
+        const tempProduct = selectedProduct;
 
         // Reset UI immediately
         clearInput();
 
+        const resolvedType = tempProduct ? (tempProduct.productType || tempProduct.type || tempProduct.category?.id || tempProduct.analysisData?.product_type || 'other') : null;
+        
+        const taggedProductData = tempProduct ? {
+            id: tempProduct.id || 'unknown',
+            name: tempProduct.productName || tempProduct.name || 'Unknown Product',
+            productName: tempProduct.productName || tempProduct.name || 'Unknown Product',
+            brand: tempProduct.brand || null,
+            score: tempProduct.real_score || tempProduct.score || tempProduct.analysisData?.oilGuardScore || 0,
+            imageUrl: tempProduct.productImage || tempProduct.imageUrl || tempProduct.image || null,
+            productImage: tempProduct.productImage || tempProduct.imageUrl || tempProduct.image || null,
+            image: tempProduct.productImage || tempProduct.imageUrl || tempProduct.image || null,
+            price: tempProduct.price || null,
+            ingredients: tempProduct.ingredients || tempProduct.analysisData?.detected_ingredients || [],
+            marketingClaims: tempProduct.marketingClaims || tempProduct.claims || [],
+            productType: resolvedType,
+            type: resolvedType,
+            analysisData: tempProduct.analysisData || null,
+        } : null;
+        
+        console.log("[DEBUG CommentModal] Inserting taggedProductData:", taggedProductData);
+
         const authorSnapshot = {
             name: currentUser.settings?.name || currentUser.name || t('community_comment_default_user', language),
             avatarId: currentUser.settings?.avatarId || null,
-            skinType: currentUser.settings?.skinType || null
+            skinType: currentUser.settings?.skinType || null,
+            taggedProduct: taggedProductData
         };
         const tempId = Math.random().toString();
 
@@ -448,6 +561,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             id: tempId,
             text: finalContent,
             imageUrl: tempImageUri,
+            product: taggedProductData,
             createdAt: new Date().toISOString(),
             userId: currentUser.uid,
             userName: authorSnapshot.name,
@@ -499,10 +613,18 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             // 7. Send Notifications
             const notificationData = { postId: post.id, screen: 'PostDetails' };
 
-            // Logic: If text is empty, notification says "📷 Photo", otherwise "📷 [Text]"
-            const notifBody = tempImageUri
-                ? (finalContent ? `📷 ${finalContent}` : t('community_comment_notif_photo_only', language))
-                : finalContent;
+            let notifBody = finalContent;
+            if (!notifBody) {
+                if (tempProduct) {
+                    notifBody = `🧴 ${tempProduct.name || tempProduct.productName}`;
+                } else if (tempImageUri) {
+                    notifBody = t('community_comment_notif_photo_only', language);
+                }
+            } else if (tempProduct) {
+                notifBody = `🧴 ${tempProduct.name || tempProduct.productName}: ${notifBody}`;
+            } else if (tempImageUri) {
+                notifBody = `📷 ${notifBody}`;
+            }
 
             if (replyingTo && replyingTo.targetUserId !== currentUser.uid) {
                 await sendPushNotification(
@@ -530,6 +652,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
             // Restore user input so they can try again
             setComment(textInput);
             setSelectedImage(tempImageUri);
+            setSelectedProduct(tempProduct);
         } finally {
             setIsSending(false);
         }
@@ -551,25 +674,24 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
     if (!post) return null;
 
     return (
-        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
                 <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: backdropAnim }]}>
                     <Pressable style={{ flex: 1 }} onPress={handleClose} />
                 </Animated.View>
 
                 <Animated.View 
-    style={[{ 
-        height: SCREEN_HEIGHT * 0.93 + 150, // 👈 Expands modal to 93% visible screen height
-        backgroundColor: COLORS.background, 
-        borderTopLeftRadius: 28, 
-        borderTopRightRadius: 28, 
-        overflow: 'hidden', 
-        transform: [{ translateY: slideAnim }], 
-        marginBottom: -150, 
-        paddingBottom: 150 
-    }]}
->
-                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+                    style={{ 
+                        height: SCREEN_HEIGHT * 0.92,
+                        marginBottom: keyboardHeight,
+                        backgroundColor: COLORS.background, 
+                        borderTopLeftRadius: 28, 
+                        borderTopRightRadius: 28, 
+                        overflow: 'hidden', 
+                        transform: [{ translateY: slideAnim }], 
+                    }}
+                >
+                    <View style={styles.container}>
                         {/* HEADER */}
                         <View style={styles.header}>
                             <View style={styles.grabber} />
@@ -602,6 +724,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                                     onReply={handleInitiateReply}
                                     onProfilePress={onProfilePress}
                                     onImagePress={setViewingImage}
+                                    onProductPress={handleProductPress}
                                     isReply={!!item.parentId}
                                     COLORS={COLORS}
                                     styles={styles}
@@ -622,7 +745,7 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                 </View>
 
                 {/* FOOTER */}
-                <View style={[styles.footer, Platform.OS === 'android' && { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : navbarBottom + 12 }]}>
+                <View style={[styles.footer, { paddingBottom: footerBottomPadding }]}>
                     {/* Reply Context Banner */}
                     {replyingTo && (
                         <Animated.View style={styles.replyBanner}>
@@ -639,6 +762,35 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         </Animated.View>
                     )}
 
+                    {/* Attached Product Preview Area */}
+                    {selectedProduct && (
+                        <View style={styles.productPreviewContainer}>
+                            <View style={styles.productPreviewCard}>
+                                <View style={styles.productPreviewThumbWrap}>
+                                    {selectedProduct.image || selectedProduct.productImage || selectedProduct.imageUrl ? (
+                                        <Image source={{ uri: selectedProduct.image || selectedProduct.productImage || selectedProduct.imageUrl }} style={styles.productPreviewThumb} resizeMode="contain" />
+                                    ) : (
+                                        <FontAwesome5 name="pump-soap" size={16} color={COLORS.textDim} />
+                                    )}
+                                </View>
+                                <View style={styles.productPreviewMeta}>
+                                    {selectedProduct.brand ? (
+                                        <Text style={styles.productPreviewBrand} numberOfLines={1}>{selectedProduct.brand}</Text>
+                                    ) : null}
+                                    <Text style={styles.productPreviewName} numberOfLines={1}>
+                                        {selectedProduct.name || selectedProduct.productName}
+                                    </Text>
+                                </View>
+                                {(selectedProduct.real_score || selectedProduct.score) ? (
+                                    <WathiqScoreBadge score={selectedProduct.real_score || selectedProduct.score} size={32} />
+                                ) : null}
+                                <TouchableOpacity style={styles.removeProductBtn} onPress={() => setSelectedProduct(null)}>
+                                    <Ionicons name="close" size={14} color={COLORS.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
                     {/* Image Preview Area */}
                     {selectedImage && (
                         <View style={styles.imagePreviewContainer}>
@@ -649,8 +801,8 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                         </View>
                     )}
 
-                    {/* Quick Chips (Only when not replying and no image selected) */}
-                    {!replyingTo && !selectedImage && (
+                    {/* Quick Chips (Only when not replying and no attachment selected) */}
+                    {!replyingTo && !selectedImage && !selectedProduct && (
                         <View style={styles.chipsContainer}>
                             <FlatList
                                 horizontal
@@ -672,8 +824,8 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     <View style={styles.inputBar}>
                         <TouchableOpacity
                             onPress={() => handleSend()}
-                            style={[styles.sendButton, (!comment.trim() && !selectedImage) && styles.sendButtonDisabled]}
-                            disabled={isSending || (!comment.trim() && !selectedImage)}
+                            style={[styles.sendButton, (!comment.trim() && !selectedImage && !selectedProduct) && styles.sendButtonDisabled]}
+                            disabled={isSending || (!comment.trim() && !selectedImage && !selectedProduct)}
                         >
                             {isSending ? (
                                 <ActivityIndicator size="small" color={COLORS.background} />
@@ -694,12 +846,21 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                             textAlign="right"
                         />
 
+                        {/* Product Picker Button */}
+                        <TouchableOpacity onPress={() => setIsProductPickerVisible(true)} style={styles.attachBtn}>
+                            <MaterialCommunityIcons 
+                                name={selectedProduct ? "shopping" : "shopping-outline"} 
+                                size={22} 
+                                color={selectedProduct ? COLORS.accentGreen : COLORS.textSecondary} 
+                            />
+                        </TouchableOpacity>
+
                         {/* Camera Button */}
-                        <TouchableOpacity onPress={handlePickImage} style={styles.cameraBtn}>
+                        <TouchableOpacity onPress={handlePickImage} style={styles.attachBtn}>
                             <Feather name="image" size={20} color={selectedImage ? COLORS.accentGreen : COLORS.textSecondary} />
                         </TouchableOpacity>
 
-                        {!replyingTo && !selectedImage && (
+                        {!replyingTo && !selectedImage && !selectedProduct && (
                             <View style={[styles.inputAvatar, { overflow: 'hidden' }]}>
                                 {AVATARS[currentUser?.settings?.avatarId] ? (
                                     <Image source={AVATARS[currentUser.settings.avatarId]} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
@@ -711,13 +872,30 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress }) =
                     </View>
                 </View>
 
+                {/* Catalog Product Picker Modal */}
+                <CatalogProductPickerModal
+                    visible={isProductPickerVisible}
+                    onClose={() => setIsProductPickerVisible(false)}
+                    onSelectProduct={(product) => setSelectedProduct(product)}
+                />
+
                 {/* Full Screen Image Viewer */}
                 <FullImageViewer
                     visible={!!viewingImage}
                     imageUrl={viewingImage}
                     onClose={() => setViewingImage(null)}
                 />
-                    </KeyboardAvoidingView>
+
+                {/* Product Action Sheet */}
+                {viewingProduct && (
+                    <ProductActionSheet
+                        product={viewingProduct}
+                        visible={!!viewingProduct}
+                        onClose={() => setViewingProduct(null)}
+                        onSave={handleSaveToShelf}
+                    />
+                )}
+                    </View>
                 </Animated.View>
             </View>
         </Modal>
@@ -761,20 +939,154 @@ avatarWrapSmall: {
     meBadgeText: { fontSize: 9, color: '#000', fontFamily: 'Tajawal-Bold' },
     commentText: { color: COLORS.textPrimary, fontFamily: 'Tajawal-Regular', fontSize: 14, textAlign: 'right', lineHeight: 22 },
 
+    // --- ATTACHED PRODUCT CARD IN COMMENT ---
+    commentProductCard: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        backgroundColor: COLORS.background,
+        borderRadius: 14,
+        padding: 8,
+        marginTop: 8,
+        borderWidth: 0.8,
+        borderColor: COLORS.border,
+        gap: 10,
+    },
+    commentProductThumbWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: COLORS.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+    },
+    commentProductThumb: {
+        width: '100%',
+        height: '100%',
+    },
+    commentProductMeta: {
+        flex: 1,
+        alignItems: 'flex-end',
+        gap: 2,
+    },
+    commentProductBrand: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 10,
+        color: COLORS.textDim,
+        textTransform: 'uppercase',
+        textAlign: 'right',
+    },
+    commentProductName: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 12,
+        color: COLORS.textPrimary,
+        lineHeight: 16,
+        textAlign: 'right',
+    },
+    commentProductActionHint: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 2,
+    },
+    commentProductActionText: {
+        fontFamily: 'Tajawal-Regular',
+        fontSize: 10,
+        color: COLORS.accentGreen,
+    },
+
     // --- NEW IMAGE STYLES ---
     commentImageContainer: { marginTop: 8, borderRadius: 12, overflow: 'hidden' },
     commentImage: { width: '100%', height: 180, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.2)' },
     imagePreviewContainer: { flexDirection: 'row-reverse', paddingHorizontal: 20, paddingBottom: 10, alignItems: 'center' },
     imagePreview: { width: 60, height: 60, borderRadius: 8, marginRight: 10, borderWidth: 0.5, borderColor: COLORS.border },
     removeImageBtn: { position: 'absolute', top: -5, right: 15, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
+
+    // --- PRODUCT PREVIEW (INPUT AREA) ---
+    productPreviewContainer: {
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 4,
+    },
+    productPreviewCard: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        backgroundColor: COLORS.background,
+        borderRadius: 14,
+        padding: 8,
+        borderWidth: 0.8,
+        borderColor: COLORS.border,
+        gap: 8,
+    },
+    productPreviewThumbWrap: {
+        width: 38,
+        height: 38,
+        borderRadius: 8,
+        backgroundColor: COLORS.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+    },
+    productPreviewThumb: {
+        width: '100%',
+        height: '100%',
+    },
+    productPreviewMeta: {
+        flex: 1,
+        alignItems: 'flex-end',
+        gap: 1,
+    },
+    productPreviewBrand: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 9.5,
+        color: COLORS.textDim,
+        textTransform: 'uppercase',
+        textAlign: 'right',
+    },
+    productPreviewName: {
+        fontFamily: 'Tajawal-Bold',
+        fontSize: 11.5,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+    },
+    removeProductBtn: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: COLORS.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 0.5,
+        borderColor: COLORS.border,
+    },
+    attachBtn: {
+        padding: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     cameraBtn: { padding: 8, marginLeft: 4 },
 
     actionBar: { flexDirection: 'row-reverse', alignItems: 'center', marginTop: 6, gap: 16, paddingRight: 4 },
     timeText: { color: COLORS.textDim, fontSize: 11, fontFamily: 'Tajawal-Regular' },
     actionBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
-    actionText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'Tajawal-Bold' },
-    footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: Platform.OS === 'ios' ? 34 : 0 },
-    replyBanner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.accentGreen + '14', paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: 12, marginTop: 12, borderRadius: 12, borderWidth: 0.5, borderColor: COLORS.accentGreen + '33' },
+    footer: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border },
+    replyBanner: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: COLORS.accentGreen + '14',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginHorizontal: 12,
+        marginTop: 12,
+        borderRadius: 12,
+        borderWidth: 0.5,
+        borderColor: COLORS.accentGreen + '33',
+    },
     replyBannerContent: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
     replyVerticalLine: { width: 2, height: 24, backgroundColor: COLORS.accentGreen, borderRadius: 2 },
     replyLabel: { color: COLORS.accentGreen, fontSize: 10, fontFamily: 'Tajawal-Bold', textAlign: 'right' },
