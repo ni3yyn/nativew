@@ -166,8 +166,7 @@ const DurationPicker = ({ value, onChangeText, unit, onSelectUnit, COLORS, style
 //                       MAIN COMPONENT
 // ============================================================================
 
-const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutines, defaultType, isAdmin }) => {
-    const language = useCurrentLanguage();
+const CreatePostModal = ({ visible, onClose, onSubmit, onUpdate, savedProducts, userRoutines, defaultType, isAdmin, postToEdit }) => {    const language = useCurrentLanguage();
     const rtl = useRTL();
     const insets = useSafeAreaInsets();
     const { colors } = useTheme();
@@ -204,19 +203,27 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
     useEffect(() => {
         if (visible) {
-            const initialType = (defaultType && defaultType !== 'leaderboard') ? defaultType : 'review';
-            setType(initialType);
-            setContent(''); 
-            setTitle(''); 
-            setSelectedProduct(null);
-            setImages({ main: null }); 
-            setJourneyProducts([]);
-            setDurValue(''); 
-            setDurUnit('أشهر');
-            setMilestones([
-                { id: Date.now().toString(), label: '', image: null },
-                { id: (Date.now() + 1).toString(), label: '', image: null }
-            ]);
+            if (postToEdit) {
+                setType(postToEdit.type || 'review');
+                setContent(postToEdit.content || '');
+                setTitle(postToEdit.title || '');
+                setSelectedProduct(postToEdit.taggedProduct || null);
+                setImages({ main: postToEdit.imageUrl || null });
+            } else {
+                const initialType = (defaultType && defaultType !== 'leaderboard') ? defaultType : 'review';
+                setType(initialType);
+                setContent(''); 
+                setTitle(''); 
+                setSelectedProduct(null);
+                setImages({ main: null }); 
+                setJourneyProducts([]);
+                setDurValue(''); 
+                setDurUnit('أشهر');
+                setMilestones([
+                    { id: Date.now().toString(), label: '', image: null },
+                    { id: (Date.now() + 1).toString(), label: '', image: null }
+                ]);
+            }
 
             Animated.parallel([
                 Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }),
@@ -424,9 +431,9 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
 
         setLoading(true);
 
-        // 🌟 PROPERLY UPLOAD CUSTOM ATTACHED PHOTO
-        let uploadedMainUrl = null;
-        if (type !== 'routine_rate' && images.main) {
+        // 🌟 PROPERLY UPLOAD CUSTOM ATTACHED PHOTO (Skip upload if already a remote URL)
+        let uploadedMainUrl = images.main;
+        if (type !== 'routine_rate' && images.main && !images.main.startsWith('http')) {
             uploadedMainUrl = await uploadImageToCloudinary(images.main);
         }
 
@@ -476,7 +483,11 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
         };
 
         try {
-            await onSubmit(payload);
+            if (postToEdit && onUpdate) {
+                await onUpdate(postToEdit.id, payload);
+            } else {
+                await onSubmit(payload);
+            }
             setLoading(false);
             handleClose();
         } catch (error) {
@@ -506,7 +517,9 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                     {/* Header */}
                     <View style={styles.modalHeader}>
                         <Text style={[styles.modalTitle, { color: COLORS.textPrimary }]}>
-                            {t('community_create_post_title', language)}
+                            {postToEdit 
+                                ? (language === 'ar' ? 'تعديل المنشور' : 'Edit Post') 
+                                : t('community_create_post_title', language)}
                         </Text>
                     </View>
 
@@ -928,7 +941,9 @@ const CreatePostModal = ({ visible, onClose, onSubmit, savedProducts, userRoutin
                             ) : (
                                 <View style={[styles.submitButtonInner, { flexDirection: rtl.flexDirection }]}>
                                     <Text style={[styles.submitButtonText, { color: COLORS.textOnAccent }]}>
-                                        {t('community_create_post_submit', language)}
+                                        {postToEdit 
+                                            ? (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes') 
+                                            : t('community_create_post_submit', language)}
                                     </Text>
                                     <Feather name="arrow-up-right" size={18} color={COLORS.textOnAccent} />
                                 </View>

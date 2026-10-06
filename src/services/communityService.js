@@ -375,3 +375,50 @@ export const deleteComment = async (commentId) => {
       throw error;
   }
 };
+
+// 🌟 EDIT / UPDATE COMMENT
+export const updateComment = async (commentId, newContent) => {
+  try {
+      const { data, error } = await supabase
+          .from('comments')
+          .update({ content: newContent })
+          .eq('id', commentId)
+          .select()
+          .single();
+      if (error) throw error;
+      return data;
+  } catch (error) {
+      console.error("Update Comment Error:", error);
+      throw error;
+  }
+};
+
+// 🌟 EDIT / UPDATE POST
+export const updatePost = async (postId, payload) => {
+  try {
+      const updateFields = {
+          content: payload.content,
+          title: payload.title || null,
+      };
+
+      if (payload.imageUrl !== undefined) {
+          updateFields.image_url = payload.imageUrl;
+      }
+      if (payload.taggedProduct !== undefined) {
+          updateFields.product_snapshot = payload.taggedProduct;
+      }
+
+      const { data, error } = await supabase
+          .from('posts')
+          .update(updateFields)
+          .eq('id', postId)
+          .select()
+          .single();
+
+      if (error) throw error;
+      return data;
+  } catch (error) {
+      console.error("Update Post Error:", error);
+      throw error;
+  }
+};

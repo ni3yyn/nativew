@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, Linking, Alert, Animated, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Platform, ActivityIndicator, Linking, Alert, Animated, Pressable, Share } from 'react-native';
 import { FontAwesome5, Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { createURL } from 'expo-linking';
 import Slider from '@react-native-community/slider';
 import { File, Directory, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
@@ -632,7 +633,7 @@ const TipsContent = React.memo(({ post, onImagePress, onViewProduct, COLORS, rtl
 // 🌟 MAIN CARD COMPONENT
 // ============================================================================
 
-const PostCard = ({ post, currentUser, onInteract, onDelete, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
+const PostCard = ({ post, currentUser, onInteract, onDelete, onEdit, onViewProduct, onOpenComments, onImagePress, onProfilePress }) => {
     const language = useCurrentLanguage();
     const rtl = useRTL();
     const { colors } = useTheme();
@@ -682,10 +683,35 @@ const matchData = useMemo(() => {
 
     
 const liveAvatarId = currentUser?.settings?.avatarId || currentUser?.avatarId;
-const resolvedAvatarId = isMe 
-    ? (liveAvatarId || post.authorSettings?.avatarId || post.avatarId)
-    : (post.authorSettings?.avatarId || post.avatarId);
+    const resolvedAvatarId = isMe 
+        ? (liveAvatarId || post.authorSettings?.avatarId || post.avatarId)
+        : (post.authorSettings?.avatarId || post.avatarId);
     const avatarSource = AVATARS[resolvedAvatarId];
+
+   const [isSharing, setIsSharing] = useState(false);
+
+    const handleShare = useCallback(async () => {
+        if (isSharing) return;
+        setIsSharing(true);
+        Haptics.selectionAsync().catch(() => {});
+
+        try {
+            const url = `https://wathiq.web.app/community?openPostId=${post.id}`;
+
+            // ⚡ Platform-specific payload (Android only needs message, iOS uses url)
+            const payload = Platform.select({
+                ios: { url },
+                android: { message: url },
+                default: { message: url }
+            });
+
+            await Share.share(payload);
+        } catch (error) {
+            console.error("Share error:", error);
+        } finally {
+            setIsSharing(false);
+        }
+    }, [post.id, isSharing]);
 
     return (
         <View style={[styles.cardBase, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
@@ -741,9 +767,14 @@ const resolvedAvatarId = isMe
                 </TouchableOpacity>
 
                 {post.userId === currentUser?.uid && (
-                    <TouchableOpacity onPress={() => onDelete(post.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.deleteBtn}>
-                        <Feather name="trash-2" size={15} color={COLORS.textDim} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 4 }}>
+                        <TouchableOpacity onPress={() => onEdit && onEdit(post)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.deleteBtn}>
+                            <Feather name="edit-2" size={14} color={COLORS.textDim} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => onDelete(post.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.deleteBtn}>
+                            <Feather name="trash-2" size={15} color={COLORS.textDim} />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -883,6 +914,7 @@ const resolvedAvatarId = isMe
 
             {/* CARD FOOTER */}
             <View style={[styles.cardFooter, { borderTopColor: COLORS.border + '50', flexDirection: rtl.flexDirection }]}>
+                {/* 1. Like Action */}
                 <TouchableOpacity 
                     style={[styles.actionButton, isLiked && { backgroundColor: COLORS.danger + '14', borderColor: COLORS.danger + '35' }, { flexDirection: rtl.flexDirection }]} 
                     onPress={handleLikePress}
@@ -896,6 +928,7 @@ const resolvedAvatarId = isMe
                     </Text>
                 </TouchableOpacity>
 
+                {/* 2. Comment Action */}
                 <TouchableOpacity 
                     style={[styles.actionButton, { flexDirection: rtl.flexDirection }]} 
                     onPress={() => onOpenComments(post)}
@@ -905,6 +938,20 @@ const resolvedAvatarId = isMe
                     <Text style={[styles.statText, { color: COLORS.textSecondary }]}>
                         {post.commentsCount || 0}
                     </Text>
+                </TouchableOpacity>
+
+                {/* 3. Share Action (Identical Design & Next in List) */}
+                <TouchableOpacity 
+                    style={[styles.actionButton, { flexDirection: rtl.flexDirection }]} 
+                    onPress={handleShare}
+                    activeOpacity={0.7}
+                    disabled={isSharing}
+                >
+                    {isSharing ? (
+                        <ActivityIndicator size={14} color={COLORS.textSecondary} style={{ width: 15, height: 15 }} />
+                    ) : (
+                        <Feather name="share-2" size={15} color={COLORS.textSecondary} />
+                    )}
                 </TouchableOpacity>
             </View>
         </View>

@@ -26,6 +26,8 @@ import CatalogIntro from '../../src/components/catalog/CatalogIntro';
 import { submitBounty, submitNewProduct } from '../../src/services/bountyService'; 
 import { AlertService } from '../../src/services/alertService';
 import { CatalogService } from '../../src/services/catalogService';
+import MiniSearch from 'minisearch';
+
 
 // Storage keys & Pagination
 const CATALOG_INTRO_SEEN_KEY = '@catalog_intro_seen';
@@ -292,14 +294,34 @@ useEffect(() => {
       return ['all', ...Array.from(brands).sort()];
   }, [products]);
 
-  // Pre-lowercased search keys so we don't reallocate strings on every keystroke
-const searchableProducts = useMemo(() => {
-  if (!Array.isArray(products)) return [];
-  return products.map(p => ({
-    ...p,
-    _searchKey: normalizeSearch(`${p.name || ''} ${p.brand || ''}`),
-  }));
-}, [products]);
+  // 🚀 Initialize MiniSearch Engine
+  const miniSearch = useMemo(() => {
+      const searcher = new MiniSearch({
+          fields: ['name', 'brand', 'categoryLabel', 'marketingClaims', 'targetTypes', 'country'], // Added country!
+          idField: 'id',
+          processTerm: (term) => normalizeSearch(term), 
+          searchOptions: {
+              prefix: true, 
+              fuzzy: term => term.length > 3 ? 0.2 : null, 
+              combineWith: 'AND', 
+              // 🌟 RELEVANCE BOOSTING: Name/Brand matches are ranked higher than claims/country matches
+              boost: { name: 5, brand: 4, categoryLabel: 2, marketingClaims: 1, targetTypes: 1, country: 1 }
+          },
+          extractField: (document, fieldName) => {
+              // Tell MiniSearch how to read nested JSON/Arrays
+              if (fieldName === 'categoryLabel') return document.category?.label || '';
+              if (fieldName === 'marketingClaims') return document.marketingClaims?.join(' ') || '';
+              if (fieldName === 'targetTypes') return document.targetTypes?.join(' ') || '';
+              return document[fieldName]; // Automatically handles flat strings like 'country'
+          }
+      });
+
+      if (Array.isArray(products) && products.length > 0) {
+          const docs = products.map((p, i) => ({ ...p, id: p.id || `temp-${i}` }));
+          searcher.addAll(docs);
+      }
+      return searcher;
+  }, [products]);
 
   // Alias maps for fuzzy matching skin types & claims
   const SKIN_TYPE_ALIASES = {
@@ -357,24 +379,27 @@ const searchableProducts = useMemo(() => {
     if (!products || !Array.isArray(products) || products.length === 0) {
       return [];
     }
-    
-    const searchLower = normalizeSearch(debouncedSearch);
-    
-    let result = searchableProducts.filter(p => {
-      // 1. Search Query Match
-      const matchSearch = searchLower === '' || p._searchKey.includes(searchLower);
 
-      
-      // 2. Category Filter
+    let baseProducts = products;
+
+    // 1. Full-Text Search with Relevance Ranking
+    if (debouncedSearch.trim()) {
+        const searchResults = miniSearch.search(debouncedSearch.trim());
+        // searchResults is returned SORTED by relevance score!
+        
+        // Map the IDs back to the actual product objects quickly
+        const productMap = new Map(products.map((p, i) => [p.id || `temp-${i}`, p]));
+        baseProducts = searchResults.map(res => productMap.get(res.id)).filter(Boolean);
+    }
+
+    // 2. Apply existing hard filters (Category, Brand, Missing Fields, etc.)
+    // Because .filter() preserves array order, the Relevance Ranking from MiniSearch is kept!
+    let result = baseProducts.filter(p => {
       const matchCat = activeCat === 'all' || p.category?.id === activeCat;
-      
-      // 3. Brand Filter
       const matchBrand = advancedFilters.brand === 'all' || p.brand === advancedFilters.brand;
-      
-      // 4. Algerian Local Filter
       const matchLocal = advancedFilters.localOnly ? isAlgerianProduct(p) : true;
 
-      // 5. Granular Missing Fields (Bounties) Filter
+      // Granular Missing Fields (Bounties) Filter
       let matchMissing = true;
       if (advancedFilters.missingFields && advancedFilters.missingFields.length > 0) {
         matchMissing = advancedFilters.missingFields.some(fieldKey => {
@@ -387,7 +412,7 @@ const searchableProducts = useMemo(() => {
         });
       }
 
-      // 6. Target Skin Types Filter (Fuzzy Alias Match)
+      // Target Skin Types Filter
       let matchSkinType = true;
       if (advancedFilters.skinTypes && advancedFilters.skinTypes.length > 0) {
         const prodTypes = getProductTargetSkinTypes(p);
@@ -400,7 +425,7 @@ const searchableProducts = useMemo(() => {
         });
       }
 
-      // 7. Claims Filter (Fuzzy Alias Match)
+      // Claims Filter
       let matchClaims = true;
       if (advancedFilters.claims && advancedFilters.claims.length > 0) {
         const prodClaims = getProductClaims(p);
@@ -413,24 +438,24 @@ const searchableProducts = useMemo(() => {
         });
       }
 
-      return matchSearch && matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
+      return matchCat && matchBrand && matchLocal && matchMissing && matchSkinType && matchClaims;
     });
 
-    // Sorting
+    // 3. Sorting
     if (advancedFilters.sort === 'price_asc') {
         result.sort((a, b) => (getPriceValue(a.price) || 999999) - (getPriceValue(b.price) || 999999));
     } else if (advancedFilters.sort === 'price_desc') {
         result.sort((a, b) => (getPriceValue(b.price) || 0) - (getPriceValue(a.price) || 0));
-    } else {
-        // Pre-compute the Algerian flag once per product (not per comparison).
-    // Turns ~70k string checks into ~3k.
-    const decorated = result.map(p => ({ p, alg: isAlgerianProduct(p) }));
-    decorated.sort((a, b) => (b.alg ? 1 : 0) - (a.alg ? 1 : 0));
-    result = decorated.map(d => d.p);
+    } else if (!debouncedSearch.trim()) {
+        // ONLY sort by Algerian flag if the user is NOT searching.
+        // If they ARE searching, we want the most relevant result at the top, regardless of country.
+        const decorated = result.map(p => ({ p, alg: isAlgerianProduct(p) }));
+        decorated.sort((a, b) => (b.alg ? 1 : 0) - (a.alg ? 1 : 0));
+        result = decorated.map(d => d.p);
     }
 
     return result;
-  }, [debouncedSearch, activeCat, searchableProducts, advancedFilters]);
+  }, [debouncedSearch, activeCat, advancedFilters, products, miniSearch]);
 
   // Pulse animation for plus button when empty state
   useEffect(() => {

@@ -1,172 +1,302 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-    Modal, View, Text, TouchableOpacity, StyleSheet,
-    Animated, Dimensions, Easing
+    View,
+    Text,
+    StyleSheet,
+    Modal,
+    TouchableOpacity,
+    Animated,
+    Pressable,
+    Dimensions,
+    Easing
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+import { AlertService } from '../../services/alertService';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
-import { AlertService } from '../../services/alertService';
-import * as Haptics from 'expo-haptics';
-import { t } from '../../i18n';
+import { useRTL } from '../../hooks/useRTL';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
+import { t } from '../../i18n';
 
 const { width } = Dimensions.get('window');
 
 const GlobalAlertModal = () => {
-    const language = useCurrentLanguage(); // ✅ Moved to top - always called
     const { colors } = useTheme();
     const COLORS = colors || DEFAULT_COLORS;
-    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+    const rtl = useRTL();
+    const language = useCurrentLanguage();
+    const styles = useMemo(() => createStyles(COLORS, rtl), [COLORS, rtl]);
 
+    const [alertConfig, setAlertConfig] = useState(null);
     const [visible, setVisible] = useState(false);
-    const [config, setConfig] = useState({
-        title: '',
-        message: '',
-        type: 'info',
-        buttons: []
-    });
 
-    // Animations
-    const slideAnim = useRef(new Animated.Value(100)).current;
+    // 🌟 Subtle, natural travel distance (28px) for seamless entrance
+    const translateYAnim = useRef(new Animated.Value(28)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
+    
+    // 🛡️ Guards against close animation race conditions
+    const activeAlertId = useRef(0);
 
-    // ✅ All hooks above this line
-    // Now it's safe to have conditional returns
+    const handleClose = (callback) => {
+        const closeForId = activeAlertId.current;
 
-    const handleClose = () => {
+        // Snappy, clean exit (150ms)
         Animated.parallel([
-            Animated.timing(slideAnim, {
-                toValue: 150,
-                duration: 200,
+            Animated.timing(translateYAnim, {
+                toValue: 20,
+                duration: 150,
+                easing: Easing.in(Easing.quad),
                 useNativeDriver: true
             }),
             Animated.timing(opacityAnim, {
                 toValue: 0,
-                duration: 200,
+                duration: 150,
+                easing: Easing.in(Easing.quad),
                 useNativeDriver: true
             })
-        ]).start(() => {
-            setVisible(false);
-            if (config.onDismiss) config.onDismiss();
+        ]).start(({ finished }) => {
+            if (finished && closeForId === activeAlertId.current) {
+                setVisible(false);
+                setAlertConfig(null);
+            }
+            if (typeof callback === 'function') callback();
         });
     };
 
-    const handleButtonPress = (btn) => {
-        if (btn.onPress) btn.onPress();
-        handleClose();
-    };
-
     useEffect(() => {
-        AlertService.setRef({
-            open: (newConfig) => {
-                setConfig(newConfig);
-                setVisible(true);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        const handleOpen = (config) => {
+            if (!config) {
+                handleClose();
+                return;
+            }
 
+            activeAlertId.current += 1;
+
+            // 1. 🔒 PRE-SET values to completely invisible BEFORE modal mounts
+            translateYAnim.setValue(28);
+            opacityAnim.setValue(0);
+
+            // 2. Mount modal natively
+            setAlertConfig(config);
+            setVisible(true);
+
+            // 3. 🚀 Trigger animation on next frame to ensure native window is ready (eliminates snap)
+            requestAnimationFrame(() => {
                 Animated.parallel([
-                    Animated.timing(slideAnim, {
+                    Animated.timing(translateYAnim, {
                         toValue: 0,
-                        duration: 300,
-                        easing: Easing.out(Easing.cubic),
+                        duration: 220,
+                        easing: Easing.bezier(0.16, 1, 0.3, 1),
                         useNativeDriver: true
                     }),
                     Animated.timing(opacityAnim, {
                         toValue: 1,
-                        duration: 300,
+                        duration: 190,
+                        easing: Easing.out(Easing.quad),
                         useNativeDriver: true
                     })
                 ]).start();
-            },
-            close: handleClose,
-            toast: (message) => {
-                setConfig({
-                    title: '',
-                    message,
-                    type: 'success',
-                    buttons: []
-                });
-                setVisible(true);
-                setTimeout(() => {
-                    handleClose();
-                }, 1800);
-            }
-        });
+            });
 
-        return () => AlertService.setRef(null);
+            // 4. Non-blocking haptic trigger (eliminates latency hitch)
+            setTimeout(() => {
+                if (config.type === 'error' || config.type === 'destructive' || config.type === 'delete') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+                } else if (config.type === 'success') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                } else {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                }
+            }, 25);
+        };
+
+        const modalRef = {
+            show: handleOpen,
+            open: handleOpen,
+            alert: handleOpen,
+            close: handleClose,
+            hide: handleClose,
+        };
+
+        let unsubscribe = null;
+
+        if (typeof AlertService?.setRef === 'function') {
+            AlertService.setRef(modalRef);
+            unsubscribe = () => AlertService.setRef(null);
+        } else if (typeof AlertService?.subscribe === 'function') {
+            unsubscribe = AlertService.subscribe(handleOpen);
+        } else if (typeof AlertService?.setListener === 'function') {
+            AlertService.setListener(handleOpen);
+            unsubscribe = () => AlertService.setListener(null);
+        } else if (typeof AlertService?.register === 'function') {
+            AlertService.register(handleOpen);
+            unsubscribe = () => AlertService.register(null);
+        }
+
+        return () => {
+            if (typeof unsubscribe === 'function') unsubscribe();
+        };
     }, []);
 
-    // ✅ This return is after all hooks, so it's safe
-    if (!visible) return null;
+    if (!visible || !alertConfig) return null;
 
-    const getAlertTheme = () => {
-        switch (config.type) {
-            case 'success': return { icon: 'check-circle', color: COLORS.success || COLORS.accentGreen, bg: (COLORS.success || COLORS.accentGreen) + '20' };
-            case 'error': return { icon: 'times-circle', color: COLORS.danger, bg: COLORS.danger + '20' };
-            case 'warning': return { icon: 'exclamation-triangle', color: COLORS.warning || COLORS.gold, bg: (COLORS.warning || COLORS.gold) + '20' };
-            case 'delete': return { icon: 'trash-alt', color: COLORS.danger, bg: COLORS.danger + '20' };
-            default: return { icon: 'info-circle', color: COLORS.info || COLORS.blue, bg: (COLORS.info || COLORS.blue) + '20' };
+    const {
+        title = '',
+        message = '',
+        type = 'info',
+        buttons = []
+    } = alertConfig;
+
+    // Icon and Accent Color by Type
+    const getTypeDetails = () => {
+        switch (type) {
+            case 'success':
+                return {
+                    color: COLORS.accentGreen || '#10B981',
+                    icon: <Feather name="check" size={24} color={COLORS.accentGreen || '#10B981'} />
+                };
+            case 'delete':
+                return {
+                    color: COLORS.danger || '#EF4444',
+                    icon: <Feather name="trash-2" size={24} color={COLORS.danger || '#EF4444'} />
+                };
+            case 'error':
+            case 'destructive':
+                return {
+                    color: COLORS.danger || '#EF4444',
+                    icon: <Feather name="alert-circle" size={24} color={COLORS.danger || '#EF4444'} />
+                };
+            case 'warning':
+                return {
+                    color: COLORS.gold || '#F59E0B',
+                    icon: <Feather name="alert-triangle" size={24} color={COLORS.gold || '#F59E0B'} />
+                };
+            case 'info':
+            default:
+                return {
+                    color: COLORS.accentGreen || '#5A9C84',
+                    icon: <Feather name="info" size={24} color={COLORS.accentGreen || '#5A9C84'} />
+                };
         }
     };
-    const alertTheme = getAlertTheme();
+
+    const typeDetails = getTypeDetails();
+
+    const resolvedButtons = buttons.length > 0 ? buttons : [
+        {
+            text: t('alert_ok', language) || (language === 'ar' ? 'حسناً' : 'OK'),
+            style: 'primary',
+            onPress: () => {}
+        }
+    ];
+
+    // Layout up to 3 buttons horizontally in a single row
+    const isHorizontalLayout = resolvedButtons.length <= 3;
+
+    const handleButtonPress = (btn) => {
+        Haptics.selectionAsync().catch(() => {});
+        handleClose(() => {
+            if (btn.onPress) {
+                btn.onPress();
+            }
+        });
+    };
 
     return (
-        <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose} statusBarTranslucent>
-            <View style={styles.overlay} pointerEvents="box-none">
-                <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
-                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
+        <Modal
+            transparent
+            visible={visible}
+            animationType="none"
+            onRequestClose={handleClose}
+            statusBarTranslucent
+        >
+            <View style={styles.overlay}>
+                {/* Silky Backdrop Fade (No Shadow) */}
+                <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: opacityAnim }]}>
+                    <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
                 </Animated.View>
 
-                <Animated.View style={[
-                    styles.alertContainer,
-                    { transform: [{ translateY: slideAnim }], opacity: opacityAnim }
-                ]}>
-                    <View style={[styles.iconContainer, { backgroundColor: alertTheme.bg }]}>
-                        <FontAwesome5 name={alertTheme.icon} size={32} color={alertTheme.color} />
+                {/* Flat, Modern Card with Smooth 28px Slide Up */}
+                <Animated.View
+                    style={[
+                        styles.card,
+                        {
+                            opacity: opacityAnim,
+                            transform: [{ translateY: translateYAnim }],
+                            borderColor: typeDetails.color + '33'
+                        }
+                    ]}
+                >
+                    {/* Flat Tinted Icon Badge */}
+                    <View style={[styles.iconBadge, { backgroundColor: typeDetails.color + '14', borderColor: typeDetails.color + '28' }]}>
+                        {typeDetails.icon}
                     </View>
 
-                    <Text style={styles.title}>{config.title}</Text>
-                    <Text style={styles.message}>{config.message}</Text>
+                    {/* Content */}
+                    <View style={styles.textContainer}>
+                        {title ? (
+                            <Text style={styles.title} numberOfLines={2}>
+                                {title}
+                            </Text>
+                        ) : null}
+                        {message ? (
+                            <Text style={styles.message}>
+                                {message}
+                            </Text>
+                        ) : null}
+                    </View>
 
-                    <View style={styles.buttonRow}>
-                        {config.buttons.length > 0 ? (
-                            config.buttons.map((btn, index) => {
-                                let btnBg = COLORS.card;
-                                let btnText = COLORS.textSecondary;
-                                let btnBorder = COLORS.border;
+                    {/* Action Buttons: 1, 2, or 3 buttons horizontally */}
+                    <View style={[
+                        styles.actionsRow, 
+                        isHorizontalLayout 
+                            ? [styles.actionsRowHorizontal, { flexDirection: rtl.flexDirection }] 
+                            : styles.actionsRowVertical
+                    ]}>
+                        {resolvedButtons.map((btn, index) => {
+                            const isDestructive = btn.style === 'destructive' || btn.style === 'danger';
+                            const isSecondary = btn.style === 'secondary' || btn.style === 'cancel';
+                            const isPrimary = !isDestructive && !isSecondary;
 
-                                if (btn.style === 'primary') {
-                                    btnBg = COLORS.accentGreen;
-                                    btnText = COLORS.textOnAccent || '#ffffff';
-                                    btnBorder = COLORS.accentGreen;
-                                } else if (btn.style === 'destructive') {
-                                    btnBg = COLORS.danger + '20';
-                                    btnText = COLORS.danger;
-                                    btnBorder = COLORS.danger;
-                                }
+                            let btnStyle = styles.buttonPrimary;
+                            let textStyle = styles.buttonTextPrimary;
+                            let customBg = COLORS.accentGreen;
 
-                                return (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={[styles.button, { backgroundColor: btnBg, borderColor: btnBorder }]}
-                                        onPress={() => handleButtonPress(btn)}
-                                        activeOpacity={0.7}
-                                        delayPressIn={0}
+                            if (isDestructive) {
+                                customBg = COLORS.danger;
+                                btnStyle = styles.buttonDestructive;
+                                textStyle = styles.buttonTextDestructive;
+                            } else if (isSecondary) {
+                                btnStyle = styles.buttonSecondary;
+                                textStyle = styles.buttonTextSecondary;
+                            } else {
+                                customBg = typeDetails.color;
+                            }
+
+                            return (
+                                <TouchableOpacity
+                                    key={`alert_btn_${index}`}
+                                    style={[
+                                        styles.buttonBase,
+                                        btnStyle,
+                                        isPrimary && { backgroundColor: customBg },
+                                        isHorizontalLayout && { flex: 1 }
+                                    ]}
+                                    activeOpacity={0.75}
+                                    onPress={() => handleButtonPress(btn)}
+                                >
+                                    <Text
+                                        style={[styles.buttonTextBase, textStyle]}
+                                        numberOfLines={1}
+                                        adjustsFontSizeToFit
                                     >
-                                        <Text style={[styles.buttonText, { color: btnText }]}>{btn.text}</Text>
-                                    </TouchableOpacity>
-                                );
-                            })
-                        ) : (
-                            <TouchableOpacity
-                                style={[styles.button, { backgroundColor: COLORS.accentGreen, borderColor: COLORS.accentGreen }]}
-                                onPress={handleClose}
-                                activeOpacity={0.8}
-                                delayPressIn={0}
-                            >
-                                <Text style={[styles.buttonText, { color: COLORS.textOnAccent || '#ffffff' }]}>{t('announcement_ok', language)}</Text>
-                            </TouchableOpacity>
-                        )}
+                                        {btn.text}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 </Animated.View>
             </View>
@@ -174,76 +304,107 @@ const GlobalAlertModal = () => {
     );
 };
 
-const createStyles = (COLORS) => StyleSheet.create({
+const createStyles = (COLORS, rtl) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 9999,
-        backgroundColor: 'transparent'
+        paddingHorizontal: 20,
     },
     backdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.75)',
-        zIndex: 1
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
     },
-    alertContainer: {
-        width: width * 0.85,
+    // Modern Flat Card: Clean border, Zero Shadows, Zero Elevation
+    card: {
+        width: '100%',
+        maxWidth: 360,
         backgroundColor: COLORS.card,
         borderRadius: 24,
-        padding: 25,
+        paddingHorizontal: 18,
+        paddingTop: 22,
+        paddingBottom: 18,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 20,
-        zIndex: 2
+        borderWidth: 1.2,
+        shadowOpacity: 0,
+        elevation: 0,
     },
-    iconContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
+    iconBadge: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 20,
-        marginTop: -10,
+        borderWidth: 1,
+        marginBottom: 14,
+    },
+    textContainer: {
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 18,
+        paddingHorizontal: 4,
     },
     title: {
         fontFamily: 'Tajawal-ExtraBold',
-        fontSize: 20,
+        fontSize: 17.5,
         color: COLORS.textPrimary,
-        marginBottom: 10,
         textAlign: 'center',
+        marginBottom: 6,
+        lineHeight: 24,
     },
     message: {
         fontFamily: 'Tajawal-Regular',
-        fontSize: 14,
+        fontSize: 13.5,
         color: COLORS.textSecondary,
         textAlign: 'center',
-        marginBottom: 25,
-        lineHeight: 22,
+        lineHeight: 20,
     },
-    buttonRow: {
-        flexDirection: 'row-reverse',
-        gap: 12,
+    actionsRow: {
         width: '100%',
     },
-    button: {
-        flex: 1,
-        paddingVertical: 12,
+    actionsRowHorizontal: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    actionsRowVertical: {
+        flexDirection: 'column',
+        gap: 8,
+    },
+    buttonBase: {
+        paddingVertical: 11,
+        paddingHorizontal: 6,
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
+        minHeight: 42,
     },
-    buttonText: {
+    buttonPrimary: {
+        backgroundColor: COLORS.accentGreen,
+    },
+    buttonDestructive: {
+        backgroundColor: COLORS.danger,
+    },
+    buttonSecondary: {
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    buttonTextBase: {
+        fontSize: 13.5,
+        textAlign: 'center',
+    },
+    buttonTextPrimary: {
         fontFamily: 'Tajawal-Bold',
-        fontSize: 15,
-        marginBottom: 2
-    }
+        color: COLORS.textOnAccent || '#FFFFFF',
+    },
+    buttonTextDestructive: {
+        fontFamily: 'Tajawal-Bold',
+        color: '#FFFFFF',
+    },
+    buttonTextSecondary: {
+        fontFamily: 'Tajawal-Bold',
+        color: COLORS.textPrimary,
+    },
 });
 
 export default GlobalAlertModal;

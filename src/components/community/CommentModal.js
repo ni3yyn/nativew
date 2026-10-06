@@ -20,7 +20,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { COLORS as DEFAULT_COLORS } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { AlertService } from '../../services/alertService';
-import { deleteComment, awardInstantPoints, COMMUNITY_POINTS, saveProductToShelf } from '../../services/communityService';
+import { deleteComment, updateComment, awardInstantPoints, COMMUNITY_POINTS, saveProductToShelf } from '../../services/communityService';
 import { uploadImageToCloudinary } from '../../services/imageService';
 import FullImageViewer from '../common/FullImageViewer';
 import CatalogProductPickerModal from '../catalog/CatalogProductPickerModal';
@@ -71,7 +71,7 @@ const QUICK_REPLIES = ["quick_reply_1", "quick_reply_2", "quick_reply_3", "quick
 // 2. COMPONENT: COMMENT ROW (Updated for Images)
 // ==================================================================
 
-const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfilePress, isReply = false, onImagePress, onProductPress, COLORS, styles }) => {
+const CommentRow = React.memo(({ item, currentUser, postId, onDelete, onEdit, onReply, onProfilePress, isReply = false, onImagePress, onProductPress, COLORS, styles }) => {
     const C = COLORS || DEFAULT_COLORS;
     const language = useCurrentLanguage();
     const isMe = currentUser?.uid && item.userId === currentUser.uid;
@@ -108,6 +108,20 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
         try {
             if (newStatus) {
                 await supabase.from('comment_likes').insert([{ comment_id: item.id, user_id: currentUser.uid }]);
+                
+                // --- NEW: SEND PUSH NOTIFICATION ON COMMENT LIKE ---
+                if (item.userId !== currentUser.uid) {
+                    const likerName = currentUser.settings?.name || currentUser.name || (language === 'ar' ? 'مستخدم' : 'A user');
+                    const title = language === 'ar' ? `أعجب ${likerName} بتعليقك ❤️` : `${likerName} liked your comment ❤️`;
+                    const body = item.text ? `"${item.text.substring(0, 40)}..."` : (language === 'ar' ? 'اضغط للتفاصيل' : 'Tap to view');
+                    
+                    await sendPushNotification(
+                        item.userId,
+                        title,
+                        body,
+                        { postId: postId, screen: 'PostDetails' }
+                    );
+                }
             } else {
                 await supabase.from('comment_likes').delete().match({ comment_id: item.id, user_id: currentUser.uid });
             }
@@ -141,7 +155,27 @@ const CommentRow = React.memo(({ item, currentUser, onDelete, onReply, onProfile
     const handleLongPress = () => {
         if (!isMe) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        AlertService.delete(isReply ? t('community_comment_delete_reply', language) : t('community_comment_delete_comment', language), t('community_comment_delete_confirm', language), () => onDelete(item.id));
+        AlertService.show({
+            title: isReply ? (language === 'ar' ? 'خيارات الرد' : 'Reply Options') : (language === 'ar' ? 'خيارات التعليق' : 'Comment Options'),
+            message: language === 'ar' ? '' : 'What would you like to do?',
+            type: 'info',
+            buttons: [
+                {
+                    text: language === 'ar' ? 'تعديل' : 'Edit',
+                    style: 'primary',
+                    onPress: () => onEdit && onEdit(item)
+                },
+                {
+                    text: language === 'ar' ? 'حذف' : 'Delete',
+                    style: 'destructive',
+                    onPress: () => onDelete(item.id) // 🌟 Direct delete without alert collisions
+                },
+                { 
+                    text: language === 'ar' ? 'إلغاء' : 'Cancel', 
+                    style: 'secondary' 
+                }
+            ]
+        });
     };
 
     const timeAgo = item.createdAt
@@ -312,7 +346,22 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress, onV
     const [commentsList, setCommentsList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState(null);
+    const [editingComment, setEditingComment] = useState(null);
 
+    const handleInitiateEdit = (targetComment) => {
+        cancelReply();
+        setEditingComment(targetComment);
+        setComment(targetComment.text || '');
+        Haptics.selectionAsync();
+        inputRef.current?.focus();
+    };
+
+    const cancelEdit = () => {
+        setEditingComment(null);
+        setComment('');
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        Keyboard.dismiss();
+    };
     const [selectedImage, setSelectedImage] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isProductPickerVisible, setIsProductPickerVisible] = useState(false);
@@ -513,6 +562,33 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress, onV
     // --- SEND COMMENT LOGIC (Clean Version for Updated RLS) ---
     const handleSend = async (quickText = null) => {
         const textInput = quickText || comment;
+
+        // 🌟 HANDLE EDIT COMMENT SUBMISSION
+        if (editingComment) {
+            if (!textInput.trim()) return;
+            setIsSending(true);
+            const updatedText = textInput.trim();
+            const targetId = editingComment.id;
+
+            // Optimistic Update
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setCommentsList(prev => prev.map(c => c.id === targetId ? { ...c, text: updatedText } : c));
+            cancelEdit();
+
+            try {
+                await updateComment(targetId, updatedText);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (err) {
+                console.error("Update comment error:", err);
+                AlertService.error(
+                    t('community_comment_error_title', language), 
+                    language === 'ar' ? 'فشل تعديل التعليق' : 'Failed to update comment'
+                );
+            } finally {
+                setIsSending(false);
+            }
+            return;
+        }
 
         // 1. Validation: Don't send if text, image, and product are all empty
         if (!textInput.trim() && !selectedImage && !selectedProduct) return;
@@ -720,7 +796,9 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress, onV
                                 <CommentRow
                                     item={item}
                                     currentUser={currentUser}
+                                    postId={post.id}
                                     onDelete={handleDelete}
+                                    onEdit={handleInitiateEdit}
                                     onReply={handleInitiateReply}
                                     onProfilePress={onProfilePress}
                                     onImagePress={setViewingImage}
@@ -757,6 +835,24 @@ const CommentModal = ({ visible, onClose, post, currentUser, onProfilePress, onV
                                 </View>
                             </View>
                             <TouchableOpacity onPress={cancelReply} style={styles.replyClose}>
+                                <Ionicons name="close" size={18} color={COLORS.textSecondary} />
+                            </TouchableOpacity>
+                        </Animated.View>
+                    )}
+
+                    {/* Edit Context Banner */}
+                    {editingComment && (
+                        <Animated.View style={[styles.replyBanner, { borderColor: COLORS.gold + '40', backgroundColor: COLORS.gold + '14' }]}>
+                            <View style={styles.replyBannerContent}>
+                                <View style={[styles.replyVerticalLine, { backgroundColor: COLORS.gold }]} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.replyLabel, { color: COLORS.gold }]}>
+                                        {language === 'ar' ? 'تعديل التعليق' : 'Editing comment'}
+                                    </Text>
+                                    <Text style={styles.replyName} numberOfLines={1}>{editingComment.text}</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity onPress={cancelEdit} style={styles.replyClose}>
                                 <Ionicons name="close" size={18} color={COLORS.textSecondary} />
                             </TouchableOpacity>
                         </Animated.View>

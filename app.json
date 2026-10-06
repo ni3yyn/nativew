@@ -2,14 +2,17 @@
   "expo": {
     "name": "وثيق",
     "slug": "nativew",
-    "scheme": "whathiq",
-    "version": "2.0.3",
+    "scheme": "wathiq",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.app.wathiq",
+      "associatedDomains": [
+        "applinks:wathiq.web.app"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -25,6 +28,23 @@
         "backgroundColor": "#F0F5F0"
       },
       "softwareKeyboardLayoutMode": "pan",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "wathiq.web.app",
+              "pathPrefix": "/community"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -42,7 +62,7 @@
         "android.permission.WAKE_LOCK",
         "com.google.android.gms.permission.AD_ID"
       ],
-      "runtimeVersion": "2.0.3"
+      "runtimeVersion": "2.1.0"
     },
     "web": {
       "favicon": "./assets/favicon.png"

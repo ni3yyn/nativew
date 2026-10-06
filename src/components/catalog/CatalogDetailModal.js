@@ -7,6 +7,7 @@ import { FontAwesome5, Ionicons, Feather, MaterialCommunityIcons } from '@expo/v
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 
 // Context & Utilities
 import { useTheme } from '../../context/ThemeContext';
@@ -165,6 +166,22 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [isIngredientsExpanded, setIsIngredientsExpanded] = useState(false); 
   const [isNavigating, setIsNavigating] = useState(false);
+  const [copiedName, setCopiedName] = useState(false);
+
+  const handleCopyName = async () => {
+    if (!product?.name) return;
+    try {
+      await Clipboard.setStringAsync(product.name);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setCopiedName(true);
+      AlertService.toast(lang === 'ar' ? 'تم نسخ اسم المنتج ✓' : 'Product name copied ✓');
+      setTimeout(() => {
+        if (isMountedRef.current) setCopiedName(false);
+      }, 1500);
+    } catch (e) {
+      console.warn('Failed to copy product name:', e);
+    }
+  };
 
   // ── Smart save state ──────────────────────────────────────────────────────
   const [showClaimsPicker, setShowClaimsPicker] = useState(false);
@@ -486,9 +503,23 @@ export default function CatalogDetailModal({ visible, onClose, product, onContri
                       </Text>
                       <FontAwesome5 name="search" size={11} color={C.accentGreen} style={{ opacity: 0.8 }} />
                     </TouchableOpacity>
-                    <Text style={[styles.grandProductName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
-                      {product.name}
-                    </Text>
+                    <View style={{ flexDirection: rtl.flexDirection, alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Text style={[styles.grandProductName, { color: C.textPrimary, textAlign: rtl.textAlign }]}>
+                        {product.name}
+                      </Text>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleCopyName}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={[styles.copyNameBtn, { backgroundColor: C.background }]}
+                      >
+                        <Feather 
+                          name={copiedName ? "check" : "copy"} 
+                          size={13} 
+                          color={copiedName ? C.accentGreen : C.textDim} 
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </StaggeredView>
@@ -1145,5 +1176,11 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 25,
     backgroundColor: 'rgba(0,0,0,0.3)', // Optional: adds a subtle background
+  },
+  copyNameBtn: {
+    padding: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

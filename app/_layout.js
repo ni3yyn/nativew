@@ -206,7 +206,6 @@ const useAppOpenAd = () => {
       const adUnitId = getAppOpenAdUnitId();
 
       let appOpenAd = null;
-      let isFirstLaunch = true;
       let isAdLoaded = false;
       let isAdShowing = false;
       let unsubscribeLoaded = null;
@@ -224,13 +223,11 @@ const useAppOpenAd = () => {
           appOpenAd = AppOpenAd.createForAdRequest(adUnitId);
 
           unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-            console.log('✅ [AdMob] App Open Ad Loaded');
-            isAdLoaded = true;
-            if (isFirstLaunch) {
-              isFirstLaunch = false;
-              showCurrentAd();
-            }
-          });
+  console.log('✅ [AdMob] App Open Ad Loaded');
+  isAdLoaded = true;
+  // Cold-start show intentionally disabled to comply with AdMob policy.
+  // Ad will be shown on the next background → active transition.
+});
 
           unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
             console.log('🔄 [AdMob] App Open Ad Closed - Preloading next');
@@ -385,7 +382,7 @@ const RootLayoutNav = ({ fontsLoaded }) => {
   const router = useRouter();
 
   // ➤ CURRENT VERSION (Must match app.json)
-  const APP_VERSION = '2.0.3';
+  const APP_VERSION = '2.1.0';
 
   // 🔴 OTA TEST MARKER — This log confirms THIS bundle is running
   console.log('🔴🔴🔴 OTA_V2_BUNDLE_RUNNING — If you see this, the NEW code is active! 🔴🔴🔴');

@@ -45,7 +45,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="وثيق"/>
-        <data android:scheme="whathiq"/>
+        <data android:scheme="wathiq"/>
         <data android:scheme="exp+nativew"/>
       </intent-filter>
     </activity>

@@ -17,9 +17,11 @@ import { CATEGORIES } from '../../src/constants/categories';
 import { useAppContext } from '../../src/context/AppContext';
 import { supabase } from '../../src/config/supabase';
 
-import { createPost, saveProductToShelf, deletePost, toggleLikePost } from '../../src/services/communityService';
+import { createPost, updatePost, saveProductToShelf, deletePost, toggleLikePost } from '../../src/services/communityService';
 import { AlertService } from '../../src/services/alertService';
 import { setPostsCache, getPostsCache } from '../../src/services/cachingService';
+import { db } from '../../src/config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 // 🌟 COLLAPSIBLE AUTHENTIC HEADER
 import AuthenticHeader, { getHeaderDimensions } from '../../src/utils/AuthenticHeader';
@@ -40,6 +42,22 @@ import { useCurrentLanguage } from '../../src/hooks/useCurrentLanguage';
 import { useRTL } from '../../src/hooks/useRTL';
 
 const FILTER_BAR_HEIGHT = 110;
+
+const sendPushNotification = async (targetUserId, title, body, dataPayload) => {
+    if (!targetUserId) return;
+    try {
+        const userDocRef = doc(db, 'profiles', targetUserId);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) return;
+        const pushToken = userSnap.data().expoPushToken;
+        if (!pushToken || !pushToken.startsWith('ExponentPushToken')) return;
+        await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: pushToken, sound: 'default', title, body, data: dataPayload }),
+        });
+    } catch (err) { console.error("Notification Error:", err); }
+};
 
 const NewPostsToast = ({ visible, onPress, COLORS, styles }) => {
     const language = useCurrentLanguage();
@@ -99,6 +117,13 @@ export default function CommunityScreen() {
     const loadingMoreRef = useRef(false);
     const isAdmin = !!(user && appConfig?.adminUid && user.uid === appConfig.adminUid);
 
+    // 🌟 Specific permission ONLY for posting tips (No admin powers)
+    const canPostTips = Boolean(
+        isAdmin || 
+        userProfile?.canPostTips === true ||
+        (Array.isArray(appConfig?.tipAuthors) && appConfig.tipAuthors.includes(user?.uid))
+    );
+
     // 🌟 ALERT DEDUPLICATION REF (Prevents repeated network error modal spam)
     const hasShownNetworkAlertRef = useRef(false);
 
@@ -113,6 +138,41 @@ export default function CommunityScreen() {
 
     // Modals
     const [isCreateModalVisible, setCreateModalVisible] = useState(false);
+    const [editingPost, setEditingPost] = useState(null);
+
+    const handleEditPost = useCallback((post) => {
+        setEditingPost(post);
+        setCreateModalVisible(true);
+    }, []);
+
+    const handleUpdateWrapper = async (postId, payload) => {
+        try {
+            await updatePost(postId, payload);
+            setAllPosts(prev => prev.map(p => {
+                if (p.id === postId) {
+                    return {
+                        ...p,
+                        content: payload.content,
+                        title: payload.title || p.title,
+                        imageUrl: payload.imageUrl !== undefined ? payload.imageUrl : p.imageUrl,
+                        taggedProduct: payload.taggedProduct !== undefined ? payload.taggedProduct : p.taggedProduct,
+                    };
+                }
+                return p;
+            }));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            AlertService.success(
+                language === 'ar' ? 'تم التعديل' : 'Updated',
+                language === 'ar' ? 'تم تحديث المنشور بنجاح.' : 'Post updated successfully.'
+            );
+        } catch (e) {
+            console.error("Failed to update post:", e);
+            AlertService.error(
+                t('community_error_title', language),
+                language === 'ar' ? 'فشل تعديل المنشور.' : 'Failed to update post.'
+            );
+        }
+    };
     const [viewingProduct, setViewingProduct] = useState(null);
     const [commentingPost, setCommentingPost] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
@@ -507,7 +567,29 @@ export default function CommunityScreen() {
         }));
 
         await toggleLikePost(postId, user.uid, isLiked);
-    }, [allPosts, user]);
+
+        // --- NEW: SEND PUSH NOTIFICATION ON LIKE ---
+        if (!isLiked && post.userId !== user.uid) {
+            const likerName = userProfile?.settings?.name || (language === 'ar' ? 'مستخدم' : 'A user');
+            const title = language === 'ar' ? `أعجب ${likerName} بمنشورك ❤️` : `${likerName} liked your post ❤️`;
+            
+            let bodyText = language === 'ar' ? 'اضغط لرؤية من تفاعل معك' : 'Tap to see who interacted';
+            if (post.content) {
+                bodyText = `"${post.content.substring(0, 40)}..."`;
+            } else if (post.taggedProduct?.name) {
+                bodyText = `🧴 ${post.taggedProduct.name}`;
+            } else if (post.imageUrl) {
+                bodyText = language === 'ar' ? '📷 صورة' : '📷 Photo';
+            }
+
+            await sendPushNotification(
+                post.userId,
+                title,
+                bodyText,
+                { postId: post.id, screen: 'PostDetails' }
+            );
+        }
+    }, [allPosts, user, userProfile, language]);
 
     const handleDeleteWrapper = useCallback((postId) => {
         AlertService.delete(
@@ -677,6 +759,7 @@ export default function CommunityScreen() {
                                     currentUser={currentUserObj}
                                     onInteract={handleInteract}
                                     onDelete={handleDeleteWrapper}
+                                    onEdit={handleEditPost}
                                     onViewProduct={setViewingProduct}
                                     onOpenComments={setCommentingPost}
                                     onImagePress={setViewingImage}
@@ -698,7 +781,7 @@ export default function CommunityScreen() {
                                 <View style={styles.emptyState}>
                                     <MaterialCommunityIcons name="filter-remove-outline" size={60} color={COLORS.textDim} />
                                     <Text style={styles.emptyText}>{searchQuery || isBioFilterActive ? t('community_no_search_results', language) : t('community_empty_section', language)}</Text>
-                                    {(!searchQuery && !isBioFilterActive && (selectedCategory?.id !== 'tips' || isAdmin)) && (
+                                    {(!searchQuery && !isBioFilterActive && (selectedCategory?.id !== 'tips' || canPostTips)) && (
                                         <TouchableOpacity style={styles.emptyActionBtn} onPress={() => setCreateModalVisible(true)}>
                                             <Text style={styles.emptyActionText}>{t('community_be_first', language)}</Text>
                                         </TouchableOpacity>
@@ -710,7 +793,7 @@ export default function CommunityScreen() {
 
                     <NewPostsToast visible={newPostsCount > 0} onPress={() => loadNewPosts(false)} COLORS={COLORS} styles={styles} />
 
-                    {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                    {selectedCategory && (selectedCategory.id !== 'tips' || canPostTips) && (
                         <TouchableOpacity 
                             style={[
                                 styles.fab, 
@@ -727,15 +810,20 @@ export default function CommunityScreen() {
                         </TouchableOpacity>
                     )}
 
-                    {selectedCategory && (selectedCategory.id !== 'tips' || isAdmin) && (
+                    {selectedCategory && (selectedCategory.id !== 'tips' || canPostTips) && (
                         <CreatePostModal 
                             visible={isCreateModalVisible} 
-                            onClose={() => setCreateModalVisible(false)} 
+                            onClose={() => {
+                                setCreateModalVisible(false);
+                                setEditingPost(null);
+                            }} 
                             onSubmit={handleCreateWrapper} 
+                            onUpdate={handleUpdateWrapper}
+                            postToEdit={editingPost}
                             savedProducts={savedProducts} 
                             userRoutines={userProfile?.routines} 
                             defaultType={selectedCategory?.id}
-                            isAdmin={isAdmin}
+                            isAdmin={canPostTips}
                         />
                     )}
                 </>

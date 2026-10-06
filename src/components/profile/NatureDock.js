@@ -729,7 +729,7 @@ export const NatureDock = ({
 
     // Respect system navigation bar height so the dock clears 3-button nav bars
     const insets = useSafeAreaInsets();
-    const dockBottomOffset = Math.max(insets.bottom, 16) + 19;
+    const dockBottomOffset = Math.max(insets.bottom, 16);
 
     const theme = useMemo(
         () => getThemeTokens(COLORS, activeThemeId),
@@ -1006,7 +1006,7 @@ const createStyles = (theme) =>
 
         dockPosition: {
             position: 'absolute',
-            bottom: 35, // overridden dynamically by dockBottomOffset
+            bottom: 32, // overridden dynamically by dockBottomOffset
             left: 0,
             right: 0,
             alignItems: 'center',

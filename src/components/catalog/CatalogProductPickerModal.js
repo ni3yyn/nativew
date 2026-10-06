@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useCurrentLanguage } from '../../hooks/useCurrentLanguage';
 import { useRTL } from '../../hooks/useRTL';
 import { t } from '../../i18n';
+import MiniSearch from 'minisearch';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -158,16 +159,45 @@ const CatalogProductPickerModal = ({ visible, onClose, onSelectProduct }) => {
         handleClose();
     };
 
+    // Initialize MiniSearch for the Modal
+    const miniSearch = useMemo(() => {
+        const searcher = new MiniSearch({
+            fields: ['name', 'brand', 'categoryLabel', 'marketingClaims', 'targetTypes', 'country'],
+            idField: 'id',
+            processTerm: (term) => normalizeSearch(term),
+            searchOptions: {
+                prefix: true,
+                fuzzy: term => term.length > 3 ? 0.2 : null,
+                combineWith: 'AND',
+                // 🌟 RELEVANCE BOOSTING
+                boost: { name: 5, brand: 4, categoryLabel: 2, marketingClaims: 1, targetTypes: 1, country: 1 }
+            },
+            extractField: (document, fieldName) => {
+                if (fieldName === 'categoryLabel') return document.category?.label || '';
+                if (fieldName === 'marketingClaims') return document.marketingClaims?.join(' ') || '';
+                if (fieldName === 'targetTypes') return document.targetTypes?.join(' ') || '';
+                return document[fieldName];
+            }
+        });
+
+        if (Array.isArray(products) && products.length > 0) {
+            const docs = products.map((p, i) => ({ ...p, id: p.id || `temp-${i}` }));
+            searcher.addAll(docs);
+        }
+        return searcher;
+    }, [products]);
+
     const filteredProducts = useMemo(() => {
         if (!searchQuery.trim()) return products.slice(0, 50);
-        const queryNorm = normalizeSearch(searchQuery);
-        return products.filter(p => {
-            const nameNorm = normalizeSearch(p.name || p.productName || '');
-            const brandNorm = normalizeSearch(p.brand || '');
-            const categoryNorm = normalizeSearch(typeof p.category === 'object' ? p.category?.label : p.category || '');
-            return nameNorm.includes(queryNorm) || brandNorm.includes(queryNorm) || categoryNorm.includes(queryNorm);
-        }).slice(0, 50);
-    }, [products, searchQuery]);
+        
+        const searchResults = miniSearch.search(searchQuery.trim());
+        const productMap = new Map(products.map((p, i) => [p.id || `temp-${i}`, p]));
+        
+        return searchResults
+            .map(res => productMap.get(res.id))
+            .filter(Boolean)
+            .slice(0, 50); // Keep it fast by only returning top 50 ranked results
+    }, [products, searchQuery, miniSearch]);
 
     const renderProductItem = useCallback(({ item }) => {
         const score = item.real_score || item.score || item.analysisData?.oilGuardScore || 0;
